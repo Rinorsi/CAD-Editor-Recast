@@ -37,7 +37,35 @@ function uiIcon(name, size, cls) {
   return el;
 }
 function nameOfItem(id) { return Reg.itemName(id) || EDATA.iname[shortId(id)] || humanId(shortId(id)); }
-function kindOfItem(id) { return EDATA.ikind[shortId(id)] || 'generic'; }
+/* 物品类别：优先用游戏里的真实事实（默认组件 + item_meta），数据没到、或离线时才退回内置表 EDATA.ikind。
+   facts：dc = 默认组件（短 ID 键），meta = item_meta_one 的一行。不靠物品名后缀猜（书除外：原版只有这两本）。 */
+function kindFromFacts(id, dc, meta) {
+  function has(k) { return dc[k] !== undefined; }
+  if (has('stored_enchantments')) return 'ebook';
+  if (has('potion_contents')) return 'potion';
+  if (id === 'written_book' || id === 'writable_book' || has('written_book_content') || has('writable_book_content')) return 'book';
+  if (meta.ranged_weapon) return 'ranged';
+  if (has('blocks_attacks')) return 'shield';
+  /* 镐 / 铲 / 锄 也带 weapon 组件，所以“武器”要排除普通工具；斧头能让盾失效，算近战 */
+  if (meta.weapon && (!meta.tool || (isObj(dc.weapon) && dc.weapon.disable_blocking_for_seconds > 0))) return 'melee';
+  if (meta.tool) return 'tool';
+  if (meta.armor_slot) return 'armor';
+  if (has('glider')) return 'armor';
+  if (meta.spawn_egg_entity) return 'spawn';
+  if (has('jukebox_playable')) return 'disc';
+  if (has('fireworks') || has('firework_explosion')) return 'firework';
+  if (has('banner_patterns') && meta.block_item) return 'banner';
+  if (meta.food || meta.consumable) return 'food';
+  if (meta.bundle || typeof meta.container_size === 'number' || has('container') || has('bundle_contents')) return 'container';
+  return 'generic';
+}
+function liveKind(id) {
+  if (typeof Reg === 'undefined' || !Reg.live()) return null;
+  var full = fullId(id), dc = Reg.defaultsOf(full), meta = Reg.itemMeta(full);
+  if (!dc || meta === null) return null;
+  return kindFromFacts(shortId(id), dc, meta || {});
+}
+function kindOfItem(id) { return liveKind(id) || EDATA.ikind[shortId(id)] || 'generic'; }
 
 /* ---------- 浮层 / 弹出 ---------- */
 var KPop = { el: null, owner: null, onClose: null };

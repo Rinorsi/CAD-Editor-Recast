@@ -29,7 +29,7 @@ const root=new Element('body'),overlays=new Element('div');overlays.id='overlays
 const doc={body:root,activeElement:null,addEventListener(){},createElement(tag){return new Element(tag);},createTextNode(t){const el=new Element('text');el.textContent=t;return el;},getElementById(id){return root.querySelector('#'+id);}};
 const c=vm.createContext({document:doc,window:{innerWidth:760,innerHeight:560},console,setTimeout(){},clearTimeout(){},oriel:{data:{},send(){return true;}}});
 const dir=path.resolve(__dirname,'../fabric/src/main/resources/assets/cadeditor/ui/js');
-for(const f of ['data','core','forms','kit','kit2','nbt','xlist','reg','picker','cards1','cards5','world','rules','screens'])vm.runInContext(fs.readFileSync(path.join(dir,f+'.js'),'utf8'),c);
+for(const f of ['data','core','forms','kit','kit2','nbt','xlist','reg','picker','cards1','cards2','cards3','cards5','world','rules','screens'])vm.runInContext(fs.readFileSync(path.join(dir,f+'.js'),'utf8'),c);
 c.uiIcon=()=>new Element('i');c.itemIcon=()=>new Element('i');c.uiClick=()=>{};c.snd=()=>{};c.toast=()=>{};
 let saved,disabled=0,writes=0;
 c.autoPut=(cid,value)=>{saved=JSON.parse(JSON.stringify(value));writes++;};
@@ -75,3 +75,48 @@ let child=c.h('div',{id:'testpicker'});c.openModal(child,true);assert.equal(pare
 c.closeModal();assert.equal(doc.getElementById('modal').firstChild,parent);assert.equal(doc.activeElement,focus);assert.equal(c.ModalParents.length,0);
 c.openModal(c.h('div',{id:'child2'}),true);c.openModal(c.h('div',{id:'replacement'}));assert.equal(c.ModalParents.length,0);assert.equal(doc.getElementById('detailwin'),null);c.closeModal();assert.equal(doc.getElementById('modal'),null);
 console.log('PASS world UI: rule add/change/cancel, unknown data preservation, last-rule removal, staged SNBT, duplicate keys/names, projectile data, nested modal restoration.');
+
+// 物品类别来自游戏事实（默认组件 + item_meta），不再靠物品名后缀
+{
+  const kind = (id, dc, meta) => c.kindFromFacts(id, dc, meta);
+  assert.equal(kind('diamond_sword', { weapon: { item_damage_per_attack: 1 } }, { weapon: true }), 'melee');
+  assert.equal(kind('diamond_pickaxe', { tool: {}, weapon: { item_damage_per_attack: 2 } }, { tool: true, weapon: true }), 'tool', '镐带 weapon 组件也是工具');
+  assert.equal(kind('diamond_axe', { tool: {}, weapon: { item_damage_per_attack: 1, disable_blocking_for_seconds: 5 } }, { tool: true, weapon: true }), 'melee', '斧能让盾失效，算近战');
+  assert.equal(kind('bow', {}, { ranged_weapon: true }), 'ranged');
+  assert.equal(kind('shield', { blocks_attacks: {} }, {}), 'shield');
+  assert.equal(kind('diamond_chestplate', {}, { armor_slot: 'chest', equipment_slot: 'chest' }), 'armor');
+  assert.equal(kind('player_head', {}, { equipment_slot: 'head' }), 'generic', '玩家头颅不是盔甲');
+  assert.equal(kind('elytra', { glider: {} }, { equipment_slot: 'chest' }), 'armor');
+  assert.equal(kind('pig_spawn_egg', {}, { spawn_egg_entity: 'minecraft:pig' }), 'spawn');
+  assert.equal(kind('chest', {}, { block_item: true, container_size: 27 }), 'container');
+  assert.equal(kind('bundle', {}, { bundle: true }), 'container');
+  assert.equal(kind('bread', {}, { food: true, consumable: true }), 'food');
+  assert.equal(kind('potion', { potion_contents: {} }, {}), 'potion');
+  assert.equal(kind('enchanted_book', { stored_enchantments: {} }, {}), 'ebook');
+  assert.equal(kind('white_banner', { banner_patterns: [] }, { block_item: true }), 'banner');
+  assert.equal(kind('music_disc_cat', { jukebox_playable: {} }, {}), 'disc');
+  assert.equal(kind('stone', {}, { block_item: true }), 'generic');
+  // 容器格数 / 收纳袋容量：有真实数据就用，没有才退回内置表
+  c.Reg.meta = {}; c.Reg.imeta['minecraft:chest'] = { id: 'minecraft:chest', container_size: 54 };
+  assert.equal(c.slotCountFor('minecraft:chest'), 54);
+  c.Reg.imeta['minecraft:barrel'] = false; assert.equal(c.slotCountFor('barrel'), 27, '未知元信息退回内置表');
+  c.Reg.meta = null;
+  assert.equal(c.slotCountFor('hopper'), 5, '离线退回内置表');
+}
+console.log('PASS item kind from facts, container size, bundle capacity fallbacks.');
+
+// 主手装备槽组、玩家基础属性：用游戏数据，没有时才退回默认
+{
+  c.Reg.meta = null;
+  assert.deepEqual(Array.from(c.meleeSlots()), ['mainhand', 'hand'], '离线退回内置');
+  assert.equal(c.Reg.baseAttr('minecraft:player', 'attack_damage', 1), 1);
+  c.Reg.meta = {};
+  c.Reg.kinds.equipment_slot_groups = { done: true, entries: [{ id: 'any', slots: ['mainhand', 'offhand'] }, { id: 'mainhand', slots: ['mainhand'] }, { id: 'hand', slots: ['mainhand', 'offhand'] }, { id: 'legs', slots: ['legs'] }, { id: 'armor', slots: ['feet', 'legs', 'chest', 'head', 'body'] }] };
+  assert.deepEqual(Array.from(c.meleeSlots()), ['mainhand', 'hand'], '含主手的组，不含 any');
+  c.Reg.ebase['minecraft:player'] = { 'minecraft:attack_damage': 2, 'minecraft:attack_speed': 3.5 };
+  assert.equal(c.Reg.baseAttr('player', 'attack_damage', 1), 2);
+  assert.equal(c.Reg.baseAttr('minecraft:player', 'minecraft:attack_speed', 4), 3.5);
+  assert.equal(c.Reg.baseAttr('minecraft:player', 'minecraft:luck', 9), 9, '缺属性用调用方给的默认，不当 0');
+  c.Reg.meta = null;
+}
+console.log('PASS melee slot groups and player base attributes.');

@@ -246,7 +246,10 @@ CARDS.deathProtection = function () {
 
 /* ==================== 容器 ==================== */
 var SLOT_COUNT = { chest: 27, trapped_chest: 27, barrel: 27, dispenser: 9, dropper: 9, crafter: 9, hopper: 5, furnace: 3, blast_furnace: 3, smoker: 3, brewing_stand: 5, chiseled_bookshelf: 6, decorated_pot: 1, campfire: 4, soul_campfire: 4 };
-function slotCountFor(id) { id = shortId(id); if (SLOT_COUNT[id] !== undefined) return SLOT_COUNT[id]; if (/shelf$/.test(id)) return 3; return 27; }
+/* 容器格数：优先用游戏里真实的 Container 大小（item_meta.container_size）；没到或离线时才用内置表 */
+function slotCountFor(id) { var m = Reg.live() ? Reg.itemMeta(id) : false; if (m && typeof m.container_size === 'number') return m.container_size; id = shortId(id); if (SLOT_COUNT[id] !== undefined) return SLOT_COUNT[id]; if (/shelf$/.test(id)) return 3; return 27; }
+/* 收纳袋总容量：游戏里的归一化分数（item_meta.bundle_capacity），默认 1 */
+function bundleCapacity() { var m = Reg.live() ? Reg.itemMeta(Ctx.doc().id) : false; return m && m.bundle_capacity && m.bundle_capacity.denominator ? m.bundle_capacity.numerator / m.bundle_capacity.denominator : 1; }
 function stackWeight(st) { var ms = (protoOf(st.id).max_stack_size || 64); return (st.count || 1) / ms; }
 CARDS.container = function () {
   var n = slotCountFor(Ctx.doc().id);
@@ -287,7 +290,7 @@ CARDS.container = function () {
 };
 
 CARDS.bundle = function () {
-  var card = kCard({ id: 'bundle', icon: 'bag', title: '收纳袋内容', desc: '袋子里装的东西；总重量不能超过 1（装满）', comps: ['bundle_contents'], span: 2 }, Ctx);
+  var card = kCard({ id: 'bundle', icon: 'bag', title: '收纳袋内容', desc: '袋子里装的东西；总重量不能超过 ' + fmtNum(bundleCapacity()) + '（装满）', comps: ['bundle_contents'], span: 2 }, Ctx);
   var row = h('div', { class: 'k-cgrid' }), bar = h('div', { class: 'k-meter' }, [h('i', {})]), eff = kEffect('');
   function list() { return Ctx.get('bundle_contents') || []; }
   function save(l) { if (!l.length) Ctx.disable('bundle_contents', { structural: false }); else Ctx.setSmart('bundle_contents', l, { label: '收纳袋内容' }); }
@@ -306,7 +309,7 @@ CARDS.bundle = function () {
     var add = h('div', { class: 'slot s34 addslot', title: '放入物品' }, [uiIcon('plus', 14)]);
     activate(add, function () { pickItem(add, function (id) { var l = list(); l.push({ id: fullId(id), count: 1 }); save(l); draw(); }); });
     row.appendChild(add);
-    var w = list().reduce(function (s, st) { return s + stackWeight(st); }, 0);
+    var cap = bundleCapacity(), w = list().reduce(function (s, st) { return s + stackWeight(st); }, 0) / cap;
     bar.firstChild.style.width = Math.min(100, w * 100) + '%'; bar.className = 'k-meter' + (w > 1 ? ' bad' : w > 0.85 ? ' warn' : '');
     eff.set('已占用 ' + Math.round(w * 100) + '%' + (w > 1 ? '：超过 100%，游戏可能无法放入这么多' : ''), w > 1 ? 'warn' : '');
   }

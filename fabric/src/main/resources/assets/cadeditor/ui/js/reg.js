@@ -12,6 +12,8 @@ var Reg = {
     if (kind === 'item_defaults_one') { this.ingestDef(val); return; }
     if (kind === 'item_model_hints') { this.ingestHints(val); return; }
     if (kind === 'block_properties') { this.ingestBP(val); return; }
+    if (kind === 'item_meta_one' || kind === 'item_meta') { this.ingestIM(kind, val); return; }
+    if (kind === 'entity_base_attributes') { this.ingestEB(val); return; }
     if (kind === 'entity_info' || kind.indexOf('entity_info:') === 0) { this.ingestEI(val); return; }
     if (kind.indexOf('tag:') === 0) { this.ingestTag(kind, val); return; }
     if (!k || k.gen !== val.generation) { k = this.kinds[kind] = { gen: val.generation, entries: [], total: val.total || 0, done: false, name: val.name }; delete this.cache[kind]; }
@@ -108,6 +110,50 @@ var Reg = {
     if (p !== undefined) return p;
     if (!this.eiAsk[full] && typeof oriel !== 'undefined' && oriel.send) { this.eiAsk[full] = 1; oriel.send('registry', { name: 'entity_info', id: full }); }
     return null;
+  },
+  /* 物品元信息（item_meta_one / item_meta）：武器 / 工具 / 食物 / 盔甲槽 / 容器格数 / 收纳袋容量 / 刷怪蛋实体 等事实。
+     单件按需请求；全表到齐后没有的就是未知。未到 = null，未知 = false */
+  imeta: {}, imAsk: {}, imAll: false,
+  ingestIM: function (kind, v) {
+    var ents = v.entries || [];
+    ents.forEach(function (e) { Reg.imeta[e.id] = e; });
+    if (kind === 'item_meta_one' && v.id && !ents.length) this.imeta[this.full(v.id)] = false;
+    if (kind === 'item_meta' && v.done) this.imAll = true;
+    this.fire(kind);
+  },
+  itemMeta: function (full) {
+    if (!this.live()) return false;
+    full = this.full(full);
+    var m = this.imeta[full];
+    if (m !== undefined) return m;
+    if (this.imAll) return false;
+    if (!this.imAsk[full] && typeof oriel !== 'undefined' && oriel.send) { this.imAsk[full] = 1; oriel.send('registry', { name: 'item_meta_one', id: full }); }
+    return null;
+  },
+  /* 整张表按需取（枚举、装备槽组……）：到齐返回条目数组，没到返回 null 并只请求一次 */
+  tblAsk: {},
+  table: function (name) {
+    var k = this.kinds[name];
+    if (k && k.done) return k.entries.filter(Boolean);
+    if (!this.live()) return null;
+    if (!this.tblAsk[name]) { this.tblAsk[name] = 1; this.request(name); }
+    return null;
+  },
+  /* 实体基础属性（entity_base_attributes）：玩家的攻击伤害 / 攻击速度基础值等，替换手写的 1 和 4。取不到（离线 / 还没到）用 dflt */
+  ebase: {}, ebAsk: {},
+  ingestEB: function (v) {
+    var ents = v.entries || [];
+    ents.forEach(function (e) { Reg.ebase[e.id] = e.attributes || {}; });
+    if (v.id && !ents.length) this.ebase[this.full(v.id)] = false;
+    this.fire('entity_base_attributes');
+  },
+  baseAttr: function (entity, attr, dflt) {
+    if (!this.live()) return dflt;
+    entity = this.full(entity);
+    var m = this.ebase[entity];
+    if (m === undefined && !this.ebAsk[entity] && typeof oriel !== 'undefined' && oriel.send) { this.ebAsk[entity] = 1; oriel.send('registry', { name: 'entity_base_attributes', id: entity }); }
+    var v = m ? m[this.full(attr)] : undefined;
+    return typeof v === 'number' ? v : dflt;
   },
   tagsOf: function (full) { var e = this.defs[full]; return e && e.tags ? e.tags : null; },
   /* 大数组（适用物品/互斥附魔太多）被宿主改为延迟加载：条目带 xxx_ref，按需请求，分页回来后合并 */

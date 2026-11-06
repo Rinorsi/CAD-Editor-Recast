@@ -347,7 +347,7 @@ function heroStats(d, kind) {
   var eff = effectiveComps(d), out = [];
   function mods(type, slots, base) { var s = base; (eff.attribute_modifiers || []).forEach(function (m) { if (shortId(m.type) === type && m.operation === 'add_value' && (m.slot === undefined || m.slot === 'any' || slots.indexOf(m.slot) >= 0)) s += m.amount; }); return s; }
   if (kind === 'melee' || kind === 'tool') {
-    var dmg = mods('attack_damage', MELEE_SLOTS, 1), spd = mods('attack_speed', MELEE_SLOTS, 4);
+    var dmg = mods('attack_damage', meleeSlots(), Reg.baseAttr('minecraft:player', 'attack_damage', 1)), spd = mods('attack_speed', meleeSlots(), Reg.baseAttr('minecraft:player', 'attack_speed', 4));
     out.push({ icon: 'sword', label: '攻击伤害', value: bigOrNum(dmg) });
     out.push({ icon: 'bolt', label: '攻击速度', value: fmtNum(+spd.toFixed(2)) + ' 次/秒' });
     out.push({ icon: 'flame', label: '每秒伤害', value: bigOrNum(+(dmg * spd).toFixed(2)) });

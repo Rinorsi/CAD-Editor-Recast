@@ -81,7 +81,13 @@ function attrCard(o) {
   return card;
 }
 
-var MELEE_SLOTS = ['mainhand', 'hand'];
+/* 主手拿着时生效的装备槽组：来自游戏的 equipment_slot_groups（哪些组包含主手，不含 any），离线 / 没到时才用 mainhand + hand */
+function meleeSlots() {
+  var g = Reg.live() ? Reg.table('equipment_slot_groups') : null;
+  if (!g) return ['mainhand', 'hand'];
+  var out = g.filter(function (x) { return x.id !== 'any' && x.slots.indexOf('mainhand') >= 0; }).map(function (x) { return x.id; });
+  return out.length ? out : ['mainhand', 'hand'];
+}
 CARDS.attackDamage = function () {
   var hearts = iconBar();
   var presets = [];
@@ -89,7 +95,7 @@ CARDS.attackDamage = function () {
   presets.push({ v: 100, label: '100' }, { v: 1000, label: '1000' }, { v: Reg.attrMax('attack_damage', 2048), label: fmtNum(Reg.attrMax('attack_damage', 2048)) + ' 上限' });
   return attrCard({
     type: 'attack_damage', icon: 'sword', brief: function (t) { return '≈ ' + bigOrNum(+(t / 2).toFixed(1)) + ' 颗心'; }, title: '攻击伤害', desc: '每次完整蓄力攻击造成的伤害（含你自己的 1 点基础伤害）',
-    base: 1, slots: function () { return MELEE_SLOTS; }, slot: function () { return 'mainhand'; }, id: 'minecraft:base_attack_damage',
+    base: Reg.baseAttr('minecraft:player', 'attack_damage', 1), slots: function () { return meleeSlots(); }, slot: function () { return 'mainhand'; }, id: 'minecraft:base_attack_damage',
     warnMax: Reg.attrMax('attack_damage', 2048) + 1, warnWhy: '攻击伤害属性自身的数值上限是 ' + fmtNum(Reg.attrMax('attack_damage', 2048)), softMin: 0, softMax: 30, step: 0.5, unit: '点', presets: presets,
     effect: function (t) { return '相当于 ' + bigOrNum(t / 2) + ' 颗心' + (t >= 20 ? '；一击可以秒杀普通生物（僵尸 20 点生命）' : (t >= 4 ? '；约 ' + Math.ceil(20 / Math.max(t, 1)) + ' 击打死一只僵尸' : '')); },
     tone: function (t) { return t > Reg.attrMax('attack_damage', 2048) + 1 ? 'warn' : ''; }, extra: { el: hearts.el, update: function (t) { hearts.set(Math.max(0, t), 10); } },
@@ -100,7 +106,7 @@ function bigOrNum(n) { var b = bigText(n); return b ? fmtInt(n) + '（' + b + '�
 CARDS.attackSpeed = function () {
   return attrCard({
     type: 'attack_speed', icon: 'bolt', brief: function (t) { return t > 0 ? '约 ' + (+(1 / t).toFixed(2)) + ' 秒一刀' : ''; }, title: '攻击速度', desc: '每秒可以完整挥动几次（含基础值 4）',
-    base: 4, slots: function () { return MELEE_SLOTS; }, slot: function () { return 'mainhand'; }, id: 'minecraft:base_attack_speed',
+    base: Reg.baseAttr('minecraft:player', 'attack_speed', 4), slots: function () { return meleeSlots(); }, slot: function () { return 'mainhand'; }, id: 'minecraft:base_attack_speed',
     warnMax: 1024, warnWhy: '攻击速度属性在原版最大 1024', softMin: 0.1, softMax: 4, step: 0.1, unit: '次/秒', dec: 2,
     presets: [{ v: 0.8, label: '0.8 重武器' }, { v: 1, label: '1.0 斧' }, { v: 1.6, label: '1.6 剑' }, { v: 4, label: '4 无冷却' }, { v: 100, label: '100' }],
     effect: function (t) { return t <= 0 ? '⚠ 攻击速度 ≤ 0 时无法完成蓄力攻击' : '蓄力满约需 ' + fmtNum(1 / t) + ' 秒；每秒最多 ' + fmtNum(t) + ' 次完整攻击'; },
