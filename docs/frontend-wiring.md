@@ -320,24 +320,30 @@ enum 请求统一 {name:'enum:<下列名>'}，回复 registry.enum:<名>；条�
 
 因此常规读取 entries[0].comps.entity_data.id；需要完整 namespace 时也兼容 comps['minecraft:entity_data']。不要 JSON.parse 整个 SNBT。若其他组件/扩展返回 component_formats[k]=='snbt'，通过 validate_component 的 snbt 模式取得 result.json 再读取 id；也可直接用 item_meta_one.spawn_egg_entity 作为默认蛋类型。显式草稿 entity_data 覆盖优先，item_meta 只描述默认物品。
 
-## 11. 手写表的逐项结论与本轮补齐
+## 11. 手写表与前端实际接线
 
-| 前端表/需求 | 结论 | 接线 |
+以index.html实际加载顺序为准；“已接”只表示源码消费，不代替真实客户端和用户验收。
+
+| 前端表/需求 | 当前结论 | 接线与边界 |
 |---|---|---|
-| MC_COLORS | 现有接口足够 | enum:text_color，ChatFormatting.isColor()，含rgb；不含 bold/reset，十六进制颜色仍手输 |
-| HIDE_PARTS | 现有接口足够 | data_component_types 初始推送，主动查询 minecraft:data_component_type；hidden_components 保存真实组件 ID，不能仅留8个白名单 |
-| TAG_NAMES | 需要新增字段，已补齐 | tags:* 新增 name/translation_key；活动语言缺键回ID，不手写翻译 |
-| RESIST | 现有接口足够 | tags:damage_type + tag:damage_type，标签成员权威 |
-| TOOL_GROUPS | 现有接口足够 | tags:block + tag:block，快捷项按存在性过滤 |
-| MELEE_SLOTS | 现有接口足够 | equipment_slot_groups 的slots |
-| 攻击基础值 | 现有接口足够 | entity_base_attributes + player ID；缺属性不填0 |
-| 枚举控件序列化符号名 | 现有id足够；另补Java常量符号 | 所有 Java Enum 条目增加 symbol；不替代id |
-| ANIMS / EQ_SLOTS / FW_SHAPES / CE_TYPES | 现有接口足够 | enum:use_animation / equipment_slot / firework_shape / consume_effect_type |
-| ikind / SLOT_COUNT / 袋容量 / 蛋实体 / 衣服槽 | 现有接口足够 | item_meta(_one)，剩余按默认组件能力判断 |
+| MC_COLORS | 已替换为实时数据；保留离线/未到达回退与中文标签 | forms.js mcColors()读取enum:text_color的id/rgb，富文本及颜色盘调用；静态16色保留。 |
+| HIDE_PARTS | 保留为UI常用项；完整候选改为实时数据 | 常用chips仍保留；“＋其他组件”通过data_component_type选择，支持未知/模组组件ID。 |
+| TAG_NAMES | 保留为中文别名回退 | tags:*的翻译name优先；缺翻译时才取静态中文别名，再回退ID。 |
+| RESIST / TOOL_GROUPS | 保留为UI快捷项；接入实时存在性过滤 | keepKnownTags按tags:damage_type / tags:block过滤；离线或目录未返回/为空时仍保留原快捷项，不可视为已核实存在。 |
+| TRIM_MATS | 已替换为实时候选；保留离线/未到达回退 | 材料/图案使用实时trim注册表；静态表不是在线候选白名单。 |
+| TRIM_ICON / 模板图标 | 已接实时关联；保留静态图标回退 | liveTrimIcon读取trim_materials.ingredients / trim_patterns.template_items；缺关联时仍走静态图标回退。 |
+| POTION_VARIANTS / POTION_IDS | 保留为离线回退 | 连接游戏后的药水候选来自实时potions；静态变种表用于离线/无返回时的预览回退。 |
+| ANIMS / EQ_SLOTS / FW_SHAPES / CE_TYPES | 已接实时枚举；保留UI说明及离线回退 | syncEnums按enum:use_animation / equipment_slot / firework_shape / consume_effect_type过滤并追加；写入id而非symbol。 |
+| 生物变种离线sc.en | 已接实时枚举；保留离线/未到达回退 | liveEnumOptions接9种生物枚举及rarity；小枚举分段/色板等手动输入门槛仍需核对。 |
+| ikind | 已接实时事实；保留离线/未到达回退 | liveKind读取item_meta与item_defaults；数据未到仍使用静态分类。 |
+| SLOT_COUNT / 收纳袋容量 | 已接实时事实；保留回退 | container_size / bundle_capacity优先；未知格数仍回退固定表或27，袋内特殊重量规则未由容量接口替代。 |
+| MELEE_SLOTS / 攻击基础值 | 已接实时事实；保留回退 | equipment_slot_groups / entity_base_attributes优先；未到或缺值仍用mainhand、hand及1/4。 |
+| item_model / tooltip_style / equipment_asset | 已接实时资源目录 | 模型改用item_model资源注册表，样式和装备外观保持直连资源目录；手动输入保留。 |
+| profile_texture / profile_cape / profile_elytra | 候选通道已接；实际profile表单尚未接通 | cards5.js添加资源选择器，但随后加载的world.js覆盖AUTO_BODY.profile，最终仍为普通输入框；不能记为实际界面已接通。 |
+| camera_overlay | 尚未接线 | 仅Reg.DIRECT识别请求名；equippable字段仍未接资源选择器，等待后端语义确认。 |
+| 刷怪蛋 / 刷怪笼 / 试炼刷怪器页面 | 已添加专用页面，未作用户/实机验收 | spawn.js与pages.js已接entity_info、item_meta、spawner_info；原始未知字段保留路径仍需往返验收。 |
 
-没有新增消息通道或手写候选表；只有向后兼容的响应字段补充。注册表不存在、资源未载入、服务器未同步时一律保留手动输入和草稿。
-
-另修复初始发布复数别名的主动查询：items、data_component_types、trim_materials、painting_variants 等使用同一 KINDS 定义映射到缓存的规范注册表。此前这些名称只在初始推送出现，主动请求会找不到注册表；现在可直接使用，回复 key 不变。trim_patterns 继续走原有模板补充路由。
+所有候选继续保留手动输入及已有草稿；服务器未同步、资源未载入与完整空列表须区分。复数别名items、data_component_types、trim_materials、painting_variants等可主动请求，回复key沿用请求名；trim_patterns继续走模板补充路由。
 
 ## 12. 示例证据与验证边界
 

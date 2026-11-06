@@ -14,7 +14,7 @@
 
 目标固定为MC **26.1.2**。ID和名称以 [data.js](../fabric/src/main/resources/assets/cadeditor/ui/js/data.js) 为底稿，变种名译成中文；形态对照 [审计脚本](../tools/audit-backend-status.cjs) 输出：CARDS关联为专用卡片，AUTO_BODY/SPEC_FORMS为专用表单，schema及自动头部控件为通用表单。含局部SNBT不等于整项仅SNBT；核不准的写未核实。
 
-来源列“部分”只证明部分候选已接实时来源，不证明整个组件权威；“否”有离线枚举证据；“未核实”缺少逐字段来源确认。全部组件仍须与实际持久组件全集、Codec核对；静态107项不能作为模组组件白名单。
+来源列“部分”只证明部分候选已接实时来源，不证明整个组件权威；“否”表示尚有手写数据充当权威来源；“未核实”缺少逐字段来源确认。全部组件仍须与实际持久组件全集、Codec核对；静态107项不能作为模组组件白名单。
 
 | 组件 id | 中文名 | 当前界面形态 | 数据来源是否权威 | 是否已验收 |
 |---|---|---|---|---|
@@ -96,7 +96,7 @@
 | `minecraft:note_block_sound` | 音符盒音效 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
 | `minecraft:potion_contents` | 药水内容 | 专用卡片 | 未核实 | [ ] 未核实 |
 | `minecraft:potion_duration_scale` | 药水时长倍率 | 通用表单 | 未核实：约束/默认值 | [ ] 未核实 |
-| `minecraft:axolotl/variant` | 美西螈变种 | 通用表单 | 否：离线枚举 | [ ] 未核实 |
+| `minecraft:axolotl/variant` | 美西螈变种 | 通用表单 | 部分：实时枚举；离线回退 | [ ] 未核实 |
 | `minecraft:cat/collar` | 猫项圈颜色 | 通用表单 | 部分：实时染料枚举 | [ ] 未核实 |
 | `minecraft:cat/sound_variant` | 猫声音变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
 | `minecraft:cat/variant` | 猫变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
@@ -104,27 +104,50 @@
 | `minecraft:chicken/variant` | 鸡变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
 | `minecraft:cow/sound_variant` | 牛声音变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
 | `minecraft:cow/variant` | 牛变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
-| `minecraft:fox/variant` | 狐狸变种 | 通用表单 | 否：离线枚举 | [ ] 未核实 |
+| `minecraft:fox/variant` | 狐狸变种 | 通用表单 | 部分：实时枚举；离线回退 | [ ] 未核实 |
 | `minecraft:frog/variant` | 青蛙变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
-| `minecraft:horse/variant` | 马变种 | 通用表单 | 否：离线枚举 | [ ] 未核实 |
-| `minecraft:llama/variant` | 羊驼变种 | 通用表单 | 否：离线枚举 | [ ] 未核实 |
-| `minecraft:mooshroom/variant` | 哞菇变种 | 通用表单 | 否：离线枚举 | [ ] 未核实 |
+| `minecraft:horse/variant` | 马变种 | 通用表单 | 部分：实时枚举；离线回退 | [ ] 未核实 |
+| `minecraft:llama/variant` | 羊驼变种 | 通用表单 | 部分：实时枚举；离线回退 | [ ] 未核实 |
+| `minecraft:mooshroom/variant` | 哞菇变种 | 通用表单 | 部分：实时枚举；离线回退 | [ ] 未核实 |
 | `minecraft:painting/variant` | 画变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
-| `minecraft:parrot/variant` | 鹦鹉变种 | 通用表单 | 否：离线枚举 | [ ] 未核实 |
+| `minecraft:parrot/variant` | 鹦鹉变种 | 通用表单 | 部分：实时枚举；离线回退 | [ ] 未核实 |
 | `minecraft:pig/sound_variant` | 猪声音变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
 | `minecraft:pig/variant` | 猪变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
-| `minecraft:rabbit/variant` | 兔子变种 | 通用表单 | 否：离线枚举 | [ ] 未核实 |
-| `minecraft:salmon/size` | 鲑鱼体型 | 通用表单 | 否：离线枚举 | [ ] 未核实 |
+| `minecraft:rabbit/variant` | 兔子变种 | 通用表单 | 部分：实时枚举；离线回退 | [ ] 未核实 |
+| `minecraft:salmon/size` | 鲑鱼体型 | 通用表单 | 部分：实时枚举；离线回退 | [ ] 未核实 |
 | `minecraft:sheep/color` | 绵羊颜色 | 通用表单 | 部分：实时染料枚举 | [ ] 未核实 |
 | `minecraft:shulker/color` | 潜影贝颜色 | 通用表单 | 部分：实时染料枚举 | [ ] 未核实 |
 | `minecraft:tropical_fish/base_color` | 热带鱼底色 | 通用表单 | 部分：实时染料枚举 | [ ] 未核实 |
-| `minecraft:tropical_fish/pattern` | 热带鱼图案 | 通用表单 | 否：离线枚举 | [ ] 未核实 |
+| `minecraft:tropical_fish/pattern` | 热带鱼图案 | 通用表单 | 部分：实时枚举；离线回退 | [ ] 未核实 |
 | `minecraft:tropical_fish/pattern_color` | 热带鱼图案颜色 | 通用表单 | 部分：实时染料枚举 | [ ] 未核实 |
 | `minecraft:villager/variant` | 村民变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
 | `minecraft:wolf/collar` | 狼项圈颜色 | 通用表单 | 部分：实时染料枚举 | [ ] 未核实 |
 | `minecraft:wolf/sound_variant` | 狼声音变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
 | `minecraft:wolf/variant` | 狼变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
 | `minecraft:zombie_nautilus/variant` | 僵尸鹦鹉螺变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+
+## 手写表与页面接线
+
+以下为源码接线状态，不代表已通过1.0验收。回退表和UI本地化不得作为在线完整候选的白名单。实际加载顺序优先于单个文件里的定义。
+
+| 前端表/需求 | 当前结论 | 接线与边界 |
+|---|---|---|
+| MC_COLORS | 已替换为实时数据；保留离线/未到达回退与中文标签 | forms.js mcColors()读取enum:text_color的id/rgb，富文本及颜色盘调用；静态16色保留。 |
+| HIDE_PARTS | 保留为UI常用项；完整候选改为实时数据 | 常用chips仍保留；“＋其他组件”通过data_component_type选择，支持未知/模组组件ID。 |
+| TAG_NAMES | 保留为中文别名回退 | tags:*的翻译name优先；缺翻译时才取静态中文别名，再回退ID。 |
+| RESIST / TOOL_GROUPS | 保留为UI快捷项；接入实时存在性过滤 | keepKnownTags按tags:damage_type / tags:block过滤；离线或目录未返回/为空时仍保留原快捷项，不可视为已核实存在。 |
+| TRIM_MATS | 已替换为实时候选；保留离线/未到达回退 | 材料/图案使用实时trim注册表；静态表不是在线候选白名单。 |
+| TRIM_ICON / 模板图标 | 已接实时关联；保留静态图标回退 | liveTrimIcon读取trim_materials.ingredients / trim_patterns.template_items；缺关联时仍走静态图标回退。 |
+| POTION_VARIANTS / POTION_IDS | 保留为离线回退 | 连接游戏后的药水候选来自实时potions；静态变种表用于离线/无返回时的预览回退。 |
+| ANIMS / EQ_SLOTS / FW_SHAPES / CE_TYPES | 已接实时枚举；保留UI说明及离线回退 | syncEnums按enum:use_animation / equipment_slot / firework_shape / consume_effect_type过滤并追加；写入id而非symbol。 |
+| 生物变种离线sc.en | 已接实时枚举；保留离线/未到达回退 | liveEnumOptions接9种生物枚举及rarity；小枚举分段/色板等手动输入门槛仍需核对。 |
+| ikind | 已接实时事实；保留离线/未到达回退 | liveKind读取item_meta与item_defaults；数据未到仍使用静态分类。 |
+| SLOT_COUNT / 收纳袋容量 | 已接实时事实；保留回退 | container_size / bundle_capacity优先；未知格数仍回退固定表或27，袋内特殊重量规则未由容量接口替代。 |
+| MELEE_SLOTS / 攻击基础值 | 已接实时事实；保留回退 | equipment_slot_groups / entity_base_attributes优先；未到或缺值仍用mainhand、hand及1/4。 |
+| item_model / tooltip_style / equipment_asset | 已接实时资源目录 | 模型改用item_model资源注册表，样式和装备外观保持直连资源目录；手动输入保留。 |
+| profile_texture / profile_cape / profile_elytra | 候选通道已接；实际profile表单尚未接通 | cards5.js添加资源选择器，但随后加载的world.js覆盖AUTO_BODY.profile，最终仍为普通输入框；不能记为实际界面已接通。 |
+| camera_overlay | 尚未接线 | 仅Reg.DIRECT识别请求名；equippable字段仍未接资源选择器，等待后端语义确认。 |
+| 刷怪蛋 / 刷怪笼 / 试炼刷怪器页面 | 已添加专用页面，未作用户/实机验收 | spawn.js与pages.js已接entity_info、item_meta、spawner_info；原始未知字段保留路径仍需往返验收。 |
 
 ## 非组件功能
 
@@ -133,25 +156,25 @@
 | 编号 | 功能 | 怎样算完成 | 是否已验收 |
 |---|---|---|---|
 | F01 | 刷怪蛋页 | 按对应实体展示名称、属性、装备与变种；读取entity_info/实时注册表；未知字段保留；保存重开及实际生成行为符合修改。 | [ ] 未核实 |
-| F02 | 刷怪笼 / 试炼刷怪器页 | 在物品编辑范围内编辑实体、权重、延迟、数量、范围、条件及试炼配置；来自官方Codec/宿主导出；写回后在隔离世界放置核对实际行为。 | [ ] 未核实 |
+| F02 | 刷怪笼 / 试炼刷怪器页 | 在物品编辑范围内编辑实体、权重、延迟、数量、范围、条件及试炼配置；来自官方Codec/宿主导出；写回后在隔离世界放置核对实际行为。 | [ ] 未完成 |
 | F03 | 收纳袋内物品组件编辑 | 袋内每件物品可进入组件编辑、撤销及取消；递归保存不丢未知组件/类型；容量按游戏规则计算，覆盖嵌套袋及蜂巢特殊重量。 | [ ] 未核实 |
 | F04 | 容器内物品组件编辑 | 任意槽内物品可编辑组件；槽号、数量、嵌套内容及未改组件保留；取消不改原物品；背包与服务端容器路径均验证。 | [ ] 未核实 |
-| F05 | 桥梁类型保真提交（component_formats） | 前端按组件发送component_formats:snbt并走宿主保真通道；byte/short/int/long/float/double、三种类型数组、嵌套未知字段往返不变；完整long种子可保存。 | [ ] 未核实 |
+| F05 | 桥梁类型保真提交（component_formats） | 前端按组件发送component_formats:snbt并走宿主保真通道；byte/short/int/long/float/double、三种类型数组、嵌套未知字段往返不变；完整long种子可保存。 | [ ] 未完成 |
 | F06 | validate_component接入 | 通用/原始编辑提交前调用真实组件Codec；校验回执关联当前编辑版本；字段错误可见、失败保留草稿；规范化不吞未知值或改变类型。 | [ ] 未核实 |
 | F07 | 拼音搜索预算 | 真实Rhino默认预算下，对完整物品/音效目录逐字输入拼音、首字母及汉字混输；无预算错误、停页；热搜索p95≤20ms，或分帧单段≤8ms且取消过期搜索。 | [ ] 未核实 |
-| F08 | 静态分类ikind | 由实时item_meta/item_defaults推导类别；原版与模组刷怪蛋、装备、容器等进入正确页；静态表不作为在线分类白名单。 | [ ] 未完成 |
+| F08 | 静态分类ikind | 由实时item_meta/item_defaults推导类别；原版与模组刷怪蛋、装备、容器等进入正确页；静态表不作为在线分类白名单。 | [ ] 未核实 |
 | F09 | 静态格数SLOT_COUNT | 格数来自container_size/实际容器信息；不按名称猜测或兜底27；模组容器通过验证，未知容量明示限制。 | [ ] 未完成 |
-| F10 | MC_COLORS / CODE_COLOR | 文字颜色及格式来自官方枚举；富文本、旧表单、颜色控件全部接入；语言/资源切换刷新，离线表不限制在线选项。 | [ ] 未完成 |
-| F11 | HIDE_PARTS | 隐藏项来自当前data_component_type注册表，含模组组件、手动输入与未知项保留，不局限固定8项。 | [ ] 未完成 |
+| F10 | MC_COLORS / CODE_COLOR | 文字颜色及格式来自官方枚举；富文本、旧表单、颜色控件全部接入；语言/资源切换刷新，离线表不限制在线选项。 | [ ] 未核实 |
+| F11 | HIDE_PARTS | 隐藏项来自当前data_component_type注册表，含模组组件、手动输入与未知项保留，不局限固定8项。 | [ ] 未核实 |
 | F12 | TAG_NAMES | 标签候选来自实时目录及语言键；别名只做展示，不隐藏真实标签；无翻译显示ID；空标签、模组标签可用。 | [ ] 未核实 |
-| F13 | RESIST | 快捷标签按实时damage_type标签存在性过滤；完整候选与手输可达，不凭固定表宣称标签存在。 | [ ] 未完成 |
-| F14 | TOOL_GROUPS | 工具快捷组按实时方块标签过滤；规则成员来自注册表/标签；模组标签、手输及重载通过验证。 | [ ] 未完成 |
-| F15 | MELEE_SLOTS | 槽位及槽位组匹配来自EquipmentSlotGroup/宿主导出；主手、副手及扩展按实际规则显示和计算。 | [ ] 未完成 |
+| F13 | RESIST | 快捷标签按实时damage_type标签存在性过滤；完整候选与手输可达，不凭固定表宣称标签存在。 | [ ] 未核实 |
+| F14 | TOOL_GROUPS | 工具快捷组按实时方块标签过滤；规则成员来自注册表/标签；模组标签、手输及重载通过验证。 | [ ] 未核实 |
+| F15 | MELEE_SLOTS | 槽位及槽位组匹配来自EquipmentSlotGroup/宿主导出；主手、副手及扩展按实际规则显示和计算。 | [ ] 未核实 |
 | F16 | 攻击基础值 / AMT_LIMIT | 读取玩家或目标实体实际基础属性，不写死1/4；范围来自实际属性/Codec，旧入口不再任意限幅±2048；结果与游戏一致。 | [ ] 未完成 |
 | F17 | 枚举控件手动输入 | 每个选择器含分段、色板、通用schema及旧附魔/属性入口均可手输；候选来自实时枚举/注册表；刷新保留未知输入，非法值由Codec解释。 | [ ] 未完成 |
-| F18 | 29个生物变种组件 | 按registry-contract逐项核对14个注册表组件与15个官方枚举组件；无离线枚举白名单；序列化字符串/颜色正确，模组候选与实体行为通过验收。 | [ ] 未完成 |
+| F18 | 29个生物变种组件 | 按registry-contract逐项核对14个注册表组件与15个官方枚举组件；无离线枚举白名单；序列化字符串/颜色正确，模组候选与实体行为通过验收。 | [ ] 未核实 |
 | F19 | 纹饰 | 候选及ingredients/template_items图标关联来自实时组件/真实配方，不拼模板ID；远服unavailable明示并可手输；数据包/模组纹饰可保存。 | [ ] 未核实 |
-| F20 | 资源ID | item_model、tooltip_style、equipment_asset、camera_overlay、profile皮肤/披风/鞘翅读取活动资源包目录；保留命名空间/子目录；验证空目录、不可用、手输与重载。 | [ ] 未核实 |
+| F20 | 资源ID | item_model、tooltip_style、equipment_asset、camera_overlay、profile皮肤/披风/鞘翅读取活动资源包目录；保留命名空间/子目录；验证空目录、不可用、手输与重载。 | [ ] 未完成 |
 | F21 | 方块属性 | block_state/debug_stick_state接block_properties真实属性名、值及默认值；模组方块和非法组合通过验证，不再只能手输猜字段。 | [ ] 未完成 |
 | F22 | 战利品 / 配方 / 维度 / 地图标记 | 使用合同中的真实来源；集成服/远服分别测试；未同步明确unavailable，不伪报完整空列表；手输值与long种子保真。 | [ ] 未核实 |
 | F23 | 模组组件与实时结构 | 不以离线107项限制组件；实时持久组件可发现，结构/范围由Codec确认；不能结构化的走SNBT+validate_component，不能编辑的明示限制且保留原值。 | [ ] 未完成 |

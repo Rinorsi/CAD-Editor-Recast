@@ -76,4 +76,27 @@ assert.equal(run('var o2 = []; Valid.problems(Store.doc(), o2); o2.length'), 0, 
 // Reg.ingest 路由
 ctx.RES2 = { requestId: 'nope', ok: true };
 run('Reg.ingest("validate_component.result", RES2)');
+
+// 5) 审查发现：删数组元素不能把已删的 long 原文写回来
+ctx.REFX = '{xs:[9007199254740993L,9007199254740992L]}';
+assert.equal(run('nbtMerge({ xs: [9007199254740992] }, nbtParse(REFX))'), '{xs:[9007199254740992L]}', '删除首元素后不抄旧原文，但保留 long 类型');
+assert.equal(run('nbtMerge({ xs: [1, 2, 3] }, nbtParse("{xs:[1L,2L]}"))'), '{xs:[1L,2L,3L]}', '末尾追加沿用 long 类型');
+
+// 6) 用户手输的带类型 SNBT 不能被旧参照盖掉
+ctx.REFB = '{x:1b}';
+run('nbtSeenClear(); var u = parseSnbtUser("{x:2s,newByte:1b}")');
+assert.equal(run('nbtMerge(u, nbtParse(REFB))'), '{x:2s,newByte:1b}', 'short 不被旧 byte 盖掉，新 byte 不变 int');
+run('nbtSeenClear()');
+assert.equal(run('nbtMerge({ x: 2, newByte: 1 }, nbtParse(REFB))'), '{x:2b,newByte:1}', '没手输过时仍按旧类型 / 普通写法');
+run('nbtSeenClear(); parseSnbtUser("{big:9007199254740993L}")');
+assert.equal(run('nbtMerge({ big: 9007199254740992 }, null)'), '{big:9007199254740993L}', '手输的超大 long 保留原文');
+run('nbtSeenClear()');
+
+// 7) 非 NBT_RAW 组件里的 float / double 局部编辑后仍走 SNBT
+ctx.D7 = { base: JSON.stringify({ comps: { bees: [{ entity_data: { id: 'minecraft:bee', Health: 2 }, ticks_in_hive: 40 }] } }),
+  comps: { bees: [{ entity_data: { id: 'minecraft:bee', Health: 2 }, ticks_in_hive: 41 }] },
+  snbt: { bees: '[{entity_data:{id:"minecraft:bee",Health:2.0f},ticks_in_hive:40,min_ticks_in_hive:600}]' } };
+const r7 = run('nbtApplyFormats(D7)');
+assert.equal(r7.formats.bees, 'snbt');
+assert.ok(String(r7.comps.bees).includes('Health:2.0f') && String(r7.comps.bees).includes('ticks_in_hive:41'), 'Health 保持 float');
 console.log('PASS nbt: typed SNBT merge, apply formats, game validation routing.');

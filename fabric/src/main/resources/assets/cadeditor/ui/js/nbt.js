@@ -88,6 +88,52 @@ function nbtParse(text) {
   return node;
 }
 
+/* ---------- 用户手输的 SNBT：保住他写的类型 ----------
+   页面里输入框把 SNBT 解析成普通 JSON 再存，类型就没了（2s 变 2，1b 变 1）。parseSnbtUser 解析时把带类型的节点记在这里，
+   合并时如果某个值的 JSON 与记下的某个节点一致（而旧参照已对不上），就用用户写的那个类型。应用成功后清空。 */
+var NBT_SEEN = {}, NBT_SEEN_N = 0;
+function nbtToJson(n) {
+  if (n.k === 'num' || n.k === 'str' || n.k === 'bool') return n.v;
+  if (n.k === 'list' || n.k === 'arr') return n.items.map(nbtToJson);
+  var o = {}; n.keys.forEach(function (k) { o[k] = nbtToJson(n.map[k]); }); return o;
+}
+function nbtTypedNode(n) {
+  if (n.k === 'num') return n.t !== 'i' && n.t !== 'd0';
+  if (n.k === 'arr') return true;
+  if (n.k === 'list') return n.items.some(nbtTypedNode);
+  if (n.k === 'obj') return n.keys.some(function (k) { return nbtTypedNode(n.map[k]); });
+  return false;
+}
+function nbtNote(text) {
+  var root = nbtParse(text);
+  (function walk(n) {
+    if (nbtTypedNode(n)) {
+      if (NBT_SEEN_N > 300) { NBT_SEEN = {}; NBT_SEEN_N = 0; }
+      var j = JSON.stringify(nbtToJson(n));
+      if (!NBT_SEEN[j]) NBT_SEEN_N++;
+      NBT_SEEN[j] = n;
+    }
+    if (n.k === 'list' || n.k === 'arr') n.items.forEach(walk);
+    else if (n.k === 'obj') n.keys.forEach(function (k) { walk(n.map[k]); });
+  })(root);
+}
+function nbtSeenClear() { NBT_SEEN = {}; NBT_SEEN_N = 0; }
+/* 值已经被改过（与旧参照对不上）时，看用户是不是手输过一个带类型的同值节点 */
+function nbtPickRef(v, ref) {
+  if (!NBT_SEEN_N || v === null || v === undefined || typeof v === 'string' || typeof v === 'boolean') return ref;
+  var js = JSON.stringify(v);
+  if (ref && JSON.stringify(nbtToJson(ref)) === js) return ref;
+  return NBT_SEEN[js] || ref;
+}
+/* 数组里同值的元素个数与参照里不一样（删了 / 加了）：按位置抄旧原文会把已删元素的数字写回来，这种值只沿用类型 */
+function nbtAmbig(v, refItems) {
+  var a = {}, b = {};
+  v.forEach(function (x) { if (typeof x === 'number') a[x] = (a[x] || 0) + 1; });
+  refItems.forEach(function (r) { if (r && r.k === 'num') b[r.v] = (b[r.v] || 0) + 1; });
+  return function (x) { return a[x] !== b[x]; };
+}
+function nbtTypeOnly(r) { return { k: 'num', t: r.t, raw: '', v: NaN }; }
+
 /* ---------- 合并：按 JSON 当前值输出 SNBT，类型和原文参照 ref ---------- */
 function nbtNum(v, ref) {
   if (ref && ref.k === 'num') {
@@ -103,22 +149,34 @@ function nbtNum(v, ref) {
 }
 function nbtMerge(v, ref) {
   if (v === null || v === undefined) return '""';
+  ref = nbtPickRef(v, ref);
   if (typeof v === 'boolean') return ref && ref.k === 'num' && ref.t === 'b' ? (v ? '1b' : '0b') : String(v);
   if (typeof v === 'number') return nbtNum(v, ref && (ref.k === 'num' || ref.k === 'bool') ? (ref.k === 'num' ? ref : null) : null);
   if (typeof v === 'string') return snbtStr(v);
   if (Array.isArray(v)) {
     if (ref && ref.k === 'arr') {
-      var tt = ref.p === 'B' ? 'b' : ref.p === 'L' ? 'l' : 'i';
-      return '[' + ref.p + ';' + v.map(function (x, idx) { return nbtNum(Number(x), ref.items[idx] || ref.items[0] || { k: 'num', t: tt, raw: '', v: NaN }); }).join(',') + ']';
+      var tt = ref.p === 'B' ? 'b' : ref.p === 'L' ? 'l' : 'i', amb = nbtAmbig(v, ref.items);
+      return '[' + ref.p + ';' + v.map(function (x, idx) {
+        var r = ref.items[idx];
+        if (!r || amb(Number(x))) r = nbtTypeOnly(r || ref.items[0] || { t: tt });
+        return nbtNum(Number(x), r);
+      }).join(',') + ']';
     }
-    return '[' + v.map(function (x, idx) { return nbtMerge(x, ref && ref.k === 'list' ? (ref.items[idx] || ref.items[ref.items.length - 1] || null) : null); }).join(',') + ']';
+    var lamb = ref && ref.k === 'list' ? nbtAmbig(v, ref.items) : null;
+    return '[' + v.map(function (x, idx) {
+      var r = ref && ref.k === 'list' ? (ref.items[idx] || ref.items[ref.items.length - 1] || null) : null;
+      if (r && r.k === 'num' && typeof x === 'number' && lamb(x)) r = nbtTypeOnly(r);
+      return nbtMerge(x, r);
+    }).join(',') + ']';
   }
   var parts = Object.keys(v).map(function (k) { return snbtKey(k) + ':' + nbtMerge(v[k], ref && ref.k === 'obj' ? (ref.map[k] || null) : null); });
   return '{' + parts.join(',') + '}';
 }
 /* 参照文本里有 JSON 表达不了的类型（short / long / 类型化数组）？ */
 function nbtHasTyped(text) {
-  return /\[[BIL];/.test(text) || /(?:^|[^A-Za-z0-9_."'])[+-]?\d+[sSlL](?![A-Za-z0-9_])/.test(text);
+  return /\[[BIL];/.test(text)
+    || /(?:^|[^A-Za-z0-9_."'])[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?[sSlLfFdD](?![A-Za-z0-9_])/.test(text)   /* 2s 3L 2.0f 4d；单独的 1b / 0b 多半是布尔，不算 */
+    || /(?:^|[^A-Za-z0-9_."'])[+-]?\d+\.\d*(?![A-Za-z0-9_])/.test(text);   /* 没写后缀的小数 = double，整数化后会变 int */
 }
 
 /* 提交时：哪些组件改用 SNBT。没被编辑过的交给宿主按原值保留（宿主会恢复真实组件，类型原样）。 */

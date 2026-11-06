@@ -84,7 +84,7 @@ function spBlockEntity() {
 
 /* 一行数值：图标 + 名称 + 说明，右边是数字。get/set 读写；ticks 为真时说明里顺带换算成秒 */
 function spNumRow(o) {
-  var num = kNumber(+(+o.get()).toFixed(4), { min: o.min, max: o.max, step: o.step || 1, unit: o.ticks ? '' : (o.unit || ''), noSlider: true, onChange: function (v) { o.set(v); upd(v); } });
+  var num = kNumber(+(+o.get()).toFixed(4), { min: o.min, max: o.max, step: o.step || 1, dec: o.dec, unit: o.ticks ? '' : (o.unit || ''), noSlider: true, onChange: function (v) { o.set(v); upd(v); } });
   num.el.classList.add('k-xnum'); num.el.addEventListener('click', function (ev) { ev.stopPropagation(); });
   var row = xRow({ icon: uiIcon(o.icon || 'sliders', 14), title: o.title, sub: sub(o.get()), tip: o.tip || '', right: num.el });
   function sub(v) { return (o.desc || '') + (o.ticks && v > 0 ? (o.desc ? ' · ' : '') + spNum(v) + ' 刻 = ' + spNum(v / 20) + ' 秒' : ''); }
@@ -188,15 +188,15 @@ function buildTrialSpawner(body, obj, beId, put) {
     function setv(key, v) { cfg[key] = v; obj[name] = cfg; put(); }
     var F = [
       ['spawn_range', '刷怪范围', '在笼子周围这个范围内找位置', 'cube', '格', 1, 128, 1, 4],
-      ['total_mobs', '总数量', '一场试炼一共会刷出多少只', 'paw', '只', 0, 3.4e38, 1, 6],
-      ['simultaneous_mobs', '同时存在上限', '场上同时最多有几只', 'layers', '只', 0, 3.4e38, 1, 2],
-      ['total_mobs_added_per_player', '每多一名玩家增加总数', '', 'users', '只', 0, 3.4e38, 1, 2],
-      ['simultaneous_mobs_added_per_player', '每多一名玩家增加同时上限', '', 'users', '只', 0, 3.4e38, 1, 1],
+      ['total_mobs', '总数量', '一场试炼一共会刷出多少只', 'paw', '只', 0, 3.4e38, 1, 6, false, 3],
+      ['simultaneous_mobs', '同时存在上限', '场上同时最多有几只', 'layers', '只', 0, 3.4e38, 1, 2, false, 3],
+      ['total_mobs_added_per_player', '每多一名玩家增加总数', '', 'users', '只', 0, 3.4e38, 1, 2, false, 3],
+      ['simultaneous_mobs_added_per_player', '每多一名玩家增加同时上限', '', 'users', '只', 0, 3.4e38, 1, 1, false, 3],
       ['ticks_between_spawn', '刷怪间隔', '两次刷怪之间的等待', 'clock', '刻', 0, 2147483647, 1, 40, true]
     ];
     var lst = h('div', { class: 'x-list' });
     F.forEach(function (f) {
-      lst.appendChild(spNumRow({ title: f[1], desc: f[2], icon: f[3] === 'users' ? 'paw' : f[3], unit: f[4], min: f[5], max: f[6], step: f[7], ticks: f[9], tip: f[0], get: function () { return cv(f[0], f[8]); }, set: function (v) { setv(f[0], v); } }));
+      lst.appendChild(spNumRow({ title: f[1], desc: f[2], icon: f[3] === 'users' ? 'paw' : f[3], unit: f[4], min: f[5], max: f[6], step: f[7], dec: f[10], ticks: f[9], tip: f[0], get: function () { return cv(f[0], f[8]); }, set: function (v) { setv(f[0], v); } }));
     });
     body.appendChild(lst);
     var tpot = Array.isArray(cfg.spawn_potentials) ? cfg.spawn_potentials : [];

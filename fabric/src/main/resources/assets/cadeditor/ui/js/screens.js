@@ -644,7 +644,7 @@ function advSnbt(host) {
   ta.value = stackSnbt(d);
   function apply() {
     try {
-      var p = parseSnbt(ta.value); if (!isObj(p)) throw new Error('顶层需要是 {…}');
+      var p = parseSnbtUser(ta.value); if (!isObj(p)) throw new Error('顶层需要是 {…}');
       var comps = {}, removed = {}, src = p.components || {};
       Object.keys(src).forEach(function (k) { if (k.charAt(0) === '!') removed[shortId(k.substring(1))] = 1; else comps[shortId(k)] = src[k]; });
       var id = typeof p.id === 'string' ? fullId(p.id) : d.id; if (!ITEMSET[shortId(id)]) throw new Error('未知物品 ' + id);

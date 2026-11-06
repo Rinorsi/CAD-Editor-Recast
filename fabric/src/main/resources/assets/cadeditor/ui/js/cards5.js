@@ -23,41 +23,6 @@ function list5(host, items, rowFn, onAdd, addLabel, emptyText) {
 }
 function numField5(val, def, opts, set) { return kNumber(typeof val === 'number' ? val : def, Object.assign({ min: -1e9, max: 1e9, step: 1, noSlider: true, onChange: set }, opts || {})).el; }
 
-/* ---- 头颅档案 ---- */
-AUTO_BODY.profile = function (card, cid, v) {
-  var o = typeof v === 'string' ? { name: v } : clone(isObj(v) ? v : {});
-  function put() {
-    var out = {}, k, n = 0;
-    ['name', 'id', 'properties', 'texture', 'cape', 'elytra', 'model'].forEach(function (key) { if (o[key] !== undefined && o[key] !== '' && !(Array.isArray(o[key]) && !o[key].length)) { out[key] = o[key]; n++; } });
-    autoPut(cid, n === 1 && out.name !== undefined ? out.name : out);
-  }
-  /* 直接指定的贴图：游戏当前资源包里有的列出来选（写入值是去掉 textures/ 和 .png 的 ID，游戏渲染时再补回），也能手输；没连游戏就是普通输入框 */
-  function res(key, reg, ph) { return Reg.live() ? kRegSelect({ reg: reg, value: o[key] || '', title: '选择贴图', empty: '（未指定）', allowClear: true, onChange: function (x) { if (x) o[key] = x; else delete o[key]; put(); } }).el : txt(key, ph); }
-  function txt(key, ph) { return kInput(o[key] || '', function (x) { if (x) o[key] = x; else delete o[key]; put(); }, { placeholder: ph }); }
-  card.body.appendChild(h('div', { class: 'k-sech', text: '谁的头' }));
-  card.body.appendChild(fieldRow('玩家名', txt('name', '例如 Steve；游戏联网取这个玩家的皮肤'), '填了玩家名，游戏会按名字联网查皮肤。离线或查不到时显示默认皮肤'));
-  var uuid = kInput(Array.isArray(o.id) ? o.id.join(', ') : '', function (x) {
-    var p = x.split(/[,\s]+/).filter(Boolean).map(function (s) { return parseInt(s, 10); });
-    if (!x.trim()) { delete o.id; put(); return; }
-    if (p.length === 4 && p.every(function (n) { return !isNaN(n); })) { o.id = p; put(); }
-  }, { placeholder: '4 个整数，用逗号隔开（可不填）' });
-  card.body.appendChild(fieldRow('UUID', uuid, '玩家 UUID 的 4 个整数写法，一般不用填'));
-  card.body.appendChild(h('div', { class: 'k-sech', text: '直接指定皮肤（不联网）' }));
-  card.body.appendChild(fieldRow('身体皮肤', res('texture', 'profile_texture', '贴图 ID，如 minecraft:entity/player/wide/steve'), '资源包里的皮肤图（不含 textures/ 和 .png），不是网址'));
-  card.body.appendChild(fieldRow('披风', res('cape', 'profile_cape', '贴图 ID')));
-  card.body.appendChild(fieldRow('鞘翅', res('elytra', 'profile_elytra', '贴图 ID')));
-  var model = kSeg([{ v: '', label: '默认' }, { v: 'wide', label: '粗手臂' }, { v: 'slim', label: '细手臂' }], o.model || '', function (m) { if (m) o.model = m; else delete o.model; put(); });
-  card.body.appendChild(fieldRow('手臂模型', model.el));
-  card.body.appendChild(h('div', { class: 'k-sech', text: '皮肤属性（高级）' }));
-  if (isObj(o.properties)) { card.body.appendChild(h('div', { class: 'k-sub', text: '这里用的是“属性名 → 值列表”的写法，原样保留，不在这里编辑。' })); return; }
-  if (!Array.isArray(o.properties)) o.properties = [];
-  list5(card.body, function () { return o.properties; }, function (body, it, i, ch) {
-    body.appendChild(fieldRow('属性名', kInput(it.name || '', function (x) { it.name = x; ch(); }, { placeholder: '一般是 textures' })));
-    body.appendChild(fieldRow('值', kInput(it.value || '', function (x) { it.value = x; ch(); }, { placeholder: 'Base64 文本' })));
-    body.appendChild(fieldRow('签名', kInput(it.signature || '', function (x) { if (x) it.signature = x; else delete it.signature; ch(); }, { placeholder: '可不填' })));
-  }, { add: function () { if (o.properties.length < 16) o.properties.push({ name: 'textures', value: '' }); put(); }, remove: function (i) { o.properties.splice(i, 1); put(); }, changed: put, summary: function (it) { return (it.name || '?') + (it.value ? ' · ' + it.value.slice(0, 18) + (it.value.length > 18 ? '…' : '') : ''); } }, '添加一条属性', '没有');
-};
-
 /* ---- 蜜蜂 ---- */
 AUTO_BODY.bees = function (card, cid, v) {
   var arr = clone(Array.isArray(v) ? v : []);
@@ -68,7 +33,7 @@ AUTO_BODY.bees = function (card, cid, v) {
     body.appendChild(fieldRow('至少停留', numField5(it.min_ticks_in_hive, 600, { step: 20, unit: '刻' }, function (n) { it.min_ticks_in_hive = n; ch(); }), '至少要待多少刻才允许飞出来'));
     var ta = h('textarea', { class: 'ed-snbt bees-nbt', spellcheck: 'false' }), msg = h('div', { class: 'k-sub' });
     ta.value = toSnbt(it.entity_data === undefined ? { id: 'minecraft:bee' } : it.entity_data, null, true);
-    ta.addEventListener('input', function () { try { it.entity_data = parseSnbt(ta.value); msg.textContent = ''; ch(); } catch (e) { msg.textContent = 'SNBT 有误：' + (e.message || e); } });
+    ta.addEventListener('input', function () { try { it.entity_data = parseSnbtUser(ta.value); msg.textContent = ''; ch(); } catch (e) { msg.textContent = 'SNBT 有误：' + (e.message || e); } });
     body.appendChild(fieldRow('实体数据', h('div', {}, [ta, msg]), '蜜蜂实体的 NBT，必须含 id'));
     setTimeout(function () { if (typeof growable === 'function') growable(body); }, 0);
   }, { add: function () { arr.push({ entity_data: { id: 'minecraft:bee' }, ticks_in_hive: 0, min_ticks_in_hive: 600 }); put(); }, remove: function (i) { arr.splice(i, 1); put(); }, changed: put, summary: function (it) { return '待了 ' + fmtNum((it.ticks_in_hive || 0) / 20) + ' 秒 · 至少 ' + fmtNum((it.min_ticks_in_hive || 0) / 20) + ' 秒'; } }, '添加一只蜜蜂', '巢里没有蜜蜂');
@@ -120,7 +85,7 @@ function blockPredList(card, cid, v, what) {
     var ta = h('textarea', { class: 'ed-snbt bees-nbt', spellcheck: 'false', placeholder: '额外条件（方块状态 / NBT / 组件），例如 {state:{facing:"north"}}；没有就留空' }), msg = h('div', { class: 'k-sub' });
     ta.value = Object.keys(rest).length ? toSnbt(rest, null, true) : '';
     ta.addEventListener('input', function () {
-      try { var pv = ta.value.trim() ? parseSnbt(ta.value) : {}; Object.keys(p).forEach(function (k) { if (k !== 'blocks') delete p[k]; }); Object.keys(pv).forEach(function (k) { p[k] = pv[k]; }); msg.textContent = ''; ch(); } catch (e) { msg.textContent = 'SNBT 有误：' + (e.message || e); }
+      try { var pv = ta.value.trim() ? parseSnbtUser(ta.value) : {}; Object.keys(p).forEach(function (k) { if (k !== 'blocks') delete p[k]; }); Object.keys(pv).forEach(function (k) { p[k] = pv[k]; }); msg.textContent = ''; ch(); } catch (e) { msg.textContent = 'SNBT 有误：' + (e.message || e); }
     });
     body.appendChild(fieldRow('额外条件', h('div', {}, [ta, msg]), '方块状态（state）、方块实体 NBT（nbt）等，直接写 SNBT'));
     setTimeout(function () { if (typeof growable === 'function') growable(body); }, 0);

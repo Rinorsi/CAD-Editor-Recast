@@ -27,7 +27,7 @@ function worldRaw(value, set, validate) {
   var box=h('div',{class:'world-raw'}), ta=h('textarea',{class:'ed-snbt world-snbt',spellcheck:'false'}), msg=worldError();
   var saved=toSnbt(value === undefined ? {} : value,null,true); ta.value=saved;
   var save=kBtn('写入草稿',function () {
-    try { var next=parseSnbt(ta.value); if(validate) validate(next); set(next); saved=ta.value; msg.textContent='已写入草稿'; ta.classList.remove('bad'); }
+    try { var next=parseSnbtUser(ta.value); if(validate) validate(next); set(next); saved=ta.value; msg.textContent='已写入草稿'; ta.classList.remove('bad'); }
     catch(e) { msg.textContent='未写入：'+(e.message||e); ta.classList.add('bad'); }
   },{cls:'pri'});
   ta.addEventListener('input',function () { msg.textContent='尚未写入草稿'; ta.classList.remove('bad'); });
@@ -75,7 +75,7 @@ function worldMap(value, set, strings, ph) {
   var key = kInput('', function () {}, { placeholder: ph.key || (strings ? '属性名' : '字段名') }), val = kInput('', function () {}, { placeholder: ph.val || (strings ? '属性值' : '值（SNBT）') });
   add.appendChild(key); add.appendChild(val); add.appendChild(kBtn('添加', function () {
     try { var name = key.value.trim(); if (!name) throw new Error('请填写字段名'); if (Object.prototype.hasOwnProperty.call(obj, name)) throw new Error('同名字段已存在');
-      var next = strings ? val.value : parseSnbt(val.value), candidate = clone(obj); candidate[name] = next; set(candidate); obj = candidate; xl.draw(); key.value = ''; val.value = ''; msg.textContent = '';
+      var next = strings ? val.value : parseSnbtUser(val.value), candidate = clone(obj); candidate[name] = next; set(candidate); obj = candidate; xl.draw(); key.value = ''; val.value = ''; msg.textContent = '';
     } catch (e) { msg.textContent = e.message || String(e); }
   }));
   box.addField = function (name, next) { if (Object.prototype.hasOwnProperty.call(obj, name)) return false; var candidate = clone(obj); candidate[name] = next; set(candidate); obj = candidate; xl.draw(); return true; };
@@ -189,7 +189,9 @@ AUTO_BODY.profile=function(card,cid,v){
   card.body.appendChild(fieldRow('玩家名',input('name','输入玩家名')));
   card.body.appendChild(h('div',{class:'world-note',text:'游戏联网获取该玩家的皮肤。'}));
   var resources=h('div');
-  [['texture','身体皮肤'],['cape','披风'],['elytra','鞘翅']].forEach(function(f){resources.appendChild(fieldRow(f[1],input(f[0],'命名空间:资源路径')));});
+  /* 贴图 ID 写入值是去掉 textures/ 和 .png 的 ns:path；游戏资源包里有的列出来选，也能手输 */
+  function res(key,reg){return Reg.live()?kRegSelect({reg:reg,value:obj[key]||'',title:'选择贴图',empty:'（未指定）',allowClear:true,onChange:function(x){if(x)obj[key]=x;else delete obj[key];put();}}).el:input(key,'贴图 ID，如 minecraft:entity/player/wide/steve');}
+  [['texture','身体皮肤','profile_texture'],['cape','披风','profile_cape'],['elytra','鞘翅','profile_elytra']].forEach(function(f){resources.appendChild(fieldRow(f[1],res(f[0],f[2])));});
   resources.appendChild(fieldRow('手臂模型',kInput(obj.model||'',function(x){if(x)obj.model=x;else delete obj.model;put();},{placeholder:'资源定义中的模型名'})));
   card.body.appendChild(worldFold('资源包皮肤覆盖',resources,!!(obj.texture||obj.cape||obj.elytra)));
   var advanced={};Object.keys(obj).forEach(function(k){if(['name','texture','cape','elytra','model'].indexOf(k)<0)advanced[k]=obj[k];});

@@ -220,6 +220,10 @@ console.log('PASS resource-id registries.');
   assert.ok(t2.includes('冷却时间') && t2.filter(x => x === '总数量').length === 2, '普通 / 不祥各一套');
   const totals = sp.body.querySelectorAll('.k-xrow').filter(r => r.querySelector('.z').textContent === '总数量').map(r => r.querySelector('.k-numin').value);
   assert.deepEqual(totals, ['6', '12'], '默认值来自游戏的 defaults.normal_config / ominous_config');
+  // total_mobs 等是 float：小数不能被取整
+  const tm = sp.body.querySelectorAll('.k-xrow').filter(r => r.querySelector('.z').textContent === '总数量')[0].querySelector('.k-numin');
+  tm.value = '6.5'; tm.fire('input'); tm.fire('change');
+  assert.equal(comps.block_entity_data.normal_config.total_mobs, 6.5, '浮点字段保留小数');
   // 刷怪蛋：没有覆盖时显示默认生物；换成别的生物写 entity_data.id
   setDoc('minecraft:pig_spawn_egg');
   c.Reg.einfo['minecraft:pig'] = { id: 'minecraft:pig', attributes: { 'minecraft:max_health': 10, 'minecraft:movement_speed': 0.25 } };

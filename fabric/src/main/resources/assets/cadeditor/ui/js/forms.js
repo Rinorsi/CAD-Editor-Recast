@@ -266,7 +266,7 @@ function wText(sc, val, commit, ctx) {
     ta.value = toSnbt(val, null, true);
     var err = h('div', { class: 'ed-err' });
     ta.addEventListener('change', function () {
-      try { var p = parseSnbt(ta.value); err.textContent = ''; commit(p, {}); } catch (e) { err.textContent = '解析失败：' + e.message; }
+      try { var p = parseSnbtUser(ta.value); err.textContent = ''; commit(p, {}); } catch (e) { err.textContent = '解析失败：' + e.message; }
     });
     wrap.appendChild(h('div', { class: 'ed-hint', text: '这是带 translate / extra / 点击事件等的复杂文本，请直接编辑 SNBT。' }));
     wrap.appendChild(ta); wrap.appendChild(err);
@@ -341,7 +341,7 @@ function wRaw(sc, val, commit) {
   var ta = h('textarea', { class: 'ore-field ed-raw', rows: '4', spellcheck: 'false' });
   ta.value = val === undefined ? '{}' : toSnbt(val, null, true);
   var err = h('div', { class: 'ed-err' });
-  ta.addEventListener('change', function () { try { var p = parseSnbt(ta.value); err.textContent = ''; ta.classList.remove('bad'); commit(p, {}); } catch (e) { err.textContent = '解析失败：' + e.message; ta.classList.add('bad'); } });
+  ta.addEventListener('change', function () { try { var p = parseSnbtUser(ta.value); err.textContent = ''; ta.classList.remove('bad'); commit(p, {}); } catch (e) { err.textContent = '解析失败：' + e.message; ta.classList.add('bad'); } });
   var box = h('div', { class: 'ed-rawbox' }, [ta, err]);
   if (sc.hint) box.insertBefore(h('div', { class: 'ed-hint', text: '结构较复杂（' + sc.hint + '），暂以 SNBT 编辑。' }), ta);
   return box;

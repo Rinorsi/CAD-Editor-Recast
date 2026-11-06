@@ -36,6 +36,7 @@ document.addEventListener('keydown', function (e) {
 var OrielEditor = null;
 var EditorBridge = { pending: null, timer: null, sequence: 0 };
 function receiveEditorResult(result) {
+  if (result && result.status === 'saved' && typeof nbtSeenClear === 'function') nbtSeenClear();
   var p = EditorBridge.pending;
   if (!p || !result || result.requestId !== p.id) return;
   clearTimeout(EditorBridge.timer); EditorBridge.pending = null;

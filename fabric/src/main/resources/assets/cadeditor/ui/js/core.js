@@ -158,6 +158,12 @@ function parseSnbt(text) {
   if (!r.end()) r.fail('末尾有多余内容');
   return v;
 }
+/* 用户在输入框里手输的 SNBT：除了解析成 JSON，还记下带类型的节点，提交时按他写的类型输出（见 nbt.js nbtNote） */
+function parseSnbtUser(text) {
+  var v = parseSnbt(text);
+  try { if (typeof nbtNote === 'function') nbtNote(text); } catch (e) {}
+  return v;
+}
 /* 解析 "[/give @s |/item replace … with ]minecraft:xxx[组件…] [数量]"，返回 {id,count,comps,removed} */
 function parseStackString(text) {
   var t = text.trim().replace(/^\/+/, '');

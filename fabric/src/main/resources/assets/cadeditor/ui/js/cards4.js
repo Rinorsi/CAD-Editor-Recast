@@ -72,7 +72,7 @@ AUTO_BODY.item_name = function (card, cid, v) {
     } else {
       var ta = h("textarea", { class: "ed-snbt tc-raw", spellcheck: "false" }), msg = h("div", { class: "k-sub" });
       ta.value = toSnbt(v === undefined ? "" : v, null, true);
-      ta.addEventListener("input", function () { try { var pv = parseSnbt(ta.value); v = pv; msg.textContent = ""; autoPut(cid, pv); } catch (e) { msg.textContent = "SNBT 有误：" + (e.message || e); } });
+      ta.addEventListener("input", function () { try { var pv = parseSnbtUser(ta.value); v = pv; msg.textContent = ""; autoPut(cid, pv); } catch (e) { msg.textContent = "SNBT 有误：" + (e.message || e); } });
       body.appendChild(ta); body.appendChild(msg);
       setTimeout(function () { if (typeof growable === "function") growable(body); }, 0);
     }
