@@ -1,0 +1,9 @@
+gradle.projectsEvaluated {
+    def p = gradle.rootProject.project(':fabric:26.1.2')
+    p.tasks.register('backendDataTest', JavaExec) {
+        dependsOn p.tasks.named('codecVerificationClasses')
+        classpath = p.sourceSets.codecVerification.runtimeClasspath
+        mainClass = 'dev.rinorsi.editor.BackendDataTest'
+        args gradle.rootProject.file('logs/backend-b').absolutePath
+    }
+}

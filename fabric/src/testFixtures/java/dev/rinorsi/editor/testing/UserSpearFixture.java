@@ -1,0 +1,16 @@
+package dev.rinorsi.editor.testing;
+
+import net.minecraft.core.HolderLookup;
+import net.minecraft.world.item.ItemStack;
+
+/** Exact user-supplied /item argument, without replacing tags or typed numeric suffixes. */
+public final class UserSpearFixture {
+    private UserSpearFixture() {}
+    public static final String ARGUMENT = """
+        minecraft:netherite_spear[attribute_modifiers=[{type:"minecraft:attack_damage",amount:4.0d,id:"minecraft:base_attack_damage",operation:"add_value",slot:"mainhand"},{type:"minecraft:attack_speed",amount:-3.13043475151062d,id:"minecraft:base_attack_speed",operation:"add_value",slot:"mainhand"},{type:"minecraft:armor",id:"cadeditor:armor_3",amount:1.0d,operation:"add_value",slot:"mainhand"},{type:"minecraft:armor_toughness",id:"cadeditor:armor_toughness_4",amount:1.0d,operation:"add_value",slot:"mainhand"},{type:"minecraft:block_break_speed",id:"cadeditor:block_break_speed_6",amount:1.0d,operation:"add_value",slot:"mainhand"},{type:"minecraft:attack_knockback",id:"cadeditor:attack_knockback_5",amount:1.0d,operation:"add_value",slot:"mainhand"},{type:"minecraft:block_interaction_range",id:"cadeditor:block_interaction_range_7",amount:1.0d,operation:"add_value",slot:"mainhand"},{type:"minecraft:burning_time",id:"cadeditor:burning_time_8",amount:1.0d,operation:"add_value",slot:"mainhand"}],bees=[{entity_data:{id:"minecraft:bee"},ticks_in_hive:140,min_ticks_in_hive:600},{entity_data:{id:"minecraft:bee"},ticks_in_hive:0,min_ticks_in_hive:600},{entity_data:{id:"minecraft:bee"},ticks_in_hive:0,min_ticks_in_hive:600}],block_entity_data={id:"minecraft:ender_chest"},bucket_entity_data={},can_break={blocks:["minecraft:acacia_door","minecraft:acacia_fence","minecraft:acacia_button"]},can_place_on={blocks:"#c:barrels/wooden",state:{face:"wall",attached:"true"}},consumable={consume_seconds:1.6d,animation:"eat",has_consume_particles:true,on_consume_effects:[{type:"minecraft:apply_effects",effects:[{id:"minecraft:haste",amplifier:0,duration:600,show_particles:true},{id:"minecraft:health_boost",amplifier:0,duration:600,show_particles:true},{id:"minecraft:hero_of_the_village",amplifier:0,duration:600,show_particles:true},{id:"minecraft:hunger",amplifier:0,duration:600,show_particles:true},{id:"minecraft:infested",amplifier:0,duration:600,show_particles:true},{id:"minecraft:instant_damage",amplifier:0,duration:600,show_particles:true}],probability:1.0d}]},container_loot={loot_table:"minecraft:blocks/andesite_wall"},custom_data={},entity_data={Fire:111,id:"minecraft:allay"},equippable={slot:"mainhand"},food={nutrition:4,saturation:2.4d,can_always_eat:false},glider={},kinetic_weapon={delay_ticks:8,dismount_conditions:{max_duration_ticks:50,min_speed:9.0d},knockback_conditions:{max_duration_ticks:110,min_speed:5.1d},forward_movement:0.38d,damage_multiplier:1.2d,sound:"minecraft:item.spear.use",hit_sound:"minecraft:item.spear.hit",damage_conditions:{max_duration_ticks:0}},lock={items:"#c:animal_foods"}]
+        """.strip();
+    public static ItemStack create(HolderLookup.Provider access) {
+        try { return new net.minecraft.commands.arguments.item.ItemParser(access).parse(new com.mojang.brigadier.StringReader(ARGUMENT)).createItemStack(1); }
+        catch (com.mojang.brigadier.exceptions.CommandSyntaxException error) { throw new IllegalArgumentException(error.getMessage(), error); }
+    }
+}

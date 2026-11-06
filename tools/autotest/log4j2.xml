@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+  <Appenders>
+    <Console name="console" target="SYSTEM_OUT"><PatternLayout pattern="[%d{HH:mm:ss}] [%t/%level] %logger: %msg%n%throwable"/></Console>
+    <File name="file" fileName="logs/latest.log" append="false"><PatternLayout pattern="[%d{HH:mm:ss}] [%t/%level] %logger: %msg%n%throwable"/></File>
+  </Appenders>
+  <Loggers>
+    <Logger name="net.minecraft.commands" level="debug"/>
+    <Logger name="net.minecraft.server.MinecraftServer" level="debug"/>
+    <Root level="info"><AppenderRef ref="console"/><AppenderRef ref="file"/></Root>
+  </Loggers>
+</Configuration>

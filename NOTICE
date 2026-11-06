@@ -1,0 +1,9 @@
+The I key, /cade command and creative-slot packet workflow were studied in
+CAD Editor public commit 295554ee4a889fcb8b4dcd402a8301093d9625b9.
+Source: https://github.com/Rinorsi/CAD-Editor-public
+Copyright (c) 2022 Franck Velasco. MIT text retained in LICENSE-CAD-Editor.
+No CAD Editor source files or UI assets are bundled.
+
+Oriel UI 0.11.x is an external required dependency, based on Vellum by
+Max Leiter (MIT). Its JAR retains its own notices and nested dependencies.
+Minecraft textures and browser preview atlases are not distributed here.

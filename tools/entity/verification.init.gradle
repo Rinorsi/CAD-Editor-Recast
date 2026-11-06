@@ -1,0 +1,19 @@
+gradle.projectsEvaluated {
+    def p = gradle.rootProject.project(":fabric:26.1.2")
+    p.tasks.register("entityDataTest", JavaExec) {
+        dependsOn p.tasks.named("codecVerificationClasses")
+        classpath = p.sourceSets.codecVerification.runtimeClasspath
+        mainClass = "dev.rinorsi.editor.registry.EntityDataTest"
+        args gradle.rootProject.file("logs/entity-spawner-defaults.json").absolutePath
+    }
+    p.tasks.register("entityProbeJar", Jar) {
+        dependsOn p.tasks.named("autotestClasses")
+        archiveFileName = "editor-entity-probe.jar"
+        destinationDirectory = p.layout.buildDirectory.dir("entity-probe")
+        from(p.sourceSets.autotest.output.classesDirs) {
+            include "dev/rinorsi/editor/entityprobe/**"
+            include "dev/rinorsi/editor/probe/mixin/NoMouseCaptureMixin.class"
+        }
+        from(gradle.rootProject.file("tools/entity/resources"))
+    }
+}

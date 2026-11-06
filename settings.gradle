@@ -1,0 +1,15 @@
+pluginManagement {
+    repositories {
+        maven { url = 'https://maven.fabricmc.net/' }
+        maven { url = 'https://maven.kikugie.dev/releases' }
+        gradlePluginPortal()
+    }
+}
+plugins { id 'dev.kikugie.stonecutter' version '0.9.8' }
+rootProject.name = 'CAD-Editor-Recast'
+stonecutter {
+    create(rootProject) {
+        vcsVersion = '26.1.2'
+        branch('fabric') { version('26.1.2') }
+    }
+}

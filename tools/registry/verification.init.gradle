@@ -1,0 +1,25 @@
+gradle.projectsEvaluated {
+    def p = gradle.rootProject.project(":fabric:26.1.2")
+    p.tasks.register("registryTest", JavaExec) {
+        dependsOn p.tasks.named("codecVerificationClasses")
+        classpath = p.sourceSets.codecVerification.runtimeClasspath
+        mainClass = "dev.rinorsi.editor.registry.RegistryPagesTest"
+    }
+    p.tasks.register("registryStress", JavaExec) {
+        dependsOn p.tasks.named("codecVerificationClasses")
+        classpath = p.sourceSets.codecVerification.runtimeClasspath
+        mainClass = "dev.rinorsi.editor.registry.RegistryStressTest"
+        maxHeapSize = "1G"
+        args gradle.rootProject.file("../Oriel-UI-Workspace/daily/2026-11-06/logs/registry-stress.json").absolutePath
+    }
+    p.tasks.register("registryProbeJar", Jar) {
+        dependsOn p.tasks.named("autotestClasses")
+        archiveFileName = "editor-registry-probe.jar"
+        destinationDirectory = p.layout.buildDirectory.dir("registry-probe")
+        from(p.sourceSets.autotest.output.classesDirs) {
+            include "dev/rinorsi/editor/registry/**"
+            include "dev/rinorsi/editor/probe/mixin/**"
+        }
+        from(gradle.rootProject.file("tools/registry/resources"))
+    }
+}

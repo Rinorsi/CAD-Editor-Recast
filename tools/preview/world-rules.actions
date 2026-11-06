@@ -1,0 +1,10 @@
+wait 2
+click .world-rule:nth-child(1) .world-entry-head .k-btn:nth-child(3)
+wait 2
+shot expanded
+click .world-rule:nth-child(1) .world-entry-head .k-btn:nth-child(2)
+wait 2
+shot picker
+key Escape
+wait 2
+shot returned

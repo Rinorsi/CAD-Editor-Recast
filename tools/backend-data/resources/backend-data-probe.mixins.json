@@ -1,0 +1,1 @@
+{"required":true,"package":"dev.rinorsi.editor.probe.mixin","compatibilityLevel":"JAVA_25","client":["NoMouseCaptureMixin","BackendProbeWindowMixin"],"injectors":{"defaultRequire":1}}

@@ -1,0 +1,124 @@
+plugins { id 'net.fabricmc.fabric-loom' }
+base.archivesName = 'cadeditor-fabric-26.1.2'
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+sourceSets {
+    main { java.srcDirs = [rootProject.file('fabric/src/main/java')]; resources.srcDirs = [rootProject.file('fabric/src/main/resources')] }
+    test { java.setSrcDirs([]) }
+    codecVerification {
+        java.srcDirs = [rootProject.file('fabric/src/test/java'), rootProject.file('fabric/src/testFixtures/java')]
+        java.exclude('dev/rinorsi/editor/probe/**')
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+    autotest {
+        java.srcDirs = [rootProject.file('fabric/src/autotest/java'), rootProject.file('fabric/src/testFixtures/java')]
+        resources.srcDirs = [rootProject.file('tools/autotest/resources')]
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+}
+def day = java.time.LocalDate.now().toString()
+def daily = rootProject.file('../Oriel-UI-Workspace/daily/' + day)
+def clientRun = new File(daily, 'run/editor-mod-client')
+layout.buildDirectory.set(new File(daily, 'scratch/editor-mod/build/fabric-26.1.2'))
+repositories { mavenCentral() }
+dependencies {
+    minecraft "com.mojang:minecraft:${minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
+    implementation files(rootProject.file('libs/oriel-fabric-26.1.2-0.11.0.jar'))
+}
+loom {
+    mods { editor { sourceSet(sourceSets.main) } }
+    accessWidenerPath.set(rootProject.file('fabric/src/main/resources/cadeditor.accesswidener'))
+    runs {
+        client {
+            runDirectory.set(clientRun.absolutePath)
+            vmArg('-Doriel.sourceRoot=' + rootProject.file('fabric').absolutePath)
+            if (providers.gradleProperty('editorLauncherDebug').orNull == 'true') {
+                vmArg('-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:5007')
+            }
+        }
+        server { runDirectory.set(new File(daily, 'run/editor-mod-server').absolutePath); programArg('--nogui') }
+    }
+}
+
+// Keep the exact release jar in the standalone Editor run directory too.
+tasks.register('prepareEditorClient', Copy) {
+    from(rootProject.file('libs/oriel-fabric-26.1.2-0.11.0.jar'))
+    into(new File(clientRun, 'mods'))
+}
+tasks.named('runClient') { dependsOn('prepareEditorClient') }
+tasks.register('isolateEditorClient') {
+    doLast {
+        def modsDir = new File(clientRun, 'mods')
+        modsDir.listFiles()?.findAll { it.name.endsWith('.jar') }?.each { candidate ->
+            def archive = new java.util.zip.ZipFile(candidate)
+            def id
+            try {
+                def meta = archive.getEntry('fabric.mod.json')
+                if (meta != null) id = new groovy.json.JsonSlurper().parse(archive.getInputStream(meta)).id
+            } finally { archive.close() }
+            if (id in ['editor_backend_probe', 'editor'] || (id == 'oriel' && candidate.name != 'oriel-fabric-26.1.2-0.11.0.jar')) {
+                def quarantine = new File(daily, 'scratch/editor-mod/launcher-quarantine/' + candidate.name)
+                quarantine.parentFile.mkdirs()
+                java.nio.file.Files.move(candidate.toPath(), quarantine.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                logger.lifecycle('Isolated stale development mod from normal client: ' + candidate.name)
+            }
+        }
+        assert !sourceSets.main.runtimeClasspath.files.any { it.path.contains('autotest') || it.path.contains('codecVerification') }
+    }
+}
+tasks.named('runClient') { dependsOn('isolateEditorClient') }
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+processResources { filesMatching('fabric.mod.json') { expand(version: project.version) } }
+tasks.named('jar') { from(rootProject.file('NOTICE')); from(rootProject.file('LICENSE-CAD-Editor')) }
+// UI integration stays gated on the current Oriel review. No browser fixtures enter the jar.
+if (providers.gradleProperty('editorUiApproved').orNull == 'true') {
+    throw new GradleException('Use the documented Oriel integration workflow after user review; a build flag cannot approve UI.')
+}
+tasks.register('codecTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.StackCodecTest'
+    workingDir = new File(daily, 'scratch/editor-mod')
+}
+tasks.named('check') { dependsOn('codecTest') }
+tasks.register('prefsTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.client.EditorPrefsTest'
+    workingDir = new File(daily, 'scratch/editor-mod')
+}
+tasks.named('check') { dependsOn('prefsTest') }
+
+tasks.register('clipboardTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.client.EditorClipboardTest'
+    workingDir = new File(daily, 'scratch/editor-mod')
+}
+tasks.named('check') { dependsOn('clipboardTest') }
+
+tasks.register('soundPreviewTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.client.EditorSoundPreviewTest'
+    workingDir = new File(daily, 'scratch/editor-mod')
+}
+tasks.named('check') { dependsOn('soundPreviewTest') }
+
+// Optional standalone probe: never included in the distributed Editor jar.
+tasks.register('autotestJar', Jar) {
+    dependsOn(autotestClasses)
+    archiveBaseName.set('editor-backend-probe')
+    destinationDirectory.set(new File(daily, 'scratch/editor-mod/autotest-only'))
+    from(sourceSets.autotest.output)
+}
+tasks.register('exportAutotestClasspath') {
+    doLast {
+        def output = new File(daily, 'scratch/editor-mod/runtime-classpath.json')
+        output.parentFile.mkdirs()
+        output.text = groovy.json.JsonOutput.toJson(configurations.runtimeClasspath.files.collect { it.absolutePath })
+    }
+}
