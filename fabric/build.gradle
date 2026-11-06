@@ -72,7 +72,7 @@ tasks.register('isolateEditorClient') {
 tasks.named('runClient') { dependsOn('isolateEditorClient') }
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
 processResources { filesMatching('fabric.mod.json') { expand(version: project.version) } }
-tasks.named('jar') { from(rootProject.file('NOTICE')); from(rootProject.file('LICENSE-CAD-Editor')) }
+tasks.named('jar') { from(rootProject.file('NOTICE')) }
 // UI integration stays gated on the current Oriel review. No browser fixtures enter the jar.
 if (providers.gradleProperty('editorUiApproved').orNull == 'true') {
     throw new GradleException('Use the documented Oriel integration workflow after user review; a build flag cannot approve UI.')
