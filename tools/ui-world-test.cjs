@@ -15,6 +15,7 @@ class Element {
   getAttribute(k){return this.attrs[k]??null;}
   removeAttribute(k){delete this.attrs[k];}
   appendChild(x){if(x.parentNode)x.remove();this.children.push(x);x.parentNode=this;return x;}
+  insertBefore(x,ref){if(x.parentNode)x.remove();const i=ref?this.children.indexOf(ref):-1;if(i<0)this.children.push(x);else this.children.splice(i,0,x);x.parentNode=this;return x;}
   removeChild(x){this.children.splice(this.children.indexOf(x),1);x.parentNode=null;return x;}
   remove(){if(this.parentNode)this.parentNode.removeChild(this);}
   addEventListener(k,fn){(this.events[k]??=[]).push(fn);}
@@ -29,7 +30,7 @@ const root=new Element('body'),overlays=new Element('div');overlays.id='overlays
 const doc={body:root,activeElement:null,addEventListener(){},createElement(tag){return new Element(tag);},createTextNode(t){const el=new Element('text');el.textContent=t;return el;},getElementById(id){return root.querySelector('#'+id);}};
 const c=vm.createContext({document:doc,window:{innerWidth:760,innerHeight:560},console,setTimeout(){},clearTimeout(){},oriel:{data:{},send(){return true;}}});
 const dir=path.resolve(__dirname,'../fabric/src/main/resources/assets/cadeditor/ui/js');
-for(const f of ['data','core','forms','kit','kit2','nbt','xlist','reg','picker','cards1','cards2','cards3','cards5','world','rules','screens'])vm.runInContext(fs.readFileSync(path.join(dir,f+'.js'),'utf8'),c);
+for(const f of ['data','core','forms','kit','kit2','nbt','xlist','reg','picker','cards1','cards2','cards3','cards5','world','rules','spawn','screens'])vm.runInContext(fs.readFileSync(path.join(dir,f+'.js'),'utf8'),c);
 c.uiIcon=()=>new Element('i');c.itemIcon=()=>new Element('i');c.uiClick=()=>{};c.snd=()=>{};c.toast=()=>{};
 let saved,disabled=0,writes=0;
 c.autoPut=(cid,value)=>{saved=JSON.parse(JSON.stringify(value));writes++;};
@@ -177,3 +178,53 @@ console.log('PASS live text colors and known-tag quick items.');
   c.Reg.meta = null; c.Reg.kinds = {};
 }
 console.log('PASS resource-id registries.');
+
+// 刷怪蛋 / 刷怪笼：数据来自 entity_info / item_meta / spawner_info，写回 block_entity_data（id = 方块实体类型）
+{
+  let doc, comps; const setDoc = id => { doc = c.makeDoc({ id }); comps = doc.comps; }; setDoc('minecraft:spawner'); c.Store.doc = () => doc;
+  const writes = [];
+  c.Ctx.doc = () => doc; c.Ctx.get = cid => comps[cid] === undefined ? undefined : JSON.parse(JSON.stringify(comps[cid]));
+  c.Ctx.has = cid => comps[cid] !== undefined; c.Ctx.id = () => doc.id.replace('minecraft:', '');
+  c.Ctx.setSmart = (cid, v) => { comps[cid] = JSON.parse(JSON.stringify(v)); writes.push([cid, comps[cid]]); };
+  c.Ctx.disable = cid => { delete comps[cid]; writes.push([cid, null]); };
+  c.Ctx.reset = cid => { delete comps[cid]; writes.push([cid, 'reset']); };
+  c.Reg.meta = {}; c.Reg.kinds = {};
+  c.Reg.imeta['minecraft:spawner'] = { id: 'minecraft:spawner', block_item: true, block_entity_type: 'minecraft:mob_spawner' };
+  c.Reg.imeta['minecraft:trial_spawner'] = { id: 'minecraft:trial_spawner', block_item: true, block_entity_type: 'minecraft:trial_spawner' };
+  c.Reg.imeta['minecraft:pig_spawn_egg'] = { id: 'minecraft:pig_spawn_egg', spawn_egg_entity: 'minecraft:pig' };
+  c.Reg.defs['minecraft:spawner'] = { id: 'minecraft:spawner', comps: {} };
+  assert.equal(c.kindFromFacts('spawner', {}, c.Reg.imeta['minecraft:spawner']), 'spawner');
+  assert.equal(c.kindFromFacts('trial_spawner', {}, c.Reg.imeta['minecraft:trial_spawner']), 'spawner');
+  assert.equal(c.kindFromFacts('pig_spawn_egg', {}, c.Reg.imeta['minecraft:pig_spawn_egg']), 'spawn');
+  const pg = fs.readFileSync(path.join(dir, 'pages.js'), 'utf8');
+  assert.ok(pg.includes("PAGES.spawner = [{ id: 'spawner'") && pg.includes("PAGES.spawn = [{ id: 'egg'"), '分页里挂了刷怪蛋 / 刷怪笼卡片');
+  c.Reg.kinds['spawner_info'] = { done: true, entries: [
+    { id: 'minecraft:mob_spawner', fields: { Delay: { default: 20 }, MinSpawnDelay: { default: 200 }, MaxSpawnDelay: { default: 800 }, SpawnCount: { default: 4 } } },
+    { id: 'minecraft:trial_spawner', defaults: { normal_config: { spawn_range: 4, total_mobs: 6 }, ominous_config: { spawn_range: 4, total_mobs: 12 } }, fields: {} }] };
+
+  // 普通刷怪笼：显示游戏默认值；改一个数写出 block_entity_data 且 id 是方块实体类型
+  let sp = c.CARDS.spawner();
+  const rows = sp.body.querySelectorAll('.k-xrow');
+  const titles = rows.map(r => r.querySelector('.z').textContent);
+  assert.ok(titles.includes('最短间隔') && titles.includes('每次刷出数量') && titles.includes('当前倒计时'));
+  const spawnCount = rows[titles.indexOf('每次刷出数量')].querySelector('.k-numin');
+  assert.equal(spawnCount.value, '4', '没写的字段显示游戏默认值');
+  spawnCount.value = '9'; spawnCount.fire('input'); spawnCount.fire('change');
+  assert.equal(comps.block_entity_data.id, 'minecraft:mob_spawner'); assert.equal(comps.block_entity_data.SpawnCount, 9);
+  assert.equal(comps.block_entity_data.SpawnPotentials, undefined, '没动随机池就不写 SpawnPotentials');
+  // 试炼刷怪笼
+  setDoc('minecraft:trial_spawner');
+  sp = c.CARDS.spawner();
+  const t2 = sp.body.querySelectorAll('.k-xrow').map(r => r.querySelector('.z').textContent);
+  assert.ok(t2.includes('冷却时间') && t2.filter(x => x === '总数量').length === 2, '普通 / 不祥各一套');
+  const totals = sp.body.querySelectorAll('.k-xrow').filter(r => r.querySelector('.z').textContent === '总数量').map(r => r.querySelector('.k-numin').value);
+  assert.deepEqual(totals, ['6', '12'], '默认值来自游戏的 defaults.normal_config / ominous_config');
+  // 刷怪蛋：没有覆盖时显示默认生物；换成别的生物写 entity_data.id
+  setDoc('minecraft:pig_spawn_egg');
+  c.Reg.einfo['minecraft:pig'] = { id: 'minecraft:pig', attributes: { 'minecraft:max_health': 10, 'minecraft:movement_speed': 0.25 } };
+  const egg = c.CARDS.spawnEgg();
+  assert.equal(c.eggDefaultEntity(), 'minecraft:pig');
+  assert.ok(egg.body.textContent.includes('生命值') && egg.body.textContent.includes('10'), '基础属性来自 entity_info');
+  c.Reg.meta = null; c.Reg.kinds = {}; c.Reg.imeta = {}; c.Reg.einfo = {};
+}
+console.log('PASS spawn egg / spawner / trial spawner cards.');

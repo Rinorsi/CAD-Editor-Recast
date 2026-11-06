@@ -252,7 +252,7 @@ CARDS.repair = function () {
     var r = Ctx.get('repairable'), items = r ? r.items : null, list = [];
     if (typeof items === 'string') list = [items]; else if (Array.isArray(items)) list = items.slice();
     list.forEach(function (it, i) {
-      var isTag = it.charAt(0) === '#', label = isTag ? (TAG_NAMES[it] || it) + '类' : nameOfItem(it);
+      var isTag = it.charAt(0) === '#', label = isTag ? (tagLabel('item', it) || TAG_NAMES[it] || it) + '类' : nameOfItem(it);
       var chip = h('div', { class: 'k-chip on' }, [isTag ? uiIcon('tag', 12) : itemIcon(it, 16), label]);
       var x = h('span', { class: 'x', text: ' ×' }); x.addEventListener('click', function (e) { e.stopPropagation(); list.splice(i, 1); saveRep(list); });
       chip.appendChild(x); rep.appendChild(chip);

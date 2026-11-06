@@ -347,3 +347,12 @@ function emptyReason(q, since, reg) {
   var waited = Date.now() - (since || EMPTY_T0);
   return waited < 4000 ? "正在向游戏读取…" : "游戏没有返回这类数据。常见原因：游戏里的编辑器模组还是旧版本，请更新并重启游戏";
 }
+
+/* 标签的显示名：游戏里的翻译名（tags:<reg> 的 name，缺翻译时等于完整 id → 返回 null） */
+function tagLabel(reg, hashId) {
+  if (!Reg.live() || !hashId) return null;
+  var l = Reg.options('tags:' + reg), f = '#' + Reg.full(String(hashId).replace(/^#/, ''));
+  if (!l) return null;
+  for (var i = 0; i < l.length; i++) if ('#' + Reg.full(l[i].v) === f) return l[i].label && l[i].label !== l[i].v ? l[i].label : null;
+  return null;
+}

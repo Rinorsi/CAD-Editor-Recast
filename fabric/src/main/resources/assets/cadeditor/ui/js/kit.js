@@ -55,6 +55,7 @@ function kindFromFacts(id, dc, meta) {
   if (has('jukebox_playable')) return 'disc';
   if (has('fireworks') || has('firework_explosion')) return 'firework';
   if (has('banner_patterns') && meta.block_item) return 'banner';
+  if (meta.block_entity_type === 'minecraft:mob_spawner' || meta.block_entity_type === 'minecraft:trial_spawner') return 'spawner';
   if (meta.food || meta.consumable) return 'food';
   if (meta.bundle || typeof meta.container_size === 'number' || has('container') || has('bundle_contents')) return 'container';
   return 'generic';
@@ -65,7 +66,7 @@ function liveKind(id) {
   if (!dc || meta === null) return null;
   return kindFromFacts(shortId(id), dc, meta || {});
 }
-function kindOfItem(id) { return liveKind(id) || EDATA.ikind[shortId(id)] || 'generic'; }
+function kindOfItem(id) { var s = shortId(id); return liveKind(id) || (s === 'spawner' || s === 'trial_spawner' ? 'spawner' : EDATA.ikind[s]) || 'generic'; }
 
 /* ---------- 浮层 / 弹出 ---------- */
 var KPop = { el: null, owner: null, onClose: null };

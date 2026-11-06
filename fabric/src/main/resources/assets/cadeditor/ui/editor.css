@@ -1090,6 +1090,7 @@ textarea.bees-nbt { min-height: 64px; width: 100%; }
 /* 属性加成：数值直接在行里改，展开后是紧凑的两行设置 */
 .k-xhead .k-xnum { flex: none; width: 120px; }
 .k-xhead .k-xnum .ed-numin, .k-xhead .k-xnum input { width: 52px; }
+.k-xhead .k-xnum .k-big { display: none; }   /* 行内数字框不显示“≈ 3.6万”之类的换算，会撑出行；需要的换算写在说明里 */
 .k-xbody.x2 { gap: 8px; padding: 8px 10px 10px 10px; }
 .x2r { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .x2l { flex: none; width: 64px; color: var(--tx3); }

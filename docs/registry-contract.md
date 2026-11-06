@@ -92,17 +92,19 @@
 
 ### B9 活动资源 ID
 
+存储语义核实：camera_overlay 使用 Equippable.CODEC 的 Identifier.CODEC；Gui#extractCameraOverlays / lambda$extractCameraOverlays$0 在渲染时拼接 textures/<path>.png。profile 的 ResolvableProfile#FULL_CODEC 合入 PlayerSkin.Patch#MAP_CODEC；texture/cape/elytra 都用 ClientAsset.ResourceTexture.CODEC，序列化 id，构造器派生 texturePath=textures/<id.path>.png。因此这四种导出均移除文件前后缀，保留命名空间与子路径；item_model 语义不变。证据日志见 frontend-wiring 第6节；新增 ResourceIdsTest 与运行探针断言，当前有Java进程，按本次任务限制未编译或运行这些新增断言。
+
 请求以下 name，后台枚举活动 ResourceManager（资源包覆盖去重、保留模组命名空间与子目录），每项 {id,name:id,resource:完整文件ID}。不是读取磁盘任意路径，不下载玩家账户皮肤，不保证每个候选的尺寸/渲染语义都适用。目录无文件正常回空页；读取失败回空页+error。所有资源选择器仍需手动输入，以支持资源包自定义目录与运行时动态纹理。
 
 | name | 文件来源 | id 格式 |
 |---|---|---|
-| camera_overlay | textures/gui/**/*.png（GUI 图片候选超集，无法从文件目录判断是否专门为 camera_overlay 设计） | 完整 ns:textures/gui/...png |
-| profile_texture | textures/entity/player/**/*.png | 完整 ns:textures/entity/player/...png |
-| profile_cape | textures/entity/**/*.png 中 cape/capes 路径段或 cape.png | 完整纹理文件ID；原版静态资源可能为空，玩家在线下载的披风不在此列表 |
-| profile_elytra | textures/entity/**/*.png 中 elytra/wings 路径段或 elytra.png | 完整纹理文件ID；含 equipment/wings 目录 |
+| camera_overlay | textures/misc/**/*.png 与 textures/gui/**/*.png（候选超集，含原版南瓜遮罩） | 去 textures/ 与 .png 的 ns:path，例如 minecraft:misc/pumpkinblur |
+| profile_texture | textures/entity/player/**/*.png | 去 textures/ 与 .png 的 ns:entity/player/... |
+| profile_cape | textures/entity/**/*.png 中 cape/capes 路径段或 cape.png | 去 textures/ 与 .png 的资源纹理ID；原版静态资源可能为空，在线下载披风不在此列表 |
+| profile_elytra | textures/entity/**/*.png 中 elytra/wings 路径段或 elytra.png | 去 textures/ 与 .png 的资源纹理ID；含 equipment/wings 目录 |
 | item_model | items/**/*.json，物品模型定义而非 models/item 网格模型 | 去 items/ 和 .json 的 ns:path，保留子目录；可以没有同名注册物品 |
 
-示例：请求 {name:"item_model"}，条目 {"id":"minecraft:diamond_sword","name":"minecraft:diamond_sword","resource":"minecraft:items/diamond_sword.json"}；请求 {name:"profile_texture"}，条目的 id 与 resource 相同，均保留 textures/ 和 .png，适用于 profile 的直接纹理字段。
+示例：请求 {name:"item_model"}，条目 {"id":"minecraft:diamond_sword","name":"minecraft:diamond_sword","resource":"minecraft:items/diamond_sword.json"}；请求 {name:"profile_texture"}，期望条目 {"id":"minecraft:entity/player/slim/alex","name":"minecraft:entity/player/slim/alex","resource":"minecraft:textures/entity/player/slim/alex.png"}。camera_overlay/profile_texture/profile_cape/profile_elytra 的 id 是可直接写组件的逻辑纹理ID，resource 才保留 textures/ 和 .png。此前合同的完整文件ID写入说明错误，已按26.1.2实际代码更正。
 
 验证入口：tools/registry/supplement-run.ps1（使用已构建基础 jar 与 runtime-classpath 的独立副本、Java25 javac，无需终止用户 runClient/Gradle）。只读实时数据与 Codec，隔离测试世界；窗口创建前禁用聚焦/显示并设置离屏位置，独立探针禁止抓鼠标。回执与完整数据位于本工程 daily/<日期>/registry-supplement/run/registry-supplement-{verification,data}.json；临时目录不是运行时依赖。当前验证结果以该次回执为准，不把编译通过称为实机通过。
 

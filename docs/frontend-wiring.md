@@ -190,16 +190,20 @@ apply 还受 Oriel 页面消息默认8192字符、模组网络32767字符限制�
 | name | 来源 | 写入值 |
 |---|---|---|
 | item_model | items/**/*.json 物品模型**定义** | 去 items/ 与 .json 的 ns:path；不是 models/item 网格名 |
-| camera_overlay | textures/gui/**/*.png | 完整 ns:textures/gui/...png；这是候选超集，不能保证适合作遮罩 |
-| profile_texture | textures/entity/player/**/*.png | 完整纹理文件 ID |
-| profile_cape | textures/entity 下 cape/capes 路径或 cape.png | 完整文件 ID；静态资源可正常为空 |
-| profile_elytra | textures/entity 下 elytra/wings 路径或 elytra.png | 完整文件 ID |
+| camera_overlay | textures/misc/**/*.png + textures/gui/**/*.png | 去 textures/ 和 .png 的 ns:path，如 minecraft:misc/pumpkinblur；候选超集，不保证适合作遮罩 |
+| profile_texture | textures/entity/player/**/*.png | 去 textures/ 和 .png 的资源纹理ID，如 minecraft:entity/player/slim/alex |
+| profile_cape | textures/entity 下 cape/capes 路径或 cape.png | 去 textures/ 和 .png 的资源纹理ID；静态资源可正常为空 |
+| profile_elytra | textures/entity 下 elytra/wings 路径或 elytra.png | 去 textures/ 和 .png 的资源纹理ID |
 
-它们不下载玩家账户皮肤/披风，不承诺列出动态纹理；资源为空是完整空页，不用 unavailable。普通远程服仍用当前客户端活动资源包（不代表服务器磁盘资源）。读取失败是 error。profile 的 texture/cape/elytra 直接纹理字段选对应完整文件 ID；不要去前缀或扩展名。
+它们不下载玩家账户皮肤/披风，不承诺列出动态纹理；资源为空是完整空页，不用 unavailable。普通远程服仍用当前客户端活动资源包（不代表服务器磁盘资源）。读取失败是 error。profile 的 texture/cape/elytra 字段必须写去掉 textures/ 和 .png 的资源纹理 ID；resource 字段才是完整文件 ID。camera_overlay 同样写逻辑纹理 ID。旧版文档对这四种值的说明错误，禁止继续将旧回执中的完整文件 ID 直接写进组件。
+
+以下为按26.1.2字节码核实转换规则后的**期望条目**，不是新一轮运行回执（当前有Java进程，遵照本次任务约束未运行测试）：
 
 ```json
-{"item_model":{"id":"minecraft:diamond_sword","name":"minecraft:diamond_sword","resource":"minecraft:items/diamond_sword.json"},"camera_overlay":{"id":"fabric:textures/gui/creative_buttons.png","name":"fabric:textures/gui/creative_buttons.png","resource":"fabric:textures/gui/creative_buttons.png"},"profile_texture":{"id":"minecraft:textures/entity/player/slim/alex.png","name":"minecraft:textures/entity/player/slim/alex.png","resource":"minecraft:textures/entity/player/slim/alex.png"},"profile_cape":[],"profile_elytra":{"id":"minecraft:textures/entity/equipment/wings/elytra.png","name":"minecraft:textures/entity/equipment/wings/elytra.png","resource":"minecraft:textures/entity/equipment/wings/elytra.png"}}
+{"camera_overlay":{"id":"minecraft:misc/pumpkinblur","name":"minecraft:misc/pumpkinblur","resource":"minecraft:textures/misc/pumpkinblur.png"},"profile_texture":{"id":"minecraft:entity/player/slim/alex","name":"minecraft:entity/player/slim/alex","resource":"minecraft:textures/entity/player/slim/alex.png"},"profile_elytra":{"id":"minecraft:entity/equipment/wings/elytra","name":"minecraft:entity/equipment/wings/elytra","resource":"minecraft:textures/entity/equipment/wings/elytra.png"}}
 ```
+
+代码证据（26.1.2，已解析游戏jar）：Equippable.CODEC 的 camera_overlay 字段为 Identifier.CODEC.optionalFieldOf；Gui#extractCameraOverlays 对该ID调用 withPath，其 lambda$extractCameraOverlays$0 拼接 textures/<path>.png 后交给 extractTextureOverlay。Items 的南瓜构造器 lambda$static$16 实际设置 misc/pumpkinblur。profile 经 ResolvableProfile#FULL_CODEC → PlayerSkin.Patch#MAP_CODEC，texture/cape/elytra 都是 ClientAsset.ResourceTexture.CODEC；其 Codec 序列化 id，单参数构造器生成 texturePath=textures/<id.path>.png。不能把texturePath当成序列化id。渲染端 AvatarRenderer#getTextureLocation、CapeLayer#submit、WingsLayer#getPlayerElytraTexture 均读取 ClientAsset.Texture.texturePath()，详见对应字节码日志。字节码与常量完整证据：logs/backend-g/texture-semantics-bytecode.log、texture-semantics-constants.log、profile-render-bytecode.log、vanilla-item-default-bytecode.log。
 
 ## 7. 实体信息、基础属性、装备槽组
 
@@ -337,7 +341,7 @@ enum 请求统一 {name:'enum:<下列名>'}，回复 registry.enum:<名>；条�
 
 ## 12. 示例证据与验证边界
 
-本文 JSON 示例全部由真实回执摘取，下面明确区分客户端消息与无窗口 Java Codec 测试；不把模拟信封写成真实网络收包。标签成员与计数会随数据包变化，示例不能当常量表：
+除第6节明确标注的修正后期望条目外，本文 JSON 示例全部由真实回执摘取，下面明确区分客户端消息与无窗口 Java Codec 测试；不把模拟信封写成真实网络收包。标签成员与计数会随数据包变化，示例不能当常量表：
 
 - S：daily/2026-11-07/registry-supplement/run/registry-supplement-data.json：独立离屏客户端经 registry 通道收到并合页的条目；本轮重新验证并补获标签/枚举/复数别名回执；本文摘变种、纹饰、资源、方块属性与标签成员。
 - E：run/entity-data-probe/entity-data-verification.json：此前离屏实体探针157类型的真实条目和刷怪器数据；本文摘猫实体。

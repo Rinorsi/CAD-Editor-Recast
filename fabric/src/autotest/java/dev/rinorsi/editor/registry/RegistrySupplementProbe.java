@@ -71,6 +71,14 @@ public final class RegistrySupplementProbe implements ClientModInitializer {
                 if (name.equals("enum:use_animation")) for (var value : rows)
                     check(value.getAsJsonObject().has("symbol"), "enum_symbol_" + value.getAsJsonObject().get("id").getAsString());
                 if (!name.equals("profile_cape")) check(!rows.isEmpty(), "wire_" + name + "_nonempty");
+                if (name.equals("camera_overlay") || name.equals("profile_texture") || name.equals("profile_cape") || name.equals("profile_elytra")) {
+                    for (var element : rows) {
+                        var row = element.getAsJsonObject();
+                        var texture = net.minecraft.core.ClientAsset.ResourceTexture.CODEC.parse(JsonOps.INSTANCE, row.get("id")).getOrThrow();
+                        check(texture.texturePath().toString().equals(row.get("resource").getAsString()), "texture_asset_resolves_file_" + name + "_" + row.get("id").getAsString());
+                    }
+                    if (name.equals("camera_overlay")) check(find(rows, "minecraft:misc/pumpkinblur").get("resource").getAsString().equals("minecraft:textures/misc/pumpkinblur.png"), "camera_overlay_includes_vanilla_pumpkin");
+                }
                 if (name.equals("block_properties")) {
                     var log = find(rows, "minecraft:oak_log").getAsJsonObject("properties").getAsJsonObject("axis");
                     check(log.getAsJsonArray("values").size() == 3 && log.get("default").getAsString().equals("y"), "block_property_values_default");
