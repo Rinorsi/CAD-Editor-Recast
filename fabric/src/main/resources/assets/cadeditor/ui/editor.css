@@ -1427,3 +1427,10 @@ textarea.world-snbt { min-height: 56px; }
 .sub-block > .fld.sub { padding-right: 8px; }
 .sub-block > .fld.sub > .fl { max-width: none; flex: 1 1 auto; }
 .sub-block > .fld.sub > .fc { flex: none; margin-left: auto; }
+
+/* 游戏校验结果行（数据类窗口底部） */
+.vd-badge { display: flex; align-items: center; gap: 6px; min-height: 22px; margin-top: 6px; color: var(--tx3); -mc-tint: var(--tx3); }
+.vd-badge.none { display: none; }
+.vd-badge.ok { color: var(--ok, #6cc349); -mc-tint: var(--ok, #6cc349); }
+.vd-badge.bad { color: var(--bad, #ff5a6a); -mc-tint: var(--bad, #ff5a6a); align-items: flex-start; line-height: 1.5; }
+.vd-badge.bad span { overflow-wrap: anywhere; }

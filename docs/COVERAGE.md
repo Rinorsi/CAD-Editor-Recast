@@ -1,117 +1,182 @@
-# 覆盖清单：哪些做了、哪些没做、哪些数据还是手写的
+# 1.0 发布门槛清单
 
-生成于 2026-11-07，数据来自对当前代码的实际统计（`tools` 之外的一次性脚本读取 `data.js` / `cards*.js` / `pages.js`），**不是**旧的 `STATUS-data.md`（那份写于 2026-11-06 20:20，之后改动很多，已过期，需要让审计 worker 重跑）。
+## 发布规则与勾选定义
 
-图例：`*` = 该组件的结构里含原始 NBT / SNBT 字段（只能手写 SNBT，没有可视化编辑）。
+版本从 **0.99.1** 起补全功能；以下 **107个组件及全部非组件功能项**全部勾完，且没有未完成、未核实的阻塞项，才能发布 **1.0**。未勾选表示未达发布门槛，不等于功能完全不存在。
 
-## 1. 107 个物品数据组件的界面状态
+- 每个组件勾选时记录三选一结论：**专用界面 / 通用表单足够 / 明确不支持**，附验收人、证据链接及适用范围。当前界面形态只描述源码入口，不代表验收结论。
+- 前两种结论须覆盖增删改、范围/默认值、取消、撤销、保存重开、未知字段保留及游戏行为；通用表单须由用户确认足够，不能凭有输入框勾选。
+- “明确不支持”须写明原因、影响、原值保留方式及替代路径，经用户明确批准该发布范围后才能勾选；未实现或仅SNBT不能自动归入此项。未批准的缺功能继续阻塞1.0。
+- 候选、类型、范围和默认值来自**游戏实时注册表 / 官方枚举 / 真实Codec**；资源候选来自活动ResourceManager。手写表不能作为在线权威来源，纯图标/中文标签可保留。每个选择器同时支持手动输入，空目录、未知ID不删除原值。
+- 勾选须有前端消费、宿主校验及真实客户端回执。接口存在、源码接线、自动测试通过只证明对应层，不能互相替代。
 
-### 有专用界面（52 个）
-- **专用卡片 39**：custom_name、lore、rarity、enchantment_glint_override、item_model、tooltip_display、dyed_color、damage、max_damage、max_stack_size、repair_cost、repairable、damage_resistant、unbreakable、attack_range、attribute_modifiers、swing_animation、tool、weapon、enchantable、enchantments、stored_enchantments、consumable、death_protection、food、suspicious_stew_effects、use_cooldown、use_effects、use_remainder*、equippable、glider、trim、bundle_contents*、container*、writable_book_content、written_book_content、firework_explosion、fireworks、potion_contents*
-- **专用表单 13**（点开独立窗口或卡片头控件）：custom_model_data、item_name、tooltip_style、break_sound、note_block_sound、instrument、jukebox_playable、profile、lodestone_tracker、map_decorations、bees*、can_break*、can_place_on*
-- **说明书表单 3**（按字段排好分段、中文名、单位）：blocks_attacks、kinetic_weapon、piercing_weapon
+## 107个持久组件
 
-### 只有“按 Codec 自动生成”的通用表单（52 个，能编辑、能写回，但没有定制界面）
-- **含原始 NBT，只能手写 SNBT（6）**：block_entity_data*、bucket_entity_data*、charged_projectiles*、custom_data*、entity_data*、lock*
-- **简单字段（46）**：damage_type、minimum_attack_charge、intangible_projectile、ominous_bottle_amplifier、banner_patterns、base_color、provides_banner_patterns、provides_trim_material、block_state、debug_stick_state、container_loot、pot_decorations、map_color、map_id、recipes、dye、potion_duration_scale，以及 29 个生物变种（cat/variant、wolf/variant、sheep/color、tropical_fish/*、villager/variant 等）。这些大多是“一个注册表选择 / 枚举 / 数字”，已经走统一控件（头部控件、色块、选择…），可以认为基本可用。
-- **其中真正“缺东西”的**：block_state / debug_stick_state（需要方块的属性名表，宿主还没导出）、container_loot（战利品表没有来源，只能手输）、recipes、charged_projectiles（弩里的箭，只能 SNBT）、lock（锁，只能 SNBT）。
+目标固定为MC **26.1.2**。ID和名称以 [data.js](../fabric/src/main/resources/assets/cadeditor/ui/js/data.js) 为底稿，变种名译成中文；形态对照 [审计脚本](../tools/audit-backend-status.cjs) 输出：CARDS关联为专用卡片，AUTO_BODY/SPEC_FORMS为专用表单，schema及自动头部控件为通用表单。含局部SNBT不等于整项仅SNBT；核不准的写未核实。
 
-## 2. 特殊物品逐类核对
+来源列“部分”只证明部分候选已接实时来源，不证明整个组件权威；“否”有离线枚举证据；“未核实”缺少逐字段来源确认。全部组件仍须与实际持久组件全集、Codec核对；静态107项不能作为模组组件白名单。
 
-| 物品类 | 现状 | 缺什么 |
-|---|---|---|
-| 药水 / 喷溅 / 滞留 / 药箭（4 个，kind=potion） | **做了**：药水分页（基础药水、液体颜色、自定义效果、饮用行为、剩余物、堆叠） | potion_duration_scale 是通用表单；不死图腾以外的“药水类”没有 |
-| 不祥之瓶 | 归在“食物”类，有食用页 | ominous_bottle_amplifier 只是通用数字框 |
-| **刷怪蛋（87 个，kind=spawn）** | **没做专用界面**：用的是通用分页，entity_data 是“实体类型选择 + SNBT” | 没有刷怪蛋页：看不到可视化的实体数据（名称、血量、装备、属性、变种）；生物变种组件只有零散的选择框 |
-| **刷怪笼 / 试炼刷怪器** | **没做**：被分到“物品/方块”通用类，只能靠 block_entity_data 手写 SNBT | 整个刷怪笼编辑（刷什么、延迟、范围、数量、条件）都没有 |
-| 箱子 / 木桶 / 潜影盒 / 漏斗 / 发射器 等（61 个，kind=container） | **做了**：“里面的物品”格子（点格子选物品、右键复制 / 清空） | 容器里物品自带的组件不能编辑；container_loot 战利品表没有候选；lock 只能 SNBT；潜影盒颜色用生物变种之外的组合未处理 |
-| 收纳袋 | 做了（bundle_contents 卡片） | 同上，袋里物品的组件不能编辑 |
-| 陶罐 | 归在容器类 | pot_decorations 是通用列表（现在支持多选添加） |
-| 旗帜 / 盾牌 | **做了**：新增“旗帜图案”分页（图案、颜色、提供图案） | 刚做的，预览里没渲染确认 |
-| 书与笔 / 成书 | 做了（页面内容、作者、标题） | 文本组件复杂样式只到基础层 |
-| 附魔书 | 做了 | — |
-| 烟花火箭 / 烟火之星 | 做了 | — |
-| 谜之炖菜 | 做了（效果列表 + 多选添加） | — |
-| 玩家头颅 | 做了（profile 独立窗口） | 物品被归在“盔甲”类，这个分类不对 |
-| 指南针（磁石指南针）/ 地图 | lodestone_tracker、map_decorations 做了窗口 | map_id / map_color 是通用数字；指南针/地图被分到“物品/方块”通用类 |
-| 唱片 / 山羊角 | jukebox_playable、instrument 做了头部选择 | 山羊角在“物品/方块”类里；唱片分类用的是通用页 |
-| 桶（含水桶里的鱼） | **没做**：bucket_entity_data 只能 SNBT | 鱼种变种、生物数据 |
-| 弩 | charged_projectiles 只能 SNBT | 装填的箭 / 烟花的可视化编辑 |
-| 命令方块、结构方块等 | custom_data* / block_entity_data* 只能 SNBT | 无 |
-| 盔甲架、画（painting）、物品展示框 | 通用类；painting/variant 是选择框 | 无专用页 |
-| 工具 / 武器 / 盔甲 / 食物 | 做了（各自分页） | tool 规则、attribute_modifiers 显示方式等窗口内部布局仍是旧的 |
+| 组件 id | 中文名 | 当前界面形态 | 数据来源是否权威 | 是否已验收 |
+|---|---|---|---|---|
+| `minecraft:custom_model_data` | 自定义模型数据 | 专用表单 | 未核实：约束/默认值 | [ ] 未核实 |
+| `minecraft:custom_name` | 自定义名称 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:dyed_color` | 染色 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:enchantment_glint_override` | 附魔光效 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:item_model` | 物品模型 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:item_name` | 基础名称 | 专用表单 | 未核实：约束/默认值 | [ ] 未核实 |
+| `minecraft:lore` | 说明文字 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:rarity` | 稀有度 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:tooltip_display` | 提示框显示 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:tooltip_style` | 提示框样式 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:break_sound` | 损坏音效 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:damage` | 已损耗耐久 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:damage_resistant` | 免疫伤害 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:max_damage` | 最大耐久 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:max_stack_size` | 最大堆叠 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:repair_cost` | 铁砧惩罚 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:repairable` | 可修复材料 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:unbreakable` | 不可破坏 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:attack_range` | 攻击范围 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:attribute_modifiers` | 属性修饰器 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:blocks_attacks` | 格挡 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:damage_type` | 攻击伤害类型 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:kinetic_weapon` | 动能武器 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:minimum_attack_charge` | 最小攻击充能 | 通用表单 | 未核实：约束/默认值 | [ ] 未核实 |
+| `minecraft:piercing_weapon` | 穿刺武器 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:swing_animation` | 挥动动画 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:tool` | 工具 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:weapon` | 武器 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:enchantable` | 可附魔性 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:enchantments` | 附魔 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:stored_enchantments` | 存储的附魔 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:consumable` | 消耗行为 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:death_protection` | 死亡保护 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:food` | 食物 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:intangible_projectile` | 不可拾取投射物 | 通用表单 | 未核实：约束/默认值 | [ ] 未核实 |
+| `minecraft:ominous_bottle_amplifier` | 不祥之瓶强度 | 通用表单 | 未核实：约束/默认值 | [ ] 未核实 |
+| `minecraft:suspicious_stew_effects` | 谜之炖菜效果 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:use_cooldown` | 使用冷却 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:use_effects` | 使用时效果 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:use_remainder` | 使用后剩余 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:banner_patterns` | 旗帜图案 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:base_color` | 盾牌底色 | 通用表单 | 部分：实时染料枚举 | [ ] 未核实 |
+| `minecraft:equippable` | 可装备 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:glider` | 滑翔 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:provides_banner_patterns` | 提供旗帜图案 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:provides_trim_material` | 提供纹饰材料 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:trim` | 盔甲纹饰 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:bees` | 蜜蜂 | 专用表单 | 未核实：约束/默认值 | [ ] 未核实 |
+| `minecraft:block_entity_data` | 方块实体数据 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:block_state` | 方块状态 | 专用表单 | 未核实：约束/默认值 | [ ] 未核实 |
+| `minecraft:bucket_entity_data` | 桶内实体数据 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:bundle_contents` | 收纳袋内容 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:can_break` | 可破坏方块 | 专用表单 | 未核实：约束/默认值 | [ ] 未核实 |
+| `minecraft:can_place_on` | 可放置于 | 专用表单 | 未核实：约束/默认值 | [ ] 未核实 |
+| `minecraft:charged_projectiles` | 已装填弹药 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:container` | 容器内容 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:container_loot` | 容器战利品 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:custom_data` | 自定义数据 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:debug_stick_state` | 调试棒状态 | 专用表单 | 未核实：约束/默认值 | [ ] 未核实 |
+| `minecraft:entity_data` | 实体数据 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:lock` | 容器锁 | 专用表单 | 未核实：约束/默认值 | [ ] 未核实 |
+| `minecraft:pot_decorations` | 陶罐装饰 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:profile` | 头颅档案 | 专用表单 | 未核实：约束/默认值 | [ ] 未核实 |
+| `minecraft:lodestone_tracker` | 磁石追踪 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:map_color` | 地图颜色 | 专用表单 | 未核实：约束/默认值 | [ ] 未核实 |
+| `minecraft:map_decorations` | 地图标记 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:map_id` | 地图编号 | 通用表单 | 未核实：约束/默认值 | [ ] 未核实 |
+| `minecraft:recipes` | 解锁配方 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:writable_book_content` | 书与笔内容 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:written_book_content` | 成书内容 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:dye` | 染料 | 通用表单 | 部分：实时染料枚举 | [ ] 未核实 |
+| `minecraft:firework_explosion` | 烟花爆炸 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:fireworks` | 烟花 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:instrument` | 乐器 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:jukebox_playable` | 唱片 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:note_block_sound` | 音符盒音效 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:potion_contents` | 药水内容 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:potion_duration_scale` | 药水时长倍率 | 通用表单 | 未核实：约束/默认值 | [ ] 未核实 |
+| `minecraft:axolotl/variant` | 美西螈变种 | 通用表单 | 否：离线枚举 | [ ] 未核实 |
+| `minecraft:cat/collar` | 猫项圈颜色 | 通用表单 | 部分：实时染料枚举 | [ ] 未核实 |
+| `minecraft:cat/sound_variant` | 猫声音变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:cat/variant` | 猫变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:chicken/sound_variant` | 鸡声音变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:chicken/variant` | 鸡变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:cow/sound_variant` | 牛声音变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:cow/variant` | 牛变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:fox/variant` | 狐狸变种 | 通用表单 | 否：离线枚举 | [ ] 未核实 |
+| `minecraft:frog/variant` | 青蛙变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:horse/variant` | 马变种 | 通用表单 | 否：离线枚举 | [ ] 未核实 |
+| `minecraft:llama/variant` | 羊驼变种 | 通用表单 | 否：离线枚举 | [ ] 未核实 |
+| `minecraft:mooshroom/variant` | 哞菇变种 | 通用表单 | 否：离线枚举 | [ ] 未核实 |
+| `minecraft:painting/variant` | 画变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:parrot/variant` | 鹦鹉变种 | 通用表单 | 否：离线枚举 | [ ] 未核实 |
+| `minecraft:pig/sound_variant` | 猪声音变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:pig/variant` | 猪变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:rabbit/variant` | 兔子变种 | 通用表单 | 否：离线枚举 | [ ] 未核实 |
+| `minecraft:salmon/size` | 鲑鱼体型 | 通用表单 | 否：离线枚举 | [ ] 未核实 |
+| `minecraft:sheep/color` | 绵羊颜色 | 通用表单 | 部分：实时染料枚举 | [ ] 未核实 |
+| `minecraft:shulker/color` | 潜影贝颜色 | 通用表单 | 部分：实时染料枚举 | [ ] 未核实 |
+| `minecraft:tropical_fish/base_color` | 热带鱼底色 | 通用表单 | 部分：实时染料枚举 | [ ] 未核实 |
+| `minecraft:tropical_fish/pattern` | 热带鱼图案 | 通用表单 | 否：离线枚举 | [ ] 未核实 |
+| `minecraft:tropical_fish/pattern_color` | 热带鱼图案颜色 | 通用表单 | 部分：实时染料枚举 | [ ] 未核实 |
+| `minecraft:villager/variant` | 村民变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:wolf/collar` | 狼项圈颜色 | 通用表单 | 部分：实时染料枚举 | [ ] 未核实 |
+| `minecraft:wolf/sound_variant` | 狼声音变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:wolf/variant` | 狼变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:zombie_nautilus/variant` | 僵尸鹦鹉螺变种 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
 
-**分类本身也是手写的**：`EDATA.ikind`（1506 个物品→类别）是静态烘焙表，**模组物品一律归“物品/方块”通用类**；刷怪笼、指南针、地图、山羊角、桶、盔甲架等原版物品也因为表里没写而落到通用类。应该改成按物品的实时默认组件推导类别（宿主 `item_defaults` 已能提供）。
+## 非组件功能
 
-## 3. 仍然手写的数据（尚未换成权威来源）
+每项满足完成标准并附证据后勾选。“未完成”有已知缺口，“未核实”尚无足够端到端证据。性能数值是发布目标，不是已测成绩；预算未签定前继续阻塞发布。
 
-### 3.1 整套静态烘焙（`data.js` 的 `EDATA`）
-| 内容 | 数量 | 说明 |
-|---|---:|---|
-| 组件结构 `comps`（字段、范围、默认值、中文说明） | 107 | 来自研究 worker 对 26.1.2 的导出，不是实时 Codec；**模组新增组件 / 字段不会出现**（只能作为原始数据保留） |
-| 物品清单 / 名称 / 类别 / 图标映射 | 1506 | 有宿主时优先用实时注册表，离线才用；类别 `ikind` 始终用静态表 |
-| 附魔 / 属性 / 状态效果 / 语言表 | 43 / 35 / 40 / 6 | 有宿主时用注册表，静态表做回退与图标、描述 |
-| 方块 `iblk`、`pt`（347） | 922 / 347 | 方块清单、药水类相关表 |
-
-### 3.2 仍然手写、应当改成权威来源（来自状态审计，代码里仍存在；审计由 tools/audit-backend-status.cjs 生成，报告存放在工作区）
-- `HIDE_PARTS`（提示框隐藏项，8 个）→ 应读 data_component_type 注册表
-- `TAG_NAMES`（15 个标签别名）→ 应读实时标签与语言键
-- `RESIST` 快捷项（5 个）、`TOOL_GROUPS`（10 个）→ 快捷项应按实际存在的标签过滤
-- `MELEE_SLOTS`、攻击基础值（1 / 4）→ 应读玩家 / 目标实体的实际基础属性
-- `AMT_LIMIT` 残留的 ±2048 限幅（旧表单里还有）
-- 旧 `wEnchants` 专用表单（forms.js）仍 free:false
-- 物品类别 `ikind`（见上）
-
-### 3.3 手写但可以保留（纯 UI 元数据：图标、中文标签、快捷预设）
-`TIER_TOOLS`、`ENCH_ICON`、`ATTR_ICON` / `ATTR_VIS` / `ATTR_SLOT_ICON`、`SPR`、`COMP_ITEM`（组件→图标物品）、`LABEL_ICON`、`REG_HINT`、`EFFECT_CAT_ZH`、`SOUND_GROUP_ZH`、`SLOT_ZH` / `SLOTS`。
-
-### 3.4 手写候选，但现在有实时来源、静态表只当离线回退
-`POTION_IDS` / `POTION_VARIANTS`、`TRIM_MATS`、`EQ_ASSETS`、`DYE_RGB`（有 enum:dye_color 时用实时）、`MC_COLORS`（文本颜色，有 enum:text_color）。
-
-### 3.5 手写、但对应的权威来源还没做 / 没核对
-- `ANIMS`（使用动画 12 种）、`EQ_SLOTS`（装备槽 8 种）、`FW_SHAPES`（烟花形状 5 种）、`CE_TYPES`（消耗效果类型 5 种）：契约里有 `enum:use_animation / equipment_slot / firework_shape / consume_effect_type`，界面是否已同步这些枚举需要核对（`reg.js` 有 `ENUM_TABLES` 管线，但这几处的接线我这次没有逐个验证）。
-- 各枚举控件（<=4 项分段、>4 项下拉）**没有“手动输入”入口**（违反铁律的一部分）。
-
-## 4. 下一步建议
-1. 重跑 `tools/audit-backend-status.cjs` 更新状态审计报告（它们已过期），并加上第 2 节的特殊物品矩阵。
-2. 前端先补的专用界面（按用户可能最常用排序）：刷怪蛋 / 刷怪笼（含后端导出实体和刷怪数据）→ 物品分类改由实时默认组件推导 → 桶 / 弩 / 容器内物品的组件编辑。
-3. 把 3.2 里“必须改”的几项和 3.5 的枚举手动输入补完。
-
-## 5. 需要后端（宿主 Java）做的事
-
-分类：**新增导出**（宿主现在没有）/ **需核对**（合同里说“任意按需注册表同结构”，但没确认过每个名字都能出数据）/ **性能与行为**。已确认宿主已有：items、enchantments、mob_effects、attributes、sounds、potions、instruments、jukebox_songs、banner_patterns、trim_materials、trim_patterns、painting_variants、damage_types、entity_types、data_component_types、blocks、`tags:` / `tag:`、`equipment_asset`、`enum:*`（9 个）、`item_defaults(_one)`、`tooltip_style`、`item_model_hints`、草稿通道、log 通道。
-
-### P0 · 不做就没法做的功能
-| # | 任务 | 为什么 | 导出内容建议 |
+| 编号 | 功能 | 怎样算完成 | 是否已验收 |
 |---|---|---|---|
-| B1 | **实体信息**（刷怪蛋 / 实体数据） | 刷怪蛋、`entity_data` 现在只能 SNBT | `entity_info:<实体类型>`：默认属性值（最大生命、移速、攻击…）、可用变种注册表名、是否有装备槽、对应刷怪蛋物品、默认 NBT（客户端创建一个临时实体 `saveWithoutId()` 得到 SNBT 模板，不加入世界） |
-| B2 | **刷怪笼 / 试炼刷怪器数据** | 整个刷怪笼编辑没有 | 刷怪笼 SpawnData 的官方 Codec 字段与默认值（SpawnData、SpawnPotentials、延迟、范围、数量、玩家检测范围）；试炼刷怪器的配置字段与默认值；只读导出 + 写回时用 Codec 校验 |
-| B3 | **Codec 校验接口** | 所有只能手写 SNBT 的字段（block_entity_data、entity_data、bucket_entity_data、charged_projectiles、custom_data、lock）需要“这段写得对不对” | `validate_component(组件id, snbt|json)` → `{ok, error, normalized}`，直接用该组件的真实 Codec 解析；模组组件同样可用 |
-| B4 | **物品分类 / 元信息** | 现在是静态表 `ikind`，模组物品全归通用 | `item_meta`：每个物品的 `block_item`、`block_entity_type`、`spawn_egg_entity`、`armor_slot`、`tool/weapon/food/consumable` 标记、`container_size`（箱子 27、漏斗 5、潜影盒 27…，替代手写 SLOT_COUNT）、`bundle` 容量；也可以让前端用已有的 `item_defaults` 自己推导，需要后端确认哪些信息 `item_defaults` 里拿不到 |
+| F01 | 刷怪蛋页 | 按对应实体展示名称、属性、装备与变种；读取entity_info/实时注册表；未知字段保留；保存重开及实际生成行为符合修改。 | [ ] 未核实 |
+| F02 | 刷怪笼 / 试炼刷怪器页 | 在物品编辑范围内编辑实体、权重、延迟、数量、范围、条件及试炼配置；来自官方Codec/宿主导出；写回后在隔离世界放置核对实际行为。 | [ ] 未核实 |
+| F03 | 收纳袋内物品组件编辑 | 袋内每件物品可进入组件编辑、撤销及取消；递归保存不丢未知组件/类型；容量按游戏规则计算，覆盖嵌套袋及蜂巢特殊重量。 | [ ] 未核实 |
+| F04 | 容器内物品组件编辑 | 任意槽内物品可编辑组件；槽号、数量、嵌套内容及未改组件保留；取消不改原物品；背包与服务端容器路径均验证。 | [ ] 未核实 |
+| F05 | 桥梁类型保真提交（component_formats） | 前端按组件发送component_formats:snbt并走宿主保真通道；byte/short/int/long/float/double、三种类型数组、嵌套未知字段往返不变；完整long种子可保存。 | [ ] 未核实 |
+| F06 | validate_component接入 | 通用/原始编辑提交前调用真实组件Codec；校验回执关联当前编辑版本；字段错误可见、失败保留草稿；规范化不吞未知值或改变类型。 | [ ] 未核实 |
+| F07 | 拼音搜索预算 | 真实Rhino默认预算下，对完整物品/音效目录逐字输入拼音、首字母及汉字混输；无预算错误、停页；热搜索p95≤20ms，或分帧单段≤8ms且取消过期搜索。 | [ ] 未核实 |
+| F08 | 静态分类ikind | 由实时item_meta/item_defaults推导类别；原版与模组刷怪蛋、装备、容器等进入正确页；静态表不作为在线分类白名单。 | [ ] 未完成 |
+| F09 | 静态格数SLOT_COUNT | 格数来自container_size/实际容器信息；不按名称猜测或兜底27；模组容器通过验证，未知容量明示限制。 | [ ] 未完成 |
+| F10 | MC_COLORS / CODE_COLOR | 文字颜色及格式来自官方枚举；富文本、旧表单、颜色控件全部接入；语言/资源切换刷新，离线表不限制在线选项。 | [ ] 未完成 |
+| F11 | HIDE_PARTS | 隐藏项来自当前data_component_type注册表，含模组组件、手动输入与未知项保留，不局限固定8项。 | [ ] 未完成 |
+| F12 | TAG_NAMES | 标签候选来自实时目录及语言键；别名只做展示，不隐藏真实标签；无翻译显示ID；空标签、模组标签可用。 | [ ] 未核实 |
+| F13 | RESIST | 快捷标签按实时damage_type标签存在性过滤；完整候选与手输可达，不凭固定表宣称标签存在。 | [ ] 未完成 |
+| F14 | TOOL_GROUPS | 工具快捷组按实时方块标签过滤；规则成员来自注册表/标签；模组标签、手输及重载通过验证。 | [ ] 未完成 |
+| F15 | MELEE_SLOTS | 槽位及槽位组匹配来自EquipmentSlotGroup/宿主导出；主手、副手及扩展按实际规则显示和计算。 | [ ] 未完成 |
+| F16 | 攻击基础值 / AMT_LIMIT | 读取玩家或目标实体实际基础属性，不写死1/4；范围来自实际属性/Codec，旧入口不再任意限幅±2048；结果与游戏一致。 | [ ] 未完成 |
+| F17 | 枚举控件手动输入 | 每个选择器含分段、色板、通用schema及旧附魔/属性入口均可手输；候选来自实时枚举/注册表；刷新保留未知输入，非法值由Codec解释。 | [ ] 未完成 |
+| F18 | 29个生物变种组件 | 按registry-contract逐项核对14个注册表组件与15个官方枚举组件；无离线枚举白名单；序列化字符串/颜色正确，模组候选与实体行为通过验收。 | [ ] 未完成 |
+| F19 | 纹饰 | 候选及ingredients/template_items图标关联来自实时组件/真实配方，不拼模板ID；远服unavailable明示并可手输；数据包/模组纹饰可保存。 | [ ] 未核实 |
+| F20 | 资源ID | item_model、tooltip_style、equipment_asset、camera_overlay、profile皮肤/披风/鞘翅读取活动资源包目录；保留命名空间/子目录；验证空目录、不可用、手输与重载。 | [ ] 未核实 |
+| F21 | 方块属性 | block_state/debug_stick_state接block_properties真实属性名、值及默认值；模组方块和非法组合通过验证，不再只能手输猜字段。 | [ ] 未完成 |
+| F22 | 战利品 / 配方 / 维度 / 地图标记 | 使用合同中的真实来源；集成服/远服分别测试；未同步明确unavailable，不伪报完整空列表；手输值与long种子保真。 | [ ] 未核实 |
+| F23 | 模组组件与实时结构 | 不以离线107项限制组件；实时持久组件可发现，结构/范围由Codec确认；不能结构化的走SNBT+validate_component，不能编辑的明示限制且保留原值。 | [ ] 未完成 |
+| F24 | 仿真界面验收 | ui-contract、ui-world、ui-compact等适用测试通过；真实Oriel渲染覆盖全部组件入口、窗口、分页和错误态；无document.error；附截图/日志，不能代替实机。 | [ ] 未核实 |
+| F25 | 真实客户端与世界验收 | 按TESTING逐项修改107组件→成功回执→重开→/data核对；补刷怪与嵌套内容；单人、联机、权限拒绝、槽位变化、取消均有独立回执。 | [ ] 未核实 |
+| F26 | 首开读取与性能预算 | 固定JDK、资源、视口和数据集，分别记录采集/分页/patch/首次可交互的冷暖开p50/p95；首开读取及可交互数值上限由维护者签定并达标；采集tick峰值<5ms、单patch≤10ms、整批刷新≤1次；开屏不请求默认组件全集。 | [ ] 未核实 |
+| F27 | 亮色主题审查 | 全部页面、选择窗、详细窗口、应用确认及错误/禁用/悬停态可读；窄窗无截断；主题持久化、深浅切换及重开通过用户视觉验收。 | [ ] 未核实 |
+| F28 | 保存成功率 | 合法样例覆盖107组件及全部写回路径，各至少重复3轮；记录尝试/成功/拒绝/超时及原因；合法样例成功率100%、丢数据0；非法/过期会话应拒绝并保留草稿，另计拒绝率。 | [ ] 未核实 |
+| F29 | 草稿 / 撤销 / 生命周期 | 大草稿在20条/秒限频下逐块回执且可恢复；撤销重做、换基线及保存后清理正确；开关20轮不持续泄漏；关闭无页面动画/周期草稿；未知组件保留。 | [ ] 未核实 |
+| F30 | 唱片 / 乐器试听 | 实机能播放存在的音源，空事件/缺资源/静音有明确结果；长音乐能力经实测；明确不支持须经用户批准，按钮存在不算通过。 | [ ] 未核实 |
 
-### P1 · 让“手写 / 必须改”的表换成权威来源
-| # | 任务 | 替换什么 | 内容 |
-|---|---|---|---|
-| B5 | **方块属性表** | block_state / debug_stick_state 无法编辑 | `block_properties`：每个方块的属性名→允许值、默认值 |
-| B6 | **战利品表 / 配方 / 维度 / 地图标记类型** | container_loot、recipes、lodestone 维度、map_decorations 只能手输 | 注册表 `loot_table`（客户端远程服务器可能拿不到，需说明限制）、`recipe`、`dimension`、`map_decoration_type` |
-| B7 | **生物变种注册表核对** | 29 个变种组件的选择框 | 逐个核对 `cat_variant`、`wolf_variant`、`wolf_sound_variant`、`cat_sound_variant`、`chicken_variant`、`cow_variant`、`frog_variant`、`pig_variant`、`villager_type`、`zombie_nautilus_variant` 等是否能出数据（合同只说“任意按需注册表”，没有逐个验证） |
-| B8 | **纹饰材料 / 图案的图标来源** | 前端手写 `TRIM_ICON` / `ipt` | `trim_materials` 增加材料物品 `ingredient`、`trim_patterns` 增加对应模板物品 |
-| B9 | **资源 ID 列表** | `equippable.camera_overlay`、`profile.texture/cape/elytra`、`item_model` 只能手输 | 按目录列出资源 ID：`textures/gui/...` 叠加层、`textures/entity/player/...` 皮肤、`items/*.json`（物品模型定义，让 item_model 选择器列出真实模型而不只是物品 ID） |
-| B10 | **玩家 / 实体基础属性** | 前端手写“攻击基础值 1 / 4”“MELEE_SLOTS” | 按实体类型导出基础属性（至少 player）、`EquipmentSlotGroup` 与槽位的匹配表 |
-| B11 | **组件 schema 实时化（长期）** | 前端静态 `comps`（107，26.1.2 烘焙），模组新增组件 / 字段看不到 | 方案 A：导出每个组件 Codec 的结构化描述（字段、类型、范围、默认）；方案 B（折中）：只导出 `data_component_types` 的 `persistent` / 是否有 Codec，模组组件一律走“SNBT + B3 校验”。建议先做 B，A 作后续 |
+## 谁来勾与如何重新统计
 
-### P2 · 性能 / 行为
-| # | 任务 | 说明 |
-|---|---|---|
-| B12 | 注册表预热 tick 峰值 | 实机 9.4ms，目标 <5ms（`registry-contract.md` 末尾回执）；需要继续切分采集 / 推送 |
-| B13 | PERF P1 的后端侧 | 性能评估报告（草稿序列化、history 内存、推送合并；存放在工作区 planning/cad-editor-recast/PERF.md） |
-| B14 | **试听验证** | 唱片 / 山羊角预览能否在库里播放长音乐；如果 `oriel.playSound` 不能播，宿主要提供短预览或明确不支持（需重启游戏后看 `[CAD-Editor-Recast]` 日志） |
-| B15 | 写回路径对新数据的覆盖 | 如果前端开始编辑实体数据 / 刷怪笼，`applyToGame` 的写回要覆盖 `entity_data`、`block_entity_data` 的 Codec 往返（目前只有“自定义名称”被游戏内端到端验证过） |
+| 责任人 | 勾选职责 |
+|---|---|
+| 前端维护者 | 核实入口和实时数据消费，提供仿真截图、交互/错误态证据，填写形态和来源；不能代替用户视觉验收。 |
+| 后端维护者 | 核实持久组件全集、注册表/Codec及写回，提供类型保真、权限、联机、性能的真实客户端回执。 |
+| 用户 / 用户指定验收人 | 依据TESTING及证据逐项勾选，确认通用表单足够、视觉结果及明确不支持范围；发布负责人复核全表后决定1.0。 |
 
-### 建议派工（最多 4 个并行）
-1. **Worker A（实体 / 刷怪）**：B1 + B2 + B10
-2. **Worker B（校验与分类）**：B3 + B4 + B15
-3. **Worker C（注册表补全）**：B5 + B6 + B7 + B8 + B9
-4. **Worker D（性能与试听）**：B12 + B13 + B14；B11 先出方案评估
+在仓库根目录运行：
 
-每个 worker 都要：不抢鼠标键盘、静默离屏、只改 Java / 合同文档、更新 `docs/registry-contract.md`、给出实机验证回执，前端不由它们改。
+    node tools/audit-backend-status.cjs
+
+输出为被git忽略的docs/STATUS-data.md、docs/STATUS-generic.md；源码哈希证据为logs/backend-b/ui-source-audit.json。脚本不覆盖本清单，也不会自动勾选。对照data.js的107个唯一ID及实际持久组件全集，逐行更新形态/来源；新增或移除组件须说明版本/范围，不能靠改变统计分母消除缺口。
+
+按“是否已验收”列统计：完成勾选为完成，未勾选且标“未完成”为已知缺口，标“未核实”为证据不足；两类未勾选均阻塞1.0。来源列的部分/否/未核实单独复核，不算已验收。勾选后在同一格追加三选一结论、验收人及证据链接。相关实现变化后须重新核实，不能沿用失效证据。
+
+行为操作见 [TESTING](TESTING.md)，数据依据见 [registry-contract](registry-contract.md)。

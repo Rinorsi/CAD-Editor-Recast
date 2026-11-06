@@ -210,7 +210,7 @@ function effectiveComps(d) {
   return out;
 }
 function makeDoc(spec) {
-  var d = { key: spec.key, id: spec.id, count: spec.count || 1, comps: clone(spec.comps || {}), removed: clone(spec.removed || {}), label: spec.label || '', src: spec.src || null };
+  var d = { key: spec.key, id: spec.id, count: spec.count || 1, comps: clone(spec.comps || {}), removed: clone(spec.removed || {}), label: spec.label || '', src: spec.src || null, snbt: clone(spec.snbt || {}) };
   d.base = snapOf(d);
   d.hist = [{ label: '打开', snap: d.base, t: 0 }];
   d.hi = 0;
@@ -406,6 +406,7 @@ function validateDoc(d) {
     if (!c) { out.push({ level: 'warn', cid: cid, path: '', msg: '26.1.2 不存在的组件：' + cid }); return; }
     validateValue(c.schema, d.comps[cid], '', out, cid);
   });
+  if (typeof Valid !== 'undefined') Valid.problems(d, out);   // 游戏对自由 NBT 组件的校验结果
   /* 跨组件规则 */
   var maxd = eff.max_damage, dmg = eff.damage;
   if (typeof dmg === 'number' && typeof maxd === 'number' && dmg >= maxd) out.push({ level: 'warn', cid: 'damage', path: '', msg: '已损耗耐久不小于最大耐久，物品会立刻损坏' });

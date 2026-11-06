@@ -59,7 +59,7 @@ public final class RegistrySnapshot {
         Registry<?> registry = registry(registryId);
         JsonArray entries = new JsonArray();
         registry.getTags().sorted(java.util.Comparator.comparing(t -> t.key().location().toString())).forEach(tag -> {
-            JsonObject row = new JsonObject(); row.addProperty("id", tag.key().location().toString());
+            JsonObject row = tagLabel(tag.key());
             row.addProperty("count", tag.size()); entries.add(row);
         });
         return entries;
@@ -68,6 +68,15 @@ public final class RegistrySnapshot {
         var tag = registry(registryId).getTags().filter(t -> t.key().location().equals(tagId)).findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("当前注册表没有标签: " + tagId));
         return ids(tag);
+    }
+    /** Fabric convention keys also cover mod registries; missing language entries retain the ID. */
+    static JsonObject tagLabel(net.minecraft.tags.TagKey<?> tag) {
+        JsonObject row = new JsonObject();
+        row.addProperty("id", tag.location().toString());
+        String translationKey = tag.getTranslationKey();
+        row.addProperty("translation_key", translationKey);
+        row.addProperty("name", translated(translationKey, tag.location()));
+        return row;
     }
     private Registry<?> registry(Identifier registryId) {
         Registry<?> registry = registries.get(registryId);

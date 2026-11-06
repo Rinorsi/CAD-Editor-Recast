@@ -3,6 +3,7 @@
 var Reg = {
   meta: null, kinds: {}, subs: [], cache: {},
   ingest: function (key, val) {
+    if (key === 'validate_component.result') { if (typeof Valid !== 'undefined') Valid.receive(val); return; }
     if (typeof key !== 'string' || key.indexOf('registry.') !== 0) return;
     if (key === 'registry.meta') { this.meta = val; this.cache = {}; this.fire(); return; }
     if (!val || typeof val !== 'object') return;

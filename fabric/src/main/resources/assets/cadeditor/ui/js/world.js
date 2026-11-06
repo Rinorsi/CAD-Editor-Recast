@@ -125,8 +125,10 @@ function worldCond(title,hint,action,content){
   var sug=cid==='entity_data'?kBtn('常用字段',function(){suggestEntityFields(obj.id,function(k){return Object.prototype.hasOwnProperty.call(obj,k);},function(k,val){try{mapEl.addField(k,val);}catch(e){toast(e.message||String(e),'warn');}},sug);},{title:'从这个实体的默认数据里挑字段'}):null;
   card.body.appendChild(worldSection('数据字段',sug));
   card.body.appendChild(mapEl);
+  card.body.appendChild(Valid.badge(id));
 };});
 AUTO_BODY.lock=function(card,cid,v){
+  card.body.appendChild(Valid.badge(cid));
   card.body.appendChild(h('div',{class:'world-note',text:'钥匙匹配条件 · 所有已填写条件都必须满足'}));
   var obj=clone(isObj(v)?v:{});
   card.body.appendChild(fieldRow('钥匙物品',wHolderSet('item',obj.items===undefined?[]:obj.items,function(x){if(Array.isArray(x)&&!x.length)delete obj.items;else obj.items=x;autoPut(cid,obj);})));
@@ -161,6 +163,7 @@ AUTO_BODY.recipes = function (card, cid, v) {
 };
 AUTO_BODY.charged_projectiles=function(card,cid,v){
   var arr=clone(Array.isArray(v)?v:[]);
+  card.body.appendChild(Valid.badge(cid));
   list5(card.body,function(){return arr;},function(body,it,i,ch){
     body.appendChild(fieldRow('弹药',kRegSelect({reg:'item',value:it.id||'',title:'选择弹药',onChange:function(x){it.id=x;ch();}}).el));
     body.appendChild(fieldRow('数量',numField5(it.count,1,{min:1,max:99,unit:'个'},function(n){it.count=n;ch();})));

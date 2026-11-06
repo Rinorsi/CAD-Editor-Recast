@@ -64,6 +64,7 @@ public final class RegistryChoices {
             String id = value.getSerializedName();
             String display = translated(name + "." + id, id);
             JsonObject entry = row(id, display);
+            if (value instanceof Enum<?> constant) entry.addProperty("symbol", constant.name());
             if (value instanceof FireworkExplosion.Shape shape) entry.addProperty("name", shape.getName().getString());
             if (value instanceof DyeColor color) {
                 entry.addProperty("name", translated("color.minecraft." + id, id));

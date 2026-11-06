@@ -72,7 +72,7 @@ function modalShell(title, sub, body, foot, cls) {
    浏览器预览里的演示物品由 demo.js 提供。 */
 function loadStack(st) {
   UI.loading = true;   // 载入过程中 Store 会连发几次 docs 事件，别每次都整页重画；调用方载入完后统一画一次
-  Store.open({ key: 'stk' + Date.now(), src: st.slot || null, id: fullId(st.id), count: st.count || 1, label: st.label || '', comps: st.comps || {}, removed: st.removed || {} }, true);
+  Store.open({ key: 'stk' + Date.now(), src: st.slot || null, id: fullId(st.id), count: st.count || 1, label: st.label || '', comps: st.comps || {}, removed: st.removed || {}, snbt: st.component_snbt || {} }, true);
   while (Store.docs.length > 1) Store.close(0);
   UI.loading = false;
   UI.tab = null; UI.bodyScroll = {}; UI.advSel = null; UI.uni = {};
@@ -783,6 +783,8 @@ function applyToGame() {
   var requestId = 'edit-' + Date.now() + '-' + (++EditorBridge.sequence);
   var payload = { requestId: requestId, command: buildCommand(d, UI.cmdMode, UI.cmdSel),
     id: d.id, item: d.id, count: d.count, comps: clone(d.comps), removed: clone(d.removed), slot: clone(d.src) };
+  /* 被编辑过的自由 NBT 组件用 SNBT 提交，保住 byte / long / float 等类型 */
+  var typed = nbtApplyFormats(d); payload.comps = typed.comps; if (typed.formats) payload.component_formats = typed.formats;
   EditorBridge.pending = { id: requestId, doc: d, snap: snapOf(d) };
   var sent = (typeof oriel !== 'undefined' && oriel.send) ? oriel.send('apply', payload) : false;
   if (sent) {

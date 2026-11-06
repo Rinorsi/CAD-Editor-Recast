@@ -3,6 +3,7 @@
 function onStoreEvent(ev) {
   if (typeof UI !== 'undefined' && UI.loading) return;
   if (ev.type !== 'docs' && typeof Drafts !== 'undefined') Drafts.touch();
+  if (ev.type !== 'docs' && typeof Valid !== 'undefined') Valid.touch();
   if (ev.type === 'docs') { rebuild(); return; }
   if (ev.structural || ev.type === 'restore') {
     var body = $('edbody'); if (body && UI.tab) UI.bodyScroll[UI.tab] = body.scrollTop;
@@ -48,6 +49,7 @@ function receiveEditorResult(result) {
   var d = p.doc, unchanged = snapOf(d) === p.snap;
   if (unchanged) { d.id = st.id; d.count = st.count; d.comps = clone(st.comps); d.removed = clone(st.removed); }
   d.base = JSON.stringify({ id: st.id, count: st.count, comps: st.comps, removed: st.removed });
+  d.snbt = clone(st.component_snbt || {});   // 新基线的类型参照
   if (typeof Drafts !== 'undefined') Drafts.touch();   // 应用成功后基线变了：没有新改动就清掉草稿，有就按新基线重存
   if (Store.doc() === d) rebuild();
   toast(unchanged ? '服务器已确认物品修改' : '服务器已确认上次提交；后续修改仍保留在草稿中', 'ok');
@@ -56,6 +58,7 @@ function boot() {
   Store.subscribe(onStoreEvent);
   Prefs.init(typeof oriel !== 'undefined' ? oriel.data : null);
   Reg.attach();
+  Valid.on(function () { if (Store.docs.length) { drawFooter(); if (typeof paintProblems === 'function') paintProblems(); } });
   /* 注册表数据到齐后，如果界面上没有打开的窗口，就重画当前页，让名称/列表换成实时数据 */
   var regT = null;
   Reg.on(function (kind, kinds) { clearTimeout(regT); regT = setTimeout(function () { if (!Store.docs.length || $('modal')) return; try { if ((kinds || []).indexOf('item_defaults_one') >= 0) { drawHero(); drawTabbar(); drawTabBody(); drawFooter(); } else drawTabBody(); } catch (e) {} }, 400); });
