@@ -1,9 +1,9 @@
-param([string]$ClasspathFile, [string]$BaseJar, [string]$World)
+param([string]$ClasspathFile, [string]$BaseJar, [string]$World, [switch]$UseReleaseJar)
 $ErrorActionPreference = 'Stop'
 $Root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $Workspace = [IO.Path]::GetFullPath((Join-Path $Root '../Oriel-UI-Workspace'))
 $Out = Join-Path $Root ('daily/' + (Get-Date -Format 'yyyy-MM-dd') + '/registry-supplement')
-$Run = Join-Path $Out 'run'
+$Run = Join-Path $Out $(if ($UseReleaseJar) { 'run-release' } else { 'run' })
 $Classes = Join-Path $Out 'compiled'
 $Probe = Join-Path $Out 'probe'
 New-Item -ItemType Directory -Force $Run,$Classes,$Probe,(Join-Path $Run 'mods'),(Join-Path $Run 'saves') | Out-Null
@@ -19,17 +19,22 @@ $Cp = (@($BaseJar,$Mc) + $Runtime) -join ';'
 $Sources = @(Get-ChildItem ($Root+'/fabric/src/main/java/dev/rinorsi/editor/registry/*.java') | ForEach-Object FullName)
 $Sources += $Root+'/fabric/src/main/java/dev/rinorsi/editor/ComponentValidation.java'
 # Existing interactive Gradle runClient processes remain untouched; compile the registry package directly.
-& ($JavaBin+'/javac.exe') -proc:none -encoding UTF-8 -cp $Cp -d $Classes $Sources *> ($Out+'/compile.log')
-if ($LASTEXITCODE) { throw ('注册表 javac 失败；查看 '+$Out+'/compile.log') }
+if (!$UseReleaseJar) {
+    & ($JavaBin+'/javac.exe') -proc:none -encoding UTF-8 -cp $Cp -d $Classes $Sources *> ($Out+'/compile.log')
+    if ($LASTEXITCODE) { throw ('注册表 javac 失败；查看 '+$Out+'/compile.log') }
+}
 $EditorJar = Join-Path $Run 'mods/editor-supplement-under-test.jar'
 Copy-Item -LiteralPath $BaseJar -Destination $EditorJar -Force
-& ($JavaBin+'/jar.exe') uf $EditorJar -C $Classes .
-if ($LASTEXITCODE) { throw '测试副本打包失败' }
+if (!$UseReleaseJar) {
+    & ($JavaBin+'/jar.exe') uf $EditorJar -C $Classes .
+    if ($LASTEXITCODE) { throw '测试副本打包失败' }
+} elseif ((Get-FileHash -LiteralPath $EditorJar).Hash -ne (Get-FileHash -LiteralPath $BaseJar).Hash) { throw '发行jar复制后哈希不一致' }
 $TestSources = @(($Root+'/fabric/src/autotest/java/dev/rinorsi/editor/registry/RegistrySupplementProbe.java'), ($Root+'/fabric/src/autotest/java/dev/rinorsi/editor/registry/supplementmixin/RegistrySupplementWindowMixin.java'), ($Root+'/fabric/src/autotest/java/dev/rinorsi/editor/probe/mixin/NoMouseCaptureMixin.java'))
-& ($JavaBin+'/javac.exe') -proc:none -encoding UTF-8 -cp ($Classes+';'+$Cp) -d $Probe $TestSources *> ($Out+'/probe-compile.log')
+$ProbeCp = if ($UseReleaseJar) { $Cp } else { $Classes+';'+$Cp }
+& ($JavaBin+'/javac.exe') -proc:none -encoding UTF-8 -cp $ProbeCp -d $Probe $TestSources *> ($Out+'/probe-compile.log')
 if ($LASTEXITCODE) { throw ('探针 javac 失败；查看 '+$Out+'/probe-compile.log') }
 $Utf8 = [Text.UTF8Encoding]::new($false)
-[IO.File]::WriteAllText(($Probe+'/fabric.mod.json'), '{"schemaVersion":1,"id":"editor_supplement_probe","version":"1.0.0","environment":"client","entrypoints":{"client":["dev.rinorsi.editor.registry.RegistrySupplementProbe"]},"mixins":["supplement-window.mixins.json","editor-probe.mixins.json"],"depends":{"fabricloader":">=0.19.5","fabric-api":"*","minecraft":"26.1.2","editor":"*"}}', $Utf8)
+[IO.File]::WriteAllText(($Probe+'/fabric.mod.json'), '{"schemaVersion":1,"id":"editor_supplement_probe","version":"1.0.0","environment":"client","entrypoints":{"client":["dev.rinorsi.editor.registry.RegistrySupplementProbe"]},"mixins":["supplement-window.mixins.json","editor-probe.mixins.json"],"depends":{"fabricloader":">=0.19.5","fabric-api":"*","minecraft":"26.1.2","cadeditor":"*"}}', $Utf8)
 [IO.File]::WriteAllText(($Probe+'/supplement-window.mixins.json'), '{"required":true,"package":"dev.rinorsi.editor.registry.supplementmixin","compatibilityLevel":"JAVA_25","client":["RegistrySupplementWindowMixin"],"injectors":{"defaultRequire":1}}', $Utf8)
 Copy-Item -LiteralPath ($Root+'/tools/autotest/resources/editor-probe.mixins.json') -Destination $Probe -Force
 $ModelDir = $Probe+'/assets/editor_supplement_probe/items/nested'
@@ -62,3 +67,4 @@ try {
 $Receipt = $Run+'/registry-supplement-verification.json'
 if ($Code -ne 0 -or !(Test-Path $Receipt) -or (Get-Item $Receipt).LastWriteTimeUtc -lt $Started -or (Get-Content $Receipt | ConvertFrom-Json).status -ne 'PASSED') { throw ('注册表补全自测失败；查看 '+$Out+'/client.log 与 '+$Receipt) }
 Write-Output ('PASS registry supplement; receipt='+$Receipt)
+

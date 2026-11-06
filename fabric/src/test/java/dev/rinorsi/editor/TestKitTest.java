@@ -20,7 +20,9 @@ public final class TestKitTest {
     static void run(HolderLookup.Provider registries) {
         var dispatcher = new com.mojang.brigadier.CommandDispatcher<net.minecraft.commands.CommandSourceStack>();
         dispatcher.register(TestKitCommand.tree(() -> new EditorPolicy(2, false)));
-        var node = dispatcher.getRoot().getChild("editor").getChild("testkit");
+        var root = dispatcher.getRoot().getChild("cadeditor");
+        check(root != null, "CAD Editor command root registered");
+        var node = root.getChild("testkit");
         check(node.getCommand() != null && node.getChildren().size() == 4, "actual command tree registers default and four modes");
         for (String mode : List.of("all", "inventory", "hotbar", "clear")) check(node.getChild(mode).getCommand() != null, "command mode " + mode);
         check(!TestKitCommand.allowedMode(false, false), "ordinary survival excluded even if editing policy is permissive");

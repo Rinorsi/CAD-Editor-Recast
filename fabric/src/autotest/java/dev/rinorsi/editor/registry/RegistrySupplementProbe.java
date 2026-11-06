@@ -17,7 +17,7 @@ public final class RegistrySupplementProbe implements ClientModInitializer {
     private final JsonObject receipt = new JsonObject(), captured = new JsonObject();
     private final List<String> requests = new ArrayList<>();
     private OrielScreen screen; private int index, edgeStage; private boolean sent, finished;
-    private long start; private Object proceeded;
+    private long start; private Object proceeded; private boolean listenerReady;
     @Override public void onInitializeClient() {
         start = System.nanoTime(); ClientTickEvents.END_CLIENT_TICK.register(this::tick);
     }
@@ -43,15 +43,26 @@ public final class RegistrySupplementProbe implements ClientModInitializer {
                         "minecraft:map_decoration_type", "trim_material", "trim_patterns",
                         "camera_overlay", "profile_texture", "profile_cape", "profile_elytra", "item_model",
                         "tags:block", "tags:damage_type", "tag:block", "tag:damage_type", "enum:text_color", "enum:use_animation",
-                        "items", "data_component_types", "trim_materials", "painting_variants"));
-                screen = OrielScreens.openInline("<html><body><script>var received={};var completed={};oriel.on('patch',function(p){var v=p.value;if(!v||!v.entries)return;var a=received[p.key]||[];if(v.offset===0)a=[];for(var i=0;i<v.entries.length;i++)a[v.offset+i]=v.entries[i];received[p.key]=a;if(v.done)completed[p.key]=v;});</script></body></html>", new JsonObject());
+                        "items", "data_component_types", "trim_materials", "painting_variants", "spawner_info", "item_meta_one", "entity_info"));
+                JsonObject data = new JsonObject(), slot = new JsonObject();
+                slot.addProperty("kind", "inventory"); slot.addProperty("index", 0);
+                data.add("stack", dev.rinorsi.editor.StackCodec.snapshot(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SPAWNER), mc.level.registryAccess(), slot, "独立发行包冒烟测试"));
+                data.add("prefs", new JsonObject());
+                screen = OrielScreens.open("cadeditor:ui/index.html", data);
                 RegistryBridge.attach(screen.driver()); return;
             }
             if (screen.driver().document() == null || !screen.driver().settled()) return;
+            if (!listenerReady) {
+                check(eval("typeof Store==='object'&&typeof UI==='object'&&document.querySelector('#edbody')!=null").getAsBoolean(), "release_editor_page_loaded");
+                eval("var received={};var completed={};oriel.on('patch',function(p){var v=p.value;if(!v||!v.entries)return;var a=received[p.key]||[];if(v.offset===0)a=[];for(var i=0;i<v.entries.length;i++)a[v.offset+i]=v.entries[i];received[p.key]=a;if(v.done)completed[p.key]=v;});true");
+                check(org.lwjgl.glfw.GLFW.glfwGetWindowAttrib(mc.getWindow().handle(), org.lwjgl.glfw.GLFW.GLFW_FOCUSED) == 0, "smoke_window_unfocused");
+                listenerReady = true;
+            }
             if (index < requests.size()) {
                 String name = requests.get(index), key = "registry." + name;
                 if (!sent) {
-                    String tagId = name.equals("tag:block") ? "minecraft:mineable/axe" : name.equals("tag:damage_type") ? "minecraft:is_fire" : null;
+                    String tagId = name.equals("tag:block") ? "minecraft:mineable/axe" : name.equals("tag:damage_type") ? "minecraft:is_fire"
+                            : name.equals("item_meta_one") ? "minecraft:spawner" : name.equals("entity_info") ? "minecraft:pig" : null;
                     eval("oriel.send('registry',{name:" + new JsonPrimitive(name)
                             + (tagId == null ? "" : ",id:" + new JsonPrimitive(tagId)) + "});true"); sent = true; return;
                 }
@@ -74,6 +85,8 @@ public final class RegistrySupplementProbe implements ClientModInitializer {
                 if (name.equals("camera_overlay") || name.equals("profile_texture") || name.equals("profile_cape") || name.equals("profile_elytra")) {
                     for (var element : rows) {
                         var row = element.getAsJsonObject();
+                        String writable = Identifier.parse(row.get("id").getAsString()).getPath();
+                        check(!writable.startsWith("textures/") && !writable.endsWith(".png"), "texture_writable_id_" + name + "_" + writable);
                         var texture = net.minecraft.core.ClientAsset.ResourceTexture.CODEC.parse(JsonOps.INSTANCE, row.get("id")).getOrThrow();
                         check(texture.texturePath().toString().equals(row.get("resource").getAsString()), "texture_asset_resolves_file_" + name + "_" + row.get("id").getAsString());
                     }
@@ -90,6 +103,17 @@ public final class RegistrySupplementProbe implements ClientModInitializer {
                 if (name.equals("item_model")) {
                     check(find(rows, "minecraft:diamond_sword").get("resource").getAsString().equals("minecraft:items/diamond_sword.json"), "item_model_definition_id");
                     check(find(rows, "editor_supplement_probe:nested/only_definition").get("resource").getAsString().equals("editor_supplement_probe:items/nested/only_definition.json"), "model_without_registered_item_and_nested_path");
+                }
+                if (name.equals("spawner_info")) {
+                    check(rows.size() == 2, "spawner_two_types");
+                    check(find(rows, "minecraft:mob_spawner").has("fields"), "classic_spawner_fields");
+                    check(find(rows, "minecraft:trial_spawner").getAsJsonObject("defaults").has("normal_config"), "trial_spawner_normal_config");
+                }
+                if (name.equals("item_meta_one")) check(rows.size() == 1 && find(rows, "minecraft:spawner").get("block_entity_type").getAsString().equals("minecraft:mob_spawner"), "single_spawner_item_metadata");
+                if (name.equals("entity_info")) {
+                    var pig = find(rows, "minecraft:pig");
+                    check(pig.has("attributes") && pig.has("equipment_slots") && pig.has("variant_sources") && pig.has("spawn_eggs"), "pig_entity_shape");
+                    check(pig.get("template_available").getAsBoolean() && pig.has("default_nbt"), "pig_entity_default_template");
                 }
                 index++; sent = false; return;
             }

@@ -1,0 +1,29 @@
+gradle.projectsEvaluated {
+    def p = gradle.rootProject.project(':fabric:26.1.2')
+    def names = [
+        'dev.rinorsi.editor.StackCodecTest',
+        'dev.rinorsi.editor.ComplexStackRoundTripTest',
+        'dev.rinorsi.editor.BackendDataTest',
+        'dev.rinorsi.editor.client.EditorSoundPreviewTest',
+        'dev.rinorsi.editor.client.EditorPrefsTest',
+        'dev.rinorsi.editor.client.EditorClipboardTest',
+        'dev.rinorsi.editor.registry.SpawnerApplyTest',
+        'dev.rinorsi.editor.registry.FrontendWiringTest',
+        'dev.rinorsi.editor.registry.ResourceIdsTest',
+        'dev.rinorsi.editor.registry.EntityDataTest',
+        'dev.rinorsi.editor.registry.RegistryStressTest',
+        'dev.rinorsi.editor.registry.DraftUtf8CounterTest',
+        'dev.rinorsi.editor.registry.RegistryPagesTest',
+        'dev.rinorsi.editor.registry.RegistryDeliveryTest'
+    ]
+    def tests = names.collect { name ->
+        p.tasks.register('integration' + name.tokenize('.').last(), JavaExec) {
+            dependsOn p.tasks.named('codecVerificationClasses')
+            classpath = p.sourceSets.codecVerification.runtimeClasspath
+            mainClass = name
+            workingDir = gradle.rootProject.projectDir
+            maxHeapSize = '1G'
+        }
+    }
+    p.tasks.register('integrationJvmTests') { dependsOn tests }
+}
