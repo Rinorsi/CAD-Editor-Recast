@@ -262,7 +262,7 @@ CARDS.tool = function () {
   }
   kSortable(rules, { onMove: function (from, to) { put(function (t) { var x = t.rules.splice(from, 1)[0]; t.rules.splice(to, 0, x); }); openIdx = -1; drawRules(); } });
   var add = xAdd('添加挖掘规则');
-  activate(add, function () { openTagPicker({ title: '选择挖掘规则针对的方块', tagsReg: 'block', entryReg: 'block', quick: TOOL_GROUPS.map(function (g) { return { v: g.v, label: g.label, sub: g.sub }; }), entryIcon: function (e) { return itemIcon(shortId(e.v), 16); }, onConfirm: function (v) { put(function (t) { t.rules = t.rules || []; t.rules.push({ blocks: v, speed: 4, correct_for_drops: true }); }); openIdx = (Ctx.get('tool').rules || []).length - 1; drawRules(); } }); });
+  activate(add, function () { openTagPicker({ title: '选择挖掘规则针对的方块', tagsReg: 'block', entryReg: 'block', quick: keepKnownTags(TOOL_GROUPS, 'block').map(function (g) { return { v: g.v, label: g.label, sub: g.sub }; }), entryIcon: function (e) { return itemIcon(shortId(e.v), 16); }, onConfirm: function (v) { put(function (t) { t.rules = t.rules || []; t.rules.push({ blocks: v, speed: 4, correct_for_drops: true }); }); openIdx = (Ctx.get('tool').rules || []).length - 1; drawRules(); } }); });
   card.body.appendChild(fieldRow('挖掘规则', h('div', { class: 'k-scrollbox' }, [rules]), '靠前的规则优先，拖 ⋮⋮ 调整顺序；点一条展开编辑'));
   card.body.appendChild(add);
   card.body.appendChild(fieldRow('每挖一个方块损耗', dpb.el, '耐久点数'));

@@ -198,7 +198,7 @@ function kRich(value, o) {
       var sw = h('div', { class: 'k-swatches' });
       var none = h('div', { class: 'k-sw nonec' + (!r.color ? ' on' : ''), title: '默认颜色' }, [h('i', { text: '×' })]);
       none.addEventListener('mousedown', function (e) { e.preventDefault(); kPopClose(); delete runs[i].color; emit(true); }); sw.appendChild(none);
-      MC_COLORS.forEach(function (c) { var s = h('div', { class: 'k-sw' + (r.color === c[0] ? ' on' : ''), title: c[2], style: 'background:#' + c[1] }); s.addEventListener('mousedown', function (e) { e.preventDefault(); kPopClose(); runs[i].color = c[0]; emit(true); }); sw.appendChild(s); });
+      mcColors().forEach(function (c) { var s = h('div', { class: 'k-sw' + (r.color === c[0] ? ' on' : ''), title: c[2], style: 'background:#' + c[1] }); s.addEventListener('mousedown', function (e) { e.preventDefault(); kPopClose(); runs[i].color = c[0]; emit(true); }); sw.appendChild(s); });
       var hex = h('input', { class: 'k-input', type: 'text', placeholder: '#RRGGBB', value: r.color && r.color.charAt(0) === '#' ? r.color : '', maxlength: '7' });
       hex.addEventListener('change', function () { var t = hex.value.trim(); if (/^#[0-9a-fA-F]{6}$/.test(t)) { kPopClose(); runs[i].color = t.toUpperCase(); emit(true); } });
       pal.appendChild(sw); pal.appendChild(hex);

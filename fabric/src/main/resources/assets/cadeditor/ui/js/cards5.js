@@ -31,6 +31,8 @@ AUTO_BODY.profile = function (card, cid, v) {
     ['name', 'id', 'properties', 'texture', 'cape', 'elytra', 'model'].forEach(function (key) { if (o[key] !== undefined && o[key] !== '' && !(Array.isArray(o[key]) && !o[key].length)) { out[key] = o[key]; n++; } });
     autoPut(cid, n === 1 && out.name !== undefined ? out.name : out);
   }
+  /* 直接指定的贴图：游戏当前资源包里有的列出来选（完整文件 ID），也能手输；没连游戏就是普通输入框 */
+  function res(key, reg, ph) { return Reg.live() ? kRegSelect({ reg: reg, value: o[key] || '', title: '选择贴图', empty: '（未指定）', allowClear: true, onChange: function (x) { if (x) o[key] = x; else delete o[key]; put(); } }).el : txt(key, ph); }
   function txt(key, ph) { return kInput(o[key] || '', function (x) { if (x) o[key] = x; else delete o[key]; put(); }, { placeholder: ph }); }
   card.body.appendChild(h('div', { class: 'k-sech', text: '谁的头' }));
   card.body.appendChild(fieldRow('玩家名', txt('name', '例如 Steve；游戏联网取这个玩家的皮肤'), '填了玩家名，游戏会按名字联网查皮肤。离线或查不到时显示默认皮肤'));
@@ -41,9 +43,9 @@ AUTO_BODY.profile = function (card, cid, v) {
   }, { placeholder: '4 个整数，用逗号隔开（可不填）' });
   card.body.appendChild(fieldRow('UUID', uuid, '玩家 UUID 的 4 个整数写法，一般不用填'));
   card.body.appendChild(h('div', { class: 'k-sech', text: '直接指定皮肤（不联网）' }));
-  card.body.appendChild(fieldRow('身体皮肤', txt('texture', '命名空间:路径，对应 textures/ 下的 png'), '资源包里的皮肤图，写法如 mypack:skins/hero，不是网址'));
-  card.body.appendChild(fieldRow('披风', txt('cape', '命名空间:路径')));
-  card.body.appendChild(fieldRow('鞘翅', txt('elytra', '命名空间:路径')));
+  card.body.appendChild(fieldRow('身体皮肤', res('texture', 'profile_texture', '完整贴图 ID，如 minecraft:textures/entity/player/wide/steve.png'), '资源包里的皮肤图（完整文件 ID），不是网址'));
+  card.body.appendChild(fieldRow('披风', res('cape', 'profile_cape', '完整贴图 ID')));
+  card.body.appendChild(fieldRow('鞘翅', res('elytra', 'profile_elytra', '完整贴图 ID')));
   var model = kSeg([{ v: '', label: '默认' }, { v: 'wide', label: '粗手臂' }, { v: 'slim', label: '细手臂' }], o.model || '', function (m) { if (m) o.model = m; else delete o.model; put(); });
   card.body.appendChild(fieldRow('手臂模型', model.el));
   card.body.appendChild(h('div', { class: 'k-sech', text: '皮肤属性（高级）' }));

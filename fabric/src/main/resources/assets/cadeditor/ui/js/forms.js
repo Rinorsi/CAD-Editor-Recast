@@ -193,7 +193,7 @@ function wSeg(options, cur, onPick, cls) {
 }
 
 /* 结构里没标注册表、但实际是注册表 ID 的字段：按「组件 + 路径」补上，走统一的选择控件（仍可手动输入） */
-var STR_REG = { item_model: 'item', 'equippable.asset_id': 'equipment_asset' };
+var STR_REG = { item_model: 'item_model', 'equippable.asset_id': 'equipment_asset' };
 function wStr(sc, val, commit, ctx) {
   if (!sc.reg && !sc.en && !sc.tag) { var rg0 = STR_REG[(CURCID || '') + (ctx && ctx.path ? ctx.path : '')]; if (rg0) { var sc2 = {}; for (var kk0 in sc) sc2[kk0] = sc[kk0]; sc2.reg = rg0; sc = sc2; } }
   if ((sc.en && sc.en.indexOf('light_blue') >= 0 && sc.en.indexOf('magenta') >= 0 && sc.en.indexOf('white') >= 0) || (typeof dyeFieldFor === 'function' && dyeFieldFor(CURCID, ctx && ctx.path))) return wDye(val, commit);
@@ -220,6 +220,21 @@ function wStr(sc, val, commit, ctx) {
 /* ---------- 文本组件 ---------- */
 var MC_COLORS = [['black', '000000', '黑色'], ['dark_blue', '0000AA', '深蓝'], ['dark_green', '00AA00', '深绿'], ['dark_aqua', '00AAAA', '深青'], ['dark_red', 'AA0000', '深红'], ['dark_purple', 'AA00AA', '深紫'], ['gold', 'FFAA00', '金色'], ['gray', 'AAAAAA', '灰色'], ['dark_gray', '555555', '深灰'], ['blue', '5555FF', '蓝色'], ['green', '55FF55', '绿色'], ['aqua', '55FFFF', '青色'], ['red', 'FF5555', '红色'], ['light_purple', 'FF55FF', '粉紫'], ['yellow', 'FFFF55', '黄色'], ['white', 'FFFFFF', '白色']];
 var MC_HEX = {}; MC_COLORS.forEach(function (c) { MC_HEX[c[0]] = '#' + c[1]; });
+/* 文本颜色：以游戏里的 enum:text_color（ChatFormatting 的颜色）为准，带 rgb；没到 / 离线用上面内置的 16 色。
+   中文名沿用内置表（按 id 对），游戏里多出来的颜色用它自己的名字 */
+function mcColors() {
+  var l = typeof Reg !== 'undefined' && Reg.live() ? Reg.options('enum:text_color') : null;
+  if (!l || !l.length) return MC_COLORS;
+  var zh = {}; MC_COLORS.forEach(function (c) { zh[c[0]] = c[2]; });
+  var out = [];
+  l.forEach(function (e) {
+    if (typeof e.rgb !== 'number') return;
+    var hex = ('000000' + e.rgb.toString(16)).slice(-6).toUpperCase();
+    MC_HEX[e.v] = '#' + hex;
+    out.push([e.v, hex, zh[e.v] || e.label || e.v]);
+  });
+  return out.length ? out : MC_COLORS;
+}
 var TC_KEYS = { text: 1, color: 1, bold: 1, italic: 1, underlined: 1, strikethrough: 1, obfuscated: 1 };
 function tcSimple(v) {
   if (typeof v === 'string') return { text: v };
@@ -233,7 +248,7 @@ function tcPack(o) {
   ['color', 'bold', 'italic', 'underlined', 'strikethrough', 'obfuscated'].forEach(function (k) { if (o[k] !== undefined && o[k] !== '') out[k] = o[k]; });
   return out;
 }
-function tcHex(c) { if (!c) return null; if (MC_HEX[c]) return MC_HEX[c]; return /^#[0-9a-fA-F]{6}$/.test(c) ? c : null; }
+function tcHex(c) { if (!c) return null; if (!MC_HEX[c] && /^[a-z_]+$/.test(c)) mcColors(); if (MC_HEX[c]) return MC_HEX[c]; return /^#[0-9a-fA-F]{6}$/.test(c) ? c : null; }
 function tcPreview(el, v, fallbackColor) {
   clear(el);
   var o = tcSimple(v);
@@ -269,7 +284,7 @@ function wText(sc, val, commit, ctx) {
     var none = h('div', { class: 'swatch none' + (!cur.color ? ' on' : ''), title: '默认颜色' }, [h('i', { text: '⁄' })]);
     activate(none, function () { delete cur.color; paintSw(); emit('tc-color'); });
     rowC.appendChild(none);
-    MC_COLORS.forEach(function (c) {
+    mcColors().forEach(function (c) {
       var s = h('div', { class: 'swatch' + (cur.color === c[0] ? ' on' : ''), title: c[2], style: 'background:#' + c[1] });
       activate(s, function () { cur.color = c[0]; paintSw(); emit('tc-color'); });
       rowC.appendChild(s);
@@ -315,7 +330,7 @@ function wColor(sc, val, commit) {
   function set(v) { n = v; chip.setAttribute('style', 'background:' + hex()); input.value = hex(); commit(n, { key: 'color' }); }
   input.addEventListener('change', function () { var t = input.value.trim(); if (/^#?[0-9a-fA-F]{6}$/.test(t)) set(parseInt(t.replace('#', ''), 16)); else input.value = hex(); });
   var pal = h('div', { class: 'ed-sw' });
-  MC_COLORS.forEach(function (c) { var s = h('div', { class: 'swatch', title: c[2], style: 'background:#' + c[1] }); activate(s, function () { set(parseInt(c[1], 16)); }); pal.appendChild(s); });
+  mcColors().forEach(function (c) { var s = h('div', { class: 'swatch', title: c[2], style: 'background:#' + c[1] }); activate(s, function () { set(parseInt(c[1], 16)); }); pal.appendChild(s); });
   wrap.appendChild(h('div', { class: 'ed-row' }, [chip, input]));
   wrap.appendChild(pal);
   return wrap;

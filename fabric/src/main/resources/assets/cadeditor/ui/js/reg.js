@@ -156,9 +156,12 @@ var Reg = {
     var v = m ? m[this.full(attr)] : undefined;
     return typeof v === 'number' ? v : dflt;
   },
+  /* 请求名就是它自己、不带 minecraft: 前缀的：枚举 / 标签（带冒号）和资源 ID 类（装备外观、提示框样式、物品模型、遮罩与皮肤贴图） */
+  DIRECT: { equipment_asset: 1, tooltip_style: 1, item_model: 1, camera_overlay: 1, profile_texture: 1, profile_cape: 1, profile_elytra: 1 },
+  isDirect: function (reg) { return reg.indexOf(':') > 0 || this.DIRECT[reg] === 1; },
   /* 这类注册表在当前连接里是否“拿不到完整列表”（远程服务器）：返回原因文字，否则 null。拿不到时必须保留手动输入 */
   unavailable: function (reg) {
-    var kind = this.KIND[reg] || (reg.indexOf(':') > 0 || reg === 'equipment_asset' || reg === 'tooltip_style' ? reg : 'minecraft:' + reg), k = this.kinds[kind];
+    var kind = this.KIND[reg] || (this.isDirect(reg) ? reg : 'minecraft:' + reg), k = this.kinds[kind];
     return k && k.unavail ? k.unavail : null;
   },
   tagsOf: function (full) { var e = this.defs[full]; return e && e.tags ? e.tags : null; },
@@ -237,7 +240,7 @@ var Reg = {
   KIND: { item: 'items', enchantment: 'enchantments', attribute: 'attributes', mob_effect: 'mob_effects', sound_event: 'sounds', block: 'blocks', entity_type: 'entity_types', damage_type: 'damage_types', instrument: 'instruments', jukebox_song: 'jukebox_songs', trim_material: 'trim_materials', trim_pattern: 'trim_patterns', banner_pattern: 'banner_patterns', potion: 'potions', painting_variant: 'painting_variants', data_component_type: 'data_component_types' },
   /* 通用候选：{v,label,sub}；没推送过的注册表（战利品表等）第一次用到时按需请求 */
   options: function (reg) {
-    var direct = reg.indexOf(':') > 0 || reg === 'equipment_asset' || reg === 'tooltip_style', kind = this.KIND[reg] || (direct ? reg : 'minecraft:' + reg), ck = 'opt:' + kind;
+    var direct = this.isDirect(reg), kind = this.KIND[reg] || (direct ? reg : 'minecraft:' + reg), ck = 'opt:' + kind;
     if (this.cache[ck]) return this.cache[ck];
     var l = this.list(kind);
     if (!l || !l.length) { if (!this.asked) this.asked = {}; if (!this.asked[kind]) { this.asked[kind] = 1; this.request(direct ? reg : 'minecraft:' + reg); } return null; }

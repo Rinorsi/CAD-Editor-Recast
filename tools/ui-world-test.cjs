@@ -148,3 +148,32 @@ console.log('PASS live enum options.');
   c.Reg.meta = null; c.Reg.kinds = {};
 }
 console.log('PASS unavailable registry hint.');
+
+// 文本颜色来自 enum:text_color；标签快捷项只保留游戏里存在的
+{
+  c.Reg.meta = null;
+  assert.equal(Array.from(c.mcColors()).length, 16, '离线用内置 16 色');
+  c.Reg.meta = {}; c.Reg.kinds = {};
+  c.Reg.kinds['enum:text_color'] = { done: true, entries: [{ id: 'black', name: 'Black', rgb: 0 }, { id: 'gold', name: 'Gold', rgb: 0xFFAA00 }, { id: 'lime', name: 'Lime', rgb: 0x32CD32 }] };
+  const cols = Array.from(c.mcColors(), x => Array.from(x));
+  assert.deepEqual(cols.map(x => x[0]), ['black', 'gold', 'lime']);
+  assert.equal(cols[1][1], 'FFAA00'); assert.equal(cols[1][2], '金色'); assert.equal(cols[2][2], 'Lime', '游戏新增的颜色用它自己的名字');
+  assert.equal(c.tcHex('lime'), '#32CD32');
+  c.Reg.kinds['tags:damage_type'] = { done: true, entries: [{ id: 'minecraft:is_fire', name: 'is_fire', count: 3 }] };
+  const q = [{ v: '' , label: 'x' }, { v: '#minecraft:is_fire', label: 'f' }, { v: '#minecraft:is_gone', label: 'g' }, { v: 'minecraft:cobweb', label: 'w' }];
+  assert.deepEqual(Array.from(c.keepKnownTags(q, 'damage_type'), x => x.label), ['x', 'f', 'w'], '不存在的标签被去掉，单个条目与空项保留');
+  c.Reg.meta = null; c.Reg.kinds = {};
+  assert.equal(c.keepKnownTags(q, 'damage_type').length, 4, '离线原样保留');
+}
+console.log('PASS live text colors and known-tag quick items.');
+
+// 资源 ID 类注册表：请求名不加 minecraft: 前缀，文件名作显示名
+{
+  c.Reg.meta = {}; c.Reg.kinds = {};
+  assert.equal(c.Reg.isDirect('item_model'), true); assert.equal(c.Reg.isDirect('profile_cape'), true); assert.equal(c.Reg.isDirect('loot_table'), false);
+  c.Reg.kinds['item_model'] = { done: true, entries: [{ id: 'mymod:fancy_sword', name: 'mymod:fancy_sword', resource: 'mymod:items/fancy_sword.json' }] };
+  const o = c.Reg.options('item_model'); assert.equal(o.length, 1); assert.equal(o[0].v, 'mymod:fancy_sword');
+  assert.equal(c.refName('profile_texture', { v: 'minecraft:textures/entity/player/slim/alex.png', label: 'minecraft:textures/entity/player/slim/alex.png' }), 'Alex');
+  c.Reg.meta = null; c.Reg.kinds = {};
+}
+console.log('PASS resource-id registries.');

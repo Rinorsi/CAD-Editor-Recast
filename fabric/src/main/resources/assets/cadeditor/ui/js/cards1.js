@@ -149,12 +149,28 @@ CARDS.tooltip = function () {
   var chips = h('div', { class: 'k-chips' });
   function paint() {
     clear(chips);
-    HIDE_PARTS.forEach(function (p) {
-      var id = 'minecraft:' + p[0], on = (v.hidden_components || []).indexOf(id) >= 0;
-      var c = h('div', { class: 'k-chip' + (on ? ' on' : ''), text: p[1] });
+    /* 常用的几项直接给按钮；其余的（含模组组件）选中后也以按钮出现，用“＋其他组件”从游戏的组件注册表里挑或手输 */
+    var shown = HIDE_PARTS.map(function (p) { return ['minecraft:' + p[0], p[1]]; });
+    (v.hidden_components || []).forEach(function (id) {
+      if (shown.some(function (x) { return x[0] === id; })) return;
+      var zh = null; EDATA.comps.forEach(function (c) { if ('minecraft:' + c.id === id) zh = c.name; });
+      shown.push([id, zh || humanId(shortId(id))]);
+    });
+    shown.forEach(function (p) {
+      var id = p[0], on = (v.hidden_components || []).indexOf(id) >= 0;
+      var c = h('div', { class: 'k-chip' + (on ? ' on' : ''), text: p[1], title: id });
       activate(c, function () { var l = v.hidden_components || []; var i = l.indexOf(id); if (i >= 0) l.splice(i, 1); else l.push(id); v.hidden_components = l; save(); paint(); });
       chips.appendChild(c);
     });
+    var more = h('div', { class: 'k-chip', text: '＋ 其他组件' });
+    activate(more, function () {
+      openRegPick({ reg: 'data_component_type', title: '选择要隐藏的组件', onPick: function (id) {
+        id = Reg.full(id); var l = v.hidden_components || [];
+        if (l.indexOf(id) < 0) l.push(id);
+        v.hidden_components = l; save(); paint();
+      } });
+    });
+    chips.appendChild(more);
   }
   paint();
   card.body.appendChild(tg.el); card.body.appendChild(fieldRow('只隐藏其中几项', chips, '被选中的信息不会在提示框里显示'));
@@ -170,6 +186,10 @@ CARDS.model = function () {
     var btn = h('div', { class: 'k-btn' }, [itemIcon(id, 20), h('span', { text: '外观：' + nameOfItem(id) }), uiIcon('down', 10)]);
     activate(btn, function () { pickItem(btn, function (pid) { Ctx.setSmart('item_model', fullId(pid), { label: '借用外观' }); draw(); }); });
     holder.appendChild(btn);
+    /* 物品模型定义不止“某个物品”（模组 / 资源包自己的模型也行）：从游戏当前资源包里列出来选，也能手输 */
+    var more = h('div', { class: 'k-btn' }, [uiIcon('grid', 12), h('span', { text: '其他模型…' })]);
+    activate(more, function () { openRegPick({ reg: 'item_model', title: '选择物品模型', current: m ? fullId(m) : '', onPick: function (x) { if (x) { Ctx.setSmart('item_model', Reg.full(x), { label: '借用外观' }); draw(); } } }); });
+    holder.appendChild(more);
   }
   draw(); card.live.push(draw);
   var hd = card.el.firstChild; hd.insertBefore(holder, hd.querySelector('.k-cval')); card.el.classList.add('flat');
@@ -258,7 +278,7 @@ var RESIST = [{ v: '', label: '不免疫', sub: '会被烧毁' }, { v: '#minecra
 CARDS.resist = function () {
   var card = kCard({ id: 'resist', icon: 'flame', title: '掉落物免疫', desc: '变成掉落物后能抵抗哪类伤害（如下界合金装备不怕岩浆）', comps: ['damage_resistant'] }, Ctx);
   function cur() { var v = Ctx.get('damage_resistant'); return v && typeof v.types === 'string' ? v.types : ''; }
-  var tiles = kTiles(RESIST, cur(), function (v) {
+  var tiles = kTiles(keepKnownTags(RESIST, 'damage_type'), cur(), function (v) {
     if (!v) Ctx.disable('damage_resistant', { structural: false });
     else Ctx.setSmart('damage_resistant', { types: v }, { label: '掉落物免疫' });
   }, { list: true });

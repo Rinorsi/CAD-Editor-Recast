@@ -302,11 +302,35 @@ function openRegPick(o) {   /* o: { reg, tag, current, title, fallback, onPick(i
 /* 条目名：有翻译名就用翻译名；没有就用物品名（装备外观、方块和物品同名）；再不行才把路径变成易读的英文。完整 ID 不再当名字 */
 function refName(reg, e) {
   if (e.label && e.label !== e.v) return e.label;
+  if (reg === 'profile_texture' || reg === 'profile_cape' || reg === 'profile_elytra' || reg === 'camera_overlay') return humanId(shortId(e.v).split('/').pop().replace(/.png$/, ''));   // 资源文件：名字取文件名，完整 ID 在副标题
   var inm = (reg === "item" || reg === "block" || reg === "equipment_asset" || reg === "entity_type") ? Reg.itemName(e.v) : null;
   return inm || humanId(shortId(e.v));
 }
+/* 内置的常用标签快捷项只保留游戏里真的存在的（模组 / 版本变动后不会点出一个不存在的标签）；游戏数据没到时原样保留。
+   list 的每项 {v,...}，v 以 # 开头的才检查 */
+function keepKnownTags(list, reg) {
+  if (!Reg.live()) return list;
+  var tags = Reg.options('tags:' + reg);
+  if (!tags || !tags.length) return list;
+  var have = {}; tags.forEach(function (t) { have['#' + Reg.full(t.v)] = 1; });
+  return list.filter(function (x) { return !x.v || x.v.charAt(0) !== '#' || have[x.v]; });
+}
+/* 纹饰材料 / 图案的图标：用游戏里 PROVIDES_TRIM_MATERIAL 的原料物品 / 真实的锻造模板，模组的也能显示 */
+function liveTrimIcon(reg, v, size) {
+  if (!Reg.live()) return null;
+  Reg.options(reg);   // 没取过就顺便请求，到了会重画
+  var l = Reg.list(reg === 'trim_material' ? 'trim_materials' : 'trim_patterns'), f = Reg.full(v);
+  if (!l) return null;
+  for (var i = 0; i < l.length; i++) {
+    if (l[i].id !== f) continue;
+    var it = (l[i].ingredients || l[i].template_items || [])[0] || l[i].ingredient || l[i].template_item;
+    return it ? itemIcon(Reg.isMod(it) ? it : shortId(it), size) : null;
+  }
+  return null;
+}
 function refIcon(reg, v, size) {
   size = size || 16;
+  if (reg === 'trim_material' || reg === 'trim_pattern') { var lt = liveTrimIcon(reg, v, size); if (lt) return lt; }
   if (reg === 'trim_material' && typeof TRIM_ICON !== 'undefined' && TRIM_ICON[shortId(v)] && !Reg.isMod(Reg.full(v))) return itemIcon(TRIM_ICON[shortId(v)], size);
   if (reg === 'trim_pattern' && typeof EDATA !== 'undefined' && EDATA.ipt && EDATA.ipt[shortId(v) + '_armor_trim_smithing_template'] !== undefined && !Reg.isMod(Reg.full(v))) return itemIcon(shortId(v) + '_armor_trim_smithing_template', size);
   if (reg === "item" || reg === "block") return itemIcon(shortId(v), 16);
