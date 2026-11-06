@@ -27,6 +27,9 @@ public final class FrontendWiringTest {
             @Override public <V> net.minecraft.resources.RegistryOps<V> createSerializationContext(com.mojang.serialization.DynamicOps<V> ops) { return lookup.createSerializationContext(ops); }
         };
         var capture = new JsonObject();
+        RegistrySnapshot.KINDS.forEach((alias, path) -> check(RegistrySnapshot.initialName(alias).equals("minecraft:" + path), "initial publication alias " + alias));
+        check(RegistrySnapshot.initialName("enum:text_color").equals("enum:text_color"), "extension names are not rewritten");
+        check(RegistrySnapshot.initialName("example:custom").equals("example:custom"), "mod registry names are not rewritten");
         var enums = new JsonObject();
         // API names under test, not candidate lists; candidates must all come from game values().
         for (String name : new String[]{"use_animation", "equipment_slot", "equipment_slot_group", "attribute_operation", "rarity", "firework_shape", "consume_effect_type", "dye_color", "text_color", "axolotl_variant", "horse_variant", "llama_variant", "mooshroom_variant", "fox_variant", "rabbit_variant", "parrot_variant", "tropical_fish_pattern", "salmon_size"}) {

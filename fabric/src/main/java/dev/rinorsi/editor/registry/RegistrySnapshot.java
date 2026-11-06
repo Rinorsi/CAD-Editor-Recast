@@ -43,6 +43,11 @@ public final class RegistrySnapshot {
         KINDS.put("data_component_types", "data_component_type"); KINDS.put("blocks", "block");
     }
     private final Map<Identifier, Registry<?>> registries = new LinkedHashMap<>();
+    /** Initial publication keys are also valid explicit request aliases. */
+    static String initialName(String raw) {
+        String path = KINDS.get(raw);
+        return path == null ? raw : "minecraft:" + path;
+    }
     private final Function<Identifier, Component> subtitles;
     public RegistrySnapshot(RegistryAccess access, Function<Identifier, Component> subtitles) {
         BuiltInRegistries.REGISTRY.forEach(r -> registries.put(r.key().identifier(), r));
@@ -73,7 +78,8 @@ public final class RegistrySnapshot {
     static JsonObject tagLabel(net.minecraft.tags.TagKey<?> tag) {
         JsonObject row = new JsonObject();
         row.addProperty("id", tag.location().toString());
-        String translationKey = tag.getTranslationKey();
+        // Explicit interface also compiles against an untransformed game jar in the standalone harness.
+        String translationKey = ((net.fabricmc.fabric.api.tag.FabricTagKey) (Object) tag).getTranslationKey();
         row.addProperty("translation_key", translationKey);
         row.addProperty("name", translated(translationKey, tag.location()));
         return row;

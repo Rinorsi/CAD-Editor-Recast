@@ -61,30 +61,33 @@ document.addEventListener('mousedown', function (e) { if (KPop.el && !KPop.el.co
 function pickItem(anchor, onPick, o) {
   o = o || {};
   var q = h('input', { class: 'k-input', type: 'text', placeholder: o.placeholder || '搜索物品，如「钻石」「sword」', spellcheck: 'false' });
-  var grid = h('div', { class: 'k-pgrid' }), hint = h('div', { class: 'k-phint' });
-  function paint() {
+  var grid = h('div', { class: 'k-pgrid' }), hint = h('div', { class: 'k-phint' }), cancel = null, typingT = null;
+  /* 候选来自游戏实时注册表（含模组物品）；没有宿主时才用内置清单。原版物品用短 ID，模组物品用完整 ID。
+     搜索按时间片分批（kFilterSliced）：一千多个物品的拼音匹配不能在一次脚本入口里做完，否则会被引擎停页 */
+  function show(list, s, src) {
     clear(grid);
-    var s = q.value.trim().toLowerCase(), n = 0, total = 0;
-    /* 候选来自游戏实时注册表（含模组物品）；没有宿主时才用内置清单。原版物品用短 ID，模组物品用完整 ID */
-    var src = Reg.has('items') ? Reg.list('items').map(function (e) { return shortId(e.id); }) : EDATA.items;
-    for (var i = 0; i < src.length; i++) {
-      var id = src[i];
-      if (o.filter && !o.filter(id)) continue;
-      if (s && !kMatch(id, s) && !kMatch(nameOfItem(id), s)) continue;
-      total++;
-      if (n >= 56) continue;
+    var n = 0, total = list.length;
+    for (var i = 0; i < total && n < 56; i++) {
       n++;
       (function (id) {
         var c = h('div', { class: 'k-pcell', title: nameOfItem(id) + '\n' + fullId(id) }, [itemIcon(id, 16)]);
         c.addEventListener('mousedown', function (e) { e.preventDefault(); kPopClose(); onPick(id); });
         grid.appendChild(c);
-      })(id);
+      })(list[i]);
     }
     var custom = s && /^[a-z0-9_.\-]+:[a-z0-9_.\/\-]+$/.test(s) && src.indexOf(shortId(s)) < 0;
     if (custom) { var cu = h('div', { class: 'k-add', text: '使用自定义 ID：' + s }); cu.addEventListener('mousedown', function (e) { e.preventDefault(); kPopClose(); onPick(shortId(s)); }); grid.appendChild(cu); }
     hint.textContent = total ? (total > n ? '共 ' + total + ' 个，输入关键字缩小' : '共 ' + total + ' 个') : '没有匹配的物品';
   }
-  q.addEventListener('input', paint);
+  function paint() {
+    if (cancel) { cancel(); cancel = null; }
+    var s = q.value.trim().toLowerCase();
+    var src = Reg.has('items') ? Reg.list('items').map(function (e) { return shortId(e.id); }) : EDATA.items;
+    var pool = o.filter ? src.filter(function (id) { return o.filter(id); }) : src;
+    if (!s) { show(pool, s, src); return; }
+    cancel = kFilterSliced(pool, function (id) { return kMatch(id, s) || kMatch(nameOfItem(id), s); }, function (list) { show(list, s, src); });
+  }
+  q.addEventListener('input', function () { clearTimeout(typingT); typingT = setTimeout(paint, 90); });   // 连续敲字只在停顿后搜一次
   onKey(q, { Escape: function () { kPopClose(); } });
   var box = h('div', { class: 'k-pickbox' }, [q, grid, hint]);
   kPopover(anchor, box, { width: 292, maxHeight: 340 });

@@ -1,5 +1,20 @@
 # 实时注册表合同 v1
 
+前端接线与真实回执摘录见 [frontend-wiring.md](frontend-wiring.md)，包括 apply 的 component_formats/component_snbt、29种变种、物品元信息全部字段、刷怪器范围与错误形态。
+
+## 2026-11-07：标签显示名与枚举符号（向后兼容补充）
+
+- tags:<注册表> 条目从 {id,count} 扩展为 {id,count,name,translation_key}。translation_key 直接调用当前 Fabric TagKey.getTranslationKey()，支持模组注册表命名空间与嵌套路径；name 从当前 Language 读取，无翻译严格回退完整标签 ID（不加 #）。不增加 TAG_NAMES 静态翻译表，不承诺每个服务器自定义标签都有中文。tag:<注册表> 的成员仍是 ID 字符串数组，信封、分页、错误和远程可见性不变。
+- enum:* 的实际 Java Enum 条目增加 symbol=Enum.name()；id 仍然是 getSerializedName()，前端写组件必须用 id，不能写 symbol 或 ordinal。consume_effect_type 来自真实注册表而非 Java Enum，因此没有 symbol。现有 name/rgb 字段保持。
+- 本轮无新增消息通道。MC_COLORS→enum:text_color；HIDE_PARTS→data_component_types；RESIST→tags:damage_type + tag:damage_type；TOOL_GROUPS→tags:block + tag:block；MELEE_SLOTS→equipment_slot_groups；攻击基础值→entity_base_attributes。上述现有接口已足够，不重复增加私有候选表。
+- 修复初始发布别名的主动查询：RegistrySnapshot.KINDS 中的 items / data_component_types / trim_materials / painting_variants 等现在也可作为请求 name，读取同一个正式注册表缓存；回复 key 保留请求原名，信封 name 可为规范注册表名。此前这些复数名仅自动推送有效（trim_patterns 已有专门补充路由）；不新增候选映射表。
+- 完整 enum 名共18个：use_animation、equipment_slot、equipment_slot_group、attribute_operation、rarity、firework_shape、consume_effect_type、dye_color、text_color、axolotl_variant、horse_variant、llama_variant、mooshroom_variant、fox_variant、rabbit_variant、parrot_variant、tropical_fish_pattern、salmon_size。
+- 无客户端世界时，不保证 registry 错误页被实际投递：当前发送队列只在世界 tick 内排空。前端需处理世界退出、页面关闭和超时；不要无限等待回复，也不要将无回复当完整空列表。validate_component 的大小/频率拒绝则在主线程直接 patch 结果。
+- 刷怪器附加校验抛普通 IllegalArgumentException，当前 apply 拒绝的稳定 code 是 invalid_request，详细原因在 reason；没有细分刷怪器错误码。validate_component 本身仅检查单组件 Codec，不包含整栈 SpawnerData.validate。
+- 验证：独立 Java25 javac（无 Gradle、无窗口）与 FrontendWiringTest；回执 logs/backend-g/wiring-responses.json、完整日志 logs/backend-g/wiring-test.log。包含语言键翻译/缺键/模组注册表回退、全部枚举符号、精确SNBT sidecar、默认蛋实体JSON、远程 unavailable 与正式分页关联检查。无窗口单测不代替客户端消息链验证，后者见下段。
+
+随后本轮追加独立离屏客户端 registry 通道验证：46类请求、849个布尔检查 PASS，包含 tags:block/tags:damage_type 的 name/translation_key、tag:* 成员、enum:symbol、items/data_component_types/trim_materials/painting_variants 主动别名。回执 daily/2026-11-07/registry-supplement/run/registry-supplement-verification.json，条目及部分完整信封 registry-supplement-data.json，启动日志 logs/backend-g/live-runner.log，客户端日志 daily/2026-11-07/registry-supplement/client.log。使用既有基础jar的隔离副本覆盖最新注册表类，没有启动Gradle，也未接管用户客户端；本轮未重测apply服务端保存链、专服真实unavailable或新版发行整包。
+
 ## B5–B9：方块属性、世界数据、变种、纹饰和资源（26.1.2）
 
 以下仍发送到 registry 通道，回复顶层字面键 registry.<请求 name>，沿用 version/generation/name/offset/total/entries/done 分页。ID 全部来自当前游戏对象、官方枚举或活动资源包，不按原版固定名单生成候选。前端必须保留手动输入；列表为空、未知 ID、资源未加载均不得清除草稿里的值。补充索引同代缓存最多64项、在途最多8项，与资源索引共用限额；换世界、标签/资源重载失效。非法请求/导出失败返回空页及 error；正常“服务器未同步”使用 availability:"unavailable"、source、reason 区分，不伪报完整空注册表。

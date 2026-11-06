@@ -41,7 +41,9 @@ public final class RegistrySupplementProbe implements ClientModInitializer {
                 validateVariants(mc);
                 requests.addAll(List.of("block_properties", "minecraft:loot_table", "minecraft:recipe", "minecraft:dimension",
                         "minecraft:map_decoration_type", "trim_material", "trim_patterns",
-                        "camera_overlay", "profile_texture", "profile_cape", "profile_elytra", "item_model"));
+                        "camera_overlay", "profile_texture", "profile_cape", "profile_elytra", "item_model",
+                        "tags:block", "tags:damage_type", "tag:block", "tag:damage_type", "enum:text_color", "enum:use_animation",
+                        "items", "data_component_types", "trim_materials", "painting_variants"));
                 screen = OrielScreens.openInline("<html><body><script>var received={};var completed={};oriel.on('patch',function(p){var v=p.value;if(!v||!v.entries)return;var a=received[p.key]||[];if(v.offset===0)a=[];for(var i=0;i<v.entries.length;i++)a[v.offset+i]=v.entries[i];received[p.key]=a;if(v.done)completed[p.key]=v;});</script></body></html>", new JsonObject());
                 RegistryBridge.attach(screen.driver()); return;
             }
@@ -49,7 +51,9 @@ public final class RegistrySupplementProbe implements ClientModInitializer {
             if (index < requests.size()) {
                 String name = requests.get(index), key = "registry." + name;
                 if (!sent) {
-                    eval("oriel.send('registry',{name:" + new JsonPrimitive(name) + "});true"); sent = true; return;
+                    String tagId = name.equals("tag:block") ? "minecraft:mineable/axe" : name.equals("tag:damage_type") ? "minecraft:is_fire" : null;
+                    eval("oriel.send('registry',{name:" + new JsonPrimitive(name)
+                            + (tagId == null ? "" : ",id:" + new JsonPrimitive(tagId)) + "});true"); sent = true; return;
                 }
                 JsonElement result = eval("completed[" + new JsonPrimitive(key) + "]||null");
                 if (result.isJsonNull()) return;
@@ -58,6 +62,14 @@ public final class RegistrySupplementProbe implements ClientModInitializer {
                 var rows = eval("received[" + new JsonPrimitive(key) + "]").getAsJsonArray();
                 check(rows.size() == envelope.get("total").getAsInt(), "wire_" + name + "_complete");
                 captured.add(name, rows); receipt.addProperty("count_" + name, rows.size());
+                if (name.startsWith("tag:") || name.startsWith("tags:") || name.startsWith("enum:") || name.equals("data_component_types"))
+                    captured.add("envelope_" + name, envelope);
+                if (name.startsWith("tags:")) for (var value : rows) {
+                    var row = value.getAsJsonObject();
+                    check(row.has("name") && row.has("translation_key"), "tag_label_" + name + "_" + row.get("id").getAsString());
+                }
+                if (name.equals("enum:use_animation")) for (var value : rows)
+                    check(value.getAsJsonObject().has("symbol"), "enum_symbol_" + value.getAsJsonObject().get("id").getAsString());
                 if (!name.equals("profile_cape")) check(!rows.isEmpty(), "wire_" + name + "_nonempty");
                 if (name.equals("block_properties")) {
                     var log = find(rows, "minecraft:oak_log").getAsJsonObject("properties").getAsJsonObject("axis");

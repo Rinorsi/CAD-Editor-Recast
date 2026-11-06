@@ -201,7 +201,8 @@ public final class RegistryBridge {
         }
         if (RegistrySupplement.handles(raw)) { supplementRequest(driver, request, raw); return; }
         // Initial registries are served only from the generation index, never recaptured at page-open/request time.
-        boolean initial = RegistrySnapshot.KINDS.values().stream().anyMatch(path -> raw.equals("minecraft:" + path) || raw.equals(path));
+        String initialName = RegistrySnapshot.initialName(raw);
+        boolean initial = RegistrySnapshot.KINDS.values().stream().anyMatch(path -> initialName.equals("minecraft:" + path) || initialName.equals(path));
         if (initial && !request.has("field")) {
             State state = DOCUMENTS.get(driver);
             if (warmup == null || !warmup.complete()) {
@@ -211,7 +212,7 @@ public final class RegistryBridge {
                 }
                 return;
             }
-            RegistryIndex index = warmup.index(Identifier.parse(raw).toString());
+            RegistryIndex index = warmup.index(Identifier.parse(initialName).toString());
             if (index != null) queuePages(driver, "registry." + raw, index.pages());
             return;
         }

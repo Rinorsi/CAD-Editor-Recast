@@ -98,8 +98,19 @@ function openPicker(o) {
     if (o.single && o.preview) o.preview(e.full);
     paintFoot();
   }
+  /* 过滤：条目多时按时间片分批（kFilterSliced），每批都是一次新的脚本入口，不会触发单次入口指令预算而停页。
+     分批期间旧列表保持原样，算完再换，不会闪空白。 */
+  var filterCancel = null, lastVis = [];
   function paint() {
-    var vis = visible(), shown = vis.slice(0, limit);   // 先算完结果再清空列表：即使中途出问题，也不会留下一片空白
+    if (filterCancel) { filterCancel(); filterCancel = null; }
+    var cat = catOf(catSel), s = q.trim().toLowerCase();
+    var pool = o.entries.filter(function (e) { return !cat.filter || cat.filter(e); });
+    if (!s) { render(pool); return; }
+    filterCancel = kFilterSliced(pool, function (e) { return kMatch(e.name + ' ' + e.full + ' ' + (e.sub || ''), s); }, render);
+  }
+  function render(vis) {
+    lastVis = vis;
+    var shown = vis.slice(0, limit);
     clear(list);
     var qq = q.trim().toLowerCase();
     if (o.custom && (o.custom.hash ? /^#?[a-z0-9_.\-]+:[a-z0-9_.\/\-]+$/ : /^[a-z0-9_.\-]+:[a-z0-9_.\/\-]+$/).test(qq) && !o.entries.some(function (e) { return e.full === qq; })) {
@@ -120,7 +131,7 @@ function openPicker(o) {
       row.addEventListener('click', function () { pick(e, row); });
       list.appendChild(row);
     });
-    if (vis.length > shown.length) { var more = h('div', { class: 'k-add', text: '显示更多（还有 ' + (vis.length - shown.length) + ' 个）' }); activate(more, function () { limit += 120; paint(); }); list.appendChild(more); }
+    if (vis.length > shown.length) { var more = h('div', { class: 'k-add', text: '显示更多（还有 ' + (vis.length - shown.length) + ' 个）' }); activate(more, function () { limit += 120; render(lastVis); }); list.appendChild(more); }
     if (!vis.length) list.appendChild(xEmpty(emptyReason(q, openedAt)));
   }
   var searchT = null;
