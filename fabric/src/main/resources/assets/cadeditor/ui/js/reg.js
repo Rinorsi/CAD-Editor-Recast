@@ -20,6 +20,7 @@ var Reg = {
     var off = val.offset || 0, ents = val.entries || [];
     for (var i = 0; i < ents.length; i++) k.entries[off + i] = ents[i];
     k.total = val.total || k.total; if (val.done) { k.done = true; delete this.cache[kind]; }
+    if (val.availability === 'unavailable') k.unavail = String(val.reason || '服务器没有向客户端同步完整列表');   /* 远程服务器上的战利品表 / 配方等：空是“拿不到”，不是“没有” */
     this.fire(kind);
   },
   /* 物品原型默认组件：按需一件件向宿主要，来了再重画；没来之前用内置数据 */
@@ -155,6 +156,11 @@ var Reg = {
     var v = m ? m[this.full(attr)] : undefined;
     return typeof v === 'number' ? v : dflt;
   },
+  /* 这类注册表在当前连接里是否“拿不到完整列表”（远程服务器）：返回原因文字，否则 null。拿不到时必须保留手动输入 */
+  unavailable: function (reg) {
+    var kind = this.KIND[reg] || (reg.indexOf(':') > 0 || reg === 'equipment_asset' || reg === 'tooltip_style' ? reg : 'minecraft:' + reg), k = this.kinds[kind];
+    return k && k.unavail ? k.unavail : null;
+  },
   tagsOf: function (full) { var e = this.defs[full]; return e && e.tags ? e.tags : null; },
   /* 大数组（适用物品/互斥附魔太多）被宿主改为延迟加载：条目带 xxx_ref，按需请求，分页回来后合并 */
   rel: {}, relAsk: {},
@@ -272,3 +278,21 @@ function syncEnums() {
   });
 }
 function setOf(arr) { var o = {}; (arr || []).forEach(function (x) { o[x] = 1; }); return o; }
+
+/* 枚举字段 → 游戏里的枚举（enum:<名>）。候选以游戏为准；内置的 en 只是离线 / 数据没到之前的备用。
+   这些都是 Java 枚举，写入值只能用条目的 id（不是 symbol）。 */
+var LIVE_ENUM = { 'axolotl/variant': 'axolotl_variant', 'horse/variant': 'horse_variant', 'llama/variant': 'llama_variant', 'mooshroom/variant': 'mooshroom_variant', 'fox/variant': 'fox_variant', 'rabbit/variant': 'rabbit_variant', 'parrot/variant': 'parrot_variant', 'tropical_fish/pattern': 'tropical_fish_pattern', 'salmon/size': 'salmon_size', rarity: 'rarity' };
+/* 返回 [{v,label}]，数据没到 / 离线 / 这个字段没有对应枚举时返回 null */
+function liveEnumOptions(cid, path) {
+  var name = cid && !path ? LIVE_ENUM[cid] : null;
+  if (!name || typeof Reg === "undefined" || !Reg.live()) return null;
+  var l = Reg.options('enum:' + name);
+  if (!l || !l.length) return null;
+  return l.map(function (e) { return { v: e.v, label: e.label && e.label !== e.v ? e.label : e.v, title: e.v }; });
+}
+function liveEnumHas(cid, path, v) {
+  var l = liveEnumOptions(cid, path);
+  if (!l) return false;
+  for (var i = 0; i < l.length; i++) if (l[i].v === v) return true;
+  return false;
+}

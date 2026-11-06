@@ -153,7 +153,7 @@ function headAuto(card, cid, c, kind, v) {
   } else if (kind === 'reg') {
     headCtl(card, kRegSelect({ reg: sc.reg, value: typeof v === 'string' ? v : '', title: '选择' + c.name, empty: '（未选择）', onChange: function (x) { if (x) autoPut(cid, x); } }).el);
   } else {
-    var entries = sc.en.map(function (e) { return { v: e, label: e }; });
+    var entries = liveEnumOptions(cid, '') || sc.en.map(function (e) { return { v: e, label: e }; });
     headCtl(card, kSelect(entries, typeof v === 'string' ? v : sc.en[0], function (x) { autoPut(cid, x); }).el);
   }
 }

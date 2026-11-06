@@ -198,9 +198,10 @@ function wStr(sc, val, commit, ctx) {
   if (!sc.reg && !sc.en && !sc.tag) { var rg0 = STR_REG[(CURCID || '') + (ctx && ctx.path ? ctx.path : '')]; if (rg0) { var sc2 = {}; for (var kk0 in sc) sc2[kk0] = sc[kk0]; sc2.reg = rg0; sc = sc2; } }
   if ((sc.en && sc.en.indexOf('light_blue') >= 0 && sc.en.indexOf('magenta') >= 0 && sc.en.indexOf('white') >= 0) || (typeof dyeFieldFor === 'function' && dyeFieldFor(CURCID, ctx && ctx.path))) return wDye(val, commit);
   if (sc.en) {
-    if (sc.en.length <= 4) return wSeg(sc.en.map(function (v) { return { v: v, label: v }; }), val, function (v) { commit(v, {}); });
-    var opts = sc.en.map(function (v) { return { v: v, label: v }; });
-    return combo({ value: val === undefined ? '' : val, options: opts, free: false, placeholder: '选择…', onPick: function (v) { if (sc.en.indexOf(v) >= 0) commit(v, {}); } });
+    /* 候选以游戏里的枚举为准（liveEnumOptions），没到 / 离线才用内置；多于 4 个的可以直接输入（不在列表里的会在问题列表里提示） */
+    var opts = liveEnumOptions(CURCID, ctx && ctx.path) || sc.en.map(function (v) { return { v: v, label: v }; });
+    if (opts.length <= 4) return wSeg(opts, val, function (v) { commit(v, {}); });
+    return combo({ value: val === undefined ? '' : val, options: opts, free: true, placeholder: '选择，或直接输入…', onPick: function (v) { if (v !== '') commit(v, {}); } });
   }
   if (typeof dyeFieldFor === 'function' && dyeFieldFor(CURCID, ctx && ctx.path)) return wDye(val, commit);
   var ropts = sc.reg ? registryOptions(sc.reg) : null;

@@ -120,3 +120,31 @@ console.log('PASS item kind from facts, container size, bundle capacity fallback
   c.Reg.meta = null;
 }
 console.log('PASS melee slot groups and player base attributes.');
+
+// 枚举字段：候选以游戏为准，没到才用内置；校验接受游戏列表里的值
+{
+  c.Reg.meta = null;
+  assert.equal(c.liveEnumOptions('fox/variant', ''), null, '离线没有游戏列表');
+  c.Reg.meta = {};
+  c.Reg.kinds['enum:fox_variant'] = { done: true, entries: [{ id: 'red', name: 'Red' }, { id: 'snow', name: 'Snow' }, { id: 'ice', name: 'Ice' }] };
+  const o = Array.from(c.liveEnumOptions('fox/variant', '')).map(x => x.v);
+  assert.deepEqual(o, ['red', 'snow', 'ice'], '游戏新增的值出现在候选里');
+  assert.equal(c.liveEnumHas('fox/variant', '', 'ice'), true);
+  assert.equal(c.liveEnumHas('fox/variant', '', 'lava'), false);
+  assert.equal(c.liveEnumOptions('fox/variant', '.sub'), null, '只对组件本身生效，子路径不套用');
+  c.Reg.meta = null;
+}
+console.log('PASS live enum options.');
+
+// 远程服务器上拿不到完整列表：空列表要说明原因，并保留手动输入
+{
+  c.Reg.meta = {};
+  c.Reg.kinds = {};
+  c.Reg.ingest('registry.minecraft:loot_table', { generation: 1, offset: 0, total: 0, entries: [], done: true, availability: 'unavailable', reason: '远程服务器不向客户端同步战利品表' });
+  assert.equal(c.Reg.unavailable('loot_table'), '远程服务器不向客户端同步战利品表');
+  assert.equal(c.Reg.unavailable('recipe'), null);
+  assert.ok(/远程服务器不向客户端同步战利品表.*直接输入/.test(c.emptyReason('', 0, 'loot_table')), '空列表说明原因并指向手动输入');
+  assert.ok(/没有匹配/.test(c.emptyReason('abc', 0, 'loot_table')), '有搜索词时仍是没有匹配');
+  c.Reg.meta = null; c.Reg.kinds = {};
+}
+console.log('PASS unavailable registry hint.');

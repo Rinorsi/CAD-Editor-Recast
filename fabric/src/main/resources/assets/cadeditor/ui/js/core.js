@@ -366,7 +366,7 @@ function validateValue(sc, v, path, out, cid) {
       break;
     case 'str':
       if (typeof v !== 'string') { add('error', '需要文本'); break; }
-      if (sc.en && sc.en.indexOf(v) < 0) add('error', '不是有效选项：' + v);
+      if (sc.en && sc.en.indexOf(v) < 0 && !(typeof liveEnumHas === 'function' && liveEnumHas(cid, path, v))) add('error', '不是有效选项：' + v);
       /* 注册表引用不能是空的：空串到游戏里会变成“minecraft:”，整件物品被拒绝 */
       if (sc.reg && (v === '' || v === 'minecraft:' || v === '#')) { add('error', '还没有选择（这一项不能留空）'); break; }
       if (sc.reg === 'item' && !sc.tag && !knownItem(v)) add('warn', '未知物品：' + v);

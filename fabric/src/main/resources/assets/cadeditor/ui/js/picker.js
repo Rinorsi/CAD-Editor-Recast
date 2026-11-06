@@ -132,7 +132,7 @@ function openPicker(o) {
       list.appendChild(row);
     });
     if (vis.length > shown.length) { var more = h('div', { class: 'k-add', text: '显示更多（还有 ' + (vis.length - shown.length) + ' 个）' }); activate(more, function () { limit += 120; render(lastVis); }); list.appendChild(more); }
-    if (!vis.length) list.appendChild(xEmpty(emptyReason(q, openedAt)));
+    if (!vis.length) list.appendChild(xEmpty(emptyReason(q, openedAt, o.emptyReg)));
   }
   var searchT = null;
   search.addEventListener('input', function () { q = search.value; limit = 80; clearTimeout(searchT); searchT = setTimeout(paint, 90); });   // 连续敲字只在停顿后搜一次
@@ -288,7 +288,7 @@ function openRegPick(o) {   /* o: { reg, tag, current, title, fallback, onPick(i
   if (o.reg === "jukebox_song" || o.reg === "instrument") {   // 唱片曲目 / 山羊角：带试听（用它们各自的声音事件）
     var snds = {};
     var buildS = function () { return (Reg.options(o.reg) || []).map(function (e) { snds[Reg.full(e.v)] = e.sound; return { full: Reg.full(e.v), name: e.label === e.v ? humanId(shortId(e.v)) : e.label, sub: e.v + (e.len ? " · " + Math.round(e.len) + " 秒" : ""), icon: function () { return uiIcon("music", 16); } }; }); };
-    openPicker({ kind: "regpick-" + o.reg, title: o.title || "选择", sub: "", icon: "music", single: true, entriesFn: buildS, cats: [{ id: "all", name: "全部", icon: "grid" }, { id: "mod", name: "模组", icon: "cube", filter: function (en) { return Reg.isMod(en.full); } }], live: Reg.live(), searchHint: "搜索名称或 ID", custom: {}, preview: function () {}, soundOf: function (full) { return snds[full]; }, confirmLabel: "使用这个", onConfirm: function (ids) { o.onPick(ids[0]); } });
+    openPicker({ kind: "regpick-" + o.reg, emptyReg: o.reg, title: o.title || "选择", sub: "", icon: "music", single: true, entriesFn: buildS, cats: [{ id: "all", name: "全部", icon: "grid" }, { id: "mod", name: "模组", icon: "cube", filter: function (en) { return Reg.isMod(en.full); } }], live: Reg.live(), searchHint: "搜索名称或 ID", custom: {}, preview: function () {}, soundOf: function (full) { return snds[full]; }, confirmLabel: "使用这个", onConfirm: function (ids) { o.onPick(ids[0]); } });
     return;
   }
   if (o.tag) { openTagPicker({ title: o.title || "选择标签或条目", tagsReg: o.reg, entryReg: o.reg, entryIcon: function (e) { return refIcon(o.reg, e.v); }, onConfirm: o.onPick }); return; }
@@ -297,7 +297,7 @@ function openRegPick(o) {   /* o: { reg, tag, current, title, fallback, onPick(i
     return l.map(function (e) { return { full: Reg.full(e.v), name: refName(o.reg, e), sub: e.v, icon: function () { return refIcon(o.reg, e.v); } }; });
   }
   var cats = [{ id: "all", name: "全部", icon: "grid" }, { id: "mod", name: "模组", icon: "cube", filter: function (en) { return Reg.isMod(en.full); } }];
-  openPicker({ kind: "regpick-" + o.reg, title: o.title || "选择", sub: o.multi ? "勾选后一次添加" : "", icon: "grid", single: !o.multi, locked: o.locked, entriesFn: build, cats: cats, live: Reg.live(), searchHint: "搜索名称或 ID", custom: { placeholder: "或输入 ID，回车选中" }, confirmLabel: o.multi ? "添加所选" : "使用这个", onConfirm: function (ids) { if (o.multi) o.onPickMany(ids); else o.onPick(ids[0]); } });
+  openPicker({ kind: "regpick-" + o.reg, emptyReg: o.reg, title: o.title || "选择", sub: o.multi ? "勾选后一次添加" : "", icon: "grid", single: !o.multi, locked: o.locked, entriesFn: build, cats: cats, live: Reg.live(), searchHint: "搜索名称或 ID", custom: { placeholder: "或输入 ID，回车选中" }, confirmLabel: o.multi ? "添加所选" : "使用这个", onConfirm: function (ids) { if (o.multi) o.onPickMany(ids); else o.onPick(ids[0]); } });
 }
 /* 条目名：有翻译名就用翻译名；没有就用物品名（装备外观、方块和物品同名）；再不行才把路径变成易读的英文。完整 ID 不再当名字 */
 function refName(reg, e) {
@@ -316,8 +316,9 @@ function refIcon(reg, v, size) {
 
 /* 列表是空的时候，说明为什么空：还在向游戏要数据、游戏没有这类条目、还是游戏端没有响应（多半是模组 jar 没更新 / 没重启） */
 var EMPTY_T0 = Date.now();
-function emptyReason(q, since) {
+function emptyReason(q, since, reg) {
   if (q && String(q).trim()) return "没有匹配“" + String(q).trim() + "”的项";
+  if (reg && Reg.live() && Reg.unavailable(reg)) return Reg.unavailable(reg) + "。可以在上面的搜索框里直接输入完整 ID。";
   if (!Reg.live()) return "游戏还没有把注册表发给编辑器（未连接游戏，或游戏里的编辑器模组需要更新并重启）";
   var waited = Date.now() - (since || EMPTY_T0);
   return waited < 4000 ? "正在向游戏读取…" : "游戏没有返回这类数据。常见原因：游戏里的编辑器模组还是旧版本，请更新并重启游戏";
