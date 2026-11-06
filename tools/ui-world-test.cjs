@@ -174,7 +174,8 @@ console.log('PASS live text colors and known-tag quick items.');
   assert.equal(c.Reg.isDirect('item_model'), true); assert.equal(c.Reg.isDirect('profile_cape'), true); assert.equal(c.Reg.isDirect('loot_table'), false);
   c.Reg.kinds['item_model'] = { done: true, entries: [{ id: 'mymod:fancy_sword', name: 'mymod:fancy_sword', resource: 'mymod:items/fancy_sword.json' }] };
   const o = c.Reg.options('item_model'); assert.equal(o.length, 1); assert.equal(o[0].v, 'mymod:fancy_sword');
-  assert.equal(c.refName('profile_texture', { v: 'minecraft:textures/entity/player/slim/alex.png', label: 'minecraft:textures/entity/player/slim/alex.png' }), 'Alex');
+  assert.equal(c.refName('profile_texture', { v: 'minecraft:entity/player/slim/alex', label: 'minecraft:entity/player/slim/alex' }), 'Alex');
+  assert.equal(c.refName('camera_overlay', { v: 'minecraft:misc/pumpkinblur', label: 'minecraft:misc/pumpkinblur' }), 'Pumpkinblur');
   c.Reg.meta = null; c.Reg.kinds = {};
 }
 console.log('PASS resource-id registries.');

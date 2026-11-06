@@ -193,7 +193,7 @@ function wSeg(options, cur, onPick, cls) {
 }
 
 /* 结构里没标注册表、但实际是注册表 ID 的字段：按「组件 + 路径」补上，走统一的选择控件（仍可手动输入） */
-var STR_REG = { item_model: 'item_model', 'equippable.asset_id': 'equipment_asset' };
+var STR_REG = { item_model: 'item_model', 'equippable.asset_id': 'equipment_asset', 'equippable.camera_overlay': 'camera_overlay' };
 function wStr(sc, val, commit, ctx) {
   if (!sc.reg && !sc.en && !sc.tag) { var rg0 = STR_REG[(CURCID || '') + (ctx && ctx.path ? ctx.path : '')]; if (rg0) { var sc2 = {}; for (var kk0 in sc) sc2[kk0] = sc[kk0]; sc2.reg = rg0; sc = sc2; } }
   if ((sc.en && sc.en.indexOf('light_blue') >= 0 && sc.en.indexOf('magenta') >= 0 && sc.en.indexOf('white') >= 0) || (typeof dyeFieldFor === 'function' && dyeFieldFor(CURCID, ctx && ctx.path))) return wDye(val, commit);
