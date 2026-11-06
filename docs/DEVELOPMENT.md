@@ -7,7 +7,7 @@
 - 构建输出、运行目录、日志、截图写在 `../Oriel-UI-Workspace/daily/<日期>/`（`fabric/build.gradle`、`stonecutter.gradle` 里是这个相对路径），所以仓库必须与 `Oriel-UI-Workspace` 同级。内部评估报告、阶段交接、状态审计也放在工作区的 `planning/cad-editor-recast/`，不进仓库。
 - `tools/gw.sh` 转交给 `Oriel-UI-Workspace/tools/gw.sh`，由它处理 JDK 与下载代理。作者只验证过这条路径；没有工作区时直接用 `./gradlew` 理论上可行但未验证，构建输出会写到上级目录的 `Oriel-UI-Workspace/daily/…`（Gradle 自动创建）。
 - Oriel UI 的 jar 获取：源码仓库 <https://github.com/Rinorsi/Oriel-UI>（目前私有）；维护者本机的发布包在 `Oriel-UI-Workspace/dist/oriel-0.11.0-<日期>/`，复制 `oriel-fabric-26.1.2-0.11.0.jar` 到本仓库 `libs/`。
-- 许可与来源：借鉴 CAD Editor（MIT）的 I 键、`/cade` 与创造槽位包写回思路，没有打包其源码或界面资源，声明见 `NOTICE`、`LICENSE-CAD-Editor`。Oriel UI 基于 Vellum（MIT），是外部必需依赖。
+- 来源：CAD Editor 是作者自己的项目，本项目是它的换代重写；界面引擎 Oriel UI 基于 Vellum（MIT，Max Leiter），是外部必需依赖，声明见 `NOTICE`。
 
 ## 发布包与运行
 

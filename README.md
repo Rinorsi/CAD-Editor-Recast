@@ -44,6 +44,10 @@ node tools/ui-contract-test.cjs                              # 界面测试（�
 
 [`DEVELOPMENT`](docs/DEVELOPMENT.md) 开发说明 · [`README-host`](README-host.md) 宿主与写回合同 · [`registry-contract`](docs/registry-contract.md) 数据通道 · [`TESTING`](docs/TESTING.md) 测试 · [`COVERAGE`](docs/COVERAGE.md) 覆盖与 1.0 门槛
 
+## 致谢
+
+[Vellum](https://modrinth.com/mod/vellum-gui)（Max Leiter，MIT）：Oriel UI 基于它，界面引擎的思路也来自它。
+
 ## 许可
 
-借鉴 CAD Editor（MIT）的思路，声明见 [`NOTICE`](NOTICE)。本项目自己的许可证待定。
+本项目自己的许可证待定，第三方声明见 [`NOTICE`](NOTICE)。
