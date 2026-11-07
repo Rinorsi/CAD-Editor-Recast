@@ -49,10 +49,7 @@ function weRender() {
 }
 function drawWorldTop() {
   var bar = clear($('topbar')), w = WE.w;
-  bar.appendChild(h('span', { class: 'eb-ico' }, [w.kind === 'block' ? itemIcon(shortId(w.block || w.type), 22) : w.player ? itemIcon('player_head', 22) : entityIcon(w.type, 22)]));
-  bar.appendChild(h('span', { class: 'ttl', text: weName() }));
-  bar.appendChild(h('span', { class: 'crumb', text: w.kind === 'block' ? '方块' : w.player ? '玩家' : '实体' }));
-  bar.appendChild(h('div', { class: 'grow' }));
+  edTopHead(bar, { icon: w.kind === 'block' ? itemIcon(shortId(w.block || w.type), 22) : w.player ? itemIcon('player_head', 22) : entityIcon(w.type, 22), title: weName(), crumb: w.kind === 'block' ? '方块' : w.player ? '玩家' : '实体' });
   var un = h('div', { class: 'k-ibtn' + (w.canUndo ? '' : ' dis'), title: '撤销上一次写入游戏的修改' }, [uiIcon('undo', 14)]);
   activate(un, function () { if (WE.w.canUndo) weUndo(); });
   bar.appendChild(un);
@@ -60,19 +57,15 @@ function drawWorldTop() {
   var th = h('div', { class: 'k-ibtn', title: '设置' }, [uiIcon('sliders', 14)]); activate(th, openSettings);
   bar.appendChild(vb); bar.appendChild(th);
   var n = weDirty(), cnt = weChangeCount();
-  var ap = h('div', { class: 'k-btn pri k-apply' + (n ? '' : ' dim'), title: n ? '写入游戏' : '还没有修改' }, [uiIcon('play', 12), h('span', { text: '应用修改' }), cnt ? h('b', { text: String(cnt) }) : null]);
-  activate(ap, weApply);
-  bar.appendChild(ap);
-  var mx = h('div', { class: 'k-ibtn', title: UI.maxed ? '还原窗口' : '全屏' }, [uiIcon(UI.maxed ? 'restore' : 'maximize', 14)]);
-  activate(mx, function () { UI.maxed = !UI.maxed; applyWinStyle(); Prefs.set('windowMax', UI.maxed); mx.title = UI.maxed ? '还原窗口' : '全屏'; mx.firstChild.src = 'oriel:textures/icons/' + (UI.maxed ? 'restore' : 'maximize') + '.png'; });
-  bar.appendChild(mx);
-  var x = h('div', { class: 'k-ibtn', title: '关闭' }, [uiIcon('close', 14)]);
-  activate(x, closeEditor);
-  bar.appendChild(x);
+  bar.appendChild(edApplyBtn({ dirty: n, count: cnt, tip: '写入游戏', tipOff: '还没有修改', onClick: weApply }));
+  bar.appendChild(edMaxBtn());
+  bar.appendChild(edCloseBtn('关闭', closeEditor));
 }
+/* 改了任何草稿之后：顶栏的「应用修改」计数和撤销、底栏的「有未应用的修改」一起刷新 */
+function weMarkDirty() { drawWorldTop(); drawWorldFoot(); }
 function drawWorldFoot() {
   var f = clear($('footer')), w = WE.w, s = w.slot || {};
-  f.appendChild(h('span', { class: 'it' + (weDirty() ? ' chg' : '') }, [h('i', { class: 'dot' }), weDirty() ? '有未应用的修改' : '没有未应用的修改']));
+  f.appendChild(edFootChg(weDirty(), '有未应用的修改', '没有未应用的修改'));
   if (WE.err) f.appendChild(h('span', { class: 'it bad' }, [uiIcon('close', 12), WE.err]));
   f.appendChild(h('div', { class: 'grow' }));
   f.appendChild(h('span', { class: 'it', title: '这个目标在世界里的位置', text: weWhere() }));
@@ -128,7 +121,7 @@ function weTools() {
   t.appendChild(all);
 }
 /* 只重画右边的标签页内容（拖动 / 放下物品后用），保留滚动位置，不动左栏和顶栏 */
-function weRedrawBody() { var body = $('edbody'); if (!body) return; var top = body.scrollTop; clear(body); weTabBody(body); body.scrollTop = top; drawWorldTop(); drawWorldFoot(); }
+function weRedrawBody() { var body = $('edbody'); if (!body) return; var top = body.scrollTop; clear(body); weTabBody(body); body.scrollTop = top; weMarkDirty(); }
 
 /* ---------- 容器：格子 + 点开改物品 / 数量 / 清空；只发改过的格子，没改的格子宿主保留原样 ---------- */
 function weSlotStack(i) {
@@ -143,7 +136,7 @@ function weContainerTab(body) {
   body.appendChild(weDndHint());
   var ix = []; for (var i = 0; i < n; i++) ix.push(i);
   body.appendChild(kSlotGrid({ tight: true, indices: ix, cols: cols, stackOf: weSlotStack, titleOf: function (i) { return '格子 ' + (i + 1); },
-    set: function (i, st) { if (st.empty && weOrigEmpty(i)) delete WE.slots[i]; else WE.slots[i] = st; drawWorldTop(); drawWorldFoot(); } }));
+    set: function (i, st) { if (st.empty && weOrigEmpty(i)) delete WE.slots[i]; else WE.slots[i] = st; weMarkDirty(); } }));
 }
 function weOrigEmpty(i) { var s = WE.w.container.slots.filter(function (x) { return x.slot === i; })[0]; return !s || s.stack.empty; }
 
@@ -155,7 +148,7 @@ function weObj() {
 function wePut() {
   var ref; try { ref = nbtParse(WE.text); } catch (e) { ref = nbtParse(WE.w.snbt); }
   try { WE.text = nbtPrint(nbtParse(nbtMerge(WE.obj, ref)), true); WE.err = ''; } catch (e) { WE.err = String(e.message || e); }
-  drawWorldTop(); drawWorldFoot(); weHeroLive();
+  weMarkDirty(); weHeroLive();
 }
 
 /* ---------- 刷怪笼：直接复用物品里的刷怪笼页（spawn.js），数据换成这个方块实体的 NBT ---------- */
@@ -188,7 +181,7 @@ function weDataTab(body) {
   ta.addEventListener('input', function () {
     WE.text = ta.value;
     try { nbtParse(ta.value); msg.textContent = ''; WE.err = ''; } catch (e) { msg.textContent = 'SNBT 有误：' + (e.message || e); WE.err = ''; }
-    WE.obj = null; drawWorldTop(); drawWorldFoot();
+    WE.obj = null; weMarkDirty();
   });
   body.appendChild(ta); body.appendChild(msg);
   body.appendChild(kBtn('放弃这里的修改', function () { WE.text = nbtPrint(nbtParse(WE.w.snbt), true); WE.obj = null; weRender(); }, { icon: 'undo' }));
@@ -274,23 +267,8 @@ function weHero() {
   else if (isPlayer) vis = entView ? heroEntity(w.type, {}, oldEnt, psrc) : itemIcon('player_head', 48);
   else vis = entView ? heroEntity(w.type, weObj(), oldEnt) : entityIcon(w.type, 48);
   var open = UI.stageOpen !== false;
-  var shead = h('div', { class: 'ed-stagehead' }, [foldArrow(open, 8), h('span', { text: '预览' }), h('div', { class: 'grow' })]);
-  shead.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.ed-view')) return; heroFold('.ed-stage', open, function (v) { UI.stageOpen = v; Prefs.set('stageOpen', v); }); });
-  if (can3d && open && (!isPlayer || psrc)) {
-    var seg = h('div', { class: 'k-seg ed-view', title: isBlock ? '方块预览：2D 图标 / 3D 模型（会记住你的选择）' : '2D 显示图标 / 3D 显示生物（会记住你的选择）' });
-    ['2d', '3d'].forEach(function (v) {
-      var b = h('div', { class: 'k-segi' + (view === v ? ' on' : ''), text: v.toUpperCase() });
-      activate(b, function () { if (UI.heroView === v) return; UI.heroView = v; Prefs.set('heroView', v); weHero(); });
-      seg.appendChild(b);
-    });
-    shead.appendChild(seg);
-  }
-  if (entView && open) {
-    var rv = h('div', { class: 'k-mini ed-view', title: '恢复默认视角。左键拖动旋转，滚轮缩放，右键拖动移动' }, [uiIcon('undo', 11)]);
-    rv.addEventListener('click', function (e) { e.stopPropagation(); UI.entView = null; var o = $('hero') && $('hero').querySelector('.k-ent'); if (o) o.remove(); weHero(); });
-    shead.appendChild(rv);
-  }
-  hero.appendChild(shead);
+  hero.appendChild(edStageHead({ open: open, view: view, can3d: can3d, showView: !isPlayer || !!psrc, entView: entView, redraw: weHero,
+    segTitle: isBlock ? '方块预览：2D 图标 / 3D 模型（会记住你的选择）' : '2D 显示图标 / 3D 显示生物（会记住你的选择）' }));
   if (open) hero.appendChild(h('div', { class: 'ed-stage' + (entView ? ' ent' : '') }, [h('div', { class: 'plate' }), vis]));
   hero.appendChild(h('div', { class: 'ed-name' + (weName().length > 6 ? ' sm' : ''), text: weName() }));
   hero.appendChild(h('div', { class: 'ed-tags' }, [h('span', { class: 'k-tag', text: isBlock ? '方块' : isPlayer ? '玩家' : '实体' }), h('span', { class: 'k-tag dim', text: shortId(w.type) })]));
@@ -301,9 +279,7 @@ function weHero() {
   else if (w.nbt && typeof w.nbt.Health === 'number') stat('生命', fmtNum(w.nbt.Health));
   var sOpen = UI.statsOpen !== false;
   if (stats.children.length) {
-    var sh = h('div', { class: 'ed-stagehead' }, [foldArrow(sOpen, 8), h('span', { text: isBlock ? '方块状态' : '属性' }), h('div', { class: 'grow' })]);
-    sh.addEventListener('click', function () { heroFold('.ed-stats', sOpen, function (v) { UI.statsOpen = v; Prefs.set('statsOpen', v); }); });
-    hero.appendChild(sh);
+    hero.appendChild(edStatsHead(isBlock ? '方块状态' : '属性', sOpen));
     if (sOpen) hero.appendChild(stats);
   }
   hero.scrollTop = scrollTop;

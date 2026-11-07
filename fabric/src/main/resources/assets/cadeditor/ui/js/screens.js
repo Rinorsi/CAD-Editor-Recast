@@ -105,13 +105,61 @@ function loadStack(st) {
 }
 
 /* ==================== 顶栏 ==================== */
+/* ---------- 顶栏 / 底栏 / 左栏的公共零件（物品页和世界页共用，不要各写一份） ---------- */
+/* 顶栏左半：图标 + 标题 + 类别标签 + 空白。o = { icon（元素）, title, crumb, crumbTitle（可省） } */
+function edTopHead(bar, o) {
+  bar.appendChild(h('span', { class: 'eb-ico' }, [o.icon]));
+  bar.appendChild(h('span', { class: 'ttl', text: o.title }));
+  var ca = { class: 'crumb', text: o.crumb }; if (o.crumbTitle !== undefined) ca.title = o.crumbTitle;
+  bar.appendChild(h('span', ca));
+  bar.appendChild(h('div', { class: 'grow' }));
+}
+/* 「应用修改」按钮。o = { dirty（有没有修改：决定变灰和提示）, count（徽标数字，0 不画）, tip, tipOff, onClick } */
+function edApplyBtn(o) {
+  var ap = h('div', { class: 'k-btn pri k-apply' + (o.dirty ? '' : ' dim'), title: o.dirty ? o.tip : o.tipOff }, [uiIcon('play', 12), h('span', { text: '应用修改' }), o.count ? h('b', { text: String(o.count) }) : null]);
+  activate(ap, o.onClick);
+  return ap;
+}
+/* 全屏 / 还原按钮 */
+function edMaxBtn() {
+  var mx = h('div', { class: 'k-ibtn', title: UI.maxed ? '还原窗口' : '全屏' }, [uiIcon(UI.maxed ? 'restore' : 'maximize', 14)]);
+  activate(mx, function () { UI.maxed = !UI.maxed; applyWinStyle(); Prefs.set('windowMax', UI.maxed); mx.title = UI.maxed ? '还原窗口' : '全屏'; mx.firstChild.src = 'oriel:textures/icons/' + (UI.maxed ? 'restore' : 'maximize') + '.png'; });
+  return mx;
+}
+function edCloseBtn(title, onClick) { var cl = h('div', { class: 'k-ibtn', title: title }, [uiIcon('close', 14)]); activate(cl, onClick); return cl; }
+/* 底栏左边的「有没有未应用的修改」 */
+function edFootChg(dirty, onText, offText) { return h('span', { class: 'it' + (dirty ? ' chg' : '') }, [h('i', { class: 'dot' }), dirty ? onText : offText]); }
+/* 左栏的「预览」折叠头：右边是 2D / 3D 切换，3D 生物时还有「恢复默认视角」。
+   o = { open, view（'2d' | '3d'）, can3d, showView:false（不要切换，如拿不到皮肤的玩家）, segTitle, entView, redraw }。折叠状态存在 UI.stageOpen */
+function edStageHead(o) {
+  var shead = h('div', { class: 'ed-stagehead' }, [foldArrow(o.open, 8), h('span', { text: '预览' }), h('div', { class: 'grow' })]);
+  shead.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.ed-view')) return; heroFold('.ed-stage', o.open, function (v) { UI.stageOpen = v; Prefs.set('stageOpen', v); }); });
+  if (o.can3d && o.open && o.showView !== false) {
+    var seg = h('div', { class: 'k-seg ed-view', title: o.segTitle });
+    ['2d', '3d'].forEach(function (v) {
+      var b = h('div', { class: 'k-segi' + (o.view === v ? ' on' : ''), text: v.toUpperCase() });
+      activate(b, function () { if (UI.heroView === v) return; UI.heroView = v; Prefs.set('heroView', v); o.redraw(); });
+      seg.appendChild(b);
+    });
+    shead.appendChild(seg);
+  }
+  if (o.entView && o.open) {
+    var rv = h('div', { class: 'k-mini ed-view', title: '恢复默认视角。左键拖动旋转，滚轮缩放，右键拖动移动' }, [uiIcon('undo', 11)]);
+    rv.addEventListener('click', function (e) { e.stopPropagation(); UI.entView = null; var o2 = $('hero') && $('hero').querySelector('.k-ent'); if (o2) o2.remove(); o.redraw(); });
+    shead.appendChild(rv);
+  }
+  return shead;
+}
+/* 左栏的「属性」折叠头。折叠状态存在 UI.statsOpen */
+function edStatsHead(label, open) {
+  var sh = h('div', { class: 'ed-stagehead' }, [foldArrow(open, 8), h('span', { text: label }), h('div', { class: 'grow' })]);
+  sh.addEventListener('click', function () { heroFold('.ed-stats', open, function (v) { UI.statsOpen = v; Prefs.set('statsOpen', v); }); });
+  return sh;
+}
 function drawTopbar() {
   var bar = clear($('topbar')), d = Store.doc();
   var kind = kindOfItem(d.id), info = KIND_INFO[kind];
-  bar.appendChild(h('span', { class: 'eb-ico' }, [itemIcon(heroItemId(d), 22)]));
-  bar.appendChild(h('span', { class: 'ttl', text: displayName(d) }));
-  bar.appendChild(h('span', { class: 'crumb', text: info.name, title: d.label || '' }));
-  bar.appendChild(h('div', { class: 'grow' }));
+  edTopHead(bar, { icon: itemIcon(heroItemId(d), 22), title: displayName(d), crumb: info.name, crumbTitle: d.label || '' });
   var un = h('div', { class: 'k-ibtn' + (Store.canUndo() ? '' : ' dis'), title: '撤销 Ctrl+Z' }, [uiIcon('undo', 14)]); activate(un, function () { Store.undo(); });
   var re = h('div', { class: 'k-ibtn' + (Store.canRedo() ? '' : ' dis'), title: '重做 Ctrl+Y' }, [uiIcon('redo', 14)]); activate(re, function () { Store.redo(); });
   var hi = h('div', { class: 'k-ibtn', title: '修改历史' }, [uiIcon('clock', 14)]); activate(hi, function () { openAdvanced('hist'); });
@@ -124,13 +172,10 @@ function drawTopbar() {
   bar.appendChild(sr); bar.appendChild(ad); bar.appendChild(th);
   fold.push({ el: th, label: '设置', icon: 'sliders', rank: 2, run: openSettings }, { el: ad, label: '高级', icon: 'code', rank: 3, run: function () { openAdvanced(); } }, { el: hi, label: '修改历史', icon: 'clock', rank: 4, run: function () { openAdvanced('hist'); } }, { el: re, label: '重做', icon: 'redo', rank: 5, run: function () { Store.redo(); } }, { el: un, label: '撤销', icon: 'undo', rank: 6, run: function () { Store.undo(); } });
   var n = diffDoc(d).length;
-  var ap = h('div', { class: 'k-btn pri k-apply' + (n ? '' : ' dim'), title: n ? '查看并应用修改（Ctrl+S）' : '还没有修改' }, [uiIcon('play', 12), h('span', { text: '应用修改' }), n ? h('b', { text: String(n) }) : null]); activate(ap, openApply);
+  var ap = edApplyBtn({ dirty: n, count: n, tip: '查看并应用修改（Ctrl+S）', tipOff: '还没有修改', onClick: openApply });
   bar.appendChild(ap);
-    var mx = h('div', { class: 'k-ibtn', title: UI.maxed ? '还原窗口' : '全屏' }, [uiIcon(UI.maxed ? 'restore' : 'maximize', 14)]);
-  activate(mx, function () { UI.maxed = !UI.maxed; applyWinStyle(); Prefs.set('windowMax', UI.maxed); mx.title = UI.maxed ? '还原窗口' : '全屏'; mx.firstChild.src = 'oriel:textures/icons/' + (UI.maxed ? 'restore' : 'maximize') + '.png'; });
-  bar.appendChild(mx);
-  var cl = h('div', { class: 'k-ibtn', title: '关闭编辑器' }, [uiIcon('close', 14)]); activate(cl, closeEditor);
-  bar.appendChild(cl);
+  bar.appendChild(edMaxBtn());
+  bar.appendChild(edCloseBtn('关闭编辑器', closeEditor));
   /* 窗口窄时，次要按钮收进「⋯」菜单；标题自己省略，关闭 / 最大化 / 应用修改永远在 */
   var more = h('div', { class: 'k-ibtn', title: '更多', style: 'display:none' }, [uiIcon('menu', 14)]);
   bar.insertBefore(more, ap);
@@ -448,23 +493,8 @@ function drawHero() {
   else { vis = itemIcon(heroItemId(d), 48); if (vis.tagName && vis.tagName.toLowerCase() === 'item') { vis.setAttribute('components', stackCompsSnbt(d)); vis.setAttribute('count', String(d.count)); } }
   /* 预览头：可折叠（折叠后不再渲染 3D 模型），右边是 2D / 3D 切换 */
   var open = UI.stageOpen !== false;
-  var shead = h('div', { class: 'ed-stagehead' }, [foldArrow(open, 8), h('span', { text: '预览' }), h('div', { class: 'grow' })]);
-  shead.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.ed-view')) return; heroFold('.ed-stage', open, function (v) { UI.stageOpen = v; Prefs.set('stageOpen', v); }); });
-  if (can3d && open) {
-    var seg = h('div', { class: 'k-seg ed-view', title: kind === 'spawn' ? '2D 显示蛋 / 3D 显示生成的生物（会记住你的选择）' : '物品预览：2D 图标 / 3D 模型（会记住你的选择）' });
-    ['2d', '3d'].forEach(function (v) {
-      var b = h('div', { class: 'k-segi' + (view === v ? ' on' : ''), text: v.toUpperCase() });
-      activate(b, function () { if (UI.heroView === v) return; UI.heroView = v; Prefs.set('heroView', v); drawHero(); });
-      seg.appendChild(b);
-    });
-    shead.appendChild(seg);
-  }
-  if (entView && open) {
-    var rv = h('div', { class: 'k-mini ed-view', title: '恢复默认视角。左键拖动旋转，滚轮缩放，右键拖动移动' }, [uiIcon('undo', 11)]);
-    rv.addEventListener('click', function (e) { e.stopPropagation(); UI.entView = null; var o = $('hero') && $('hero').querySelector('.k-ent'); if (o) o.remove(); drawHero(); });
-    shead.appendChild(rv);
-  }
-  hero.appendChild(shead);
+  hero.appendChild(edStageHead({ open: open, view: view, can3d: can3d, entView: entView, redraw: drawHero,
+    segTitle: kind === 'spawn' ? '2D 显示蛋 / 3D 显示生成的生物（会记住你的选择）' : '物品预览：2D 图标 / 3D 模型（会记住你的选择）' }));
   if (open) hero.appendChild(h('div', { class: 'ed-stage' + (ench ? ' glint' : '') + (entView ? ' ent' : '') }, [h('div', { class: 'plate' }), vis]));
   var nm = h('div', { class: 'ed-name' + (displayName(d).length > 6 ? ' sm' : '') }); var r = nameRuns(d);
   renderRuns(nm, r.base, r.runs, { color: rarityHex(d), italic: eff.custom_name !== undefined });
@@ -479,9 +509,7 @@ function drawHero() {
     stats.appendChild(h('div', { class: 'k-meter' + (ratio < 0.15 ? ' bad' : ratio < 0.4 ? ' warn' : '') }, [h('i', { style: 'width:' + (ratio * 100) + '%' })]));
   }
   var sOpen = UI.statsOpen !== false;
-  var sh = h('div', { class: 'ed-stagehead' }, [foldArrow(sOpen, 8), h('span', { text: '属性' }), h('div', { class: 'grow' })]);
-  sh.addEventListener('click', function () { heroFold('.ed-stats', sOpen, function (v) { UI.statsOpen = v; Prefs.set('statsOpen', v); }); });
-  hero.appendChild(sh);
+  hero.appendChild(edStatsHead('属性', sOpen));
   if (sOpen) hero.appendChild(stats);
   /* 提示框预览：可折叠、限高、内部滚动，放得下几十条附魔 */
   var tipHead = h('div', { class: 'ed-tiphead' }, [foldArrow(!!UI.tipOpen, 10), h('span', { text: '提示框预览' }), h('div', { class: 'grow' })]);
@@ -900,8 +928,7 @@ function jumpToComp(cid, msg) {
 function drawFooter() {
   var f = clear($('footer'));
   var d = Store.doc(), n = diffDoc(d).length, pr = validateDoc(d), errs = pr.filter(function (p) { return p.level === 'error'; }), warns = pr.filter(function (p) { return p.level === 'warn'; });
-  var chg = h('span', { class: 'it' + (n ? ' chg' : '') }, [h('i', { class: 'dot' }), n ? n + ' 处改动尚未应用' : '没有未应用的改动']);
-  f.appendChild(chg);
+  f.appendChild(edFootChg(n, n + ' 处改动尚未应用', '没有未应用的改动'));
   if (n) { var lk = h('span', { class: 'lnk', text: '查看改动' }); lk.addEventListener('click', openApply); f.appendChild(lk); }
   function problemChip(cls, icon, list, label) {
     var el = h('span', { class: 'it ' + cls + ' pcl', title: '点击查看并跳转到对应设置' }, [uiIcon(icon, 12), list.length + ' 个' + label]);

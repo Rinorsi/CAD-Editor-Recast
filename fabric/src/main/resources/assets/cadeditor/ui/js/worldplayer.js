@@ -16,7 +16,7 @@ function wpContainerStack(which, i) {
 function wpOrigEmpty(which, i) { var c = wpV(which), s = c && c.slots ? c.slots.filter(function (x) { return x.slot === i; })[0] : null; return !s || s.stack.empty; }
 function wpSetSlot(which, i, st) {
   if ((!st || st.empty) && wpOrigEmpty(which, i)) delete WE.pslots[which][i]; else WE.pslots[which][i] = st;
-  drawWorldTop(); drawWorldFoot();
+  weMarkDirty();
 }
 function wpSlotsDirty() { return Object.keys(WE.pslots.container).length + Object.keys(WE.pslots.ender).length; }
 function wpMsg(out) {

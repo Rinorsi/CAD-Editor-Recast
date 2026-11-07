@@ -14,13 +14,8 @@ function evFields(g) {
   if (!s && WE.w && WE.w.schema && WE.w.schema[g]) s = WE.w.schema[g];
   return s ? (s.fields || s) : {};
 }
-function evGet(g, k) { var e = WE.ent[g]; if (e && Object.prototype.hasOwnProperty.call(e, k)) return e[k]; return evVal(g)[k]; }
-function evSet(g, k, v) {
-  var e = WE.ent[g] || (WE.ent[g] = {});
-  if (weNorm(v) === weNorm(evVal(g)[k])) delete e[k]; else e[k] = v;
-  if (!Object.keys(e).length) delete WE.ent[g];
-  drawWorldTop(); drawWorldFoot();
-}
+function evGet(g, k) { return weDraftGet(WE.ent, g, k, evVal(g)); }
+function evSet(g, k, v) { weDraftSet(WE.ent, g, k, v, evVal(g)); }
 function evDirty() { return !!WE.w && (Object.keys(WE.ent).length > 0 || (typeof wpSlotsDirty === 'function' && wpSlotsDirty() > 0) || WE.offers !== null && JSON.stringify(WE.offers) !== JSON.stringify(evOffersOrig())); }
 function evOffersOrig() { var t = evGroup('trades'); return t && t.offers ? t.offers : []; }
 function evMsg(msg) {
@@ -30,7 +25,6 @@ function evMsg(msg) {
   if (typeof wpMsg === 'function') { wpMsg(out); if (out.player) any = true; }
   if (any) msg.entity = out;
 }
-function evRedraw() { weRender(); }
 function evNum(label, v, o, on) {
   o = o || {};
   return xNum({ title: label, sub: o.sub, value: v, min: o.min, max: o.max, softMin: o.softMin, softMax: o.softMax, step: o.step, dec: o.dec, unit: o.unit, noSlider: o.noSlider !== false && o.softMax === undefined, onChange: on });
@@ -58,13 +52,13 @@ function evPoseTab(body) {
     var def = (F[key] && F[key].default) || [0, 0, 0], k = 'we:pose:' + key, open = !!UIOpen[k];
     function setAxis(i, v) { var n = evGet('pose', key); n = Array.isArray(n) ? n.slice(0, 3) : def.slice(); n[i] = v; evSet('pose', key, n); }
     body.appendChild(xRow({ icon: false, title: pp[1], sub: 'X ' + fmtNum(cur[0]) + '°  Y ' + fmtNum(cur[1]) + '°  Z ' + fmtNum(cur[2]) + '°', chevron: true, open: open,
-      onHead: function () { UIOpen[k] = !UIOpen[k]; evRedraw(); },
+      onHead: function () { UIOpen[k] = !UIOpen[k]; weRender(); },
       body: function () {
         var rows = ['X 前后摆', 'Y 左右转', 'Z 侧倾'].map(function (nm, i) {
           var n = kNumber(cur[i], { softMin: -180, softMax: 180, step: 1, dec: 1, unit: '°', onChange: function (v) { setAxis(i, v); } });
           return xField(null, nm, n.el);
         });
-        rows.push(h('div', { class: 'x2f' }, [h('div', { class: 'grow' }), kBtn('恢复默认', function () { evSet('pose', key, def.slice()); evRedraw(); }, { icon: 'undo' })]));
+        rows.push(h('div', { class: 'x2f' }, [h('div', { class: 'grow' }), kBtn('恢复默认', function () { evSet('pose', key, def.slice()); weRender(); }, { icon: 'undo' })]));
         return rows;
       } }));
   });
@@ -81,7 +75,7 @@ function evFrameTab(body) {
   var F = evFields('item_frame'), v = evVal('item_frame');
   body.appendChild(xSec('image', '展示框'));
   var cur = evGet('item_frame', 'item');
-  body.appendChild(xRow({ icon: false, title: '框里的物品', right: evStack(cur, function (st) { evSet('item_frame', 'item', st); evRedraw(); }, { empty: { empty: true } }) }));
+  body.appendChild(xRow({ icon: false, title: '框里的物品', right: evStack(cur, function (st) { evSet('item_frame', 'item', st); weRender(); }, { empty: { empty: true } }) }));
   var rotMax = F.ItemRotation && F.ItemRotation.max !== undefined ? F.ItemRotation.max : 7;
   body.appendChild(evNum('物品转了几格', evGet('item_frame', 'ItemRotation'), { min: 0, max: rotMax, sub: '每格 45°，共 ' + (rotMax + 1) + ' 个朝向' }, function (x) { evSet('item_frame', 'ItemRotation', x); }));
   body.appendChild(evBool('隐形框', evGet('item_frame', 'Invisible'), '只看到里面的物品', function (on) { evSet('item_frame', 'Invisible', on); }));
@@ -115,13 +109,13 @@ function evDisplayTab(body) {
   var g = 'display', F = evFields(g), v = evVal(g), isText = 'text' in v || 'alignment' in v, isItem = 'item_display' in v || (v.item && !('block_state' in v)), isBlock = 'block_state' in v;
   body.appendChild(xSec('cube', '位置与大小'));
   var kt = 'we:disp:xf';
-  body.appendChild(xRow({ icon: false, title: '变换', sub: '偏移、缩放、旋转（四元数）', chevron: true, open: UIOpen[kt] !== false, onHead: function () { UIOpen[kt] = UIOpen[kt] === false; evRedraw(); },
+  body.appendChild(xRow({ icon: false, title: '变换', sub: '偏移、缩放、旋转（四元数）', chevron: true, open: UIOpen[kt] !== false, onHead: function () { UIOpen[kt] = UIOpen[kt] === false; weRender(); },
     body: function () { return [evVec('偏移', g, 'translation', true, [0, 0, 0]), evVec('缩放', g, 'scale', true, [1, 1, 1]), evVec('先转', g, 'left_rotation', false, [0, 0, 0, 1]), evVec('后转', g, 'right_rotation', false, [0, 0, 0, 1])]; } }));
   var bills = (F.billboard && F.billboard.options) || ['fixed', 'vertical', 'horizontal', 'center'];
   var BN = { fixed: '固定', vertical: '绕竖轴', horizontal: '绕横轴', center: '始终面向' };
   body.appendChild(xSeg({ title: '朝向', sub: '要不要跟着玩家的视角转', options: bills.map(function (b) { return { v: b, label: BN[b] || b }; }), value: evGet(g, 'billboard') || 'fixed', onChange: function (x) { evSet(g, 'billboard', x); } }));
   var br = evGet(g, 'brightness'), brOn = br && typeof br === 'object';
-  body.appendChild(evBool('固定亮度', brOn, '不跟随周围的光照', function (on) { evSet(g, 'brightness', on ? { block: 15, sky: 15 } : null); evRedraw(); }));
+  body.appendChild(evBool('固定亮度', brOn, '不跟随周围的光照', function (on) { evSet(g, 'brightness', on ? { block: 15, sky: 15 } : null); weRender(); }));
   if (brOn) {
     body.appendChild(evNum('方块光', br.block, { min: 0, max: 15, softMin: 0, softMax: 15, noSlider: false }, function (x) { evSet(g, 'brightness', { block: x, sky: (evGet(g, 'brightness') || br).sky }); }));
     body.appendChild(evNum('天空光', br.sky, { min: 0, max: 15, softMin: 0, softMax: 15, noSlider: false }, function (x) { evSet(g, 'brightness', { block: (evGet(g, 'brightness') || br).block, sky: x }); }));
@@ -137,7 +131,7 @@ function evDisplayTab(body) {
   body.appendChild(evNum('移动平滑', evGet(g, 'teleport_duration'), { unit: '刻', sub: '游戏最多保留 59' }, function (x) { evSet(g, 'teleport_duration', x); }));
   if (isItem) {
     body.appendChild(xSec('sword', '展示的物品'));
-    body.appendChild(xRow({ icon: false, title: '物品', right: evStack(evGet(g, 'item'), function (st) { evSet(g, 'item', st); evRedraw(); }, { empty: null }) }));
+    body.appendChild(xRow({ icon: false, title: '物品', right: evStack(evGet(g, 'item'), function (st) { evSet(g, 'item', st); weRender(); }, { empty: null }) }));
     var ctx = (F.item_display && F.item_display.options) || ['none', 'thirdperson_lefthand', 'thirdperson_righthand', 'firstperson_lefthand', 'firstperson_righthand', 'head', 'gui', 'ground', 'fixed', 'on_shelf'];
     body.appendChild(xSelect({ title: '展示方式', sub: '摆的位置不同，物品的模型姿态也不同', options: ctx.map(function (c) { return { v: c, label: c }; }), value: evGet(g, 'item_display') || 'none', width: 200, onChange: function (x) { evSet(g, 'item_display', x); } }));
   }
@@ -171,18 +165,18 @@ function evTradeTab(body) {
   if (!t || t.available === false) { body.appendChild(xEmpty((t && t.reason) || '交易只能在有服务器时修改（单人游戏的内置服务器也行）。')); return; }
   var list = evOffers();
   body.appendChild(xSec('coins', '交易', list.length + ' 条'));
-  function mark() { drawWorldTop(); drawWorldFoot(); }
+  function mark() { weMarkDirty(); }
   function stackLine(o, key, label, optional) {
     var cur = o[key];
     var has = cur && cur.id;
     var btn = kItemBtn(has ? cur : null, null, optional ? '不需要第二件' : undefined);
-    function put(st) { if (st === null) delete o[key]; else { if (cur && cur.cost_predicate_snbt !== undefined && st.id !== cur.id) delete st.cost_predicate_snbt; o[key] = st; } mark(); evRedraw(); }
+    function put(st) { if (st === null) delete o[key]; else { if (cur && cur.cost_predicate_snbt !== undefined && st.id !== cur.id) delete st.cost_predicate_snbt; o[key] = st; } mark(); weRender(); }
     activate(btn, function () { pickItem(btn, function (id) { var prev = o[key] || {}; put({ id: fullId(id), count: prev.count || 1, comps: {}, removed: {} }); kPopClose(); }, { onStack: function (st) { var s2 = clone(st); delete s2.slot; delete s2.label; put(s2); kPopClose(); } }); });
     var kids = [btn];
     if (has) {
       var cnt = kNumber(cur.count || 1, { min: 1, max: 99, noSlider: true, step: 1, onChange: function (v) { cur.count = v; mark(); } });
       kids.push(cnt.el);
-      if (optional) kids.push(kBtn('去掉', function () { delete o[key]; mark(); evRedraw(); }, { icon: 'trash' }));
+      if (optional) kids.push(kBtn('去掉', function () { delete o[key]; mark(); weRender(); }, { icon: 'trash' }));
     }
     return xField(null, label, h('div', { class: 'k-row' }, kids));
   }
@@ -190,17 +184,17 @@ function evTradeTab(body) {
     var k = 'we:offer:' + i, nm = function (s) { return s && s.id ? nameOfItem(s.id) + (s.count > 1 ? '×' + s.count : '') : '—'; };
     var title = nm(o.buy) + (o.buyB ? ' + ' + nm(o.buyB) : '') + ' → ' + nm(o.sell);
     body.appendChild(xRow({ icon: o.sell && o.sell.id ? itemIcon(shortId(o.sell.id), 22) : false, title: title, sub: '已交易 ' + (o.uses || 0) + ' / ' + (o.maxUses || 0) + ' 次', chevron: true, open: !!UIOpen[k],
-      onHead: function () { UIOpen[k] = !UIOpen[k]; evRedraw(); },
+      onHead: function () { UIOpen[k] = !UIOpen[k]; weRender(); },
       body: function () {
         function num(label, key, op) { var n = kNumber(typeof o[key] === 'number' ? o[key] : 0, { min: op && op.min, step: op && op.step || 1, dec: op && op.dec, noSlider: true, onChange: function (v) { o[key] = v; mark(); } }); return xField(null, label, n.el); }
         return [stackLine(o, 'buy', '收', false), stackLine(o, 'buyB', '再收', true), stackLine(o, 'sell', '卖', false),
           num('已交易', 'uses', { min: 0 }), num('最多交易', 'maxUses', { min: 0 }), num('给村民的经验', 'xp', { min: 0 }),
           xField(null, '交易后给玩家经验', kToggle(o.rewardExp !== false, function (on) { o.rewardExp = on; mark(); }).el),
           num('价格浮动', 'priceMultiplier', { step: 0.01, dec: 3 }), num('需求加价', 'demand'), num('特殊价格', 'specialPrice'),
-          h('div', { class: 'x2f' }, [h('div', { class: 'grow' }), kBtn('删除这条交易', function () { list.splice(i, 1); mark(); evRedraw(); }, { cls: 'dng', icon: 'trash' })])];
+          h('div', { class: 'x2f' }, [h('div', { class: 'grow' }), kBtn('删除这条交易', function () { list.splice(i, 1); mark(); weRender(); }, { cls: 'dng', icon: 'trash' })])];
       } }));
   });
-  if (list.length < 256) body.appendChild(xAdd('添加一条交易', function () { list.push({ buy: { id: 'minecraft:emerald', count: 1, comps: {}, removed: {} }, sell: { id: 'minecraft:bread', count: 1, comps: {}, removed: {} }, uses: 0, maxUses: 12, rewardExp: true, xp: 1, priceMultiplier: 0.05, demand: 0, specialPrice: 0 }); UIOpen['we:offer:' + (list.length - 1)] = true; mark(); evRedraw(); }));
+  if (list.length < 256) body.appendChild(xAdd('添加一条交易', function () { list.push({ buy: { id: 'minecraft:emerald', count: 1, comps: {}, removed: {} }, sell: { id: 'minecraft:bread', count: 1, comps: {}, removed: {} }, uses: 0, maxUses: 12, rewardExp: true, xp: 1, priceMultiplier: 0.05, demand: 0, specialPrice: 0 }); UIOpen['we:offer:' + (list.length - 1)] = true; mark(); weRender(); }));
   body.appendChild(h('div', { class: 'k-sub', text: '玩家正开着交易界面时游戏会拒绝修改。列表是整个替换：删掉的交易就真的没有了；清空后这个村民不会再自己刷新交易。' }));
 }
 
