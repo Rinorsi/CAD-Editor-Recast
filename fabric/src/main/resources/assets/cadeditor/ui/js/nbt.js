@@ -213,6 +213,7 @@ var Valid = {
     if (!this.host()) return;
     var d = Store.doc(); if (!d) return;
     var me = this;
+    this.touchHost(d);
     Object.keys(NBT_RAW).forEach(function (cid) {
       if (!me.edited(d, cid)) { if (me.state[cid]) { delete me.state[cid]; me.fire(); } return; }
       clearTimeout(me.timers[cid]);
@@ -233,6 +234,38 @@ var Valid = {
     var sent = false; try { sent = oriel.send('validate_component', { requestId: id, component: cid, snbt: text }); } catch (e) {}
     if (!sent) { delete this.waiting[id]; this.state[cid] = { text: text, note: '游戏暂时没有接受校验请求，应用时再校验' }; this.fire(); }
   },
+  /* ---- 逐字段校验（component_validate）：被改过的普通组件，把当前值交给游戏的真实 Codec，错误带字段路径（$.nutrition）。
+     自由 NBT 组件仍走上面的 validate_component（SNBT）。结果和当前值对不上（又改了）就不算数。 ---- */
+  hv: {}, hvWait: {}, hvTimers: {}, hvSeq: 0,
+  touchHost: function (d) {
+    var me = this;
+    Object.keys(d.comps).forEach(function (cid) {
+      if (NBT_RAW[cid]) return;
+      if (!me.edited(d, cid)) { if (me.hv[cid]) { delete me.hv[cid]; me.fire(); } return; }
+      clearTimeout(me.hvTimers[cid]);
+      me.hvTimers[cid] = setTimeout(function () { me.runHost(cid, d); }, 450);
+    });
+    Object.keys(this.hv).forEach(function (cid) { if (d.comps[cid] === undefined) { delete me.hv[cid]; me.fire(); } });
+  },
+  runHost: function (cid, d) {
+    d = d || Store.doc(); if (!d || d.comps[cid] === undefined) return;
+    var key; try { key = JSON.stringify(d.comps[cid]); } catch (e) { return; }
+    var st = this.hv[cid]; if (st && st.key === key) return;
+    if (key.length > 6000) { this.hv[cid] = { key: key, note: '内容较大，应用时由游戏校验' }; this.fire(); return; }
+    var id = 'cv' + (++this.hvSeq) + '-' + Date.now();
+    this.hvWait[id] = { cid: cid, key: key };
+    this.hv[cid] = { key: key, pending: true };
+    var sent = false; try { sent = oriel.send('component_validate', { requestId: id, component: cid, value: d.comps[cid] }); } catch (e) {}
+    if (!sent) { delete this.hvWait[id]; delete this.hv[cid]; }
+  },
+  receiveHost: function (res) {
+    if (!res || !res.requestId) return;
+    var w = this.hvWait[res.requestId]; if (!w) return;
+    delete this.hvWait[res.requestId];
+    if (res.ok) this.hv[w.cid] = { key: w.key, ok: true };
+    else this.hv[w.cid] = { key: w.key, ok: false, errors: (res.errors && res.errors.length) ? res.errors : [{ path: '$', message: String(res.error || '游戏拒绝了这个值') }] };
+    this.fire();
+  },
   receive: function (res) {
     if (!res || !res.requestId) return;
     var w = this.waiting[res.requestId]; if (!w) return;
@@ -243,6 +276,16 @@ var Valid = {
   /* 给 validateDoc 用：校验失败且对应当前内容的，按错误处理 */
   problems: function (d, out) {
     var me = this;
+    Object.keys(this.hv).forEach(function (cid) {
+      var st = me.hv[cid]; if (!st || st.ok !== false || d.comps[cid] === undefined) return;
+      var cur = null; try { cur = JSON.stringify(d.comps[cid]); } catch (e) {}
+      if (cur !== st.key) return;
+      var c = typeof CIDX !== 'undefined' ? CIDX[cid] : null;
+      st.errors.forEach(function (e) {
+        var path = String(e.path || '$'); if (path.charAt(0) === '$') path = path.substring(1); if (path.charAt(0) === '.') path = path.substring(1);
+        out.push({ level: 'error', cid: cid, path: path, msg: (c ? c.name : cid) + (path ? ' · ' + path : '') + '：' + String(e.message || '游戏拒绝了这个值') });
+      });
+    });
     Object.keys(this.state).forEach(function (cid) {
       var st = me.state[cid]; if (!st || st.ok !== false || d.comps[cid] === undefined) return;
       var cur = null; try { cur = me.textOf(d, cid); } catch (e) {}

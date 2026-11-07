@@ -5,6 +5,7 @@ var Reg = {
   ingest: function (key, val) {
     if (key === 'tooltip.result') { if (typeof HostTip !== 'undefined') HostTip.receive(val); return; }
     if (key === 'search.result') { if (typeof HostSearch !== 'undefined') HostSearch.receive(val); return; }
+    if (key === 'component_validate.result') { if (typeof Valid !== 'undefined') Valid.receiveHost(val); return; }
     if (key === 'validate_component.result') { if (typeof Valid !== 'undefined') Valid.receive(val); return; }
     if (typeof key !== 'string' || key.indexOf('registry.') !== 0) return;
     if (key === 'registry.client_features') { if (val && val.accepted) this.features = val.accepted; if (val && val.lazy) this.setLazy(val.lazy); this.fire(); return; }

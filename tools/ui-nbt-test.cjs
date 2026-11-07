@@ -100,3 +100,21 @@ const r7 = run('nbtApplyFormats(D7)');
 assert.equal(r7.formats.bees, 'snbt');
 assert.ok(String(r7.comps.bees).includes('Health:2.0f') && String(r7.comps.bees).includes('ticks_in_hive:41'), 'Health 保持 float');
 console.log('PASS nbt: typed SNBT merge, apply formats, game validation routing.');
+
+// 逐字段校验（component_validate）：错误带字段路径；结果与当前值对不上就不算
+{
+  const sent2 = [];
+  ctx.oriel.send = (k, v) => { sent2.push({ k, v }); return true; };
+  ctx.Reg.meta = {};
+  run("var DH = { comps: { food: { nutrition: -1, saturation: 1 } }, base: JSON.stringify({ comps: {} }), snbt: {} }; Valid.runHost('food', DH);");
+  const m = sent2.filter(x => x.k === 'component_validate').pop();
+  assert.ok(m && m.v.component === 'food' && m.v.value.nutrition === -1, '被改过的普通组件交给游戏逐字段校验');
+  ctx.RESH = { requestId: m.v.requestId, ok: false, errors: [{ path: '$.nutrition', code: 'codec', message: 'Value must be non-negative: -1' }] };
+  run('Reg.ingest("component_validate.result", RESH)');
+  const pr = JSON.parse(run('var O3 = []; Valid.problems(DH, O3); JSON.stringify(O3)'));
+  assert.equal(pr.length, 1); assert.equal(pr[0].level, 'error'); assert.equal(pr[0].path, 'nutrition'); assert.ok(pr[0].msg.includes('Value must be non-negative'));
+  run('DH.comps.food.nutrition = 3');
+  assert.equal(JSON.parse(run('var O4 = []; Valid.problems(DH, O4); JSON.stringify(O4)')).length, 0, '又改了就不再显示旧错误');
+  ctx.Reg.meta = null;
+}
+console.log('PASS nbt: per-field host validation.');
