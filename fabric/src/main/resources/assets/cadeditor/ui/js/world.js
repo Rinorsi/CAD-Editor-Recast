@@ -106,7 +106,7 @@ function worldBlockName(blocks){
   if(blocks===undefined)return '任意方块';
   if(Array.isArray(blocks))return blocks.map(function(id){return worldBlockName(id);}).join('、');
   if(blocks.charAt(0)==='#')return blocks;
-  var opts=Reg.options('block')||[],e=opts.filter(function(x){return x.v===Reg.full(blocks);})[0];return e?e.label:blocks;
+  var nm=Reg.nameOf2('block',blocks);return nm||blocks;
 }
 /* 一项条件：标题 + 一句人话说明 + 控件 */
 function worldCond(title,hint,action,content){

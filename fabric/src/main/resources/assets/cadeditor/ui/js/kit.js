@@ -122,8 +122,19 @@ function pickItem(anchor, onPick, o) {
   function paint() {
     if (cancel) { cancel(); cancel = null; }
     var s = q.value.trim().toLowerCase();
-    var src = Reg.has('items') ? Reg.list('items').map(function (e) { return shortId(e.id); }) : EDATA.items;
+    var ilk = Reg.lazyKind('item');
+    var src = ilk ? [] : (Reg.has('items') ? Reg.list('items').map(function (e) { return shortId(e.id); }) : EDATA.items);
     var pool = o.filter ? src.filter(function (id) { return o.filter(id); }) : src;
+    if (ilk) {   // 物品目录在宿主：空搜索词也问宿主要第一页
+      if (!HostSearch.query({ view: 'item-picker', kind: ilk, query: s, limit: 56 }, function (r) {
+        if (r.fallback) { show([], s, src); hint.textContent = '游戏没有返回搜索结果，可以直接输入完整 ID'; return; }
+        Reg.noteRows(ilk, r.entries);
+        var ids = (r.entries || []).map(function (e) { return Reg.isMod(Reg.full(e.id)) ? e.id : shortId(e.id); });
+        if (o.filter) ids = ids.filter(function (id) { return o.filter(id); });
+        show(ids, s, src, r.total);
+      })) { show([], s, src); hint.textContent = '当前宿主不支持搜索，可以直接输入完整 ID'; }
+      return;
+    }
     if (!s) { show(pool, s, src); return; }
     /* 没有额外过滤条件时让宿主的后台索引搜（含拼音 / 模组物品），否则本地分批 */
     if (!o.filter && HostSearch.query({ view: 'item-picker', kind: 'items', query: s, limit: 56 }, function (r) {

@@ -22,6 +22,7 @@ var HostSearch = {
     v.arm = arm; arm(this.supported === true ? 8000 : 2500);
     var msg = { requestId: id, view: o.view, kind: o.kind, query: String(o.query || '').slice(0, 128), offset: o.offset || 0, limit: o.limit || 80 };
     if (o.filters) msg.filters = o.filters;
+    if (o.ids) msg.ids = o.ids;
     var sent = false; try { sent = oriel.send('search', msg); } catch (e) {}
     if (sent === false) { clearTimeout(v.timer); delete this.views[o.view]; return false; }
     return true;

@@ -67,7 +67,9 @@ function openPicker(o) {
   }
   var list = h('div', { class: 'addlist' }), cats = h('div', { class: 'addcats' }), foot = h('div', { class: 'k-mf' });
   var info = h('span', { class: 'k-sub' }), confirm;
-  if (o.entriesFn) { o.entries = o.entriesFn(); var unsub = Reg.on(function () { if (!$('modal')) { unsub(); return; } o.entries = o.entriesFn(); byFull = null; paintCats(); paint(); }); }
+  var LZ = !!(o.lazy || o.lazySources);   /* 大目录：页面里没有整张表，列表完全来自宿主搜索 */
+  if (LZ) o.entries = o.entries || [];
+  if (o.entriesFn && !LZ) { o.entries = o.entriesFn(); var unsub = Reg.on(function () { if (!$('modal')) { unsub(); return; } o.entries = o.entriesFn(); byFull = null; paintCats(); paint(); }); }
   var search = h('input', { class: 'k-input', type: 'text', placeholder: (o.searchHint || '搜索名称或 ID') + (o.custom && !o.custom.hash ? '；也可直接输入 模组id:名字' : ''), spellcheck: 'false' });
   function catOf(id) { for (var i = 0; i < o.cats.length; i++) if (o.cats[i].id === id) return o.cats[i]; return o.cats[0]; }
   function visible() {
@@ -80,7 +82,7 @@ function openPicker(o) {
   function paintCats() {
     clear(cats);
     o.cats.forEach(function (c) {
-      var n = o.entries.filter(function (e) { return !c.filter || c.filter(e); }).length;
+      var n = LZ ? (o.lazy ? (c.id === 'mod' ? (modCount === null ? '' : modCount) : (Reg.lazy[o.lazyKind] || '')) : '') : o.entries.filter(function (e) { return !c.filter || c.filter(e); }).length;
       var t = h('div', { class: 'addcat' + (catSel === c.id ? ' on' : '') }, [uiIcon(c.icon || 'grid', 14), h('span', { text: c.name }), h('em', { class: 'n', text: String(n) })]);
       activate(t, function () { catSel = c.id; limit = 80; paintCats(); paint(); });
       cats.appendChild(t);
@@ -100,32 +102,61 @@ function openPicker(o) {
   }
   /* 过滤：条目多时按时间片分批（kFilterSliced），每批都是一次新的脚本入口，不会触发单次入口指令预算而停页。
      分批期间旧列表保持原样，算完再换，不会闪空白。 */
-  var filterCancel = null, lastVis = [], hostMore = null, byFull = null;
-  /* 宿主搜索：有 hostKind 且分类是“全部”时，让游戏的后台索引排好序，只回来一小窗口；页面只把这些 ID 对回已有的行。
-     宿主没回应 / 不支持这个类别 / 老版本时退回下面的本地分批过滤。 */
+  var filterCancel = null, lastVis = [], hostMore = null, byFull = null, nsList = [], modCount = null, lazyErr = '';
+  /* 宿主搜索：让游戏的后台索引排好序，只回来一小窗口。
+     · 普通选择窗（有 hostKind，分类“全部”）：页面里已有整张表，宿主只负责排序，结果 ID 对回已有的行；宿主不可用时退回本地分批过滤。
+     · 大目录（lazy / lazySources）：页面里没有整张表，列表完全来自宿主；宿主不可用时给出原因，仍可直接输入完整 ID。 */
   function rowsOf(r) {
+    if (o.lazy) { Reg.noteRows(o.lazyKind, r.entries); return (r.entries || []).map(o.rowFn); }
     if (!byFull) { byFull = {}; o.entries.forEach(function (e) { byFull[e.full] = e; }); }
     var out = [];
     (r.entries || []).forEach(function (x) { var e = byFull[Reg.full(x.id)]; if (e) out.push(e); });
     return out;
   }
+  function hostFilters(cat) { return o.lazy && cat.id === 'mod' ? { namespaces: nsList.filter(function (n) { return n !== 'minecraft'; }) } : undefined; }
+  function lazySourcesPaint(s, cat) {
+    var srcs = o.lazySources.filter(function (x) { return cat.id === 'all' || x.group === cat.id; });
+    var quick = (cat.id === 'all' || cat.id === 'quick') ? (o.lazyQuick || []).filter(function (e) { return !s || kMatch(e.name + ' ' + e.full + ' ' + (e.sub || ''), s); }) : [];
+    var parts = [], pending = srcs.length, failed = '';
+    if (!pending) { render(quick); return; }
+    srcs.forEach(function (src, i) {
+      var ok = HostSearch.query({ view: i ? 'picker' + i : 'picker', kind: src.kind, query: s, limit: 100 }, function (r) {
+        if (r.fallback) { failed = r.error || '没有回应'; parts[i] = []; }
+        else { Reg.noteRows(src.kind, r.entries); parts[i] = (r.entries || []).map(src.rowFn); }
+        if (--pending === 0) { lazyErr = quick.length || parts.some(function (p) { return p.length; }) ? '' : failed; render(quick.concat.apply(quick, parts)); }
+      });
+      if (!ok) { failed = '宿主不支持搜索'; parts[i] = []; if (--pending === 0) { lazyErr = quick.length ? '' : failed; render(quick.concat.apply(quick, parts)); } }
+    });
+    return true;
+  }
   function hostPaint(s, cat) {
-    if (!o.hostKind || (cat.filter && cat.id !== 'all')) return false;
-    var started = HostSearch.query({ view: 'picker', kind: o.hostKind, query: s, limit: 200 }, function (r) {
-      if (r.fallback) { localPaint(s, cat); return; }
+    if (o.lazySources) { lazySourcesPaint(s, cat); return true; }
+    var kind = o.lazy ? o.lazyKind : o.hostKind;
+    if (!kind || (!o.lazy && cat.filter && cat.id !== 'all')) return false;
+    var f = hostFilters(cat);
+    if (f && !f.namespaces.length) { lazyErr = ''; render([]); return true; }
+    var started = HostSearch.query({ view: 'picker', kind: kind, query: s, limit: 200, filters: f }, function (r) {
+      if (r.fallback) { if (o.lazy) { lazyErr = r.error || '没有回应'; render([]); } else localPaint(s, cat); return; }
+      lazyErr = '';
+      if (o.lazy && r.namespaces) {
+        nsList = r.namespaces.map(function (n) { return n.id; });
+        modCount = 0; r.namespaces.forEach(function (n) { if (n.id !== 'minecraft') modCount += n.count || 0; });
+        paintCats();
+      }
       var rows = rowsOf(r);
-      hostMore = r.nextOffset !== undefined && !r.done ? { s: s, offset: r.nextOffset, total: r.total } : null;
+      hostMore = r.nextOffset !== undefined && !r.done ? { s: s, offset: r.nextOffset, total: r.total, filters: f } : null;
       render(rows, hostMore ? r.total : rows.length);
     });
+    if (!started && o.lazy) { lazyErr = '当前宿主不支持搜索'; render([]); return true; }
     return started;
   }
   function hostNext() {
     if (!hostMore) return;
     var m = hostMore, prev = lastVis;
-    HostSearch.query({ view: 'picker', kind: o.hostKind, query: m.s, offset: m.offset, limit: 200 }, function (r) {
+    HostSearch.query({ view: 'picker', kind: o.lazy ? o.lazyKind : o.hostKind, query: m.s, offset: m.offset, limit: 200, filters: m.filters }, function (r) {
       if (r.fallback) return;
       var rows = prev.concat(rowsOf(r));
-      hostMore = r.nextOffset !== undefined && !r.done ? { s: m.s, offset: r.nextOffset, total: m.total } : null;
+      hostMore = r.nextOffset !== undefined && !r.done ? { s: m.s, offset: r.nextOffset, total: m.total, filters: m.filters } : null;
       limit = rows.length;
       render(rows, hostMore ? m.total : rows.length);
     });
@@ -134,7 +165,7 @@ function openPicker(o) {
     if (filterCancel) { filterCancel(); filterCancel = null; }
     var cat = catOf(catSel), s = q.trim().toLowerCase();
     hostMore = null;
-    if (s && hostPaint(s, cat)) return;
+    if ((s || LZ) && hostPaint(s, cat)) return;
     localPaint(s, cat);
   }
   function localPaint(s, cat) {
@@ -167,7 +198,7 @@ function openPicker(o) {
     });
     if (vis.length > shown.length) { var more = h('div', { class: 'k-add', text: '显示更多（还有 ' + (vis.length - shown.length) + ' 个）' }); activate(more, function () { limit += 120; render(lastVis, total); }); list.appendChild(more); }
     else if (hostMore) { var more2 = h('div', { class: 'k-add', text: '显示更多（共 ' + total + ' 个匹配）' }); activate(more2, hostNext); list.appendChild(more2); }
-    if (!vis.length) list.appendChild(xEmpty(emptyReason(q, openedAt, o.emptyReg)));
+    if (!vis.length) list.appendChild(xEmpty(lazyErr ? '游戏没有返回搜索结果（' + lazyErr + '）。可以在搜索框里直接输入完整 ID。' : emptyReason(q, openedAt, o.emptyReg)));
   }
   var sbox = kSearchBox(search, function (v) { q = v; limit = 80; paint(); });   // 回车或点「搜索」才搜
   var top = [sbox.el];
@@ -231,6 +262,14 @@ function openEffectPicker(o) {   /* o: { present:{full:1}, full:true=带等级, 
 
 /* ---- 音效：分类 + 点一下试听 + 确认 ---- */
 function openSoundPicker(o) {   /* o: { current, onConfirm(full) } */
+  var slk = Reg.lazyKind('sound_event');
+  if (slk) {   // 音效目录很大：搜索走宿主；分类只有“全部 / 模组”（宿主按命名空间过滤）
+    openPicker({ kind: 'snd', title: '选择音效', sub: o.current ? '当前：' + o.current : '', icon: 'music', single: true, entries: [], lazy: true, lazyKind: slk,
+      rowFn: function (r) { return { full: Reg.full(r.id), name: r.subtitle || r.name || r.id, sub: r.id, icon: function () { return uiIcon('music', 16); } }; },
+      cats: [{ id: 'all', name: '全部', icon: 'grid' }, { id: 'mod', name: '模组', icon: 'cube' }], live: true, searchHint: '搜索音效名称、字幕或 ID', custom: { placeholder: '或输入音效 ID，回车选中' }, preview: function () {}, soundOf: function (full) { return full; },
+      confirmLabel: '使用这个', onConfirm: function (ids) { o.onConfirm(ids[0]); } });
+    return;
+  }
   var all = Reg.sounds(), groups = {};
   all.forEach(function (s) { s.group = Reg.isMod(s.full) ? 'mod' : pathOf(s.full).split('.')[0]; groups[s.group] = (groups[s.group] || 0) + 1; });
   var cats = [{ id: 'all', name: '全部', icon: 'grid' }];
@@ -247,7 +286,7 @@ function kSoundField(value, onChange) {
   var pick = kBtn('选择…', function () { openSoundPicker({ current: cur, onConfirm: function (id) { cur = id; paint(); onChange(id); } }); }, { icon: 'music' });
   var idEl = h('span', { class: 'rs-id' });
   function paint() {
-    var n = cur ? Reg.nameOf('sounds', cur) : null;
+    var n = cur ? (Reg.isLazy('sound_event') ? ((Reg.optionFor('sound_event', cur) || {}).label || null) : Reg.nameOf('sounds', cur)) : null;
     name.textContent = cur ? (n || cur) : '（未选择）'; idEl.textContent = cur && n ? cur : '';
     var tip = cur ? (n && n !== cur ? n + String.fromCharCode(10) + cur : cur) : '';
     name.setAttribute('data-tip', tip); idEl.setAttribute('data-tip', tip);
@@ -263,6 +302,7 @@ function kRegSelect(o) {
   var cur = o.value || "";
   var nm = h("span", { class: "rs-name" }), idEl = h("span", { class: "rs-id" });
   function entry(id) {
+    if (Reg.isLazy(o.reg)) return Reg.optionFor(o.reg, id);
     var l = Reg.options(o.reg) || o.fallback || [], f = Reg.full(id);
     for (var i = 0; i < l.length; i++) if (l[i].v === f || l[i].v === id) return l[i];
     return null;
@@ -298,6 +338,19 @@ function openAttrPicker(o) {   /* o: { exclude:[short ids], onConfirm(fullIds) }
 /* ---- 标签 / 条目 单选：工具规则、免疫伤害、修理材料。标签与条目都读游戏实时注册表，常用快捷项排最前，也可手输 #模组id:标签 ----
    o: { title, tagsReg:'block', entryReg:'block'|null, quick:[{v,label,sub}], tagsOnly, onConfirm(id) } */
 function openTagPicker(o) {
+  var tk = Reg.lazyKind('tags:' + o.tagsReg), ek = o.entryReg && !o.tagsOnly ? Reg.lazyKind(o.entryReg) : null;
+  if (tk || ek) {   // 标签 / 条目目录很大：各自问宿主，合并显示；常用快捷项（本地）排最前
+    var srcs = [];
+    if (tk) srcs.push({ kind: tk, group: 'tag', rowFn: function (r) { var v = '#' + Reg.full(r.id); return { full: v, name: r.name && r.name !== r.id ? r.name : r.id, sub: (r.count !== undefined ? r.count + ' 个成员' : '标签'), group: 'tag' }; } });
+    if (ek) srcs.push({ kind: ek, group: 'entry', rowFn: function (r) { var e = Reg.rowToOpt(o.entryReg, r); return { full: e.v, name: e.label === e.v ? humanId(shortId(e.v)) : e.label, sub: e.v, group: 'entry', icon: o.entryIcon ? function () { return o.entryIcon(e); } : null }; } });
+    var qk = (o.quick || []).map(function (q) { return { full: q.v, name: q.label, sub: q.sub || q.v, group: 'quick' }; });
+    var tcats = [{ id: 'all', name: '全部', icon: 'grid' }];
+    if (qk.length) tcats.push({ id: 'quick', name: '常用', icon: 'star' });
+    if (tk) tcats.push({ id: 'tag', name: '标签', icon: 'tag' });
+    if (ek) tcats.push({ id: 'entry', name: '单个条目', icon: 'cube' });
+    openPicker({ kind: 'tagpick', title: o.title, sub: '', icon: 'tag', single: !o.multi, entries: [], lazySources: srcs, lazyQuick: qk, cats: tcats, live: true, searchHint: '搜索名称或 ID；也可输入 #模组id:标签', custom: { hash: true }, confirmLabel: o.multi ? '添加所选' : '使用这个', onConfirm: function (ids) { if (o.multi) o.onConfirm(ids); else o.onConfirm(ids[0]); } });
+    return;
+  }
   function build() {
     var quick = {}; (o.quick || []).forEach(function (q) { quick[q.v] = q; });
     var out = (o.quick || []).map(function (q) { return { full: q.v, name: q.label, sub: q.sub || q.v, group: 'quick' }; });
@@ -331,6 +384,13 @@ function openRegPick(o) {   /* o: { reg, tag, current, title, fallback, onPick(i
     return l.map(function (e) { return { full: Reg.full(e.v), name: refName(o.reg, e), sub: e.v, icon: function () { return refIcon(o.reg, e.v); } }; });
   }
   var cats = [{ id: "all", name: "全部", icon: "grid" }, { id: "mod", name: "模组", icon: "cube", filter: function (en) { return Reg.isMod(en.full); } }];
+  var lk = Reg.lazyKind(o.reg);
+  if (lk) {   // 大目录：不在页面里，选择窗直接问宿主
+    openPicker({ kind: "regpick-" + o.reg, emptyReg: o.reg, lazy: true, lazyKind: lk, rowFn: function (r) { var e = Reg.rowToOpt(o.reg, r); return { full: Reg.full(e.v), name: refName(o.reg, e), sub: e.v, icon: function () { return refIcon(o.reg, e.v); } }; },
+      title: o.title || "选择", sub: o.multi ? "勾选后一次添加" : "", icon: "grid", single: !o.multi, locked: o.locked, entries: [], cats: [{ id: "all", name: "全部", icon: "grid" }, { id: "mod", name: "模组", icon: "cube" }],
+      live: true, searchHint: "搜索名称或 ID", custom: { placeholder: "或输入 ID，回车选中" }, confirmLabel: o.multi ? "添加所选" : "使用这个", onConfirm: function (ids) { if (o.multi) o.onPickMany(ids); else o.onPick(ids[0]); } });
+    return;
+  }
   openPicker({ kind: "regpick-" + o.reg, emptyReg: o.reg, hostKind: Reg.hostKind(o.reg), title: o.title || "选择", sub: o.multi ? "勾选后一次添加" : "", icon: "grid", single: !o.multi, locked: o.locked, entriesFn: build, cats: cats, live: Reg.live(), searchHint: "搜索名称或 ID", custom: { placeholder: "或输入 ID，回车选中" }, confirmLabel: o.multi ? "添加所选" : "使用这个", onConfirm: function (ids) { if (o.multi) o.onPickMany(ids); else o.onPick(ids[0]); } });
 }
 /* 条目名：有翻译名就用翻译名；没有就用物品名（装备外观、方块和物品同名）；再不行才把路径变成易读的英文。完整 ID 不再当名字 */
@@ -344,6 +404,10 @@ function refName(reg, e) {
    list 的每项 {v,...}，v 以 # 开头的才检查 */
 function keepKnownTags(list, reg) {
   if (!Reg.live()) return list;
+  var tlk = Reg.lazyKind('tags:' + reg);
+  if (tlk) {   // 标签目录在宿主：只精确查这几个快捷项是否存在，没查到前原样保留
+    return list.filter(function (x) { if (!x.v || x.v.charAt(0) !== '#') return true; var row = Reg.want(tlk, Reg.full(x.v.substring(1))); return row !== null || Reg.rows[tlk][Reg.full(x.v.substring(1))] !== false; });
+  }
   var tags = Reg.options('tags:' + reg);
   if (!tags || !tags.length) return list;
   var have = {}; tags.forEach(function (t) { have['#' + Reg.full(t.v)] = 1; });
@@ -385,6 +449,7 @@ function emptyReason(q, since, reg) {
 /* 标签的显示名：游戏里的翻译名（tags:<reg> 的 name，缺翻译时等于完整 id → 返回 null） */
 function tagLabel(reg, hashId) {
   if (!Reg.live() || !hashId) return null;
+  if (Reg.lazyKind('tags:' + reg)) { var tr = Reg.want(Reg.lazyKind('tags:' + reg), Reg.full(String(hashId).replace(/^#/, ''))); return tr && tr.name && tr.name !== tr.id ? tr.name : null; }
   var l = Reg.options('tags:' + reg), f = '#' + Reg.full(String(hashId).replace(/^#/, ''));
   if (!l) return null;
   for (var i = 0; i < l.length; i++) if ('#' + Reg.full(l[i].v) === f) return l[i].label && l[i].label !== l[i].v ? l[i].label : null;

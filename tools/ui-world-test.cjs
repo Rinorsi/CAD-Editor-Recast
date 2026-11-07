@@ -312,3 +312,45 @@ console.log('PASS host search client: request supersede, ready:false wait, error
   c.Reg.meta = null; c.Reg.kinds = {}; c.HostSearch.supported = null;
 }
 console.log('PASS picker uses host search with local fallback.');
+
+// lazy-catalog-v1：大目录不在页面里；名字按需精确查询，选择窗直接问宿主
+{
+  const sent = []; c.oriel.send = (k, v) => { sent.push([k, v]); return true; };
+  let timers = []; c.setTimeout = (fn, ms) => { timers.push(fn); return timers.length; }; c.clearTimeout = () => {};
+  const runTimers = () => { const t = timers; timers = []; t.forEach(f => f()); };
+  c.Reg.meta = null; c.Reg.kinds = {}; c.Reg.lazy = {}; c.Reg.rows = {}; c.Reg.lookAsked = {}; c.Reg.lookPending = {}; c.Reg.lookBusy = false; c.HostSearch.supported = null; c.HostSearch.views = {};
+  overlays.textContent = '';
+  // 1) 页面启动先声明 lazy-catalog-v1，且是第一条 registry 消息
+  c.Reg.attach();
+  assert.equal(sent[0][0], 'registry'); assert.equal(sent[0][1].name, 'client_features'); assert.deepEqual(Array.from(sent[0][1].features), ['lazy-catalog-v1']);
+  sent.length = 0;
+  // 2) 宿主在 meta 里列出 lazy kind
+  c.Reg.ingest('registry.meta', { lazy: { items: { count: 1506 }, blocks: { count: 1100 }, sounds: { count: 1600 }, 'tags:item': { count: 200 } } });
+  assert.equal(c.Reg.lazyKind('item'), 'items'); assert.equal(c.Reg.lazyKind('block'), 'blocks'); assert.equal(c.Reg.lazyKind('sound_event'), 'sounds'); assert.equal(c.Reg.lazyKind('tags:item'), 'tags:item'); assert.equal(c.Reg.lazyKind('enchantment'), null);
+  // 3) 大目录不会触发整张表的请求；名字走批量 lookup
+  assert.equal(Array.from(c.Reg.options('item')).length, 0);
+  assert.equal(sent.filter(x => x[0] === 'registry').length, 0, '不请求整张物品表');
+  assert.equal(c.Reg.itemName('minecraft:diamond_sword'), null);
+  c.Reg.itemName('minecraft:stick'); runTimers();
+  const look = sent.filter(x => x[0] === 'search').pop();
+  assert.equal(look[1].view, 'lookup'); assert.equal(look[1].kind, 'items'); assert.deepEqual(Array.from(look[1].ids), ['minecraft:diamond_sword', 'minecraft:stick']);
+  c.Reg.ingest('search.result', { requestId: look[1].requestId, ready: true, done: true, total: 1, entries: [{ id: 'minecraft:diamond_sword', name: '钻石剑' }], missing: ['minecraft:stick'] });
+  assert.equal(c.Reg.itemName('minecraft:diamond_sword'), '钻石剑');
+  const before = sent.length; assert.equal(c.Reg.itemName('minecraft:stick'), null); runTimers(); assert.equal(sent.length, before, '查过没有的不再重复问');
+  // 4) 选择窗：打开就问宿主要第一页；结果行显示；模组分类带命名空间过滤
+  c.openRegPick({ reg: 'item', title: '选择物品', onPick() {} });
+  const s1 = sent.filter(x => x[0] === 'search').pop();
+  assert.equal(s1[1].kind, 'items'); assert.equal(s1[1].query, '');
+  c.Reg.ingest('search.result', { requestId: s1[1].requestId, ready: true, done: true, total: 2, entries: [{ id: 'minecraft:stick', name: '木棍', namespace: 'minecraft' }, { id: 'mymod:wand', name: '魔杖', namespace: 'mymod' }], namespaces: [{ id: 'minecraft', count: 1506 }, { id: 'mymod', count: 12 }] });
+  let rows = overlays.querySelectorAll('.addrow'); assert.equal(rows.length, 2); assert.ok(rows[1].textContent.includes('魔杖'));
+  const cats = overlays.querySelectorAll('.addcat'); assert.equal(cats.length, 2);
+  assert.ok(cats[1].textContent.includes('12'), '模组分类的数量来自宿主 namespaces');
+  cats[1].fire('click');
+  const s2 = sent.filter(x => x[0] === 'search').pop();
+  assert.deepEqual(Array.from(s2[1].filters.namespaces), ['mymod'], '模组分类 = 命名空间过滤');
+  // 5) 宿主没回应：给出原因，不是空白
+  c.Reg.ingest('search.result', { requestId: s2[1].requestId, ready: false, error: 'UNAVAILABLE' });
+  assert.ok(overlays.textContent.includes('UNAVAILABLE'));
+  c.Reg.meta = null; c.Reg.lazy = {}; c.Reg.rows = {}; c.HostSearch.supported = null; c.HostSearch.views = {};
+}
+console.log('PASS lazy catalog: handshake, on-demand lookup, host-driven picker.');

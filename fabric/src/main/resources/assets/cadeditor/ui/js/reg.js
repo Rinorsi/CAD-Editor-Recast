@@ -6,7 +6,8 @@ var Reg = {
     if (key === 'search.result') { if (typeof HostSearch !== 'undefined') HostSearch.receive(val); return; }
     if (key === 'validate_component.result') { if (typeof Valid !== 'undefined') Valid.receive(val); return; }
     if (typeof key !== 'string' || key.indexOf('registry.') !== 0) return;
-    if (key === 'registry.meta') { this.meta = val; this.cache = {}; this.fire(); return; }
+    if (key === 'registry.client_features') { if (val && val.accepted) this.features = val.accepted; if (val && val.lazy) this.setLazy(val.lazy); this.fire(); return; }
+    if (key === 'registry.meta') { this.meta = val; this.cache = {}; if (val && val.lazy) this.setLazy(val.lazy); this.fire(); return; }
     if (!val || typeof val !== 'object') return;
     if (key === 'registry.relation') { this.ingestRel(val); return; }
     var kind = key.substring(9), k = this.kinds[kind];
@@ -202,13 +203,15 @@ var Reg = {
   on: function (f) { this.subs.push(f); return function () { Reg.subs = Reg.subs.filter(function (x) { return x !== f; }); }; },
   attach: function () {
     if (typeof oriel === 'undefined') return;
+    /* 告诉宿主：这个页面会用搜索 / 精确查询取大目录，不必再把物品、方块、音效、标签等整张表推过来（lazy-catalog-v1）。必须是第一条 registry 消息 */
+    try { if (oriel.send) oriel.send('registry', { name: 'client_features', features: ['lazy-catalog-v1'] }); } catch (e) {}
     var d = oriel.data || {}; for (var k in d) if (k.indexOf('registry.') === 0) this.ingest(k, d[k]);
     if (oriel.on) oriel.on('patch', function (p) { if (p && p.key) Reg.ingest(p.key, p.value); });
   },
   /* 取任意注册表（含模组自己的）：页面发请求，宿主回 registry.<name> */
   request: function (name) { if (typeof oriel !== 'undefined' && oriel.send && this.meta) oriel.send('registry', { name: name }); },
   live: function () { return !!this.meta; },
-  has: function (kind) { var k = this.kinds[kind]; return !!(k && k.entries.length); },
+  has: function (kind) { if (this.lazy[kind] !== undefined) return true; var k = this.kinds[kind]; return !!(k && k.entries.length); },
   list: function (kind) { var k = this.kinds[kind]; return k ? k.entries.filter(Boolean) : null; },
   full: function (id) { id = String(id || ''); return id.indexOf(':') < 0 ? 'minecraft:' + id : id; },
   isMod: function (full) { return full.indexOf('minecraft:') !== 0; },
@@ -242,19 +245,30 @@ var Reg = {
   },
   KIND: { item: 'items', enchantment: 'enchantments', attribute: 'attributes', mob_effect: 'mob_effects', sound_event: 'sounds', block: 'blocks', entity_type: 'entity_types', damage_type: 'damage_types', instrument: 'instruments', jukebox_song: 'jukebox_songs', trim_material: 'trim_materials', trim_pattern: 'trim_patterns', banner_pattern: 'banner_patterns', potion: 'potions', painting_variant: 'painting_variants', data_component_type: 'data_component_types' },
   /* 通用候选：{v,label,sub}；没推送过的注册表（战利品表等）第一次用到时按需请求 */
+  rowToOpt: function (reg, e) { return { v: e.id, label: e.subtitle && reg === 'sound_event' ? e.subtitle : ((reg === 'jukebox_song' && e.description) ? e.description : (e.name || e.id)), sub: e.id, n: e.count, rgb: e.rgb, sound: e.sound_event, len: e.length_in_seconds, frame: e.has_frame }; },
   options: function (reg) {
     var direct = this.isDirect(reg), kind = this.KIND[reg] || (direct ? reg : 'minecraft:' + reg), ck = 'opt:' + kind;
+    if (this.lazyKind(reg)) return this.cachedOpts(reg);   /* 大目录不在页面里：只有已经查过 / 搜到过的行 */
     if (this.cache[ck]) return this.cache[ck];
     var l = this.list(kind);
     if (!l || !l.length) { if (!this.asked) this.asked = {}; if (!this.asked[kind]) { this.asked[kind] = 1; this.request(direct ? reg : 'minecraft:' + reg); } return null; }
-    var out = l.map(function (e) { return { v: e.id, label: e.subtitle && reg === 'sound_event' ? e.subtitle : ((reg === 'jukebox_song' && e.description) ? e.description : (e.name || e.id)), sub: e.id, n: e.count, rgb: e.rgb, sound: e.sound_event, len: e.length_in_seconds, frame: e.has_frame }; });
+    var out = l.map(function (e) { return Reg.rowToOpt(reg, e); });
     if (this.kinds[kind] && this.kinds[kind].done) this.cache[ck] = out;
     return out;
   },
   /* 属性自己的数值范围（游戏里 attribute 的 min/max）；没有就用 dflt */
   attrMax: function (id, dflt) { var l = this.list('attributes'), f = this.full(id); if (l) for (var i = 0; i < l.length; i++) if (l[i].id === f && typeof l[i].max === 'number') return l[i].max; return dflt; },
-  nameOf2: function (reg, full) { var l = this.options(reg), f = this.full(full); if (!l) return null; for (var i = 0; i < l.length; i++) if (l[i].v === f) return l[i].label; return null; },
+  nameOf2: function (reg, full) { var o = this.optionFor(reg, full); return o ? o.label : null; },
+  /* 某个 ID 对应的候选行 {v,label,…}；大目录里没缓存的会在后台精确查询，到了会重画。没有 = null */
+  optionFor: function (reg, full) {
+    var f = this.full(full), lk = this.lazyKind(reg);
+    if (lk) { var r = this.want(lk, f); return r ? this.rowToOpt(reg, r) : null; }
+    var l = this.options(reg); if (!l) return null;
+    for (var i = 0; i < l.length; i++) if (l[i].v === f) return l[i];
+    return null;
+  },
   nameOf: function (kind, full) {
+    if (kind === 'sounds' && this.lazyKind('sound_event')) { var so = this.optionFor('sound_event', full); return so ? so.label : null; }
     var fn = kind === 'enchantments' ? this.enchants : kind === 'mob_effects' ? this.effects : kind === 'sounds' ? this.sounds : null;
     if (!fn) return null;
     var list = fn.call(this), f = this.full(full);
@@ -262,6 +276,7 @@ var Reg = {
     return null;
   },
   itemName: function (full) {
+    if (this.lazyKind('item')) { var r = this.want(this.lazyKind('item'), this.full(full)); return r ? (r.name || r.id) : null; }
     if (!this.has('items')) return null;
     var m = this.cache.itemMap; if (!m) { m = this.cache.itemMap = {}; this.list('items').forEach(function (e) { m[e.id] = e.name || e.id; }); }
     return m[this.full(full)] || null;
@@ -302,3 +317,52 @@ function liveEnumHas(cid, path, v) {
   for (var i = 0; i < l.length; i++) if (l[i].v === v) return true;
   return false;
 }
+
+/* ---- 大目录（lazy-catalog-v1）：物品 / 方块 / 音效 / 标签 / 资源 ID 等不再整张推进页面 ----
+   宿主在 registry.meta.lazy / registry.client_features 里列出哪些 kind 是“按需”的。页面里只缓存搜到过 / 精确查过的行；
+   选择窗走 search，已选值的名字走 lookup（批量，后台，到了重画）。老宿主没有 lazy 字段，一切照旧。 */
+Reg.lazy = {}; Reg.features = null; Reg.rows = {}; Reg.lookPending = {}; Reg.lookAsked = {}; Reg.lookTimer = null; Reg.lookBusy = false;
+Reg.setLazy = function (m) { for (var k in m) this.lazy[k] = (m[k] && typeof m[k].count === 'number') ? m[k].count : 0; this.cache = {}; };
+/* reg 别名 → 它在 lazy 表里的 kind；不是大目录返回 null */
+Reg.lazyKind = function (reg) {
+  var k = this.hostKind(reg), alts = [k, reg, 'minecraft:' + reg];
+  for (var i = 0; i < alts.length; i++) if (this.lazy[alts[i]] !== undefined) return alts[i];
+  return null;
+};
+Reg.isLazy = function (reg) { return this.lazyKind(reg) !== null; };
+Reg.noteRows = function (kind, entries) {
+  var m = this.rows[kind] || (this.rows[kind] = {});
+  (entries || []).forEach(function (e) { if (e && e.id) m[Reg.full(e.id)] = e; });
+};
+Reg.cachedOpts = function (reg) {
+  var lk = this.lazyKind(reg), m = this.rows[lk] || {}, out = [];
+  for (var id in m) if (m[id]) out.push(this.rowToOpt(reg, m[id]));
+  return out;
+};
+/* 取一行（已缓存的立即返回；没有就排队批量精确查询，到了 Reg.fire 重画；查过没有的返回 null） */
+Reg.want = function (kind, full) {
+  var m = this.rows[kind] || (this.rows[kind] = {});
+  if (m[full]) return m[full];
+  if (m[full] === false || (this.lookAsked[kind] && this.lookAsked[kind][full])) return null;
+  (this.lookPending[kind] || (this.lookPending[kind] = [])).push(full);
+  (this.lookAsked[kind] || (this.lookAsked[kind] = {}))[full] = 1;
+  if (!this.lookTimer) { this.lookTimer = setTimeout(function () { Reg.lookTimer = null; Reg.lookFlush(); }, 30); }
+  return null;
+};
+Reg.lookFlush = function () {
+  if (this.lookBusy) return;
+  var kind = null, k;
+  for (k in this.lookPending) if (this.lookPending[k].length) { kind = k; break; }
+  if (!kind) return;
+  var ids = this.lookPending[kind].splice(0, 64);
+  this.lookBusy = true;
+  var done = function (r) {
+    Reg.lookBusy = false;
+    var m = Reg.rows[kind] || (Reg.rows[kind] = {});
+    if (r && !r.fallback) Reg.noteRows(kind, r.entries);
+    ids.forEach(function (id) { if (!m[id]) m[id] = false; });   /* 查过没有的记 false，不再重复问 */
+    Reg.fire('lookup:' + kind);
+    Reg.lookFlush();
+  };
+  if (!HostSearch.query({ view: 'lookup', kind: kind, ids: ids, limit: 64 }, done)) done({ fallback: true });
+};
