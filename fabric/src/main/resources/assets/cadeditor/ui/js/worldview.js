@@ -222,22 +222,36 @@ function weViewTab(body) {
   });
 }
 
+/* ---------- 方块状态：属性名 / 取值的中文名（界面文字；游戏本身没有这些翻译，认不得的原样显示） ---------- */
+var WE_PROP = { facing: '朝向', half: '上下半', type: '类型', waterlogged: '含水', open: '打开', powered: '通电', lit: '点亮', rotation: '旋转', shape: '形状', axis: '轴向', hinge: '门轴', face: '附着面',
+  age: '生长阶段', level: '等级', persistent: '不会消失', distance: '距离', bites: '被吃的口数', delay: '延迟', locked: '锁定', mode: '模式', power: '红石强度', snowy: '积雪', hanging: '悬挂', honey_level: '蜂蜜等级',
+  conditional: '有条件', attached: '已连接', berries: '有浆果', bottom: '有底', candles: '蜡烛数', charges: '充能', disarmed: '已解除', east: '东侧', west: '西侧', north: '北侧', south: '南侧', up: '上侧', down: '下侧',
+  drag: '拖拽', eye: '有末影之眼', enabled: '启用', extended: '伸出', falling: '下落', has_book: '有书', has_record: '有唱片', inverted: '反转', instrument: '乐器', note: '音高', occupied: '有人睡', orientation: '朝向',
+  signal_fire: '信号火', stage: '阶段', tilt: '倾斜', triggered: '已触发', unstable: '不稳定', vertical_direction: '垂直方向', wet: '潮湿', layers: '层数', moisture: '湿度', slot_0_occupied: '格 1 有书', slot_1_occupied: '格 2 有书',
+  slot_2_occupied: '格 3 有书', slot_3_occupied: '格 4 有书', slot_4_occupied: '格 5 有书', slot_5_occupied: '格 6 有书', flower_amount: '花瓣数', segment_amount: '花簇数', cracked: '裂开', crafting: '合成中', ominous: '不祥',
+  trial_spawner_state: '试炼状态', sculk_sensor_phase: '感应状态', tip: '尖端', thickness: '粗细', has_bottle_0: '瓶位 1', has_bottle_1: '瓶位 2', has_bottle_2: '瓶位 3', in_wall: '嵌入墙', short: '短', natural: '自然生成',
+  pickles: '海泡菜数', eggs: '蛋数', hatch: '孵化进度', dusted: '被刷过', respawn_anchor_charges: '重生锚充能', bloom: '绽放', can_summon: '可召唤', shrieking: '尖啸', lit_candle: '点燃', cauldron_level: '水位' };
+var WE_VAL = { true: '是', false: '否', north: '北', south: '南', east: '东', west: '西', up: '上', down: '下', left: '左', right: '右', top: '上', bottom: '下', single: '单', double: '双', lower: '下半', upper: '上半',
+  floor: '地面', wall: '墙面', ceiling: '天花板', x: 'X 轴', y: 'Y 轴', z: 'Z 轴', none: '无', low: '低', tall: '高', straight: '直', inner_left: '内左', inner_right: '内右', outer_left: '外左', outer_right: '外右',
+  north_south: '南北', east_west: '东西', ascending_east: '向东上坡', ascending_west: '向西上坡', ascending_north: '向北上坡', ascending_south: '向南上坡', side: '侧面', save: '保存', load: '加载', corner: '转角', data: '数据',
+  compare: '比较', subtract: '减法', inactive: '未激活', active: '激活', cooldown: '冷却', head: '头', foot: '脚', normal: '正常', sticky: '黏性', wall_hanging: '墙挂' };
+function wePropName(n) { return WE_PROP[n] || humanId(n); }
+function wePropVal(v) { return WE_VAL[v] !== undefined ? WE_VAL[v] : v; }
+
 /* ---------- 方块状态 ---------- */
 function weStateRow(p) {
   var cur = weStateCur(p), nm = p.name;
   function set(v) { if (v === p.current) delete WE.bstate[nm]; else WE.bstate[nm] = v; drawWorldTop(); drawWorldFoot(); }
   var ctl;
   if (p.type === 'boolean') ctl = kToggle(cur === 'true', function (on) { set(on ? 'true' : 'false'); }).el;
-  else if (p.values.length <= 5) ctl = kSeg(p.values.map(function (v) { return { v: v, label: v }; }), cur, set).el;
-  else ctl = kSelect(p.values.map(function (v) { return { v: v, label: v }; }), cur, set, { width: 200 }).el;
-  return xRow({ icon: false, title: nm, sub: p.default !== undefined ? '默认 ' + p.default : '', tip: nm, right: ctl });
+  else if (p.values.length <= 5) ctl = kSeg(p.values.map(function (v) { return { v: v, label: wePropVal(v) }; }), cur, set).el;
+  else ctl = kSelect(p.values.map(function (v) { return { v: v, label: wePropVal(v) }; }), cur, set, { width: 200 }).el;
+  return xRow({ icon: false, title: wePropName(nm), sub: p.default !== undefined ? '默认 ' + wePropVal(p.default) : '', tip: nm, right: ctl });
 }
 function weStateTab(body) {
   var sc = weStateSchema();
   body.appendChild(xSec('sliders', '方块状态', sc.length ? sc.length + ' 项' : ''));
   if (!sc.length) body.appendChild(xEmpty('这个方块没有可以改的状态。'));
   sc.forEach(function (p) { body.appendChild(weStateRow(p)); });
-  body.appendChild(xSec('wrench', '写入方式'));
-  body.appendChild(xRow({ icon: false, title: '通知相邻方块', sub: '关掉后不触发周围方块的更新（红石、水流、连接形状）；之后的自然更新不受影响', right: kToggle(WE.upd, function (on) { WE.upd = on; }).el }));
-  body.appendChild(h('div', { class: 'k-sub', text: '门的上下半、箱子的左右、楼梯的拐角会受周围方块影响，只改你点开的这一格。' }));
+  body.appendChild(xRow({ icon: false, title: '通知相邻方块', sub: '关掉后这次修改不会触发周围方块更新', right: kToggle(WE.upd, function (on) { WE.upd = on; }).el }));
 }

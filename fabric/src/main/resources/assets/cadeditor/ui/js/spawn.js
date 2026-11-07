@@ -183,12 +183,10 @@ function buildMobSpawner(body, obj, beId, put) {
     obj.SpawnData = isObj(obj.SpawnData) ? obj.SpawnData : {}; obj.SpawnData.entity = isObj(obj.SpawnData.entity) ? obj.SpawnData.entity : {};
     obj.SpawnData.entity.id = Reg.full(x); put();
   } }).el));
-  /* 刷出来的生物身上的装备：和刷怪蛋共用装备格子（可从保险库取），写进 SpawnData.entity */
+  /* 刷出来的生物自己的设置：外观、开关、属性、状态效果、装备——和刷怪蛋 / 世界实体共用同一个面板，写进 SpawnData.entity */
   if (eid) {
-    body.appendChild(xSec('helmet', '刷出的生物穿的装备', '只对「当前生物」生效'));
-    var gearHost = h('div'), gearIo = { get: function () { return obj.SpawnData.entity; }, set: function (e) { obj.SpawnData.entity = e; put(); }, redraw: function () { paintGear(); } };
-    var paintGear = function () { clear(gearHost); var okS = esReady(Reg.full(eid), gearHost); if (okS) gearHost.appendChild(esGearGrid(okS, gearIo, Reg.full(eid))); };
-    paintGear(); body.appendChild(gearHost);
+    body.appendChild(xSec('paw', '刷出的生物', '外观、属性、效果、装备'));
+    body.appendChild(esPanel({ type: Reg.full(eid), get: function () { return obj.SpawnData.entity; }, set: function (e) { obj.SpawnData.entity = e; put(); } }));
   }
   body.appendChild(xSec('list', '随机池', '有池子时，每次按权重从里面挑一种'));
   var pot = Array.isArray(obj.SpawnPotentials) ? obj.SpawnPotentials : [];

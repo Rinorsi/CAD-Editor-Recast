@@ -28,7 +28,7 @@ function weDirtyText() { if (!WE.w) return false; try { return nbtPrint(nbtParse
 function weDirty() { return weDirtyText() || Object.keys(WE.slots).length > 0 || (typeof weViewsDirty === 'function' && weViewsDirty()) || (typeof evDirty === 'function' && evDirty()); }
 function weName() {
   var w = WE.w;
-  if (w.kind === 'block') return Reg.nameOf2('block', w.block || w.type) || humanId(shortId(w.block || w.type));
+  if (w.kind === 'block') { var bid = shortId(w.block || w.type); return nameOfItem(bid) || Reg.nameOf2('block', w.block || w.type) || humanId(bid); }
   return Reg.nameOf2('entity_type', w.type) || humanId(shortId(w.type));
 }
 
@@ -40,10 +40,10 @@ function weOpen(world) {
 function weTabs() {
   var w = WE.w, t = [], noBE = w.kind === 'block' && w.has_block_entity === false;
   if (w.kind === 'block' && weViewGroups().length) { var vi = weViewTabInfo(); t.push({ id: 'view', label: vi.label, icon: vi.icon }); }
+  if (!noBE && w.container && w.container.slots) t.push({ id: 'container', label: '容器', icon: 'chest' });
+  if (!noBE && w.kind === 'block' && (w.type === 'minecraft:mob_spawner' || w.type === 'minecraft:trial_spawner')) t.push({ id: 'spawner', label: '刷怪设置', icon: 'paw' });
   if (w.kind === 'block' && (weStateSchema().length || weTypeSchema().length > 1)) t.push({ id: 'state', label: '方块状态', icon: 'sliders' });
   if (noBE) return t;
-  if (w.container && w.container.slots) t.push({ id: 'container', label: '容器', icon: 'chest' });
-  if (w.kind === 'block' && (w.type === 'minecraft:mob_spawner' || w.type === 'minecraft:trial_spawner')) t.push({ id: 'spawner', label: '刷怪设置', icon: 'paw' });
   if (w.kind === 'entity') {
     if (evGroup('pose')) t.push({ id: 'pose', label: '姿势', icon: 'user' });
     if (evGroup('item_frame')) t.push({ id: 'frame', label: '展示框', icon: 'image' });
@@ -69,12 +69,18 @@ function drawWorldTop() {
   var un = h('div', { class: 'k-ibtn' + (w.canUndo ? '' : ' dis'), title: '撤销上一次写入游戏的修改' }, [uiIcon('undo', 14)]);
   activate(un, function () { if (WE.w.canUndo) weUndo(); });
   bar.appendChild(un);
-  var n = weDirty();
-  var ap = h('div', { class: 'k-btn pri k-apply' + (n ? '' : ' dim'), title: n ? '写入游戏' : '还没有修改' }, [uiIcon('play', 12), h('span', { text: '应用修改' })]);
+  var vb = h('div', { class: 'k-ibtn', title: '保险库：把物品存起来，或取出放进槽位' }, [uiIcon('chest', 14)]); activate(vb, function () { openVault(); });
+  var th = h('div', { class: 'k-ibtn', title: '设置' }, [uiIcon('sliders', 14)]); activate(th, openSettings);
+  bar.appendChild(vb); bar.appendChild(th);
+  var n = weDirty(), cnt = weChangeCount();
+  var ap = h('div', { class: 'k-btn pri k-apply' + (n ? '' : ' dim'), title: n ? '写入游戏' : '还没有修改' }, [uiIcon('play', 12), h('span', { text: '应用修改' }), cnt ? h('b', { text: String(cnt) }) : null]);
   activate(ap, weApply);
   bar.appendChild(ap);
+  var mx = h('div', { class: 'k-ibtn', title: UI.maxed ? '还原窗口' : '全屏' }, [uiIcon(UI.maxed ? 'restore' : 'maximize', 14)]);
+  activate(mx, function () { UI.maxed = !UI.maxed; applyWinStyle(); Prefs.set('windowMax', UI.maxed); mx.title = UI.maxed ? '还原窗口' : '全屏'; mx.firstChild.src = 'oriel:textures/icons/' + (UI.maxed ? 'restore' : 'maximize') + '.png'; });
+  bar.appendChild(mx);
   var x = h('div', { class: 'k-ibtn', title: '关闭' }, [uiIcon('close', 14)]);
-  activate(x, function () { try { if (oriel.close) oriel.close(); } catch (e) {} });
+  activate(x, closeEditor);
   bar.appendChild(x);
 }
 function drawWorldFoot() {
@@ -82,19 +88,12 @@ function drawWorldFoot() {
   f.appendChild(h('span', { class: 'it' + (weDirty() ? ' chg' : '') }, [h('i', { class: 'dot' }), weDirty() ? '有未应用的修改' : '没有未应用的修改']));
   if (WE.err) f.appendChild(h('span', { class: 'it bad' }, [uiIcon('close', 12), WE.err]));
   f.appendChild(h('div', { class: 'grow' }));
-  f.appendChild(h('span', { class: 'it', text: w.kind === 'block' ? s.x + ' ' + s.y + ' ' + s.z : shortId(w.type) }));
+  f.appendChild(h('span', { class: 'it', title: '这个目标在世界里的位置', text: weWhere() }));
 }
 function drawWorldScreen() {
   var host = clear($('screen')), w = WE.w;
   applyWinStyle();
   var hero = h('aside', { class: 'ed-hero', id: 'hero' });
-  var vis = w.kind === 'block' ? itemIcon(shortId(w.block || w.type), 48) : h('entity', { id: w.type, rotatable: true, style: 'width:96px;height:96px;' });
-  hero.appendChild(h('div', { class: 'ed-stage' }, [h('div', { class: 'plate' }), vis]));
-  hero.appendChild(h('div', { class: 'ed-name', text: weName() }));
-  hero.appendChild(h('div', { class: 'ed-tags' }, [h('span', { class: 'k-tag', text: w.kind === 'block' ? '方块' : '实体' }), h('span', { class: 'k-tag dim', text: shortId(w.type) })]));
-  var st = h('div', { class: 'ed-stats' });
-  if (w.block_state) Object.keys(w.block_state).forEach(function (k) { st.appendChild(h('div', { class: 'k-stat' }, [h('span', { class: 'sl', text: k }), h('b', { text: String(w.block_state[k]) })])); });
-  hero.appendChild(st);
   var right = h('section', { class: 'ed-right' }), tabbar = h('div', { class: 'ed-tabs', id: 'tabbar' }), body = h('div', { class: 'ed-body', id: 'edbody' });
   weTabs().forEach(function (t) {
     var el = h('div', { class: 'ed-tab' + (WE.tab === t.id ? ' on' : '') }, [uiIcon(t.icon, 14), h('span', { text: t.label })]);
@@ -103,6 +102,7 @@ function drawWorldScreen() {
   });
   right.appendChild(tabbar); right.appendChild(body);
   host.appendChild(hero); host.appendChild(right);
+  weHero();
   if (WE.tab === 'pose') evPoseTab(body);
   else if (WE.tab === 'frame') evFrameTab(body);
   else if (WE.tab === 'painting') evPaintingTab(body);
@@ -144,7 +144,7 @@ function weContainerTab(body) {
     activate(pick, function () { pickItem(cell, function (id) { var o = weSlotStack(i); set({ id: fullId(id), count: o.empty ? 1 : (o.count || 1), comps: {}, removed: {} }); kPopClose(); }, { onStack: function (st) { var s2 = clone(st); delete s2.slot; delete s2.label; set(s2); kPopClose(); } }); });
     box.appendChild(pick);
     if (!cur.empty) {
-      var cnt = kNumber(cur.count || 1, { min: 1, max: 99, noSlider: true, step: 1, unit: '个', onChange: function (v) { var o = clone(weSlotStack(i)); o.count = v; set(o); } });
+      var ms = (protoOf(cur.id).max_stack_size || 64), cnt = kNumber(cur.count || 1, { min: 1, max: 99, noSlider: true, step: 1, unit: '个', warnMax: ms, warnWhy: '该物品原版最大堆叠 ' + ms, presets: [{ v: 1, label: '1' }, { v: 16, label: '16' }, { v: 64, label: '64' }], onChange: function (v) { var o = clone(weSlotStack(i)); o.count = v; set(o); } });
       box.appendChild(fieldRow('数量', cnt.el));
       box.appendChild(kBtn('清空这一格', function () { set({ empty: true }); kPopClose(); }, { cls: 'dng', icon: 'trash' }));
     }
@@ -165,7 +165,7 @@ function weObj() {
 function wePut() {
   var ref; try { ref = nbtParse(WE.text); } catch (e) { ref = nbtParse(WE.w.snbt); }
   try { WE.text = nbtPrint(nbtParse(nbtMerge(WE.obj, ref)), true); WE.err = ''; } catch (e) { WE.err = String(e.message || e); }
-  drawWorldTop(); drawWorldFoot();
+  drawWorldTop(); drawWorldFoot(); weHeroLive();
 }
 
 /* ---------- 刷怪笼：直接复用物品里的刷怪笼页（spawn.js），数据换成这个方块实体的 NBT ---------- */
@@ -183,6 +183,7 @@ function weEntityTab(body) {
 
 /* ---------- 数据：完整 SNBT（带类型），改完点应用 ---------- */
 function weDataTab(body) {
+  if (weTabs().length === 1) body.appendChild(h('div', { class: 'k-sub', text: '这个' + (WE.w.kind === 'block' ? '方块' : '实体') + '没有可视化的设置，可以在下面直接改带类型的数据（SNBT）。' }));
   body.appendChild(xSec('code', '完整数据', '带类型的 SNBT'));
   var ta = h('textarea', { class: 'ed-snbt', spellcheck: 'false' }); ta.value = WE.text;
   var msg = h('div', { class: 'k-sub' });
@@ -234,3 +235,62 @@ function weSaved(world) {
 }
 /* 世界实体页：entity_schema 到了再画一次（物品页的重画在 app.js，世界页没有物品文档，要自己接） */
 Reg.on(function (kind, kinds) { if (weActive() && (WE.tab === 'entity' || WE.tab === 'spawner') && (kinds || [kind]).indexOf('entity_schema') >= 0 && !$('modal')) { try { drawWorldScreen(); } catch (e) {} } });
+
+/* ---------- 左栏：和物品页同一套（预览可折叠 + 2D / 3D，名字，标签，属性可折叠） ---------- */
+var WE_DIM = { 'minecraft:overworld': '主世界', 'minecraft:the_nether': '下界', 'minecraft:the_end': '末地' };
+function weWhere() {
+  var w = WE.w, s = w.slot || {}, dim = s.dim ? (WE_DIM[s.dim] || s.dim) : '';
+  if (w.kind === 'block') return '位置 ' + s.x + ' ' + s.y + ' ' + s.z + (dim ? ' · ' + dim : '');
+  var p = w.nbt && Array.isArray(w.nbt.Pos) ? w.nbt.Pos.map(function (v) { return Math.round(Number(v)); }) : null;
+  return (p ? '位置 ' + p.join(' ') : shortId(w.type)) + (dim ? ' · ' + dim : '');
+}
+function weChangeCount() {
+  var n = (weDirtyText() ? 1 : 0) + Object.keys(WE.slots).length;
+  if (typeof weViewsDirty === 'function') n += Object.keys(WE.views).length + Object.keys(WE.bstate).length + (WE.btype && WE.btype !== WE.w.block ? 1 : 0);
+  if (typeof evDirty === 'function' && evDirty()) n += Object.keys(WE.ent).length + (WE.offers !== null ? 1 : 0);
+  return n;
+}
+function weHero() {
+  var hero = $('hero'); if (!hero || !WE.w) return;
+  var w = WE.w, isBlock = w.kind === 'block', scrollTop = hero.scrollTop, oldEnt = hero.querySelector('.k-ent'); clear(hero);
+  var can3d = typeof ED_MC === 'undefined', view = can3d && UI.heroView === '3d' ? '3d' : '2d';
+  var bid = isBlock ? shortId(w.block || w.type) : '';
+  var vis, entView = !isBlock && view === '3d';
+  if (isBlock) vis = view === '3d' ? h('model', { class: 'k-ico k-model', item: fullId(bid), rotatable: true }) : itemIcon(bid, 48);
+  else vis = entView ? heroEntity(w.type, weObj(), oldEnt) : entityIcon(w.type, 48);
+  var open = UI.stageOpen !== false;
+  var shead = h('div', { class: 'ed-stagehead' }, [foldArrow(open, 8), h('span', { text: '预览' }), h('div', { class: 'grow' })]);
+  shead.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.ed-view')) return; heroFold('.ed-stage', open, function (v) { UI.stageOpen = v; Prefs.set('stageOpen', v); }); });
+  if (can3d && open) {
+    var seg = h('div', { class: 'k-seg ed-view', title: isBlock ? '方块预览：2D 图标 / 3D 模型（会记住你的选择）' : '2D 显示图标 / 3D 显示生物（会记住你的选择）' });
+    ['2d', '3d'].forEach(function (v) {
+      var b = h('div', { class: 'k-segi' + (view === v ? ' on' : ''), text: v.toUpperCase() });
+      activate(b, function () { if (UI.heroView === v) return; UI.heroView = v; Prefs.set('heroView', v); weHero(); });
+      seg.appendChild(b);
+    });
+    shead.appendChild(seg);
+  }
+  if (entView && open) {
+    var rv = h('div', { class: 'k-mini ed-view', title: '恢复默认视角。左键拖动旋转，滚轮缩放，右键拖动移动' }, [uiIcon('undo', 11)]);
+    rv.addEventListener('click', function (e) { e.stopPropagation(); UI.entView = null; var o = $('hero') && $('hero').querySelector('.k-ent'); if (o) o.remove(); weHero(); });
+    shead.appendChild(rv);
+  }
+  hero.appendChild(shead);
+  if (open) hero.appendChild(h('div', { class: 'ed-stage' + (entView ? ' ent' : '') }, [h('div', { class: 'plate' }), vis]));
+  hero.appendChild(h('div', { class: 'ed-name' + (weName().length > 6 ? ' sm' : ''), text: weName() }));
+  hero.appendChild(h('div', { class: 'ed-tags' }, [h('span', { class: 'k-tag', text: isBlock ? '方块' : '实体' }), h('span', { class: 'k-tag dim', text: shortId(w.type) })]));
+  var stats = h('div', { class: 'ed-stats' });
+  function stat(l, v) { stats.appendChild(h('div', { class: 'k-stat' }, [h('span', { class: 'sl', text: l }), h('b', { text: String(v) })])); }
+  if (isBlock) weStateSchema().forEach(function (p) { stat(wePropName(p.name), wePropVal(weStateCur(p))); });
+  else if (w.nbt && typeof w.nbt.Health === 'number') stat('生命', fmtNum(w.nbt.Health));
+  var sOpen = UI.statsOpen !== false;
+  if (stats.children.length) {
+    var sh = h('div', { class: 'ed-stagehead' }, [foldArrow(sOpen, 8), h('span', { text: isBlock ? '方块状态' : '属性' }), h('div', { class: 'grow' })]);
+    sh.addEventListener('click', function () { heroFold('.ed-stats', sOpen, function (v) { UI.statsOpen = v; Prefs.set('statsOpen', v); }); });
+    hero.appendChild(sh);
+    if (sOpen) hero.appendChild(stats);
+  }
+  hero.scrollTop = scrollTop;
+}
+/* 编辑实体后 3D 预览跟着变（体型、幼年、装备） */
+function weHeroLive() { var hero = $('hero'), el = hero && hero.querySelector('.k-ent'); if (el && WE.w) { try { heroEntity(WE.w.type, weObj(), el); } catch (e) {} } }

@@ -1,4 +1,5 @@
 {
+  "key.cadeditor.edit": "Edit target (Shift: held item or self)",
   "key.cadeditor.vault": "Open Vault",
   "gui.cadeditor.vault": "Vault",
   "gui.cadeditor.vault.tooltip": "Open the local item vault (no world required)"

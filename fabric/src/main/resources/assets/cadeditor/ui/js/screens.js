@@ -389,6 +389,7 @@ function heroStats(d, kind) {
   return out;
 }
 function drawHero() {
+  if (typeof weActive === 'function' && weActive()) { weHero(); return; }   // 世界编辑页的左栏另画（和物品页同一套预览 / 属性折叠）
   var hero = $('hero'); if (!hero) return; var scrollTop = hero.scrollTop, oldEnt = hero.querySelector('.k-ent'); clear(hero);
   var d = Store.doc(), kind = kindOfItem(d.id), info = KIND_INFO[kind], eff = effectiveComps(d);
   var ench = (eff.enchantments && Object.keys(eff.enchantments).length) || (eff.stored_enchantments && Object.keys(eff.stored_enchantments).length) || eff.enchantment_glint_override === true;
