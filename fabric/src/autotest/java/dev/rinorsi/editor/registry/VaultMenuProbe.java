@@ -9,13 +9,9 @@ import java.util.*;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents;
-import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
-import net.fabricmc.fabric.api.client.screen.v1.Screens;
 import net.minecraft.client.*;
-import net.minecraft.client.gui.components.*;
 import net.minecraft.client.gui.screens.*;
 import net.minecraft.client.input.KeyEvent;
-import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
 /** Standalone hidden title-screen probe; never loaded in the user's game. */
@@ -40,12 +36,13 @@ public final class VaultMenuProbe implements ClientModInitializer {
                 if (!(mc.screen instanceof TitleScreen title) || mc.getOverlay() != null) return;
                 previous = title;
                 check(KeyMapping.get("key.cadeditor.vault") != null, "registered_controls_key");
-                checkLayouts(title);
-                title.init(mc.getWindow().getGuiScaledWidth(), mc.getWindow().getGuiScaledHeight());
-                Button button = vaultButton(title);
-                check(button.visible, "title_button_visible");
-                button.onPress(null);
-                check(mc.screen instanceof OrielScreen, "title_button_opens_page");
+                check(KeyMapping.get("key.cadeditor.vault").getDefaultKey().getValue()==GLFW.GLFW_KEY_O,"default_vault_key_o");
+                for(int modifier:new int[]{GLFW.GLFW_MOD_SHIFT,GLFW.GLFW_MOD_CONTROL,GLFW.GLFW_MOD_ALT}){
+                    boolean allowed=ScreenKeyboardEvents.allowKeyPress(title).invoker().allowKeyPress(title,new KeyEvent(GLFW.GLFW_KEY_O,0,modifier));
+                    check(allowed&&mc.screen==previous,"modified_shortcut_ignored_"+modifier);
+                }
+                boolean allowed=ScreenKeyboardEvents.allowKeyPress(title).invoker().allowKeyPress(title,new KeyEvent(GLFW.GLFW_KEY_O,0,0));
+                check(!allowed&&mc.screen instanceof OrielScreen,"title_shortcut_opens_page");
                 page = (OrielScreen) mc.screen;
                 check(page.driver().url().equals(VaultClient.PAGE), "same_editor_page");
                 JsonObject data = page.driver().data().getAsJsonObject();
@@ -65,13 +62,14 @@ public final class VaultMenuProbe implements ClientModInitializer {
                 var key = KeyMapping.get("key.cadeditor.vault");
                 key.setKey(InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_B));
                 KeyMapping.resetMapping();
-                boolean allow = ScreenKeyboardEvents.allowKeyPress(previous).invoker().allowKeyPress(previous,new KeyEvent(GLFW.GLFW_KEY_V,0,0));
+                boolean allow = ScreenKeyboardEvents.allowKeyPress(previous).invoker().allowKeyPress(previous,new KeyEvent(GLFW.GLFW_KEY_O,0,0));
                 check(allow && mc.screen == previous, "old_key_inactive_after_rebind");
                 allow = ScreenKeyboardEvents.allowKeyPress(previous).invoker().allowKeyPress(previous,new KeyEvent(GLFW.GLFW_KEY_B,0,0));
                 check(!allow && mc.screen instanceof OrielScreen, "rebound_screen_shortcut");
                 key.setKey(key.getDefaultKey()); KeyMapping.resetMapping();
                 mc.screen.onClose();
                 check(mc.screen == previous, "rebound_page_returns_parent");
+                VaultClient.open();check(mc.screen instanceof OrielScreen,"direct_open_api");mc.screen.onClose();check(mc.screen==previous,"direct_open_returns_parent");
                 receipt.addProperty("status","PASSED"); receipt.add("messages",captures); finish(mc); return;
             }
             String requestId = "vault-menu-"+step;
@@ -106,26 +104,6 @@ public final class VaultMenuProbe implements ClientModInitializer {
     private JsonObject stack() {
         var stack = new JsonObject(); stack.addProperty("id",net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(net.minecraft.world.item.Items.PAPER).toString());
         stack.addProperty("count",1); stack.add("comps",new JsonObject()); stack.add("removed",new JsonObject()); return stack;
-    }
-    private Button vaultButton(Screen screen) {
-        return screen.children().stream().filter(c -> c instanceof Button b && b.getMessage().getString().equals(Component.translatable("gui.cadeditor.vault").getString())).map(c -> (Button)c).findFirst().orElseThrow();
-    }
-    private void checkLayouts(TitleScreen title) {
-        int checks=0;
-        for (int[] size : List.of(new int[]{854,480},new int[]{1280,720},new int[]{1920,1080},new int[]{3840,2160})) for (int scale=1;scale<=4;scale++) {
-            int actual=Math.min(scale,Math.min(size[0]/320,size[1]/240));
-            title.init((size[0]+actual-1)/actual,(size[1]+actual-1)/actual);
-            Button vault=vaultButton(title);
-            var lateModButton=Button.builder(Component.literal("late mod"),button -> {})
-                    .bounds(vault.getX(),vault.getY(),vault.getWidth(),vault.getHeight()).build();
-            Screens.getWidgets(title).add(lateModButton);
-            ScreenEvents.beforeExtract(title).invoker().beforeExtract(title,null,0,0,0);
-            check(vault.visible,"layout_visible_"+checks);
-            for(var child:title.children()) if(child instanceof AbstractWidget other && other!=vault && other.visible)
-                check(vault.getX()+vault.getWidth()<=other.getX() || other.getX()+other.getWidth()<=vault.getX() || vault.getY()+vault.getHeight()<=other.getY() || other.getY()+other.getHeight()<=vault.getY(),"layout_clear_"+checks);
-            checks++;
-        }
-        receipt.addProperty("actual_title_layout_cases",checks);
     }
     private JsonElement eval(String js) { return JsonParser.parseString(page.driver().document().scripts().evaluateToJson(js,"vault-menu-probe")); }
     private void check(boolean ok,String key) { if(!ok)throw new AssertionError(key);receipt.addProperty(key,true); }
