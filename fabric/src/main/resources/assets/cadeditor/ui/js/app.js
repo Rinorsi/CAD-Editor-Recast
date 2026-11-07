@@ -62,7 +62,7 @@ function boot() {
   Valid.on(function () { if (Store.docs.length) { drawFooter(); if (typeof paintProblems === 'function') paintProblems(); } });
   /* 注册表数据到齐后，如果界面上没有打开的窗口，就重画当前页，让名称/列表换成实时数据 */
   var regT = null;
-  Reg.on(function (kind, kinds) { clearTimeout(regT); regT = setTimeout(function () { if (!Store.docs.length || $('modal')) return; try { if ((kinds || []).indexOf('item_defaults_one') >= 0 || (kinds || []).indexOf('item_meta_one') >= 0 || (kinds || []).indexOf('item_meta') >= 0 || (kinds || []).indexOf('entity_base_attributes') >= 0 || (kinds || []).indexOf('equipment_slot_groups') >= 0) { drawHero(); drawTabbar(); drawTabBody(); drawFooter(); } else drawTabBody(); } catch (e) {} }, 400); });
+  Reg.on(function (kind, kinds) { clearTimeout(regT); regT = setTimeout(function () { if (!Store.docs.length || $('modal')) return; try { if ((kinds || []).indexOf('item_defaults_one') >= 0 || (kinds || []).indexOf('item_meta_one') >= 0 || (kinds || []).indexOf('item_meta') >= 0 || (kinds || []).indexOf('entity_base_attributes') >= 0 || (kinds || []).indexOf('equipment_slot_groups') >= 0 || (kinds || []).indexOf('entity_info') >= 0 || (kinds || []).indexOf('entity_schema') >= 0) { drawHero(); drawTabbar(); drawTabBody(); drawFooter(); } else drawTabBody(); } catch (e) {} }, 400); });
   OrielEditor = { open: function (st) { loadStack(st); rebuild(); if (typeof Drafts !== 'undefined') Drafts.offer(Store.doc()); } };
   if (typeof Drafts !== 'undefined') Drafts.attach();
   if (typeof oriel !== 'undefined' && oriel.on) oriel.on('data', function (data, key) {

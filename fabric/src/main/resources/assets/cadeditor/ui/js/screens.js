@@ -354,6 +354,15 @@ function nameRuns(d) {
 function rarityHex(d) { var r = effectiveComps(d).rarity || 'common'; return { common: '#FFFFFF', uncommon: '#FFFF55', rare: '#55FFFF', epic: '#FF55FF' }[r]; }
 function heroStats(d, kind) {
   var eff = effectiveComps(d), out = [];
+  if (kind === 'spawn') {
+    /* 刷怪蛋：生成的生物和它的基础属性（entity_info）；生命值按蛋里写的 Health，没写用游戏默认 */
+    var et = eggEntityOf(d), info = et ? Reg.entityInfo(et) : false, at = info && info.attributes || {}, ed = isObj(eff.entity_data) ? eff.entity_data : {};
+    if (et) out.push({ icon: 'paw', label: '生物', value: spEntityName(et) });
+    var hp = typeof ed.Health === 'number' ? ed.Health : at['minecraft:max_health'];
+    if (typeof hp === 'number') out.push({ icon: 'shield', label: '生命值', value: fmtNum(+hp.toFixed(2)) });
+    if (typeof at['minecraft:movement_speed'] === 'number') out.push({ icon: 'boots', label: '移动速度', value: fmtNum(+at['minecraft:movement_speed'].toFixed(3)) });
+    if (typeof at['minecraft:attack_damage'] === 'number' && at['minecraft:attack_damage'] > 0) out.push({ icon: 'sword', label: '攻击力', value: fmtNum(+at['minecraft:attack_damage'].toFixed(2)) });
+  }
   function mods(type, slots, base) { var s = base; (eff.attribute_modifiers || []).forEach(function (m) { if (shortId(m.type) === type && m.operation === 'add_value' && (m.slot === undefined || m.slot === 'any' || slots.indexOf(m.slot) >= 0)) s += m.amount; }); return s; }
   if (kind === 'melee' || kind === 'tool') {
     var dmg = mods('attack_damage', meleeSlots(), Reg.baseAttr('minecraft:player', 'attack_damage', 1)), spd = mods('attack_speed', meleeSlots(), Reg.baseAttr('minecraft:player', 'attack_speed', 4));
@@ -382,14 +391,20 @@ function drawHero() {
   var ench = (eff.enchantments && Object.keys(eff.enchantments).length) || (eff.stored_enchantments && Object.keys(eff.stored_enchantments).length) || eff.enchantment_glint_override === true;
   var can3d = typeof ED_MC === 'undefined', view = can3d && UI.heroView === '3d' ? '3d' : '2d';
   var vis;
-  if (view === '3d') { vis = h('model', { class: 'k-ico k-model', item: fullId(heroItemId(d)), rotatable: true }); vis.setAttribute('components', stackCompsSnbt(d)); vis.setAttribute('count', String(d.count)); }
+  if (view === '3d' && kind === 'spawn' && eggEntityOf(d)) {
+    /* 刷怪蛋：3D 显示生成的生物（品种、幼年、装备跟着右边的设置变），不是蛋本身 */
+    var et = eggEntityOf(d), pa = esPreviewAttrs(et, eff.entity_data);
+    vis = h('entity', { class: 'k-ent', type: Reg.full(et), rotatable: true });
+    Object.keys(pa).forEach(function (k) { vis.setAttribute(k, pa[k]); });
+  }
+  else if (view === '3d') { vis = h('model', { class: 'k-ico k-model', item: fullId(heroItemId(d)), rotatable: true }); vis.setAttribute('components', stackCompsSnbt(d)); vis.setAttribute('count', String(d.count)); }
   else { vis = itemIcon(heroItemId(d), 48); if (vis.tagName && vis.tagName.toLowerCase() === 'item') { vis.setAttribute('components', stackCompsSnbt(d)); vis.setAttribute('count', String(d.count)); } }
   /* 预览头：可折叠（折叠后不再渲染 3D 模型），右边是 2D / 3D 切换 */
   var open = UI.stageOpen !== false;
   var shead = h('div', { class: 'ed-stagehead' }, [foldArrow(open, 8), h('span', { text: '预览' }), h('div', { class: 'grow' })]);
   shead.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.ed-view')) return; heroFold('.ed-stage', open, function (v) { UI.stageOpen = v; Prefs.set('stageOpen', v); }); });
   if (can3d && open) {
-    var seg = h('div', { class: 'k-seg ed-view', title: '物品预览：2D 图标 / 3D 模型（会记住你的选择）' });
+    var seg = h('div', { class: 'k-seg ed-view', title: kind === 'spawn' ? '2D 显示蛋 / 3D 显示生成的生物（会记住你的选择）' : '物品预览：2D 图标 / 3D 模型（会记住你的选择）' });
     ['2d', '3d'].forEach(function (v) {
       var b = h('div', { class: 'k-segi' + (view === v ? ' on' : ''), text: v.toUpperCase() });
       activate(b, function () { if (UI.heroView === v) return; UI.heroView = v; Prefs.set('heroView', v); drawHero(); });
@@ -398,7 +413,7 @@ function drawHero() {
     shead.appendChild(seg);
   }
   hero.appendChild(shead);
-  if (open) hero.appendChild(h('div', { class: 'ed-stage' + (ench ? ' glint' : '') }, [h('div', { class: 'plate' }), vis]));
+  if (open) hero.appendChild(h('div', { class: 'ed-stage' + (ench ? ' glint' : '') + (vis.tagName && vis.tagName.toLowerCase() === 'entity' ? ' ent' : '') }, [h('div', { class: 'plate' }), vis]));
   var nm = h('div', { class: 'ed-name' + (displayName(d).length > 6 ? ' sm' : '') }); var r = nameRuns(d);
   renderRuns(nm, r.base, r.runs, { color: rarityHex(d), italic: eff.custom_name !== undefined });
   hero.appendChild(nm);

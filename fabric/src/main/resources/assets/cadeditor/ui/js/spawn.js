@@ -13,11 +13,16 @@ function eggDefaultEntity() {
   var dc = Reg.live() ? Reg.defaultsOf(fullId(id)) : null, ed = dc && dc.entity_data;
   return isObj(ed) && typeof ed.id === 'string' ? ed.id : '';
 }
-/* 实体基础属性里值得一看的几项（值来自 entity_info.attributes，没有的不显示） */
-var EGG_STATS = [['max_health', '生命值', 'shield', ''], ['movement_speed', '移动速度', 'boots', ''], ['attack_damage', '攻击力', 'sword', ''], ['follow_range', '感知范围', 'target', '格']];
+/* 蛋现在会生成的生物：entity_data.id，没有就用蛋本来的生物 */
+function eggEntityOf(d) {
+  var ed = effectiveComps(d).entity_data;
+  if (isObj(ed) && typeof ed.id === 'string' && ed.id) return ed.id;
+  var m = Reg.live() ? Reg.itemMeta(d.id) : false;
+  return m && m.spawn_egg_entity ? m.spawn_egg_entity : '';
+}
 CARDS.spawnEgg = function () {
   if (UIOpen['card:spawnEgg'] === undefined) UIOpen['card:spawnEgg'] = false;   // 这一页只有它，默认展开
-  var card = kCard({ id: 'spawnEgg', icon: 'paw', title: '生成的生物', desc: '用这个蛋点击地面时生成的生物，以及生成时带上的数据', comps: ['entity_data'], span: 2, eager: true }, Ctx);
+  var card = kCard({ id: 'spawnEgg', icon: 'paw', title: '生成的生物', desc: '点击地面时生成什么，以及它的外观和设置', comps: ['entity_data'], span: 2, eager: true }, Ctx);
   function cur() { var ed = Ctx.get('entity_data'); return isObj(ed) && typeof ed.id === 'string' && ed.id ? ed.id : eggDefaultEntity(); }
   function writeData(o) { Ctx.setSmart('entity_data', o, { label: '刷怪蛋数据' }); }
   function draw() {
@@ -29,20 +34,8 @@ CARDS.spawnEgg = function () {
     } });
     card.body.appendChild(xField('paw', '生物', sel.el));
     if (over) card.body.appendChild(xField('refresh', '默认是' + spEntityName(def), kBtn('恢复默认', function () { Ctx.reset('entity_data'); draw(); }, { icon: 'undo' })));
-    /* 这只生物的基础属性 */
-    var info = id ? Reg.entityInfo(id) : false;
-    if (info === null) card.body.appendChild(xEmpty('正在向游戏读取这只生物的信息…'));
-    else if (info && info.attributes) {
-      card.body.appendChild(xSec('info', '基础属性', '游戏里的默认值'));
-      var any = false;
-      EGG_STATS.forEach(function (s) {
-        var v = info.attributes['minecraft:' + s[0]];
-        if (typeof v !== 'number' || (s[0] === 'attack_damage' && v <= 0)) return;
-        any = true;
-        card.body.appendChild(xRow({ icon: uiIcon(s[2], 14), title: s[1], right: h('span', { class: 'k-sub', text: spNum(v) + s[3] }) }));
-      });
-      if (!any) card.body.appendChild(xEmpty('这只生物没有可显示的基础属性'));
-    }
+    /* 基础属性放在左栏「属性」里（heroStats），这里不重复；信息还没到时只提示一句 */
+    if (id && Reg.entityInfo(id) === null) card.body.appendChild(xEmpty('正在向游戏读取这只生物的信息…'));
     /* 变种、常用开关、装备：来自游戏的 entity_schema */
     var rawBox = h('div');
     var panel = esPanel({ type: id, get: function () { return Ctx.get('entity_data'); }, set: function (o) { if (id) o.id = Reg.full(id); writeData(o); }, changed: drawRaw });

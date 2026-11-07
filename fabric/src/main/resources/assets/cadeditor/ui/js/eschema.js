@@ -23,6 +23,27 @@ function esDel(o, p) {
 function esVariantKey(v) { var s = String(v.id || ''); return s.substring(s.lastIndexOf('/') + 1); }
 function esOptLabel(x) { return typeof x.value === 'number' && /^-?\d+$/.test(String(x.label)) ? String(x.label) : humanId(shortId(String(x.label))); }
 
+/* 给 <entity> 预览用的属性：幼年、装备、实体组件（只取 id 形如 minecraft:cat/variant 的真实组件）。没有 schema 时只给幼年和装备 */
+function esPreviewAttrs(type, data) {
+  var out = {}, s = type ? Reg.entitySchema(type) : null; data = isObj(data) ? data : {};
+  if ((typeof data.Age === 'number' && data.Age < 0) || data.IsBaby === 1 || data.IsBaby === true) out.baby = '';
+  var eq = isObj(data.equipment) ? data.equipment : {};
+  Object.keys(ES_SLOT).forEach(function (k) { if (isObj(eq[k]) && typeof eq[k].id === 'string') out[k] = eq[k].id; });
+  if (s && s.available) {
+    var parts = [];
+    (s.variants || []).forEach(function (v) {
+      if (!/^[a-z0-9_.-]+:[a-z0-9_.-]+\/[a-z0-9_./-]+$/.test(String(v.id))) return;
+      var raw = esGet(data, v.nbt.path); if (raw === undefined) return;
+      var mask = typeof v.nbt.mask === 'number' ? v.nbt.mask : null, cur = mask !== null && typeof raw === 'number' ? raw & mask : raw;
+      var opt = (v.options || []).filter(function (x) { return x.value === cur; })[0]; if (!opt) return;
+      var val = v.kind === 'holder' ? opt.value : opt.label;
+      parts.push(snbtStr(v.id) + ':' + snbtStr(String(val)));
+    });
+    if (parts.length) out.components = '{' + parts.join(',') + '}';
+  }
+  return out;
+}
+
 /* 这份 schema 占用的顶层键：这些交给上面的控件，原始字段列表里不再重复显示。equipment / drop_chances 仍可在原始字段里改物品组件 */
 function esOwnedKeys(s) {
   var k = {};

@@ -229,7 +229,9 @@ console.log('PASS resource-id registries.');
   c.Reg.einfo['minecraft:pig'] = { id: 'minecraft:pig', attributes: { 'minecraft:max_health': 10, 'minecraft:movement_speed': 0.25 } };
   const egg = c.CARDS.spawnEgg();
   assert.equal(c.eggDefaultEntity(), 'minecraft:pig');
-  assert.ok(egg.body.textContent.includes('生命值') && egg.body.textContent.includes('10'), '基础属性来自 entity_info');
+  const hs = Array.from(c.heroStats(doc, 'spawn'), s => s.label + '=' + s.value);
+  assert.ok(hs.includes('生命值=10') && hs.includes('移动速度=0.25'), '基础属性来自 entity_info，显示在左栏属性里：' + hs);
+  assert.ok(!egg.body.textContent.includes('基础属性'), '右边不再重复基础属性');
   c.Reg.meta = null; c.Reg.kinds = {}; c.Reg.imeta = {}; c.Reg.einfo = {};
 }
 console.log('PASS spawn egg / spawner / trial spawner cards.');
@@ -516,3 +518,15 @@ console.log('PASS world edit: container slots, typed SNBT apply, rejected keeps 
   c.WE.w = null; c.Reg.meta = null; c.Reg.kinds = {}; c.Reg.eschema = {}; c.Reg.imeta = {}; c.Reg.einfo = {};
 }
 console.log('PASS entity schema: request/cache, variants with mask merge, flags, baby age, name component, equipment requires, spawn egg raw dedupe, world entity typed write-back.');
+
+// 刷怪蛋 3D 预览的 <entity> 属性：真实实体组件 + 幼年 + 装备，来自 entity_data 与 schema
+{
+  const ex = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../docs/entity-schema-examples-26.1.2.json'), 'utf8'));
+  c.Reg.meta = {}; c.Reg.eschema = { 'minecraft:cat': ex.cat.entries ? ex.cat.entries[0] : ex.cat };
+  const a = c.esPreviewAttrs('minecraft:cat', { variant: 'minecraft:red', CollarColor: 1, Age: -24000, equipment: { head: { id: 'minecraft:diamond_helmet', count: 1 } } });
+  assert.equal(a.baby, ''); assert.equal(a.head, 'minecraft:diamond_helmet');
+  assert.ok(a.components.includes('"minecraft:cat/variant":"minecraft:red"') && a.components.includes('"minecraft:cat/collar":"orange"'), a.components);
+  assert.deepEqual(Object.keys(c.esPreviewAttrs('minecraft:cat', {})), [], '没设置就不带属性');
+  c.Reg.meta = null; c.Reg.eschema = {};
+}
+console.log('PASS spawn egg 3D preview attributes.');
