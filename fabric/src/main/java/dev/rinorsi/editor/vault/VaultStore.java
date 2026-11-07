@@ -16,6 +16,7 @@ public final class VaultStore implements AutoCloseable {
       MAX_ENTRY_BYTES = 65536,
       MAX_FILE_BYTES = 8 * 1024 * 1024;
   public static final int RESPONSE_CHARS = 24000;
+  public static final long WRITE_DELAY_MS = 300, FLUSH_TIMEOUT_MS = 5000;
 
   public record Validated(
       JsonObject stack, String name, String translatedName, JsonObject summary) {}
@@ -50,7 +51,11 @@ public final class VaultStore implements AutoCloseable {
   private long undoUntil, revision, persisted;
   private ScheduledFuture<?> pending;
   private String warning = "", writeError = "";
+  private String migration = "";
   private boolean readOnly;
+  private java.nio.channels.FileChannel lockChannel;
+  private java.nio.channels.FileLock fileLock;
+  private boolean lockUnavailable;
   private final int dataVersion;
   private final String modVersion;
 
@@ -68,7 +73,76 @@ public final class VaultStore implements AutoCloseable {
               t.setDaemon(true);
               return t;
             });
+    acquireLock();
     load();
+    if (lockUnavailable && readOnly) warning = "STORAGE_LOCKED";
+  }
+
+  private void acquireLock() {
+    try {
+      Files.createDirectories(path.toAbsolutePath().getParent());
+      lockChannel =
+          java.nio.channels.FileChannel.open(
+              path.resolveSibling(path.getFileName() + ".lock"),
+              StandardOpenOption.CREATE,
+              StandardOpenOption.WRITE);
+      fileLock = lockChannel.tryLock();
+      if (fileLock == null) throw new IOException("另一个Minecraft实例占用保险库");
+      lockUnavailable = false;
+    } catch (IOException | java.nio.channels.OverlappingFileLockException failure) {
+      lockUnavailable = true;
+      // Missing/unwritable directories still retain editable memory and WRITE_FAILED semantics.
+      if (Files.isDirectory(path.toAbsolutePath().getParent())) {
+        readOnly = true;
+        warning = "STORAGE_LOCKED";
+      }
+      if (lockChannel != null)
+        try {
+          lockChannel.close();
+        } catch (IOException ignored) {
+        }
+      lockChannel = null;
+    }
+  }
+
+  /** Only migrate a fully validated source; never delete or rewrite legacy files. */
+  public synchronized void migrateFrom(Path legacy) {
+    if (path.toAbsolutePath().normalize().equals(legacy.toAbsolutePath().normalize())
+        || !Files.isRegularFile(legacy)) return;
+    if (Files.exists(path) || !entries.isEmpty()) {
+      try {
+        if (Files.size(path) != Files.size(legacy) || Files.mismatch(path, legacy) != -1)
+          System.getLogger(VaultStore.class.getName())
+              .log(System.Logger.Level.INFO, "全局保险库与旧库内容不同，未自动合并；可使用merge-legacy.ps1");
+      } catch (IOException ignored) {
+      }
+      return;
+    }
+    if (readOnly || lockUnavailable) return;
+    try {
+      readFile(legacy);
+      migration = "legacy";
+      System.getLogger(VaultStore.class.getName())
+          .log(System.Logger.Level.INFO, "已迁移当前旧保险库到全局目录，旧文件保留");
+      changed();
+    } catch (IOException | RuntimeException invalid) {
+      entries.clear();
+      warning = "MIGRATION_FAILED";
+      System.getLogger(VaultStore.class.getName())
+          .log(System.Logger.Level.WARNING, "旧保险库迁移失败，原文件未修改：" + invalid);
+    }
+  }
+
+  public String storageLabel() {
+    Path absolute = path.toAbsolutePath().normalize();
+    int n = absolute.getNameCount();
+    String parent = n >= 2 ? absolute.getName(n - 2).toString() : "";
+    String account = System.getProperty("user.name", "");
+    Path home = Path.of(System.getProperty("user.home", "."));
+    if (parent.equalsIgnoreCase(account)
+        || (home.getFileName() != null && parent.equalsIgnoreCase(home.getFileName().toString())))
+      return "…/" + absolute.getFileName();
+    return absolute.subpath(Math.max(0, n - 2), n).toString();
   }
 
   private Path backup() {
@@ -105,7 +179,7 @@ public final class VaultStore implements AutoCloseable {
   }
 
   private static int integer(JsonObject o, String key, int fallback, int min, int max) {
-    if (!o.has(key)) return fallback;
+    if (!o.has(key) || (key.equals("offset") && o.get(key).isJsonNull())) return fallback;
     try {
       var v = o.get(key);
       if (!v.isJsonPrimitive() || !v.getAsJsonPrimitive().isNumber())
@@ -114,7 +188,7 @@ public final class VaultStore implements AutoCloseable {
       if (n < min || n > max) throw new ArithmeticException();
       return n;
     } catch (RuntimeException e) {
-      throw fail("BAD_REQUEST", key + " 超出整数范围");
+      throw fail("BAD_REQUEST", key + " 必须为 " + min + " 到 " + max + " 的整数");
     }
   }
 
@@ -176,12 +250,14 @@ public final class VaultStore implements AutoCloseable {
   }
 
   public synchronized JsonObject stack(String id) {
-    return object(require(id), "stack").deepCopy();
+    JsonObject e = require(id);
+    if (kind(e).equals("entity")) throw fail("wrong_kind", "生物条目不能作为物品取出");
+    return object(e, "stack").deepCopy();
   }
 
   private JsonObject envelope(Collection<JsonObject> values) {
     JsonObject out = new JsonObject();
-    out.addProperty("version", 1);
+    out.addProperty("version", 2);
     JsonArray a = new JsonArray();
     values.forEach(a::add);
     out.add("entries", a);
@@ -197,7 +273,9 @@ public final class VaultStore implements AutoCloseable {
   }
 
   private void put(JsonObject e) {
-    if (readOnly) throw fail("STORAGE_READ_ONLY", "损坏文件隔离失败或文件版本较新，已阻止覆盖");
+    if (readOnly)
+      throw fail(
+          lockUnavailable ? "STORAGE_LOCKED" : "STORAGE_READ_ONLY", "保险库只读：其他实例占用、目录权限不足或文件版本较新");
     LinkedHashMap<String, JsonObject> candidate = new LinkedHashMap<>(entries);
     candidate.put(e.get("id").getAsString(), e);
     checkQuota(candidate.values());
@@ -210,8 +288,9 @@ public final class VaultStore implements AutoCloseable {
     cachedRows.keySet().retainAll(entries.keySet());
     exportText = null;
     revision++;
-    if (pending != null) pending.cancel(false);
-    pending = writer.schedule(this::write, 500, TimeUnit.MILLISECONDS);
+    // First-dirty deadline, not trailing debounce: continuous saves cannot postpone disk forever.
+    if (pending == null || pending.isDone())
+      pending = writer.schedule(this::write, WRITE_DELAY_MS, TimeUnit.MILLISECONDS);
   }
 
   private void load() {
@@ -233,6 +312,11 @@ public final class VaultStore implements AutoCloseable {
       if (!readOnly) warning = "RECOVERED_BACKUP";
       changed();
     } catch (Exception e) {
+      if (e instanceof Failure f && f.code.equals("SCHEMA_VERSION")) {
+        readOnly = true;
+        warning = "SCHEMA_VERSION";
+        return;
+      }
       quarantine(backup());
       if (!readOnly) warning = "RECOVERY_EMPTY";
       if (!readOnly) changed();
@@ -240,6 +324,7 @@ public final class VaultStore implements AutoCloseable {
   }
 
   private void quarantine(Path bad) {
+    if (lockUnavailable) return;
     try {
       if (Files.exists(bad))
         Files.move(
@@ -259,7 +344,7 @@ public final class VaultStore implements AutoCloseable {
   private void readFile(Path source) throws IOException {
     if (Files.size(source) > MAX_FILE_BYTES) throw fail("FILE_LIMIT", "文件过大");
     JsonObject root = parse(Files.readString(source));
-    if (integer(root, "version", 0, 0, Integer.MAX_VALUE) != 1)
+    if (!Set.of(1, 2).contains(integer(root, "version", 0, 0, Integer.MAX_VALUE)))
       throw fail("SCHEMA_VERSION", "不支持的保险库文件版本");
     if (!root.has("entries") || !root.get("entries").isJsonArray())
       throw fail("BAD_REQUEST", "缺少 entries");
@@ -277,16 +362,8 @@ public final class VaultStore implements AutoCloseable {
 
   private static void validateStored(JsonObject e) {
     for (String key :
-        List.of(
-            "id",
-            "name",
-            "tags",
-            "note",
-            "created",
-            "updated",
-            "mcDataVersion",
-            "modVersion",
-            "stack")) if (!e.has(key)) throw fail("BAD_REQUEST", "缺少条目字段：" + key);
+        List.of("id", "name", "tags", "note", "created", "updated", "mcDataVersion", "modVersion"))
+      if (!e.has(key)) throw fail("BAD_REQUEST", "缺少条目字段：" + key);
     uuid(text(e, "id", "", 36));
     text(e, "name", "", 256);
     text(e, "note", "", 200);
@@ -299,6 +376,16 @@ public final class VaultStore implements AutoCloseable {
       } catch (RuntimeException bad) {
         throw fail("BAD_REQUEST", "时间戳必须为非负整数");
       }
+    e.addProperty("kind", kind(e));
+    text(e, "modVersion", "", 128);
+    integer(e, "mcDataVersion", 0, 0, Integer.MAX_VALUE);
+    if (kind(e).equals("entity")) {
+      var valid = VaultEntities.validate(text(e, "snbt", "", MAX_FILE_BYTES));
+      e.addProperty("snbt", valid.snbt());
+      e.addProperty("hash", entityHash(valid.snbt()));
+      e.remove("stack");
+      return;
+    }
     JsonObject stack = object(e, "stack");
     if (!stack.has("count")) throw fail("BAD_REQUEST", "缺少stack.count");
     if (!text(stack, "id", "", 256).matches("[a-z0-9_.-]+:[a-z0-9_./-]+"))
@@ -345,6 +432,7 @@ public final class VaultStore implements AutoCloseable {
     JsonObject snapshot;
     long captured;
     synchronized (this) {
+      pending = null;
       if (revision == persisted || readOnly) return;
       // Stored entries are immutable after publication: updates always replace a copy.
       // Only the small envelope/list is copied under the lock, never the entire file.
@@ -353,9 +441,16 @@ public final class VaultStore implements AutoCloseable {
     }
     Path temp = null;
     try {
+      if (lockUnavailable && !readOnly) acquireLock();
+      if (lockUnavailable) throw new IOException("无法取得保险库独占文件锁");
       Files.createDirectories(path.getParent());
       temp = Files.createTempFile(path.getParent(), "vault-", ".tmp");
-      Files.writeString(temp, snapshot.toString(), StandardCharsets.UTF_8);
+      byte[] encoded = snapshot.toString().getBytes(StandardCharsets.UTF_8);
+      try (var file = java.nio.channels.FileChannel.open(temp, StandardOpenOption.WRITE)) {
+        java.nio.ByteBuffer buffer = java.nio.ByteBuffer.wrap(encoded);
+        while (buffer.hasRemaining()) file.write(buffer);
+        file.force(true);
+      }
       // The backup is also replaced atomically. A crash never exposes a half-copied backup.
       if (Files.exists(path)) {
         Path bakTemp = Files.createTempFile(path.getParent(), "vault-bak-", ".tmp");
@@ -375,11 +470,11 @@ public final class VaultStore implements AutoCloseable {
         persisted = captured;
         writeError = "";
       }
-    } catch (IOException e) {
+    } catch (IOException | RuntimeException e) {
       synchronized (this) {
         if (writeError.isEmpty())
           System.getLogger(VaultStore.class.getName())
-              .log(System.Logger.Level.WARNING, "WRITE_FAILED：保险库尚未落盘，保留内存数据并重试");
+              .log(System.Logger.Level.WARNING, "WRITE_FAILED：保险库尚未落盘，保留内存数据并重试：" + e);
         writeError = "WRITE_FAILED";
         if (!writer.isShutdown()) pending = writer.schedule(this::write, 2, TimeUnit.SECONDS);
       }
@@ -393,12 +488,33 @@ public final class VaultStore implements AutoCloseable {
   }
 
   public void flush() {
+    flushNow();
+  }
+
+  /** Bounded synchronous barrier; false is observable failure, never a false durable receipt. */
+  public boolean flushNow() {
+    Future<?> barrier;
+    synchronized (this) {
+      if (pending != null) pending.cancel(false);
+      pending = null;
+      if (writer.isShutdown()) return persisted == revision;
+      barrier = writer.submit(this::write);
+    }
     try {
-      writer.submit(this::write).get();
+      barrier.get(FLUSH_TIMEOUT_MS, TimeUnit.MILLISECONDS);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-    } catch (ExecutionException e) {
-      throw new IllegalStateException(e.getCause());
+      return false;
+    } catch (ExecutionException | TimeoutException e) {
+      synchronized (this) {
+        writeError = e instanceof TimeoutException ? "FLUSH_TIMEOUT" : "WRITE_FAILED";
+      }
+      System.getLogger(VaultStore.class.getName())
+          .log(System.Logger.Level.WARNING, "保险库退出落盘失败：" + e);
+      return false;
+    }
+    synchronized (this) {
+      return persisted == revision;
     }
   }
 
@@ -408,6 +524,49 @@ public final class VaultStore implements AutoCloseable {
     }
     flush();
     writer.shutdown();
+    try {
+      if (writer.awaitTermination(FLUSH_TIMEOUT_MS, TimeUnit.MILLISECONDS)) releaseLock();
+      else {
+        Thread release =
+            new Thread(
+                () -> {
+                  try {
+                    while (!writer.awaitTermination(1, TimeUnit.DAYS)) {}
+                    releaseLock();
+                  } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                  }
+                },
+                "vault-lock-release");
+        release.setDaemon(true);
+        release.start();
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+  }
+
+  private void releaseLock() {
+    try {
+      if (fileLock != null) fileLock.release();
+      if (lockChannel != null) lockChannel.close();
+    } catch (IOException e) {
+      System.getLogger(VaultStore.class.getName())
+          .log(System.Logger.Level.WARNING, "保险库文件锁关闭失败：" + e);
+    }
+  }
+
+  public static <T> T awaitReady(CompletableFuture<T> future, long timeoutMs) {
+    try {
+      return future.get(timeoutMs, TimeUnit.MILLISECONDS);
+    } catch (TimeoutException e) {
+      throw fail("NOT_READY", "保险库仍在加载，请在250毫秒后重试；当前结果不代表空库");
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw fail("NOT_READY", "保险库加载等待被中断，请重试");
+    } catch (ExecutionException e) {
+      throw fail("STORAGE_FAILED", "保险库加载失败：" + reason(e));
+    }
   }
 
   private static JsonElement sorted(JsonElement e) {
@@ -456,15 +615,49 @@ public final class VaultStore implements AutoCloseable {
     return s.substring(0, Math.min(512, s.length()));
   }
 
+  private static String kind(JsonObject e) {
+    String k = text(e, "kind", "item", 16);
+    if (!Set.of("item", "entity").contains(k)) throw fail("BAD_REQUEST", "kind必须为item或entity");
+    return k;
+  }
+
+  private static String entityHash(String snbt) {
+    JsonObject o = new JsonObject();
+    o.addProperty("id", "entity");
+    o.addProperty("comps", snbt);
+    return hash(o);
+  }
+
   private JsonObject row(JsonObject stored, Validator validator, boolean full) {
     JsonObject out = new JsonObject();
     stored
         .entrySet()
         .forEach(
             e -> {
-              if (!e.getKey().equals("hash") && (full || !e.getKey().equals("stack")))
+              if (!e.getKey().equals("hash")
+                  && (full || (!e.getKey().equals("stack") && !e.getKey().equals("snbt"))))
                 out.add(e.getKey(), e.getValue().deepCopy());
             });
+    out.addProperty("kind", kind(stored));
+    if (kind(stored).equals("entity")) {
+      String entryId = stored.get("id").getAsString();
+      Cached cached = cachedRows.get(entryId);
+      if (cached == null || cached.source() != stored || cached.validator() != validator) {
+        var valid = VaultEntities.validate(stored.get("snbt").getAsString());
+        JsonObject fields = new JsonObject(), entity = new JsonObject();
+        entity.addProperty("id", valid.id());
+        fields.add("entity", entity);
+        fields.add("summary", valid.summary());
+        fields.addProperty("translatedName", valid.name());
+        boolean known = VaultEntities.registered(valid.id());
+        fields.addProperty("compatibility", known);
+        if (!known) fields.addProperty("compatibilityUnknown", true);
+        cached = new Cached(stored, validator, fields);
+        cachedRows.put(entryId, cached);
+      }
+      cached.fields().entrySet().forEach(e -> out.add(e.getKey(), e.getValue().deepCopy()));
+      return out;
+    }
     JsonObject stack = object(stored, "stack");
     JsonObject item = new JsonObject();
     item.add("id", stack.get("id"));
@@ -507,14 +700,51 @@ public final class VaultStore implements AutoCloseable {
     cachedRows.clear();
   }
 
+  private JsonObject saveEntity(JsonObject request, Validator validator) {
+    var valid = VaultEntities.validate(text(request, "snbt", "", MAX_FILE_BYTES));
+    String digest = entityHash(valid.snbt());
+    JsonObject e = null;
+    if (!bool(request, "force"))
+      for (var candidate : entries.values())
+        if (kind(candidate).equals("entity")
+            && digest.equals(candidate.get("hash").getAsString())) {
+          e = candidate;
+          break;
+        }
+    boolean duplicate = e != null;
+    if (!duplicate) {
+      e = new JsonObject();
+      e.addProperty("id", UUID.randomUUID().toString());
+      e.addProperty("kind", "entity");
+      e.addProperty("snbt", valid.snbt());
+      e.addProperty("hash", digest);
+      String name = text(request, "name", valid.name(), 256).strip();
+      e.addProperty("name", name.isEmpty() ? valid.name() : name);
+      e.add("tags", tags(request));
+      e.addProperty("note", text(request, "note", "", 200));
+      e.addProperty("created", clock.getAsLong());
+      e.addProperty("updated", clock.getAsLong());
+      e.addProperty("mcDataVersion", dataVersion);
+      e.addProperty("modVersion", modVersion);
+      put(e);
+    }
+    JsonObject out = new JsonObject();
+    out.add("entry", row(e, validator, false));
+    out.addProperty("duplicate", duplicate);
+    out.add("stripped", valid.stripped());
+    out.add("warnings", valid.warnings());
+    return out;
+  }
+
   private JsonObject save(JsonObject request, Validator validator) {
+    if (kind(request).equals("entity")) return saveEntity(request, validator);
     if (bytes(object(request, "stack").toString()) > MAX_ENTRY_BYTES)
       throw fail("ENTRY_TOO_LARGE", "单个条目最多64KiB");
     Validated valid = validate(validator, object(request, "stack"));
     String digest = hash(valid.stack());
     if (!bool(request, "force"))
       for (var e : entries.values())
-        if (digest.equals(hash(object(e, "stack")))) {
+        if (kind(e).equals("item") && digest.equals(hash(object(e, "stack")))) {
           JsonObject out = new JsonObject();
           out.add("entry", row(e, validator, false));
           out.addProperty("duplicate", true);
@@ -531,6 +761,7 @@ public final class VaultStore implements AutoCloseable {
     e.addProperty("updated", now);
     e.addProperty("mcDataVersion", dataVersion);
     e.addProperty("modVersion", modVersion);
+    e.addProperty("kind", "item");
     e.add("stack", valid.stack().deepCopy());
     e.addProperty("hash", digest);
     put(e);
@@ -547,10 +778,14 @@ public final class VaultStore implements AutoCloseable {
     JsonObject out = new JsonObject();
     if (readOnly
         && Set.of("save", "update", "delete", "restore", "duplicate", "import").contains(op))
-      throw fail("STORAGE_READ_ONLY", "文件隔离失败或版本较新，禁止覆盖");
+      throw fail(
+          lockUnavailable ? "STORAGE_LOCKED" : "STORAGE_READ_ONLY", "保险库只读：其他实例占用、目录权限不足或文件版本较新");
     switch (op) {
       case "save" -> out = save(request, validator);
       case "list" -> {
+        String filter = text(request, "kind", "item", 16);
+        if (!Set.of("item", "entity", "all").contains(filter))
+          throw fail("BAD_REQUEST", "kind必须为item、entity或all");
         String query = text(request, "query", "", 128).toLowerCase(Locale.ROOT).strip();
         JsonArray wanted = tags(request);
         int offset = integer(request, "offset", 0, 0, MAX_ENTRIES),
@@ -559,6 +794,7 @@ public final class VaultStore implements AutoCloseable {
         if (!Set.of("recent", "name", "item").contains(sort)) throw fail("BAD_REQUEST", "sort 无效");
         List<JsonObject> rows = new ArrayList<>();
         for (var e : entries.values()) {
+          if (!filter.equals("all") && !filter.equals(kind(e))) continue;
           boolean matches = true;
           for (var t : wanted)
             if (!e.getAsJsonArray("tags").contains(t)) {
@@ -574,7 +810,9 @@ public final class VaultStore implements AutoCloseable {
                       + " "
                       + e.get("tags")
                       + " "
-                      + object(e, "stack").get("id").getAsString()
+                      + (kind(e).equals("entity")
+                          ? r.getAsJsonObject("entity").get("id").getAsString()
+                          : object(e, "stack").get("id").getAsString())
                       + " "
                       + text(r, "translatedName", "", 256))
                   .toLowerCase(Locale.ROOT);
@@ -588,7 +826,11 @@ public final class VaultStore implements AutoCloseable {
                   Comparator.comparing(
                       e -> e.get("name").getAsString(), String.CASE_INSENSITIVE_ORDER);
               case "item" ->
-                  Comparator.comparing(e -> e.getAsJsonObject("item").get("id").getAsString());
+                  Comparator.comparing(
+                      e ->
+                          e.getAsJsonObject(kind(e).equals("entity") ? "entity" : "item")
+                              .get("id")
+                              .getAsString());
               default ->
                   Comparator.<JsonObject>comparingLong(e -> e.get("updated").getAsLong())
                       .reversed();
@@ -676,7 +918,7 @@ public final class VaultStore implements AutoCloseable {
       case "import" -> {
         JsonObject root =
             request.has("text") ? parse(text(request, "text", "", MAX_FILE_BYTES)) : request;
-        if (integer(root, "version", 1, 1, Integer.MAX_VALUE) != 1)
+        if (!Set.of(1, 2).contains(integer(root, "version", 1, 1, Integer.MAX_VALUE)))
           throw fail("SCHEMA_VERSION", "导入版本不支持");
         if (!root.has("entries") || !root.get("entries").isJsonArray())
           throw fail("BAD_REQUEST", "缺少 entries");
@@ -692,14 +934,23 @@ public final class VaultStore implements AutoCloseable {
           result.addProperty("index", i);
           try {
             JsonObject e = input.get(i).getAsJsonObject().deepCopy();
+            if (kind(e).equals("entity")) {
+              var valid = VaultEntities.validate(text(e, "snbt", "", MAX_FILE_BYTES));
+              result.add("stripped", valid.stripped());
+              result.add("warnings", valid.warnings());
+              if (!VaultEntities.registered(valid.id()))
+                result.addProperty("compatibilityUnknown", true);
+            }
             validateStored(e);
             String id = e.get("id").getAsString();
             if (entries.containsKey(id)) throw fail("ID_CONFLICT", "ID 已存在");
             // Preserve incompatible stacks verbatim; importing never silently migrates them.
             try {
-              var v = validate(validator, object(e, "stack"));
-              e.add("stack", v.stack());
-              e.addProperty("hash", hash(v.stack()));
+              if (kind(e).equals("item")) {
+                var v = validate(validator, object(e, "stack"));
+                e.add("stack", v.stack());
+                e.addProperty("hash", hash(v.stack()));
+              }
             } catch (Failure bad) {
               result.addProperty(
                   bad.code.equals("UNAVAILABLE") ? "compatibilityUnknown" : "incompatible", true);
@@ -789,7 +1040,12 @@ public final class VaultStore implements AutoCloseable {
         out.addProperty("done", offset + a.size() >= counts.size());
       }
       case "stats" -> {
+        out.addProperty("storage", storageLabel());
+        if (!migration.isEmpty()) out.addProperty("migration", migration);
         out.addProperty("entries", entries.size());
+        long entities = entries.values().stream().filter(e -> kind(e).equals("entity")).count();
+        out.addProperty("entities", entities);
+        out.addProperty("items", entries.size() - entities);
         out.addProperty("bytes", bytes(envelope(entries.values()).toString()));
         out.addProperty("maxEntries", MAX_ENTRIES);
         out.addProperty("maxEntryBytes", MAX_ENTRY_BYTES);

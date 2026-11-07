@@ -25,7 +25,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ServerboundSetCreativeModeSlotPacket;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
@@ -51,12 +50,13 @@ public final class EditorClient implements ClientModInitializer {
     private static final String PAGE = "cadeditor:ui/index.html";
 
     @Override public void onInitializeClient() {
+        EditorToast.initialize();
         WorldEditorClient.initialize();
         VaultClient.initialize(() -> screen != null || opening != null || WorldEditorClient.active());
         dev.rinorsi.editor.registry.RegistryBridge.initialize();
         EditorPageController.register();
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> { EditorPrefs.flush(); uiLog.close(); });
-        key = KeyMappingHelper.registerKeyMapping(new KeyMapping("打开物品工坊", GLFW.GLFW_KEY_I, KeyMapping.Category.INVENTORY));
+        key = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.cadeditor.edit", GLFW.GLFW_KEY_I, KeyMapping.Category.INVENTORY));
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registry) -> dispatcher.register(
                 LiteralArgumentBuilder.<FabricClientCommandSource>literal("cade").executes(context -> {
                     openNextTick = true; return 1;
@@ -90,6 +90,11 @@ public final class EditorClient implements ClientModInitializer {
     private void open() {
         var mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null || screen != null || opening != null || WorldEditorClient.active() || mc.screen instanceof OrielScreen) return;
+        boolean hasHoveredItem=mc.screen instanceof AbstractContainerScreen<?> container&&container.hoveredSlot!=null&&container.hoveredSlot.hasItem();
+        boolean shift=mc.options.keyShift.isDown()||com.mojang.blaze3d.platform.InputConstants.isKeyDown(mc.getWindow(),GLFW.GLFW_KEY_LEFT_SHIFT)||com.mojang.blaze3d.platform.InputConstants.isKeyDown(mc.getWindow(),GLFW.GLFW_KEY_RIGHT_SHIFT);
+        var action=EditDispatch.decide(hasHoveredItem,shift,WorldEditorClient.hit(),mc.player.getMainHandItem().isEmpty());
+        if(action==EditDispatch.Action.SELF){WorldEditorClient.openSelf();return;}
+        if(action==EditDispatch.Action.ENTITY||action==EditDispatch.Action.BLOCK){WorldEditorClient.openTarget(action==EditDispatch.Action.ENTITY);return;}
         try {
             if (mc.getResourceManager().getResource(Identifier.parse(PAGE)).isEmpty())
                 StackCodec.fail("缺少物品工坊页面 cadeditor:ui/index.html，请检查 Editor jar 是否包含界面资源");
@@ -198,7 +203,7 @@ public final class EditorClient implements ClientModInitializer {
                 request.addProperty("baseline", baseline);
                 send(request);
             } else {
-                if (!mc.player.isCreative()) EditorSessions.fail("not_allowed", "服务端未安装物品工坊：只有创造模式可写回玩家自己的物品");
+                if (!mc.player.isCreative()) EditorSessions.fail("not_connected", "服务器没有安装物品工坊，生存模式不能写回；冒险和旁观模式同样需要服务端支持");
                 if (!StackCodec.string(slot, "kind").equals("inventory")) EditorSessions.fail("not_allowed", "容器槽位写回需要服务端安装物品工坊");
                 int index = StackCodec.integer(slot, "index", 0, mc.player.getInventory().getContainerSize() - 1);
                 if (!sameInventoryItem(mc, index, "local-apply"))
@@ -230,6 +235,7 @@ public final class EditorClient implements ClientModInitializer {
         if (mc.player == null || mc.level == null) return;
         JsonObject result = JsonParser.parseString(json).getAsJsonObject();
         result = dev.rinorsi.editor.world.WorldWire.decode(result);
+        if (dev.rinorsi.editor.registry.VaultChannel.receive(result)) return;
         if (WorldEditorClient.receive(result)) return;
         String id = StackCodec.string(result, "requestId");
         String status = StackCodec.string(result, "status");
@@ -323,7 +329,6 @@ public final class EditorClient implements ClientModInitializer {
         ClientPlayNetworking.send(new EditorPackets.Request(json));
     }
     private static void message(String text) {
-        var player = Minecraft.getInstance().player;
-        if (player != null) player.sendSystemMessage(Component.literal(text == null ? "无法打开物品工坊" : text));
+        EditorToast.show(EditorToast.Level.ERROR, text == null ? "无法打开物品工坊" : text);
     }
 }

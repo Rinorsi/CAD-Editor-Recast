@@ -22,15 +22,19 @@ public final class EditorMod implements ModInitializer {
     private static EditorPolicy policy;
 
     @Override public void onInitialize() {
+        ServerLifecycleEvents.SERVER_STARTING.register(server -> dev.rinorsi.editor.vault.VaultGiveServer.clear());
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> dev.rinorsi.editor.vault.VaultGiveServer.clear());
         ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, manager, success) -> dev.rinorsi.editor.registry.EntitySchemaValidation.invalidate());
         dev.rinorsi.editor.world.WorldEditor.initialize();
         TestKitCommand.register(() -> policy);
         PayloadTypeRegistry.serverboundPlay().register(EditorPackets.Request.TYPE, EditorPackets.Request.CODEC);
         PayloadTypeRegistry.clientboundPlay().register(EditorPackets.Reply.TYPE, EditorPackets.Reply.CODEC);
-        ServerLifecycleEvents.SERVER_STARTING.register(server -> { policy = EditorPolicy.load(); SESSIONS.clear(); LOG.info("Editor session cache reset: server starting"); });
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> { SESSIONS.clear(); LOG.info("Editor session cache reset: server stopped"); });
+        ServerLifecycleEvents.SERVER_STARTING.register(server -> { policy = EditorPolicy.load(); SESSIONS.clear(); dev.rinorsi.editor.vault.InventoryWrites.clear(); LOG.info("Editor session cache reset: server starting"); });
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> { SESSIONS.clear(); dev.rinorsi.editor.vault.InventoryWrites.clear(); LOG.info("Editor session cache reset: server stopped"); });
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             SESSIONS.remove(handler.player.getUUID()); LOG.info("Editor session removed: disconnect {}", handler.player.getUUID());
+            dev.rinorsi.editor.vault.InventoryWrites.remove(handler.player.getUUID());
+            dev.rinorsi.editor.vault.VaultGiveServer.remove(handler.player.getUUID());
         });
         ServerPlayNetworking.registerGlobalReceiver(EditorPackets.Request.TYPE, (packet, context) ->
                 context.server().execute(() -> handle(context.player(), packet.json())));
@@ -38,12 +42,22 @@ public final class EditorMod implements ModInitializer {
 
     private static void handle(ServerPlayer player, String json) {
         String requestId = "";
+        boolean vaultGive = false;
         try {
+            if (json.length() > EditorPackets.MAX_JSON) EditorSessions.fail("payload_too_large", "物品请求超过32767字符");
             JsonObject request = JsonParser.parseString(json).getAsJsonObject();
             request = dev.rinorsi.editor.world.WorldWire.decode(request);
+            vaultGive = request.has("op") && request.get("op").getAsString().equals("vault_give");
+            if (vaultGive) {
+                requestId = StackCodec.string(request, "requestId");
+                if (requestId.isEmpty() || requestId.length() > 80) EditorSessions.fail("invalid_request", "请求编号无效");
+                send(player, dev.rinorsi.editor.vault.VaultGiveServer.give(player, request)); return;
+            }
             if (dev.rinorsi.editor.world.WorldEditor.route(player, request, () -> policy)) return;
             requestId = StackCodec.string(request, "requestId");
             if (requestId.length() > 80) StackCodec.fail("请求编号过长");
+            dev.rinorsi.editor.vault.InventoryWrites.rateLimit(player.getUUID());
+            dev.rinorsi.editor.vault.VaultStore.checkDepth(request);
             String operation = StackCodec.string(request, "op");
             JsonObject slot;
             try { slot = StackCodec.object(request, "slot"); EditorSessions.sameSlot(slot, slot); }
@@ -66,8 +80,7 @@ public final class EditorMod implements ModInitializer {
                 send(player, reply); return;
             }
             if (!operation.equals("apply") && !operation.equals("confirm")) StackCodec.fail("未知操作：" + operation);
-            try { policy.require(player); }
-            catch (RuntimeException e) { EditorSessions.fail("not_allowed", e.getMessage()); }
+            policy.require(player);
             var current = target.current(player);
             if (operation.equals("confirm")) {
                 if (!player.isCreative() || target.inventoryIndex < 0)
@@ -87,7 +100,7 @@ public final class EditorMod implements ModInitializer {
                 EditorSessions.fail("slot_invalid", "该槽位不接受此物品；草稿已保留");
             if (target.menuSlot != null && next.getCount() > target.menuSlot.getMaxStackSize(next))
                 EditorSessions.fail("slot_invalid", "数量超过槽位容量；草稿已保留");
-            if (player.isCreative() && target.inventoryIndex >= 0) {
+            if (player.isCreative() && !EditorPolicy.gameMaster(player) && target.inventoryIndex >= 0) {
                 session.prepared = next; session.preparedRequest = requestId;
                 var reply = result("commit", requestId);
                 reply.add("item", target.snapshot(next, player, session.slot));
@@ -97,12 +110,15 @@ public final class EditorMod implements ModInitializer {
                 if (target.inventoryIndex >= 0) player.getInventory().setItem(target.inventoryIndex, next);
                 else { target.menuSlot.set(next); target.menuSlot.setChanged(); }
                 player.getInventory().setChanged(); player.inventoryMenu.broadcastChanges(); player.containerMenu.broadcastChanges();
+                if (target.inventoryIndex >= 0) player.connection.send(new net.minecraft.network.protocol.game.ClientboundSetPlayerInventoryPacket(target.inventoryIndex, next.copy()));
                 session.original = next.copy(); session.prepared = null;
                 saved(player, target, session, requestId);
             }
         } catch (RuntimeException e) {
             var reply = result("rejected", requestId);
             String code = e instanceof EditorSessions.Failure failure ? failure.code : "invalid_request";
+            if (code.equals("item_changed")) code = "slot_changed";
+            if (vaultGive) reply.addProperty("op", "vault_give");
             reply.addProperty("code", code);
             String reason = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
             reply.addProperty("reason", reason.length() > 1500 ? reason.substring(0, 1500) : reason);
@@ -120,7 +136,7 @@ public final class EditorMod implements ModInitializer {
     }
 
     private static Target target(ServerPlayer player, JsonObject slot, boolean opening) {
-        if (!player.isAlive() || player.isSpectator()) EditorSessions.fail("not_allowed", "当前玩家状态不能编辑物品；草稿已保留");
+        if (!player.isAlive() || (player.isSpectator() && !EditorPolicy.gameMaster(player))) EditorSessions.fail("permission_denied", "当前玩家状态不能编辑物品；草稿已保留");
         try {
             String kind = StackCodec.string(slot, "kind");
             Target target;
@@ -148,7 +164,10 @@ public final class EditorMod implements ModInitializer {
         reply.add("item", target.snapshot(session.original, player, session.slot)); send(player, reply);
     }
     private static JsonObject result(String status, String requestId) {
-        var result = new JsonObject(); result.addProperty("status", status); result.addProperty("requestId", requestId); return result;
+        var result = new JsonObject(); result.addProperty("status", status); result.addProperty("requestId", requestId);
+        result.addProperty("code", status.equals("rejected") ? "invalid_request" : "ok");
+        result.addProperty("reason", switch (status) { case "opened" -> "物品读取完成"; case "saved" -> "修改已保存"; case "commit" -> "等待创造模式写回确认"; default -> "请求未完成"; });
+        return result;
     }
     private static void send(ServerPlayer player, JsonObject json) {
         String text = json.toString();
