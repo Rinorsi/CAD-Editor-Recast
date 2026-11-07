@@ -117,7 +117,7 @@ function pickItem(anchor, onPick, o) {
     }
     var custom = s && /^[a-z0-9_.\-]+:[a-z0-9_.\/\-]+$/.test(s) && src.indexOf(shortId(s)) < 0;
     if (custom) { var cu = h('div', { class: 'k-add', text: '使用自定义 ID：' + s }); cu.addEventListener('mousedown', function (e) { e.preventDefault(); kPopClose(); onPick(shortId(s)); }); grid.appendChild(cu); }
-    hint.textContent = total ? (total > n ? '共 ' + total + ' 个，输入关键字缩小' : '共 ' + total + ' 个') : '没有匹配的物品';
+    hint.textContent = total ? '共 ' + total + ' 个' : '没有匹配的物品';
   }
   function paint() {
     if (cancel) { cancel(); cancel = null; }
@@ -146,7 +146,9 @@ function pickItem(anchor, onPick, o) {
   }
   var sbox = kSearchBox(q, paint);
   onKey(q, { Escape: function () { kPopClose(); } });
-  var box = h('div', { class: 'k-pickbox' }, [sbox.el, grid, hint]);
+  var foot = h('div', { class: 'k-pfoot' }, [hint]);
+  if (o.reset) foot.appendChild(kBtn(o.reset.label, function () { kPopClose(); o.reset.fn(); }, { icon: 'undo' }));
+  var box = h('div', { class: 'k-pickbox' }, [sbox.el, grid, foot]);
   kPopover(anchor, box, { width: 292, maxHeight: 340 });
   paint(); q.focus();
 }

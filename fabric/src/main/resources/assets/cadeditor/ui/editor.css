@@ -1451,3 +1451,12 @@ textarea.world-snbt { min-height: 56px; }
 /* 外观借用：头部控件靠右、按钮窄一点 */
 .k-chead .hd-pick { margin-left: auto; }
 .hd-pick .k-btn { max-width: 130px; }
+
+/* 物品选择弹层底部：左边计数提示，右边可选的操作按钮（如「恢复默认」） */
+.k-pfoot { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.k-pfoot > .k-phint { flex: 1; min-width: 0; }
+.k-pfoot > .k-btn { flex: none; }
+/* 外观借用：「恢复默认」在选择窗里，头部不再显示 */
+.k-card[data-card=model] .k-reset { display: none; }
+
+.k-pfoot > .k-phint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -183,8 +183,11 @@ CARDS.model = function () {
   function draw() {
     clear(holder);
     var m = Ctx.get('item_model'), id = m ? shortId(m) : Ctx.id();
-    var btn = h('div', { class: 'k-btn' }, [itemIcon(id, 20), h('span', { class: 'hd-model', text: '外观：' + nameOfItem(id), title: nameOfItem(id) + '\n' + fullId(id) }), uiIcon('down', 10)]);
-    activate(btn, function () { pickItem(btn, function (pid) { Ctx.setSmart('item_model', fullId(pid), { label: '借用外观' }); draw(); }); });
+    var btn = h('div', { class: 'k-btn' }, [itemIcon(id, 20), h('span', { class: 'hd-model', text: nameOfItem(id), title: nameOfItem(id) + '\n' + fullId(id) }), uiIcon('down', 10)]);
+    activate(btn, function () {
+      pickItem(btn, function (pid) { Ctx.setSmart('item_model', fullId(pid), { label: '借用外观' }); draw(); },
+        { reset: Ctx.modified('item_model') ? { label: '恢复默认', fn: function () { Ctx.reset('item_model'); draw(); } } : null });   // 「恢复默认」放在选择窗右下角，卡片头部不再占位
+    });
     holder.appendChild(btn);
   }
   draw(); card.live.push(draw);
