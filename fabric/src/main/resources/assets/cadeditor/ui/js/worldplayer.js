@@ -27,13 +27,13 @@ function weSlotPop(cell, cur, set) {
   kPopover(cell, box, { width: 250, maxHeight: 280 });
 }
 function weSlotGrid(cfg) {
-  var grid = h('div', { class: 'k-cgrid' }), cells = {};
+  var grid = h('div', { class: 'k-cgrid' + (cfg.tight ? ' inv' : '') }), cells = {};
   grid.setAttribute('style', 'grid-template-columns:repeat(' + cfg.cols + ',34px)');
   cfg.indices.forEach(function (i) {
     if (i === null) { grid.appendChild(h('div', { class: 'slot s34 blank', style: 'visibility:hidden' })); return; }
     var cell = h('div', { class: 'slot s34' }); cells[i] = cell;
     weSlotPaint(cell, cfg.stackOf(i), cfg.titleOf ? cfg.titleOf(i) : '格子 ' + (i + 1));
-    cell.addEventListener('click', function () {
+    weDndBind(cell, { get: function () { return cfg.stackOf(i); }, set: function (st) { cfg.set(i, st); } }, function () {
       weSlotPop(cell, cfg.stackOf(i), function (st) { cfg.set(i, st); weSlotPaint(cell, cfg.stackOf(i), cfg.titleOf ? cfg.titleOf(i) : '格子 ' + (i + 1)); });
     });
     grid.appendChild(cell);
@@ -75,17 +75,19 @@ function wpInventoryTab(body) {
   (sc.equipmentSlots || []).forEach(function (e) { eq[e.equipment] = e.slot; });
   var total = (wpV('container') || {}).size || sc.inventorySize || 0;
   body.appendChild(xSec('backpack', '背包', total + ' 格'));
+  body.appendChild(weDndHint());
   var which = 'container';
   function mk(indices, cols) {
-    return weSlotGrid({ indices: indices, cols: cols, stackOf: function (i) { return wpContainerStack(which, i); }, set: function (i, st) { wpSetSlot(which, i, st); },
+    return weSlotGrid({ tight: true, indices: indices, cols: cols, stackOf: function (i) { return wpContainerStack(which, i); }, set: function (i, st) { wpSetSlot(which, i, st); },
       titleOf: function (i) { var name = null; Object.keys(eq).forEach(function (k) { if (eq[k] === i) name = WP_EQ[k] || k; }); return name || (i < 9 ? '快捷栏 ' + (i + 1) : '格子 ' + (i + 1)); } });
   }
   /* 装备：和生物 / 刷怪蛋同一个公共格子（esGearLayout）；玩家的主手就是下面快捷栏里选中的那一格 */
   body.appendChild(esGearLayout({
     has: function (slot) { return eq[slot] !== undefined && slot !== 'mainhand'; },
     stackOf: function (slot) { var st = wpContainerStack(which, eq[slot]); return st && !st.empty ? st : null; },
-    onEmpty: function (slot, cell) { weSlotPop(cell, { empty: true }, function (st) { wpSetSlot(which, eq[slot], st); weRender(); }); },
-    onFilled: function (slot, cell, st) { weSlotPop(cell, st, function (n) { wpSetSlot(which, eq[slot], n); weRender(); }); }
+    onEmpty: function (slot, cell) { weSlotPop(cell, { empty: true }, function (st) { wpSetSlot(which, eq[slot], st); weRedrawBody(); }); },
+    onFilled: function (slot, cell, st) { weSlotPop(cell, st, function (n) { wpSetSlot(which, eq[slot], n); weRedrawBody(); }); },
+    bind: function (slot, cell, click) { weDndBind(cell, { get: function () { return wpContainerStack(which, eq[slot]); }, set: function (st) { wpSetSlot(which, eq[slot], st); } }, click); }
   }));
   var main = [], hot = [], i;
   for (i = 9; i < 36 && i < total; i++) main.push(i);
@@ -105,7 +107,8 @@ function wpInventoryTab(body) {
 function wpEnderTab(body) {
   var n = (wpV('ender') || {}).size || 27, ix = []; for (var i = 0; i < n; i++) ix.push(i);
   body.appendChild(xSec('chest', '末影箱', n + ' 格'));
-  body.appendChild(weSlotGrid({ indices: ix, cols: 9, stackOf: function (i) { return wpContainerStack('ender', i); }, set: function (i, st) { wpSetSlot('ender', i, st); } }));
+  body.appendChild(weDndHint());
+  body.appendChild(weSlotGrid({ tight: true, indices: ix, cols: 9, stackOf: function (i) { return wpContainerStack('ender', i); }, set: function (i, st) { wpSetSlot('ender', i, st); } }));
 }
 function wpNum(label, path, key, obj, o) {
   o = o || {}; var b = wpBound(path), cur = obj ? obj[key] : wpG(key);
@@ -171,4 +174,87 @@ function wpAttrTab(body) {
   body.appendChild(xSec('flask', '状态效果'));
   var fx = kEffectList(function () { return clone(wpG('active_effects') || []); }, function (l) { evSet('player', 'active_effects', l); }, { empty: '没有效果' });
   body.appendChild(fx.el);
+}
+
+/* ====================== 和原版背包一致的操作 ======================
+   单击：编辑这一格。双击：拿起，再点另一个格子放下（两格对换；放到空格就是移动）。也可以按住拖动到另一格。Esc 取消拿起。
+   所有用 weSlotGrid / 装备格子 的页面共用这一套，同一个标签页里的格子之间都能互相搬。 */
+var WE_DND = { cells: [], carry: null, ghost: null, last: null, timer: null, bound: false };
+function weDndReset() { WE_DND.cells = []; WE_DND.carry = null; weDndGhost(null); clearTimeout(WE_DND.timer); WE_DND.last = null; }
+function weDndHint() { return h('div', { class: 'k-sub', text: '单击编辑 · 双击拿起，再点另一格放下 · 也可按住拖动对换' }); }
+function weDndStack(ref) { var st = ref.get(); return st && !st.empty && st.id ? st : null; }
+function weDndGhost(st, x, y) {
+  var g = WE_DND.ghost;
+  if (!st) { if (g && g.parentNode) g.parentNode.removeChild(g); WE_DND.ghost = null; return; }
+  if (!g) {
+    g = WE_DND.ghost = h('div', { class: 'slot-ghost', style: 'position:fixed;z-index:400;pointer-events:none;width:26px;height:26px;' }, [itemIcon(st.id, 26)]);
+    if ((st.count || 1) > 1) g.appendChild(h('span', { class: 'cnt', text: String(st.count), style: 'position:absolute;right:0;bottom:-2px;color:#fff' }));
+    document.getElementById('overlays').appendChild(g);
+  }
+  g.style.left = (x - 13) + 'px'; g.style.top = (y - 13) + 'px';
+}
+function weDndCellAt(x, y) {
+  for (var i = 0; i < WE_DND.cells.length; i++) {
+    var c = WE_DND.cells[i], r = c.el.getBoundingClientRect();
+    if (r.width && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return c;
+  }
+  return null;
+}
+function weDndMove(a, b) {
+  if (a === b) return;
+  var sa = a.ref.get(), sb = b.ref.get();
+  if (!weDndStack(a.ref) && !weDndStack(b.ref)) return;
+  a.ref.set(sb && sb.id && !sb.empty ? sb : { empty: true });
+  b.ref.set(sa && sa.id && !sa.empty ? sa : { empty: true });
+  weRedrawBody();
+}
+function weDndBind(cell, ref, onClick) {
+  var me = { el: cell, ref: ref };
+  WE_DND.cells.push(me);
+  if (!WE_DND.bound) {
+    WE_DND.bound = true;
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && WE_DND.carry) { WE_DND.carry = null; weRedrawBody(); } });
+  }
+  if (WE_DND.carry && WE_DND.carry.ref === ref) cell.classList.add('sel');
+  var down = null, dragging = false;
+  cell.addEventListener('mousedown', function (e) {
+    if (e.button !== undefined && e.button !== 0) return;
+    if (!weDndStack(ref)) { down = null; return; }
+    down = { x: e.clientX, y: e.clientY }; dragging = false;
+    var st = weDndStack(ref);
+    function mv(ev) {
+      if (!down) return;
+      if (!dragging && Math.abs(ev.clientX - down.x) + Math.abs(ev.clientY - down.y) > 5) { dragging = true; clearTimeout(WE_DND.timer); cell.classList.add('sel'); }
+      if (dragging) weDndGhost(st, ev.clientX, ev.clientY);
+    }
+    function up(ev) {
+      document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up);
+      weDndGhost(null);
+      if (dragging) {
+        var t = weDndCellAt(ev.clientX, ev.clientY);
+        cell._noClick = true; setTimeout(function () { cell._noClick = false; }, 0);
+        if (t && t !== me) weDndMove(me, t); else cell.classList.remove('sel');
+      }
+      down = null; dragging = false;
+    }
+    document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
+  });
+  cell.addEventListener('click', function () {
+    if (cell._noClick) return;
+    if (WE_DND.carry) {   // 已经拿起了东西：点这里就是放下（点回原格取消）
+      var from = WE_DND.carry; WE_DND.carry = null;
+      if (from.ref === ref) { weRedrawBody(); return; }
+      var t = null; WE_DND.cells.forEach(function (c) { if (c.ref === ref) t = c; });
+      weDndMove(from, t || me); return;
+    }
+    var now = Date.now();
+    if (WE_DND.last && WE_DND.last.ref === ref && now - WE_DND.last.t < 380) {   // 双击：拿起
+      clearTimeout(WE_DND.timer); WE_DND.last = null;
+      if (weDndStack(ref)) { WE_DND.carry = me; cell.classList.add('sel'); toast('已拿起，点另一格放下（Esc 取消）', 'info'); }
+      return;
+    }
+    WE_DND.last = { ref: ref, t: now };
+    clearTimeout(WE_DND.timer);
+    WE_DND.timer = setTimeout(function () { WE_DND.last = null; onClick(); }, 260);
+  });
 }

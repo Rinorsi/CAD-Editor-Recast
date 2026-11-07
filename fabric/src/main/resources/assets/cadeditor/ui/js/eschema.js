@@ -219,7 +219,8 @@ function esGearLayout(cfg) {
     var cell = h('div', { class: 'slot s34 es-slot' + (st ? ' on' : '') }, [st ? itemIcon(st.id, 26) : uiIcon(meta[1], 16, 'es-ghost')]);
     if (st && (st.count || 1) > 1) cell.appendChild(h('span', { class: 'cnt', text: String(st.count) }));
     cell.setAttribute('title', meta[0] + '：' + (st ? nameOfItem(st.id) : (cfg.emptyHint ? cfg.emptyHint(slot) : '空')));
-    cell.addEventListener('click', function () { if (st) cfg.onFilled(slot, cell, st); else cfg.onEmpty(slot, cell); });
+    var open = function () { if (st) cfg.onFilled(slot, cell, st); else cfg.onEmpty(slot, cell); };
+    if (cfg.bind) cfg.bind(slot, cell, open); else cell.addEventListener('click', open);
     return h('div', { class: 'es-gear' }, [cell, h('span', { class: 'es-gearl', text: meta[0] })]);
   }
   function row(slots) { var r = h('div', { class: 'es-gearrow' }); slots.forEach(function (k) { var x = cellOf(k); if (x) r.appendChild(x); }); return r.children.length ? r : null; }

@@ -885,3 +885,30 @@ console.log('PASS world player: inventory, ender chest, status, abilities, attri
   c.WE.w = null;
 }
 console.log('PASS player inventory shows every slot.');
+
+// 玩家背包的原版式操作：拖动对换、双击拿起再点放下
+{
+  const slots = []; for (let i = 0; i < 43; i++) slots.push({ slot: i, stack: i === 0 ? { id: 'minecraft:stick', count: 3, comps: {} } : i === 1 ? { id: 'minecraft:apple', count: 2, comps: {} } : { empty: true } });
+  const w = { kind: 'entity', type: 'minecraft:player', slot: { kind: 'entity', dim: 'minecraft:overworld', player: 'self', token: 't' }, revision: 'r', canUndo: false, snbt: '{}', nbt: {}, player: { self: true, name: 'P', uuid: 'u' },
+    views: { player: { container: { size: 43, slots }, ender: { size: 27, slots: [] }, SelectedItemSlot: 0, schema: { equipmentSlots: [{ slot: 39, equipment: 'head' }, { slot: 40, equipment: 'offhand' }], selectedSlotMax: 8, inventorySize: 43 } } } };
+  c.weOpen(w); c.WE.tab = 'pinv'; c.weRender();
+  const cellOf = i => c.WE_DND.cells.find(x => x.ref.get() && x.ref.get().id && ((i === 0 && x.ref.get().id === 'minecraft:stick') || (i === 1 && x.ref.get().id === 'minecraft:apple')));
+  const emptyCells = () => c.WE_DND.cells.filter(x => !x.ref.get() || x.ref.get().empty);
+  // 拖动：木棍 → 一个空格 = 移动
+  const a = cellOf(0), target = emptyCells()[5];
+  c.weDndMove(a, target);
+  assert.equal(JSON.stringify(Object.keys(c.WE.pslots.container).sort()), '["0","' + Object.keys(c.WE.pslots.container).filter(k => k !== '0')[0] + '"]'.replace(/"$/, '"'));
+  assert.equal(c.WE.pslots.container[0].empty, true, '原格变空');
+  const moved = Object.keys(c.WE.pslots.container).filter(k => k !== '0')[0]; assert.equal(c.WE.pslots.container[moved].id, 'minecraft:stick');
+  // 对换：苹果 ↔ 另一处的木棍
+  c.weRender(); const apple = cellOf(1), stick = c.WE_DND.cells.find(x => x.ref.get() && x.ref.get().id === 'minecraft:stick');
+  c.weDndMove(apple, stick);
+  assert.equal(c.WE.pslots.container[1].id, 'minecraft:stick'); assert.equal(c.WE.pslots.container[moved].id, 'minecraft:apple');
+  // 双击拿起 → 点另一格放下
+  c.WE.pslots = { container: {}, ender: {} }; c.weRender();
+  const s1 = cellOf(0).el, dst = emptyCells()[7].el;
+  s1.fire('click'); s1.fire('click'); assert.ok(c.WE_DND.carry, '双击后拿起');
+  dst.fire('click'); assert.equal(c.WE_DND.carry, null); assert.equal(c.WE.pslots.container[0].empty, true);
+  c.WE.w = null;
+}
+console.log('PASS inventory drag / double-click move.');

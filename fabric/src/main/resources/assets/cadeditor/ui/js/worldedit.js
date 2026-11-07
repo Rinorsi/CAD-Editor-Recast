@@ -107,6 +107,10 @@ function drawWorldScreen() {
   right.appendChild(tabbar); right.appendChild(body);
   host.appendChild(hero); host.appendChild(right);
   weHero();
+  weTabBody(body);
+}
+function weTabBody(body) {
+  if (typeof weDndReset === 'function') weDndReset();
   if (WE.tab === 'pinv') wpInventoryTab(body);
   else if (WE.tab === 'pender') wpEnderTab(body);
   else if (WE.tab === 'pstat') wpStatusTab(body);
@@ -125,6 +129,8 @@ function drawWorldScreen() {
   else if (WE.tab === 'entity') weEntityTab(body);
   else weDataTab(body);
 }
+/* 只重画右边的标签页内容（拖动 / 放下物品后用），保留滚动位置，不动左栏和顶栏 */
+function weRedrawBody() { var body = $('edbody'); if (!body) return; var top = body.scrollTop; clear(body); weTabBody(body); body.scrollTop = top; drawWorldTop(); drawWorldFoot(); }
 
 /* ---------- 容器：格子 + 点开改物品 / 数量 / 清空；只发改过的格子，没改的格子宿主保留原样 ---------- */
 function weSlotStack(i) {
@@ -136,8 +142,9 @@ function weContainerTab(body) {
   var c = WE.w.container, n = c.size, cols = n <= 5 ? n : n <= 9 ? 3 : 9;
   if (c.unresolved_loot) { body.appendChild(xEmpty('这个容器里的战利品还没有生成（第一次打开时才会生成）。请先在游戏里打开一次，再回来编辑。')); return; }
   body.appendChild(xSec('chest', '里面的物品', n + ' 格'));
+  body.appendChild(weDndHint());
   var ix = []; for (var i = 0; i < n; i++) ix.push(i);
-  body.appendChild(weSlotGrid({ indices: ix, cols: cols, stackOf: weSlotStack, titleOf: function (i) { return '格子 ' + (i + 1); },
+  body.appendChild(weSlotGrid({ tight: true, indices: ix, cols: cols, stackOf: weSlotStack, titleOf: function (i) { return '格子 ' + (i + 1); },
     set: function (i, st) { if (st.empty && weOrigEmpty(i)) delete WE.slots[i]; else WE.slots[i] = st; drawWorldTop(); drawWorldFoot(); } }));
 }
 function weOrigEmpty(i) { var s = WE.w.container.slots.filter(function (x) { return x.slot === i; })[0]; return !s || s.stack.empty; }
