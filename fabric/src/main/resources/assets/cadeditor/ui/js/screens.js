@@ -194,7 +194,7 @@ function refreshForViewport() {
   try { if (typeof WE !== 'undefined' && WE.w) weRender(); else if (Store.doc()) drawEdit(); } catch (e) { dbg('视口变化重绘失败：' + (e && e.message || e)); }
   scheduleFit();
 }
-function scheduleFit() { if (fitT) return; fitT = setTimeout(function () { fitT = null; var wn = $('win'); if (wn) { var ww = wn.getBoundingClientRect().width; if (ww > 100) { wn.classList.toggle('narrow', ww < 420); wn.classList.toggle('snug', ww >= 420 && ww < 680); } } fitTopbar(); fitTip(); }, UI.dragging ? 110 : 0); }
+function scheduleFit() { if (fitT) return; fitT = setTimeout(function () { fitT = null; var wn = $('win'); if (wn) { var ww = wn.getBoundingClientRect().width; if (ww > 100) { wn.classList.toggle('narrow', ww < 420); wn.classList.toggle('snug', ww >= 420 && ww < 680); } var hr = $('hero'); if (hr) { var hw2 = hr.getBoundingClientRect().width; if (hw2 > 20) wn.classList.toggle('hthin', hw2 < 110); } } fitTopbar(); fitTip(); }, UI.dragging ? 110 : 0); }
 /* 窗口几何有 280ms 的过渡：resize 触发时量到的是动画中间值，所以立即量一次之后，过渡结束再量一次，否则模式会停在旧的一档 */
 if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', function () { var wn = $('win'); if (wn) { wn.classList.add('rs'); clearTimeout(rsT); rsT = setTimeout(function () { var w2 = $('win'); if (w2) w2.classList.remove('rs'); refreshForViewport(); }, 700); } fitT = null; scheduleFit(); setTimeout(scheduleFit, 120); setTimeout(scheduleFit, 400); setTimeout(scheduleFit, 800); });
 function clampN(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -224,14 +224,7 @@ function startResize(e) {
   dragTrack(e, function (ev) { UI.winW = clampN(Math.round(w0 + 2 * (ev.clientX - x0)), Math.min(340, window.innerWidth - 20), window.innerWidth - 20); UI.winH = clampN(Math.round(h0 + 2 * (ev.clientY - y0)), Math.min(220, window.innerHeight - 20), window.innerHeight - 20); applyWinStyle(); }, function () { Prefs.setSoon('winW', UI.winW); Prefs.setSoon('winH', UI.winH); });
 }
 /* 窗口把手：世界页（方块 / 实体 / 玩家）和物品页共用。#win 是同一个元素，缩放角只建一次 */
-function heroPopBind(hero) {
-  /* 紧凑模式（窗口窄 / GUI 缩放大）下左栏收成一条，被隐藏的属性、标签、提示框预览不丢：点一下这条栏就展开，再点收回 */
-  hero.addEventListener('click', function (e) {
-    var wn = $('win'), compact = (wn && wn.classList.contains('narrow')) || window.innerWidth <= 540 || window.innerHeight <= 290;
-    if (!compact || (e.target.closest && e.target.closest('.k-btn, .k-mini, .k-seg, .ed-stagehead, .ed-tiphead, input, textarea'))) return;
-    UI.heroPop = !UI.heroPop; hero.classList.toggle('pop', UI.heroPop);
-  });
-}
+function heroPopBind(hero) { UI.heroPop = false; hero.classList.remove('pop'); }   /* 旧的“点左栏展开成固定 200px”已取消：左栏宽度只由分隔条（--hw）决定 */
 function makeSplit() {
   var split = h('div', { class: 'ed-split', title: '拖动调整左栏宽度（双击恢复）' });
   split.addEventListener('mousedown', startSplit); split.addEventListener('dblclick', function () { UI.heroW = 0; applyWinStyle(); Prefs.set('heroWidth', 0); });

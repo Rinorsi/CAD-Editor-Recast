@@ -240,6 +240,7 @@ function esPanel(o) {
     if (s.effects && s.effects.common) { box.appendChild(xSec('flask', '状态效果')); box.appendChild(esEffects(s, oo)); }
     box.appendChild(xSec('helmet', '装备')); box.appendChild(esGearGrid(s, oo, o.type));
     (s.warnings || []).forEach(function (w) { box.appendChild(h('div', { class: 'k-sub', text: '游戏提示：' + w })); });
+    foldify(box, 'es');
   }
   draw();
   box.redraw = draw;

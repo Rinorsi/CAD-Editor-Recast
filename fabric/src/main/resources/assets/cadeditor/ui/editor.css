@@ -824,14 +824,15 @@ textarea.ed-code-in { min-height: 56px; }
 
 /* 窗口被拖窄（不是屏幕小）时同样收成紧凑布局：由脚本按窗口宽度加 .narrow */
 .ew.narrow .eb .crumb, .ew.narrow .k-search span, .ew.narrow .k-search .k-kbd { display: none; }
-.ew.narrow .ed-hero { width: 68px; padding: 6px 4px; gap: 4px; align-items: center; }
-.ew.narrow .ed-hero:not(.pop) .ed-stagehead, .ew.narrow .ed-hero:not(.pop) .ed-tags, .ew.narrow .ed-hero:not(.pop) .ed-stats, .ew.narrow .ed-hero:not(.pop) .ed-tiphead, .ew.narrow .ed-hero:not(.pop) .k-scrollbox, .ew.narrow .ed-hero:not(.pop) .k-togrow, .ew.narrow .ed-hero:not(.pop) .k-note { display: none; }
-.ew.narrow .ed-hero { cursor: pointer; }
-.ew.narrow .ed-hero.pop { width: 200px; align-items: stretch; }
-.ew.narrow .ed-hero.pop .ed-name { font-size: 12px; line-height: 16px; }
-.ew.narrow .ed-stage { height: 40px; } .ew.narrow .ed-stage .plate { width: 44px; height: 44px; margin: -22px 0 0 -22px; }
-.ew.narrow .ed-name { font-size: 8px; line-height: 14px; }
-.ew.narrow .ed-tip { display: none; }
+.ew.narrow .ed-hero { width: var(--hw, 68px); }
+.ew.hthin .ed-hero { padding: 6px 4px; gap: 4px; align-items: center; }
+.ew.hthin .ed-hero .ed-stagehead, .ew.hthin .ed-hero .ed-tags, .ew.hthin .ed-hero .ed-stats, .ew.hthin .ed-hero .ed-tiphead, .ew.hthin .ed-hero .k-scrollbox, .ew.hthin .ed-hero .k-togrow, .ew.hthin .ed-hero .k-note { display: none; }
+
+
+
+.ew.hthin .ed-stage { height: 40px; } .ew.hthin .ed-stage .plate { width: 44px; height: 44px; margin: -22px 0 0 -22px; }
+.ew.hthin .ed-name { font-size: 8px; line-height: 14px; }
+.ew.hthin .ed-tip { display: none; }
 .ew.narrow .ed-tabs .ed-tab:not(.on) span { display: none; }
 .ew.narrow .ed-addset span { display: none; } .ew.narrow .ed-addset { padding: 0 4px; }
 .ew.narrow .ed-body { padding: 6px 6px 8px 6px; }
@@ -1595,6 +1596,12 @@ body.vault-only .ew { display: none; }
 .wp-fold .fold-arrow { color: var(--tx3); }
 
 /* 窄窗口的左栏：3D 生物 / 玩家要有足够高度（舞台里的生物按 300% 铺满再居中，太矮就看不见了）；顶栏让出位置给标题 */
-.ew.narrow .ed-stage.ent { height: 96px; }
-.ew.narrow .ed-hero:not(.pop) .ed-name { white-space: normal; text-align: center; overflow-wrap: anywhere; }
+.ew.hthin .ed-stage.ent { height: 96px; }
+.ew.hthin .ed-hero .ed-name { white-space: normal; text-align: center; overflow-wrap: anywhere; }
 .ew.narrow .k-apply span { display: none; }
+.ew.hthin .ed-stage { align-self: stretch; width: 100%; }
+
+.wp-inv .k-cgrid.fluid .slot.s34 { min-width: 22px; }
+.wp-col { min-width: 204px; }
+.wp-inv { overflow-x: auto; justify-content: flex-start; }
+.wp-inv > :first-child { margin-left: auto; } .wp-inv > :last-child { margin-right: auto; }

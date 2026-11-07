@@ -60,6 +60,36 @@ function xField(icon, label, control) {
 function xSec(icon, title, hint, action) {
   return h('div', { class: 'x-sec' }, [icon ? uiIcon(icon, 14) : null, h('span', { class: 'x-st', text: title }), hint ? h('small', { text: hint }) : null, h('div', { class: 'grow' }), action || null]);
 }
+/* 世界 / 实体 / 玩家页和物品页用同一种卡片：把容器里「xSec 标题 + 后面的内容」自动收成一张 kCard（折叠、展开动画、状态记忆都是物品页那一套）。
+   不用每个页面单独改；标题后面没有内容的分区保持原样。 */
+var X_CTX = { has: function () { return false; }, modified: function () { return false; }, reset: function () {}, disable: function () {}, enable: function () {} };
+function foldify(root, keyBase) {
+  if (!root || typeof kCard !== 'function') return;
+  var kids = Array.prototype.slice.call(root.children), i = 0;
+  function isSec(n) { return n && n.classList && n.classList.contains('x-sec'); }
+  while (i < kids.length) {
+    if (!isSec(kids[i])) { i++; continue; }
+    var j = i + 1; while (j < kids.length && !isSec(kids[j])) j++;
+    var head = kids[i], group = kids.slice(i + 1, j);
+    if (group.length) {
+      var st = head.querySelector('.x-st'), sm = head.querySelector('small'), title = st ? st.textContent : '', ic = head.firstChild;
+      if (ic && ic.classList && (ic.classList.contains('x-st') || ic.classList.contains('grow'))) ic = null;
+      var acts = []; var seenGrow = false;
+      Array.prototype.slice.call(head.children).forEach(function (c) { if (seenGrow) acts.push(c); if (c.classList && c.classList.contains('grow')) seenGrow = true; });
+      var key = (keyBase || 'w') + ':' + title; if (UIOpen['card:' + key] === undefined) UIOpen['card:' + key] = false;
+      var card = kCard({ id: key, icon: ic || null, title: title, desc: sm ? sm.textContent : '' }, X_CTX);
+      card.el.classList.add('w-card'); card.el._card = card;
+      if (acts.length) {
+        var wrap = h('span', { class: 'x-act' }); acts.forEach(function (a) { wrap.appendChild(a); });
+        var hd = card.el.querySelector('.k-chead'); hd.insertBefore(wrap, hd.querySelector('.k-chev'));
+        card.onHead = function (e) { return !!(e.target.closest && e.target.closest('.x-act')); };
+      }
+      group.forEach(function (n) { card.body.appendChild(n); });
+      var list = h('div', { class: 'k-list' }, [card.el]); root.insertBefore(list, head); root.removeChild(head);
+    }
+    i = j;
+  }
+}
 /* 虚线的「＋ 添加…」行 */
 function xAdd(text, fn) {
   var el = h('div', { class: 'k-add' }, [uiIcon('plus', 12), text]);

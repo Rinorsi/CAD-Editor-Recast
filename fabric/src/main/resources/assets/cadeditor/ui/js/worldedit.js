@@ -104,7 +104,8 @@ function drawWorldScreen() {
     activate(el, function () { WE.tab = t.id; weRender(); });
     tabbar.appendChild(el);
   });
-  right.appendChild(tabbar); right.appendChild(body);
+  var tools = h('div', { class: 'ed-tools', id: 'edtools' });
+  right.appendChild(tabbar); right.appendChild(tools); right.appendChild(body);
   host.appendChild(hero); host.appendChild(makeSplit()); host.appendChild(right); ensureResize();
   weHero();
   weTabBody(body);
@@ -128,6 +129,17 @@ function weTabBody(body) {
   else if (WE.tab === 'spawner') weSpawnerTab(body);
   else if (WE.tab === 'entity') weEntityTab(body);
   else weDataTab(body);
+  foldify(body, 'w:' + WE.tab); weTools();
+}
+/* 工具行：当前页名 + 折叠 / 展开本页全部卡片（和物品页的 buildToolsRow 同一个样子） */
+function weTools() {
+  var t = $('edtools'); if (!t) return; clear(t);
+  var cards = Array.prototype.slice.call(($('edbody') || document).querySelectorAll('.w-card')), tab = weTabs().filter(function (x) { return x.id === WE.tab; })[0];
+  t.style.display = cards.length > 1 ? '' : 'none';
+  t.appendChild(h('span', { class: 'ed-tools-t', text: tab ? tab.label : '' })); t.appendChild(h('div', { class: 'grow' }));
+  var all = h('div', { class: 'k-mini', title: '折叠 / 展开本页全部卡片' }, [uiIcon('layers', 14)]);
+  activate(all, function () { var collapse = cards.some(function (c) { return !c.classList.contains('collapsed'); }); cards.forEach(function (c) { if (c._card) c._card.setCollapsed(collapse); }); });
+  t.appendChild(all);
 }
 /* 只重画右边的标签页内容（拖动 / 放下物品后用），保留滚动位置，不动左栏和顶栏 */
 function weRedrawBody() { var body = $('edbody'); if (!body) return; var top = body.scrollTop; clear(body); weTabBody(body); body.scrollTop = top; drawWorldTop(); drawWorldFoot(); }

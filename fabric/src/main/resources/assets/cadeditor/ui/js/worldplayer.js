@@ -77,18 +77,8 @@ function wpMsg(out) {
     out.player[k] = { slots: ids.map(function (i) { return { slot: Number(i), stack: clone(WE.pslots[k][i]) }; }) };
   });
 }
-/* 可折叠的分区：标题行 + 小箭头，点一下收起 / 展开（和别的页面一样），状态记在 UIOpen 里，重画页面后保持 */
-function wpSec(parent, key, icon, title, hint) {
-  var open = UIOpen[key] !== false, arrow = foldArrow(open, 10);
-  var head = h('div', { class: 'x-sec wp-fold', role: 'button', title: '折叠 / 展开' }, [arrow, icon ? uiIcon(icon, 14) : null, h('span', { class: 'x-st', text: title }), hint ? h('small', { text: hint }) : null, h('div', { class: 'grow' })]);
-  var body = h('div', { class: 'wp-fold-body' }); body.style.display = open ? '' : 'none';
-  activate(head, function () {
-    open = !open; UIOpen[key] = open; foldArrowSet(arrow, open);
-    if (open) { body.style.display = ''; uiSlide(body, true); } else uiSlide(body, false, function () { body.style.display = 'none'; });
-  });
-  parent.appendChild(h('div', { class: 'wp-foldbox' }, [head, body]));
-  return body;
-}
+/* 分区标题：和别的页面一样用 xSec，折叠卡片由 foldify 统一生成（见 xlist.js） */
+function wpSec(parent, key, icon, title, hint) { parent.appendChild(xSec(icon, title, hint)); return parent; }
 var WP_EQ = { head: '头盔', chest: '胸甲', legs: '护腿', feet: '靴子', offhand: '副手', body: '身体', saddle: '鞍', mainhand: '主手' };
 var WP_MODE = { survival: '生存', creative: '创造', adventure: '冒险', spectator: '旁观' };
 
@@ -128,7 +118,7 @@ function wpInventoryTab(body) {
   var smax = sc.selectedSlotMax !== undefined ? sc.selectedSlotMax : 8;
   var seg = []; for (i = 0; i <= smax; i++) seg.push({ v: i, label: String(i + 1) });
   var secHand = wpSec(body, 'wp:hand', 'sword', '手上拿的格子', '快捷栏第几格');
-  secHand.appendChild(xRow({ icon: false, title: '手上拿的格子', sub: '快捷栏第几格', right: kSeg(seg, typeof wpG('SelectedItemSlot') === 'number' ? wpG('SelectedItemSlot') : 0, function (v) { evSet('player', 'SelectedItemSlot', v); }).el }));
+  secHand.appendChild(h('div', { class: 'k-row' }, [kSeg(seg, typeof wpG('SelectedItemSlot') === 'number' ? wpG('SelectedItemSlot') : 0, function (v) { evSet('player', 'SelectedItemSlot', v); }).el]));
 }
 function wpEnderTab(body) {
   var n = (wpV('ender') || {}).size || 27, ix = []; for (var i = 0; i < n; i++) ix.push(i);
@@ -207,7 +197,7 @@ function wpAttrTab(body) {
    所有用 weSlotGrid / 装备格子 的页面共用这一套，同一个标签页里的格子之间都能互相搬。 */
 var WE_DND = { cells: [], carry: null, ghost: null, last: null, timer: null, bound: false };
 function weDndReset() { WE_DND.cells = []; WE_DND.carry = null; weDndGhost(null); clearTimeout(WE_DND.timer); WE_DND.last = null; }
-function weDndHint() { return h('div', { class: 'k-sub', text: '单击编辑 · 双击拿起再点别格放下 · 可拖动对换' }); }
+function weDndHint() { return h('div', { class: 'k-sub', text: '单击编辑 · 双击拿起，点别格放下' }); }
 function weDndStack(ref) { var st = ref.get(); return st && !st.empty && st.id ? st : null; }
 function weDndGhost(st, x, y) {
   var g = WE_DND.ghost;

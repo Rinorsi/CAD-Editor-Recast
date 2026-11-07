@@ -105,6 +105,7 @@ function vaultSummary(e) {
   if (e.incompatible) bits.push('当前版本打不开');
   return bits.join(' · ');
 }
+var VaultGivePending = {};
 function vInput(value, onCommit, ph) { var el = kInput(value, function () {}, { placeholder: ph }); el.classList.add('vt-in'); el.addEventListener('change', function () { onCommit(el.value); }); return el; }
 function vaultErr(r) { toast((r && r.reason) || (r && r.error) || '保险库操作失败', 'error'); }
 
@@ -162,7 +163,17 @@ function openVault(opts) {
       var tagEls = (e.tags || []).map(function (t) { return h('span', { class: 'k-tag dim', text: t }); });
       var acts = h('div', { class: 'x-rt' }, []);
       if (opts.pick) acts.appendChild(kBtn('使用', function () { takeAnd(e, function (stack, entry) { closeModal(); opts.pick(stack, entry); }); }, { cls: 'pri', icon: 'check' }));
-      else acts.appendChild(kBtn('给我', function () { Vault.call('give', { id: e.id, slot: 'inventory' }, function (r) { if (r.ok) toast('已发送到背包空位（创造模式）', 'ok'); else vaultErr(r); }); }, { icon: 'download', title: '放进背包的空位（创造模式）' }));
+      else {
+        var giveBtn = kBtn('给我', function () {
+          if (VaultGivePending[e.id]) return;   // 回执回来之前不重复发，不然会给出好几份
+          VaultGivePending[e.id] = true; giveBtn.classList.add('dis');
+          Vault.call('give', { id: e.id, slot: 'inventory' }, function (r) {
+            delete VaultGivePending[e.id]; giveBtn.classList.remove('dis');
+            if (r.ok) toast(r.reason || '已放进背包', 'ok'); else vaultErr(r);
+          });
+        }, { icon: 'download', title: '放进背包的空位（创造模式直接写进你的背包；生存需要 OP 权限）' });
+        acts.appendChild(giveBtn);
+      }
       return { chevron: true, icon: itemIcon(e.item && e.item.id || 'minecraft:stick', 16), title: e.name, sub: vaultSummary(e) || (e.item && e.item.id) || '', tip: (e.note || '') + (e.translatedName ? '\n' + e.translatedName : ''), right: acts, meta: vaultMeta(e),
         body: function () {
           var nm = vInput(e.name || '', function (v) { if (!v.trim()) return; Vault.call('update', { id: e.id, name: v }, function (r) { if (r.ok) { e.name = v; paintState(); } else vaultErr(r); }); }, '名称');
