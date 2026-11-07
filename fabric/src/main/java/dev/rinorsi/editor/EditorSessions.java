@@ -23,7 +23,7 @@ public final class EditorSessions {
 
     public static final class Failure extends IllegalArgumentException {
         public final String code;
-        Failure(String code, String reason) { super(reason); this.code = code; }
+        public Failure(String code, String reason) { super(reason); this.code = code; }
     }
     public static void fail(String code, String reason) { throw new Failure(code, reason); }
 
