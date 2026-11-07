@@ -116,11 +116,17 @@ function openVault(opts) {
   var sbox = kSearchBox(q, function (v) { V.query = v; refresh(); });
   var tagBar = h('div', { class: 'k-chips vt-tags' }), list, stat = h('span', { class: 'k-sub vt-stat' }), warn = h('div', { class: 'vt-warn' });
   var sort = kSeg([{ v: 'recent', label: '最近' }, { v: 'name', label: '名称' }, { v: 'item', label: '物品' }], 'recent', function (v) { V.sort = v; refresh(); });
+  var persistPoll = 0;
+  function pollPersisted() {   // 后台落盘完成时游戏不会主动通知：还显示“正在保存…”就隔一会儿问一次
+    if (Vault.st.persisted || persistPoll >= 12 || !$('modal')) return;
+    persistPoll++; setTimeout(function () { Vault.call('stats', {}, function () { paintState(); }); }, 600);
+  }
   function paintState() {
     stat.textContent = (Vault.st.entries === null ? '' : '共 ' + Vault.st.entries + ' 条') + (Vault.st.persisted ? '' : ' · 正在保存…');
     clear(warn);
     var w = Vault.st.storageError ? '保存到磁盘失败（' + Vault.st.storageError + '），修改保留在内存里，会自动重试' : Vault.st.readOnly ? '保险库文件版本比这个模组新，只读，不会被改动' : Vault.st.warning ? '保险库文件有问题：' + Vault.st.warning + '（原文件已另存，没有丢数据）' : '';
     if (w) warn.appendChild(h('div', { class: 'k-note bad', text: w }));
+    pollPersisted();
   }
   function paintTags(tags) {
     clear(tagBar);
