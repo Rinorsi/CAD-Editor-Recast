@@ -25,7 +25,7 @@ var WE = { w: null, text: '', slots: {}, pending: null, tab: '', seq: 0, obj: nu
 function weActive() { return !!WE.w; }
 function weBase() { try { return nbtPrint(nbtParse(WE.w.snbt), false); } catch (e) { return WE.w.snbt; } }
 function weDirtyText() { if (!WE.w) return false; try { return nbtPrint(nbtParse(WE.text), false) !== weBase(); } catch (e) { return true; } }
-function weDirty() { return weDirtyText() || Object.keys(WE.slots).length > 0; }
+function weDirty() { return weDirtyText() || Object.keys(WE.slots).length > 0 || (typeof weViewsDirty === 'function' && weViewsDirty()); }
 function weName() {
   var w = WE.w;
   if (w.kind === 'block') return Reg.nameOf2('block', w.block || w.type) || humanId(shortId(w.block || w.type));
@@ -33,12 +33,15 @@ function weName() {
 }
 
 function weOpen(world) {
-  WE.w = world; WE.text = nbtPrint(nbtParse(world.snbt), true); WE.slots = {}; WE.err = ''; WE.obj = null;
+  WE.w = world; WE.text = nbtPrint(nbtParse(world.snbt), true); WE.slots = {}; WE.err = ''; WE.obj = null; if (typeof weResetEdits === 'function') weResetEdits();
   var tabs = weTabs(); if (!tabs.some(function (t) { return t.id === WE.tab; })) WE.tab = tabs[0].id;
   weRender();
 }
 function weTabs() {
-  var w = WE.w, t = [];
+  var w = WE.w, t = [], noBE = w.kind === 'block' && w.has_block_entity === false;
+  if (w.kind === 'block' && weViewGroups().length) { var vi = weViewTabInfo(); t.push({ id: 'view', label: vi.label, icon: vi.icon }); }
+  if (w.kind === 'block' && (weStateSchema().length || weTypeSchema().length > 1)) t.push({ id: 'state', label: '方块状态', icon: 'sliders' });
+  if (noBE) return t;
   if (w.container && w.container.slots) t.push({ id: 'container', label: '容器', icon: 'chest' });
   if (w.kind === 'block' && (w.type === 'minecraft:mob_spawner' || w.type === 'minecraft:trial_spawner')) t.push({ id: 'spawner', label: '刷怪设置', icon: 'paw' });
   if (w.kind === 'entity') t.push({ id: 'entity', label: '属性', icon: 'paw' });
@@ -92,7 +95,9 @@ function drawWorldScreen() {
   });
   right.appendChild(tabbar); right.appendChild(body);
   host.appendChild(hero); host.appendChild(right);
-  if (WE.tab === 'container') weContainerTab(body);
+  if (WE.tab === 'view') weViewTab(body);
+  else if (WE.tab === 'state') weStateTab(body);
+  else if (WE.tab === 'container') weContainerTab(body);
   else if (WE.tab === 'spawner') weSpawnerTab(body);
   else if (WE.tab === 'entity') weEntityTab(body);
   else weDataTab(body);
@@ -185,7 +190,8 @@ function weApply() {
   }
   var cs = Object.keys(WE.slots).map(function (k) { return { slot: Number(k), stack: WE.slots[k] }; });
   if (cs.length) msg.container = { slots: cs };
-  if (!msg.snbt && !msg.container) { toast('还没有修改', 'info'); return; }
+  if (typeof weViewsMsg === 'function') weViewsMsg(msg);
+  if (!msg.snbt && !msg.container && !msg.views && !msg.block_state && !msg.block_type) { toast('还没有修改', 'info'); return; }
   weSend('apply', msg, '已提交给游戏，等待回执…');
 }
 function weUndo() {

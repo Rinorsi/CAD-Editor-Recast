@@ -1532,3 +1532,8 @@ textarea.world-snbt { min-height: 56px; }
 .vt-top .k-sbox > .k-input { flex: 1; min-width: 60px; }
 
 body.vault-only .ew { display: none; }
+.x2r > .we-line { flex: 1 1 auto; width: auto; min-width: 0; margin-left: 0; }
+.we-in { width: 180px; }
+.we-cmd { width: 100%; min-height: 64px; box-sizing: border-box; }
+.we-row { gap: 6px; align-items: center; }
+.we-row > .rs-field { flex: 1; min-width: 0; }

@@ -30,7 +30,7 @@ const root=new Element('body'),overlays=new Element('div');overlays.id='overlays
 const doc={body:root,activeElement:null,addEventListener(){},createElement(tag){return new Element(tag);},createTextNode(t){const el=new Element('text');el.textContent=t;return el;},getElementById(id){return root.querySelector('#'+id);}};
 const c=vm.createContext({document:doc,window:{innerWidth:760,innerHeight:560},console,setTimeout(){},clearTimeout(){},oriel:{data:{},send(){return true;}}});
 const dir=path.resolve(__dirname,'../fabric/src/main/resources/assets/cadeditor/ui/js');
-for(const f of ['data','core','pinyin-data','search','forms','kit','kit2','nbt','xlist','reg','hostsearch','picker','cards1','cards2','cards3','cards5','world','rules','spawn','eschema','screens','worldedit','vault'])vm.runInContext(fs.readFileSync(path.join(dir,f+'.js'),'utf8'),c);
+for(const f of ['data','core','pinyin-data','search','forms','kit','kit2','nbt','xlist','reg','hostsearch','picker','cards1','cards2','cards3','cards5','world','rules','spawn','eschema','screens','worldedit','worldview','vault'])vm.runInContext(fs.readFileSync(path.join(dir,f+'.js'),'utf8'),c);
 c.uiIcon=()=>new Element('i');c.itemIcon=()=>new Element('i');c.uiClick=()=>{};c.snd=()=>{};c.toast=()=>{};
 let saved,disabled=0,writes=0;
 c.autoPut=(cid,value)=>{saved=JSON.parse(JSON.stringify(value));writes++;};
@@ -730,3 +730,46 @@ console.log('PASS live-only (mod) components are registered and editable.');
   assert.equal(JSON.stringify(c.liveRangeTokens('$.damage_reductions[].horizontal_blocking_angle')), JSON.stringify(['damage_reductions', '[]', 'horizontal_blocking_angle']));
 }
 console.log('PASS live component ranges override hand-written ones.');
+
+// 世界方块：规范化视图（告示牌 / 熔炉 / 命令块）+ 方块状态 + 命令块模式，按契约发 apply
+{
+  const sent = []; c.oriel.send = (k, v) => { sent.push([k, v]); return true; };
+  const mk = (type, extra) => Object.assign({ kind: 'block', type, block: type, slot: { kind: 'block', dim: 'minecraft:overworld', x: 1, y: 2, z: 3, token: 't' }, revision: 'r', canUndo: false, has_block_entity: true,
+    snbt: '{id:"' + type + '",x:1,y:2,z:3}', nbt: {}, views: {} }, extra);
+  const sign = mk('minecraft:sign', { block: 'minecraft:oak_sign', block_state_schema: [{ name: 'rotation', type: 'int', values: ['0', '1', '2'], default: '8', current: '1' }, { name: 'waterlogged', type: 'boolean', values: ['true', 'false'], default: 'false', current: 'false' }],
+    views: { sign: { value: { front_text: { messages: ['a', '', '', ''], color: 'black', has_glowing_text: false }, back_text: { messages: ['', '', '', ''], color: 'black', has_glowing_text: false }, is_waxed: true }, schema: { fields: { front_text: { messages_length: 4 } } } } } });
+  c.weOpen(sign);
+  assert.equal(c.weTabs()[0].id, 'view'); assert.equal(c.weTabs()[1].id, 'state'); assert.equal(c.weDirty(), false);
+  c.WE.tab = 'view'; c.weRender();
+  // 涂蜡的牌子改字：同一笔取消涂蜡
+  const ins = c.$('screen').querySelectorAll('input'); assert.ok(ins.length >= 4);
+  ins[1].value = '你好'; ins[1].fire('change');
+  assert.equal(c.weDirty(), true);
+  c.WE.bstate.waterlogged = 'true';
+  c.WE.pending = null; c.weApply(); const ap = sent.filter(x => x[0] === 'apply').pop()[1];
+  assert.equal(ap.views.sign.front_text.messages[1], '你好'); assert.equal(ap.views.sign.front_text.messages[0], 'a', '其他行原样带上');
+  assert.equal(ap.views.sign.is_waxed, false, '改字同时取消涂蜡'); assert.equal(ap.block_state.waterlogged, 'true');
+  assert.equal(ap.block_state.rotation, undefined, '没改的属性不发'); assert.equal(ap.snbt, undefined);
+  // 改回原值 = 不再算修改
+  c.weSaved(sign); assert.equal(c.weDirty(), false);
+  c.weSetV('sign', 'is_waxed', false); assert.equal(c.weDirty(), true); c.weSetV('sign', 'is_waxed', true); assert.equal(c.weDirty(), false);
+  // 命令块：模式 + 通知相邻方块
+  const cb = mk('minecraft:command_block', { block_type_schema: ['minecraft:command_block', 'minecraft:repeating_command_block', 'minecraft:chain_command_block'],
+    block_state_schema: [{ name: 'conditional', type: 'boolean', values: ['true', 'false'], default: 'false', current: 'false' }],
+    views: { command_block: { value: { Command: '', TrackOutput: true, auto: false, powered: false }, schema: { fields: {} } } } });
+  c.weOpen(cb); c.WE.btype = 'minecraft:repeating_command_block'; c.WE.upd = false; c.weSetV('command_block', 'Command', 'say hi');
+  c.WE.pending = null; c.weApply(); const ap2 = sent.filter(x => x[0] === 'apply').pop()[1];
+  assert.equal(ap2.block_type, 'minecraft:repeating_command_block'); assert.equal(ap2.updateNeighbors, false); assert.equal(ap2.views.command_block.Command, 'say hi');
+  c.WE.upd = true;
+  // 没有方块实体的普通方块：只有状态页，不给数据页
+  const door = mk('minecraft:oak_door', { has_block_entity: false, block_state_schema: [{ name: 'open', type: 'boolean', values: ['true', 'false'], default: 'false', current: 'false' }] });
+  c.weOpen(door); assert.equal(JSON.stringify(c.weTabs().map(t => t.id)), '["state"]');
+  c.WE.tab = 'state'; c.weRender();
+  c.WE.pending = null; c.weApply(); assert.equal(sent.filter(x => x[0] === 'apply').pop()[1], ap2, '没改就不发');
+  // 熔炉：只发改过的进度字段
+  const fu = mk('minecraft:furnace', { views: { furnace: { value: { cooking_time_spent: 0, cooking_total_time: 0, lit_time_remaining: 0, lit_total_time: 0 }, schema: { fields: { cooking_time_spent: { min: -32768, max: 32767 } } } } } });
+  c.weOpen(fu); c.weSetV('furnace', 'lit_time_remaining', 100); c.WE.pending = null; c.weApply();
+  const ap3 = sent.filter(x => x[0] === 'apply').pop()[1]; assert.equal(JSON.stringify(ap3.views), '{"furnace":{"lit_time_remaining":100}}');
+  c.WE.w = null;
+}
+console.log('PASS block views, block state, command block mode, volatile-friendly diffs.');
