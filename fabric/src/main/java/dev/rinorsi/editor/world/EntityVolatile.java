@@ -18,6 +18,7 @@ public final class EntityVolatile {
         if(nbt.get("cad_entity_nbt") instanceof CompoundTag data){var result=nbt.copy();result.put("cad_entity_nbt",stable(data));return result;}
         if (!entity(nbt)) return nbt;
         var result = nbt.copy(); CURRENT.forEach(result::remove);
+        if(result.contains("cad_player"))return PlayerWorldEdit.stable(result);
         // Age counts towards zero each tick; crossing the baby/adult boundary is meaningful.
         if (result.get("Age") instanceof NumericTag age) result.putInt("Age", age.intValue() < 0 ? -1 : 0);
         if (result.get("active_effects") instanceof ListTag effects) effects.forEach(EntityVolatile::stableEffect);
@@ -28,6 +29,7 @@ public final class EntityVolatile {
     }
     /** Reject an intentional write to runtime-only state, but allow the stale values from open. */
     public static CompoundTag rebase(CompoundTag baseline, CompoundTag requested, CompoundTag current, boolean undo) {
+        if(current.contains("cad_player"))return PlayerWorldEdit.rebase(baseline,requested,current,undo);
         if (!undo) {
             WorldNbt.protect(baseline,requested,true);
             for (String key : CURRENT) if (!Objects.equals(baseline.get(key),requested.get(key)))
@@ -42,7 +44,8 @@ public final class EntityVolatile {
         if(!undo&&Objects.equals(baseline.get("attributes"),requested.get("attributes")))copy(current,result,"attributes");
         if(result.get("active_effects") instanceof ListTag edits && baseline.get("active_effects") instanceof ListTag base && current.get("active_effects") instanceof ListTag live)
             for(int i=0;i<edits.size();i++)if(edits.get(i) instanceof CompoundTag edit)
-                for(int j=0;j<base.size()&&j<live.size();j++)if(base.get(j) instanceof CompoundTag old&&live.get(j) instanceof CompoundTag now&&Objects.equals(edit.get("id"),old.get("id")))mergeEffect(edit,old,now,undo);
+                for(var raw:base)if(raw instanceof CompoundTag old&&Objects.equals(edit.get("id"),old.get("id")))
+                    for(var value:live)if(value instanceof CompoundTag now&&Objects.equals(old.get("id"),now.get("id")))mergeEffect(edit,old,now,undo);
         return result;
     }
     private static void stableEffect(Tag tag){if(tag instanceof CompoundTag effect){if(effect.get("duration") instanceof NumericTag duration)effect.putInt("duration",Integer.signum(duration.intValue()));if(effect.contains("hidden_effect"))stableEffect(effect.get("hidden_effect"));}}

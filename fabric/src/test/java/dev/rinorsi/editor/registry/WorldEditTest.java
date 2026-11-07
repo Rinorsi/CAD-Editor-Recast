@@ -104,15 +104,15 @@ public final class WorldEditTest {
         var omitted = typed.copy(); omitted.remove("s"); reject("invalid_nbt",() -> WorldNbt.requireEditedFieldsRetained(typed,omitted,typed));
         reject("payload_too_large",() -> WorldNbt.parse(" ".repeat(WorldNbt.MAX_SNBT+1)));
         var sessions = new WorldEditSessions(); var player = UUID.randomUUID(); var slot = new JsonObject(); slot.addProperty("kind","block"); slot.addProperty("dim","minecraft:overworld"); slot.addProperty("x",0); slot.addProperty("y",0); slot.addProperty("z",0); slot.addProperty("token","test");
-        var state = sessions.open(player,slot,typed); check(sessions.require(player,slot,WorldNbt.revision(typed),typed)==state,"session baseline accepted");
-        reject("target_changed",() -> sessions.require(player,slot,WorldNbt.revision(typed),changedType));
+        var state = sessions.open(player,slot,typed); check(sessions.require(player,slot,state.revision,typed)==state,"session baseline accepted");
+        check(sessions.require(player,slot,state.revision,changedType)==state,"current field changes deferred to three-way merge");
         reject("undo_unavailable",state::preimage);
         state.saved(typed,changedType,false); check(state.preimage().equals(typed),"undo stores exact typed preimage");
         var restored = state.preimage(); restored.putInt("b",999); check(state.preimage().equals(typed),"undo caller cannot mutate cached preimage");
         state.saved(changedType,typed,true); reject("undo_unavailable",state::preimage);
-        var otherToken = slot.deepCopy(); otherToken.addProperty("token","stale"); sessions.close(player,otherToken); check(sessions.require(player,slot,WorldNbt.revision(typed),typed)==state,"stale close retained session");
-        reject("session_lost",() -> sessions.require(player,otherToken,WorldNbt.revision(typed),typed));
-        sessions.close(player,slot); reject("session_lost",() -> sessions.require(player,slot,WorldNbt.revision(typed),typed));
+        var otherToken = slot.deepCopy(); otherToken.addProperty("token","stale"); sessions.close(player,otherToken); check(sessions.require(player,slot,state.revision,typed)==state,"stale close retained session");
+        reject("session_lost",() -> sessions.require(player,otherToken,state.revision,typed));
+        sessions.close(player,slot); reject("session_lost",() -> sessions.require(player,slot,state.revision,typed));
         sessions.rateLimit(player); reject("rate_limited",() -> sessions.rateLimit(player));
         check(!new EditorPolicy(2,false).allows(false,false),"no permission rejected by shared policy");
         reject("out_of_reach",() -> WorldAccess.reach(false)); reject("chunk_unloaded",() -> WorldAccess.loaded(false));
@@ -125,5 +125,5 @@ public final class WorldEditTest {
         BlockWorldEditTest.run(access,Path.of("logs/block-edit"));
     }
     private static void check(boolean condition,String message) { if (!condition) throw new AssertionError(message); checks++; }
-    private static void reject(String code,Runnable action) { try { action.run(); } catch(EditorSessions.Failure e) { check(code.equals(e.code),"expected "+code+" got "+e.code); return; } throw new AssertionError("expected rejection "+code); }
+    private static void reject(String code,Runnable action) { try { action.run(); } catch(WorldEditError e){check(code.equals(e.code),"expected "+code+" got "+e.code);return;}catch(EditorSessions.Failure e) { check(code.equals(e.code),"expected "+code+" got "+e.code); return; } throw new AssertionError("expected rejection "+code); }
 }

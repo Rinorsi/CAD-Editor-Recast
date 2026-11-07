@@ -44,7 +44,7 @@ public final class EntitySchemaTest {
             System.out.println(id+" variants="+schema.getAsJsonArray("variants").size()+" equipment="+schema.getAsJsonArray("equipment").size()+" warnings="+schema.get("warnings"));
         }
         applyChecks(level,access);
-        var unavailable=EntitySchema.describe(EntityType.PLAYER,level,access);check(!unavailable.get("available").getAsBoolean()&&unavailable.getAsJsonArray("variants").isEmpty(),"missing factory returns a safe unavailable schema");
+        var playerSchema=EntitySchema.describe(EntityType.PLAYER,level,access);check(playerSchema.get("available").getAsBoolean()&&!playerSchema.get("canBePreviewed").getAsBoolean()&&playerSchema.getAsJsonArray("attributes").size()>0,"player schema uses Player.createAttributes without a factory");
         Path output=Path.of(args.length==0?"logs/entity-schema/captured.json":args[0]);Files.createDirectories(output.toAbsolutePath().getParent());Files.writeString(output,new GsonBuilder().serializeNulls().setPrettyPrinting().create().toJson(captured));
         System.out.println("PASS "+assertions+" assertions; "+options+" empirical variant option egg load/save checks; "+captured.size()+" entity factories; level.isClientSide="+level.isClientSide()+"; no client/server started");
     }

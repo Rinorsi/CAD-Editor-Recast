@@ -119,8 +119,8 @@ public final class BlockWorldEditTest {
                 var packed=BlockSessionData.pack(before,b.defaultBlockState());var now=BlockSessionData.pack(current,b.defaultBlockState());
                 check(WorldNbt.revision(packed).equals(WorldNbt.revision(now)),"wrapped session ignores timers");
                 var tickingSession=new WorldEditSessions();var owner=UUID.randomUUID();var token=JsonParser.parseString("{kind:'block',dim:'minecraft:overworld',x:0,y:0,z:0,token:'dynamic'}").getAsJsonObject();
-                var opened=tickingSession.open(owner,token,packed);check(tickingSession.require(owner,token,WorldNbt.revision(packed),now)==opened,"session accepts current furnace timers");
-                reject("target_changed",()->tickingSession.require(owner,token,WorldNbt.revision(packed),BlockSessionData.pack(changed,b.defaultBlockState())));
+                var opened=tickingSession.open(owner,token,packed);check(tickingSession.require(owner,token,opened.revision,now)==opened,"session accepts current furnace timers");
+                check(tickingSession.require(owner,token,opened.revision,BlockSessionData.pack(changed,b.defaultBlockState()))==opened,"unrelated changes deferred to three-way merge");
                 var stateEdit=new JsonObject();stateEdit.addProperty("lit",true);var changedState=BlockStateEdit.prepare(b.defaultBlockState(),stateEdit);
                 reject("target_changed",()->WorldNbt.requireRevision(WorldNbt.revision(packed),BlockSessionData.pack(current,changedState)));
             }
@@ -150,7 +150,7 @@ public final class BlockWorldEditTest {
         var signData=sign.saveWithFullMetadata(access);var signSlot=JsonParser.parseString("{kind:'block',dim:'minecraft:overworld',x:0,y:0,z:0,token:'sign'}").getAsJsonObject();var signSessions=new WorldEditSessions();var signOwner=UUID.randomUUID();
         var signBaseline=BlockSessionData.pack(signData,sign.getBlockState());var signOpened=signSessions.open(signOwner,signSlot,signBaseline);
         var unrelatedFurnace=((EntityBlock)Blocks.FURNACE).newBlockEntity(new BlockPos(1,0,0),Blocks.FURNACE.defaultBlockState()).saveWithFullMetadata(access);unrelatedFurnace.putShort("lit_time_remaining",(short)99);
-        check(signSessions.require(signOwner,signSlot,WorldNbt.revision(signBaseline),BlockSessionData.pack(sign.saveWithFullMetadata(access),sign.getBlockState()))==signOpened,"sign edit unaffected by unrelated furnace clock");
+        check(signSessions.require(signOwner,signSlot,signOpened.revision,BlockSessionData.pack(sign.saveWithFullMetadata(access),sign.getBlockState()))==signOpened,"sign edit unaffected by unrelated furnace clock");
         var signEdit=BlockViews.apply(sign,signData,JsonParser.parseString("{sign:{front_text:{messages:['并发计时中改标牌','','','']}}}").getAsJsonObject(),access);
         WorldNbt.requireEditedFieldsRetained(signData,signEdit,WorldTarget.copyBlock(sign,signEdit,access).saveWithFullMetadata(access));checks++;
         var jukebox=((EntityBlock)Blocks.JUKEBOX).newBlockEntity(BlockPos.ZERO,Blocks.JUKEBOX.defaultBlockState());var jukeboxOpened=jukebox.saveWithFullMetadata(access);var jukeboxCurrent=jukeboxOpened.copy();jukeboxCurrent.putLong(JukeboxBlockEntity.TICKS_SINCE_SONG_STARTED_TAG_ID,99L);

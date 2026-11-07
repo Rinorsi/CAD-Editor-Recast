@@ -40,7 +40,7 @@ public final class EntityRiding {
         if(!BuiltInRegistries.ENTITY_TYPE.containsKey(id))throw new IllegalArgumentException("实体类型不存在："+id);
         var type=BuiltInRegistries.ENTITY_TYPE.getValue(id);
         if(type==EntityType.PLAYER||!type.canSerialize())EditorSessions.fail("unsupported_target","不能添加玩家或不可保存实体");
-        if(type.onlyOpCanSetNbt()&&!player.canUseGameMasterBlocks())EditorSessions.fail("not_allowed","该乘客类型需要游戏管理员权限与创造模式");
+        if(type.onlyOpCanSetNbt()&&!EditorPolicy.gameMaster(player))EditorSessions.fail("not_allowed","该乘客类型需要游戏管理员命令权限");
         var level=(ServerLevel)vehicle.level();var passenger=type.create(level,EntitySpawnReason.COMMAND);
         if(passenger==null)EditorSessions.fail("unsupported_target","实体工厂不能创建乘客");
         var before=WorldTarget.saveEntity(passenger,level.registryAccess());var requested=before.copy();

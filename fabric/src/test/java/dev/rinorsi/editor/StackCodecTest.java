@@ -56,7 +56,7 @@ public final class StackCodecTest {
         check(policy.allows(true, false), "creative allowed");
         check(policy.allows(false, true), "permission allowed");
         check(!policy.allows(false, false), "unprivileged survival rejected");
-        check(!new EditorPolicy(2, true).allows(false, true), "creativeOnly enforced");
+        check(new EditorPolicy(2, true).allows(false, true), "gamemaster is independent of legacy creativeOnly");
         System.out.println("PASS " + checks + " codec/policy checks; no game client or server started.");
         EditorSessionsTest.run(registries);
         TestKitTest.run(lookup);

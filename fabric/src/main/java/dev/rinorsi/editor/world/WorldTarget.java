@@ -17,20 +17,22 @@ import net.minecraft.world.level.block.entity.*;
 import net.minecraft.world.level.storage.*;
 import net.minecraft.world.item.ItemStack;
 
-/** Never loads chunks, inserts temporary entities, or targets players. */
+/** Resolves loaded world targets; online players use their native setter-only adapter. */
 public final class WorldTarget {
     public final ServerLevel level;
     public BlockEntity block;
     public final Entity entity;
     public final BlockPos blockPos;
     private net.minecraft.world.level.block.state.BlockState previewState;
+    private CompoundTag draftData;
     private WorldTarget(ServerLevel level, BlockEntity block, Entity entity) { this(level,block,entity,block == null ? null : block.getBlockPos()); }
     private WorldTarget(ServerLevel level, BlockEntity block, Entity entity, BlockPos pos) { this.level = level; this.block = block; this.entity = entity; this.blockPos = pos; }
     public net.minecraft.world.level.block.state.BlockState blockState() { return blockPos == null ? null : previewState != null ? previewState : level.getBlockState(blockPos); }
     public CompoundTag sessionData() { return entity != null ? EntitySessionData.pack(save(),entity) : BlockSessionData.pack(save(),blockState()); }
     public static WorldTarget resolve(ServerPlayer player, JsonObject slot) {
         var level = (ServerLevel) player.level();
-        if (!player.isAlive() || player.isSpectator()) EditorSessions.fail("not_allowed", "当前玩家状态不能编辑世界目标");
+        boolean gameMaster=EditorPolicy.gameMaster(player);
+        if (!player.isAlive() || (player.isSpectator() && !gameMaster)) EditorSessions.fail("not_allowed", "当前玩家状态不能编辑世界目标");
         if (!StackCodec.string(slot, "dim").equals(level.dimension().identifier().toString()))
             EditorSessions.fail("target_unavailable", "目标不在玩家当前维度");
         String kind = StackCodec.string(slot, "kind");
@@ -41,24 +43,33 @@ public final class WorldTarget {
             WorldAccess.reach(player.isWithinBlockInteractionRange(pos, 0));
             block = level.getBlockEntity(pos);
             if (level.getBlockState(pos).isAir() || (block != null && block.isRemoved())) EditorSessions.fail("target_unavailable", "该位置没有可编辑的已放置方块");
-            if (block instanceof CommandBlockEntity && !player.canUseGameMasterBlocks())
-                EditorSessions.fail("not_allowed", "命令方块需要原版游戏管理员权限与创造模式");
+            if (level.getBlockState(pos).getBlock() instanceof net.minecraft.world.level.block.GameMasterBlock && !EditorPolicy.gameMaster(player))
+                EditorSessions.fail("not_allowed", "该方块需要原版游戏管理员命令权限");
         } else if (kind.equals("entity")) {
-            entity = slot.has("uuid") ? level.getEntityInAnyDimension(UUID.fromString(StackCodec.string(slot, "uuid")))
+            entity = slot.has("player") ? null : slot.has("uuid") ? level.getEntityInAnyDimension(UUID.fromString(StackCodec.string(slot, "uuid")))
                     : level.getEntity(StackCodec.integer(slot,"id",0,Integer.MAX_VALUE));
-            WorldAccess.nonPlayer(entity instanceof Player);
+            if(slot.has("player")) {
+                PlayerWorldEdit.requirePermission(player.permissions());
+                String selector=StackCodec.string(slot,"player");
+                entity=selector.equals("self")?player:selector.equals("name")?level.getServer().getPlayerList().getPlayerByName(StackCodec.string(slot,"name")):slot.has("uuid")?level.getServer().getPlayerList().getPlayer(UUID.fromString(StackCodec.string(slot,"uuid"))):null;
+                PlayerWorldEdit.requireOnline(entity instanceof ServerPlayer);
+            }
+            if(entity instanceof Player && !(entity instanceof ServerPlayer))EditorSessions.fail("player_target","仅支持服务器在线玩家");
+            if(entity instanceof ServerPlayer) { PlayerWorldEdit.requirePermission(player.permissions());PlayerWorldEdit.requireOnline(level.getServer().getPlayerList().getPlayer(entity.getUUID())==entity); }
             if (entity == null || entity.level() != level || entity.isRemoved()) EditorSessions.fail("target_unavailable", "实体已卸载、移除或离开维度");
-            WorldAccess.reach(player.isWithinEntityInteractionRange(entity, 0));
-            if (entity.getType().onlyOpCanSetNbt() && !player.canUseGameMasterBlocks())
-                EditorSessions.fail("not_allowed", "该实体需要原版游戏管理员权限与创造模式");
+            WorldAccess.reach(entity==player || player.isWithinEntityInteractionRange(entity, 0));
+            if (entity.getType().onlyOpCanSetNbt() && !EditorPolicy.gameMaster(player))
+                EditorSessions.fail("not_allowed", "该实体需要原版游戏管理员命令权限");
             pos = entity.blockPosition();
             WorldAccess.loaded(level.hasChunkAt(pos));
         } else throw new EditorSessions.Failure("slot_invalid", "未知世界目标类型");
-        WorldAccess.area(level.getWorldBorder().isWithinBounds(pos) && player.mayInteract(level, pos) && level.mayInteract(player, pos) && player.mayBuild());
+        WorldAccess.area(level.getWorldBorder().isWithinBounds(pos) && player.mayInteract(level, pos) && level.mayInteract(player, pos) && (gameMaster || player.mayBuild()));
         return new WorldTarget(level, block, entity, kind.equals("block") ? pos : null);
     }
     public CompoundTag save() {
+        if(draftData!=null)return draftData.copy();
         if(block != null) return block.saveWithFullMetadata(level.registryAccess());
+        if(entity instanceof ServerPlayer p) return PlayerWorldEdit.save(p);
         if(entity != null) return saveEntity(entity, level.registryAccess());
         var nbt=new CompoundTag();nbt.putString("id",BuiltInRegistries.BLOCK.getKey(blockState().getBlock()).toString());
         nbt.putInt("x",blockPos.getX());nbt.putInt("y",blockPos.getY());nbt.putInt("z",blockPos.getZ());return nbt;
@@ -78,13 +89,18 @@ public final class WorldTarget {
         slot.addProperty("dim", level.dimension().identifier().toString());
         if (blockPos != null) { var p = blockPos; slot.addProperty("x", p.getX()); slot.addProperty("y", p.getY()); slot.addProperty("z", p.getZ()); }
         else { slot.addProperty("uuid", entity.getStringUUID()); slot.addProperty("id", entity.getId()); }
+        if(entity instanceof ServerPlayer)slot.addProperty("player","online");
         slot.addProperty("token", UUID.randomUUID().toString()); return slot;
     }
     public JsonObject snapshot(JsonObject slot, boolean canUndo) {
-        var nbt = save(); var result = new JsonObject();
+        return snapshot(slot,canUndo,sessionData());
+    }
+    /** NBT and revision must describe the exact captured session baseline, not a second save. */
+    public JsonObject snapshot(JsonObject slot, boolean canUndo,CompoundTag captured) {
+        var nbt = entity!=null?EntitySessionData.data(captured):BlockSessionData.data(captured); var result = new JsonObject();
         result.add("slot", slot.deepCopy()); result.addProperty("kind", blockPos != null ? "block" : "entity");
         result.addProperty("type", nbt.getString("id").orElseThrow());
-        result.addProperty("snbt", nbt.toString()); result.addProperty("revision", WorldNbt.revision(entity != null ? EntitySessionData.pack(nbt,entity) : BlockSessionData.pack(nbt,blockState())));
+        result.addProperty("snbt", nbt.toString()); result.addProperty("revision", WorldNbt.revision(captured));
         result.addProperty("canUndo", canUndo); result.add("nbt", NbtOps.INSTANCE.convertTo(JsonOps.INSTANCE, nbt));
         if (blockPos != null) {
             result.addProperty("block", BuiltInRegistries.BLOCK.getKey(blockState().getBlock()).toString());
@@ -98,7 +114,8 @@ public final class WorldTarget {
             result.add("equipment", equipment);
         }
         if (entity instanceof net.minecraft.world.entity.decoration.ItemFrame frame) result.add("displayed_item", stack(frame.getItem(),level.registryAccess()));
-        if (entity != null) {
+        if(entity instanceof ServerPlayer p) { addPlayerView(result,p,nbt,slot); }
+        else if (entity != null) {
             var views = EntityWorldEdit.views(entity,nbt,level.registryAccess());
             var schemas = EntityWorldSchema.describe(entity,level.registryAccess());
             for (var entry : schemas.entrySet()) if (views.has(entry.getKey()) && views.get(entry.getKey()).isJsonObject())
@@ -115,18 +132,19 @@ public final class WorldTarget {
             var temp=new WorldTarget(level,block == null ? null : copyBlock(block,nbt,level.registryAccess()),null,blockPos);
             temp.previewState=state; if(temp.block != null) temp.block.setBlockState(state);return temp.snapshot(slot,canUndo);
         }
+        if(entity instanceof ServerPlayer p){var result=snapshot(slot,canUndo);addPlayerView(result,p,nbt,slot);return result;}
         var copy = entity.getType().create(level,EntitySpawnReason.COMMAND);
         if (copy == null) EditorSessions.fail("unsupported_target", "无法生成目标校验副本");
         var problems = new ProblemReporter.Collector(); copy.load(TagValueInput.create(problems,level.registryAccess(),nbt)); requireClean(problems);
         return new WorldTarget(level,null,copy).snapshot(slot,canUndo);
     }
     public void checkCommandPrivileges(ServerPlayer player, CompoundTag nbt) {
-        if (block instanceof SignBlockEntity sign && !player.canUseGameMasterBlocks()) {
+        if (block instanceof SignBlockEntity sign && !EditorPolicy.gameMaster(player)) {
             var old = save();
             if (!Objects.equals(old.get("front_text"),nbt.get("front_text")) || !Objects.equals(old.get("back_text"),nbt.get("back_text"))) {
                 var copy = (SignBlockEntity) copyBlock(sign,nbt,level.registryAccess());
                 if (copy.getFrontText().hasAnyClickCommands(player) || copy.getBackText().hasAnyClickCommands(player))
-                    EditorSessions.fail("not_allowed", "写入可执行命令的标牌需要原版游戏管理员权限与创造模式");
+                    EditorSessions.fail("not_allowed", "写入可执行命令的标牌需要原版游戏管理员命令权限");
             }
         }
     }
@@ -181,6 +199,7 @@ public final class WorldTarget {
         return copy;
     }
     public CompoundTag prepare(CompoundTag nbt, JsonObject request) {
+        if(entity instanceof ServerPlayer p)return PlayerWorldEdit.prepare(p,nbt,request);
         CompoundTag before = save(); WorldNbt.protect(before, nbt, entity != null);
         if(entity instanceof net.minecraft.world.entity.npc.villager.AbstractVillager merchant && merchant.isTrading() && !Objects.equals(before.get("Offers"),nbt.get("Offers")))
             EditorSessions.fail("not_allowed","商人正在交易，请关闭交易界面后再编辑交易");
@@ -196,15 +215,27 @@ public final class WorldTarget {
             return nbt.copy();
         }
         if (request.has("entity")) {
-            var raw = copyEntity(entity,nbt,level,level.registryAccess());
+            var raw = copyEntity(entity,nbt,level,level.registryAccess(),before);
             WorldNbt.requireEditedFieldsRetained(before,nbt,raw);
             return EntityWorldEdit.prepare(entity,raw,StackCodec.object(request,"entity"),level,level.registryAccess());
         }
-        return copyEntity(entity, nbt, level, level.registryAccess());
+        return copyEntity(entity, nbt, level, level.registryAccess(),before);
+    }
+    /** Detached baseline adapter; normalized edits are measured against opened data. */
+    public WorldTarget draft(CompoundTag opened,net.minecraft.world.level.block.state.BlockState state) {
+        if(entity instanceof ServerPlayer)return this;
+        if(blockPos!=null){var temp=new WorldTarget(level,block==null?null:copyBlock(block,opened,level.registryAccess()),null,blockPos);temp.previewState=state;if(temp.block!=null){temp.block.setBlockState(state);temp.block.setLevel(level);}return temp;}
+        var copy=entity.getType().create(level,EntitySpawnReason.COMMAND);
+        if(copy==null)EditorSessions.fail("unsupported_target","无法创建编辑基线副本");
+        var problems=new ProblemReporter.Collector();copy.load(TagValueInput.create(problems,level.registryAccess(),opened));requireClean(problems);
+        var temp=new WorldTarget(level,null,copy);temp.draftData=opened.copy();return temp;
     }
     public static CompoundTag copyEntity(Entity source, CompoundTag nbt, net.minecraft.world.level.Level level, RegistryAccess access) {
+        return copyEntity(source,nbt,level,access,saveEntity(source,access));
+    }
+    private static CompoundTag copyEntity(Entity source, CompoundTag nbt, net.minecraft.world.level.Level level, RegistryAccess access,CompoundTag before) {
         WorldAccess.nonPlayer(source instanceof Player);
-        WorldNbt.protect(saveEntity(source, access), nbt, true);
+        WorldNbt.protect(before, nbt, true);
         var temp = source.getType().create(level, EntitySpawnReason.COMMAND);
         if (temp == null) throw new EditorSessions.Failure("unsupported_target", "此实体无法创建验证副本");
         var problems = new ProblemReporter.Collector(); temp.load(TagValueInput.create(problems, access, nbt)); requireClean(problems);
@@ -251,6 +282,7 @@ public final class WorldTarget {
         write(next,blockState(),true);
     }
     public void write(CompoundTag next, net.minecraft.world.level.block.state.BlockState state, boolean updateNeighbors) {
+        if(entity instanceof ServerPlayer p){PlayerWorldEdit.write(p,next);return;}
         if(blockPos != null && !state.equals(level.getBlockState(blockPos))) {
             if(!level.setBlock(blockPos,state,BlockStateEdit.flags(updateNeighbors))) EditorSessions.fail("invalid_block_state","世界拒绝应用方块状态");
             BlockStateEdit.requireApplied(state,level.getBlockState(blockPos));
@@ -271,6 +303,11 @@ public final class WorldTarget {
             level.sendBlockUpdated(block.getBlockPos(), block.getBlockState(), block.getBlockState(), BlockStateEdit.flags(updateNeighbors));
             if(updateNeighbors)level.updateNeighbourForOutputSignal(block.getBlockPos(), block.getBlockState().getBlock());
         } else { entity.load(input); requireClean(problems); }
+    }
+    private static void addPlayerView(JsonObject result,ServerPlayer player,CompoundTag nbt,JsonObject slot){
+        var metadata=new JsonObject();metadata.addProperty("self",slot.has("self")&&slot.get("self").getAsBoolean());metadata.addProperty("name",player.getPlainTextName());metadata.addProperty("uuid",player.getStringUUID());result.add("player",metadata);
+        var values=PlayerWorldEdit.data(nbt);values.add("schema",PlayerWorldEdit.schema(player));var views=new JsonObject();views.add("player",values);result.add("views",views);
+        result.addProperty("snbt",nbt.toString());result.add("nbt",NbtOps.INSTANCE.convertTo(JsonOps.INSTANCE,nbt));
     }
     private static void requireClean(ProblemReporter.Collector problems) {
         if (!problems.isEmpty()) EditorSessions.fail("invalid_nbt", "原版数据加载校验失败：" + problems.getReport());

@@ -28,9 +28,9 @@ public final class EntityWorldEditTest {
         ((CompoundTag)defaultInstance.getList("attributes").orElseThrow().get(0)).putDouble("base",0.4);check(!WorldNbt.revision(opened).equals(WorldNbt.revision(defaultInstance)),"actual attribute base modification still conflicts");
         var merged=EntityVolatile.rebase(opened,draft,current,false);var prepared=WorldTarget.copyEntity(zombie,merged,level,access);
         check(prepared.get("Pos").equals(current.get("Pos"))&&prepared.get("Motion").equals(current.get("Motion")),"name edit retains current motion");
-        var session=new WorldEditSessions();var player=UUID.randomUUID();var slot=JsonParser.parseString("{kind:'entity',dim:'minecraft:overworld',uuid:'"+zombie.getStringUUID()+"',token:'test'}").getAsJsonObject();session.open(player,slot,opened);
-        session.require(player,slot,WorldNbt.revision(opened),current);checks++;
-        ((LivingEntity)zombie).setHealth(9);reject(()->session.require(player,slot,WorldNbt.revision(opened),WorldTarget.saveEntity(zombie,access)),"health concurrent conflict");
+        var session=new WorldEditSessions();var player=UUID.randomUUID();var slot=JsonParser.parseString("{kind:'entity',dim:'minecraft:overworld',uuid:'"+zombie.getStringUUID()+"',token:'test'}").getAsJsonObject();var sessionState=session.open(player,slot,opened);
+        session.require(player,slot,sessionState.revision,current);checks++;
+        ((LivingEntity)zombie).setHealth(9);check(session.require(player,slot,sessionState.revision,WorldTarget.saveEntity(zombie,access))!=null,"health change deferred to per-path merge");
         var teleported=draft.copy();teleported.put("Pos",WorldNbt.parse("{p:[1d,2d,3d]}").get("p"));reject(()->EntityVolatile.rebase(opened,teleported,current,false),"position protected");
         var brain=draft.copy();brain.put("Brain",WorldNbt.parse("{memories:{}}"));if(!Objects.equals(opened.get("Brain"),brain.get("Brain")))reject(()->EntityVolatile.rebase(opened,brain,current,false),"brain protected");
         var undo=EntityVolatile.rebase(opened,opened,current,true);check(undo.get("Pos").equals(current.get("Pos")),"undo retains current position");

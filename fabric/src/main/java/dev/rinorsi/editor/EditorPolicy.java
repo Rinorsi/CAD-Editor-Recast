@@ -4,7 +4,7 @@ import com.google.gson.JsonParser;
 import java.io.IOException;
 import java.nio.file.Files;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.commands.Commands;
+import net.minecraft.server.permissions.Permissions;
 import net.minecraft.server.level.ServerPlayer;
 
 public record EditorPolicy(int permissionLevel, boolean creativeOnly) {
@@ -26,16 +26,13 @@ public record EditorPolicy(int permissionLevel, boolean creativeOnly) {
         }
     }
     public void require(ServerPlayer player) {
-        var check = switch (permissionLevel) {
-            case 0 -> Commands.LEVEL_ALL;
-            case 1 -> Commands.LEVEL_MODERATORS;
-            case 2 -> Commands.LEVEL_GAMEMASTERS;
-            case 3 -> Commands.LEVEL_ADMINS;
-            default -> Commands.LEVEL_OWNERS;
-        };
-        boolean permitted = Commands.hasPermission(check).test(player.createCommandSourceStack());
+        boolean permitted = gameMaster(player);
         if (!allows(player.isCreative(), permitted))
-            StackCodec.fail(creativeOnly ? "服务器仅允许创造模式修改物品" : "需要创造模式或权限等级 ≥ " + permissionLevel);
+            EditorSessions.fail("permission_denied", "需要游戏管理员命令权限（OP或单人开启作弊）；无权限时仅保留创造模式写回");
     }
-    public boolean allows(boolean creative, boolean permitted) { return creative || (!creativeOnly && permitted); }
+    public static boolean gameMaster(ServerPlayer player) {
+        return player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
+    }
+    // Legacy config keys remain readable; they cannot deny a game-master based on game mode.
+    public boolean allows(boolean creative, boolean permitted) { return creative || permitted; }
 }

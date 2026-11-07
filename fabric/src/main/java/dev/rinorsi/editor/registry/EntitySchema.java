@@ -48,6 +48,7 @@ public final class EntitySchema {
         e.refreshDimensions();return e;
     }
     public static JsonObject describe(EntityType<?> type,Level level,HolderLookup.Provider lookup) {
+        if(type==EntityType.PLAYER)return dev.rinorsi.editor.world.PlayerWorldEdit.entitySchema();
         JsonObject out=new JsonObject();out.addProperty("id",BuiltInRegistries.ENTITY_TYPE.getKey(type).toString());
         JsonArray variants=new JsonArray(),equipment=new JsonArray(),flags=new JsonArray(),warnings=new JsonArray();
         out.add("variants",variants);out.add("equipment",equipment);out.add("flags",flags);out.add("warnings",warnings);

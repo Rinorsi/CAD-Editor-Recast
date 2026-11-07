@@ -52,6 +52,8 @@ public final class WorldNbt {
         for (String key : keys) if (!Objects.equals(before.get(key), after.get(key)))
             EditorSessions.fail("protected_field", "不可修改世界目标的身份、位置或关联字段：" + key);
     }
+    /** Legacy content-fingerprint assertion for probes. World session authorization uses the
+     * frozen State.revision generation and must never compare this against a live save. */
     public static void requireRevision(String baseline, CompoundTag current) {
         if (baseline == null || !baseline.equals(revision(current)))
             EditorSessions.fail("target_changed", "目标在编辑期间已变化；请重新读取后比较，草稿已保留");
