@@ -45,7 +45,7 @@ New-Item -ItemType Directory -Force -Path $Mods | Out-Null
 Copy-Item -LiteralPath $FabricApi -Destination $Mods -Force
 if ($Mode -eq 'vanilla') {
     # Only these two exact test-install paths are removed; the original libs/build jars remain.
-    foreach ($Name in @('oriel-fabric-26.1.2-0.11.0.jar','cadeditor-fabric-26.1.2-0.99.1.jar')) {
+    foreach ($Name in @('oriel-fabric-26.1.2-0.11.0.jar','cadeditor-fabric-26.1.2-0.99.2.jar')) {
         $Installed = Join-Path $Mods $Name
         if (Test-Path -LiteralPath $Installed) {
             $Uninstalled = Join-Path $Run 'uninstalled-mods'
@@ -55,7 +55,7 @@ if ($Mode -eq 'vanilla') {
     }
 } else {
     Copy-Item -LiteralPath (Join-Path $Editor 'libs/oriel-fabric-26.1.2-0.11.0.jar') -Destination $Mods -Force
-    Copy-Item -LiteralPath (Join-Path $Build 'cadeditor-fabric-26.1.2-0.99.1.jar') -Destination $Mods -Force
+    Copy-Item -LiteralPath (Join-Path $Build 'cadeditor-fabric-26.1.2-0.99.2.jar') -Destination $Mods -Force
 }
 $Jvm = @('-Xmx2G','--enable-native-access=ALL-UNNAMED','-Dfabric.development=false','-Dfabric.defaultModDistributionNamespace=official',('-Dfabric.gameJarPath=' + $Minecraft),'-Dfabric.gameVersion=26.1.2','-cp',($Classpath -join ';'))
 if ($Mode -eq 'server') {

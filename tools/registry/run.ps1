@@ -25,7 +25,7 @@ foreach ($Relative in $Files.Keys) {
 $Runtime = @((Get-Content (Join-Path $Day "scratch/editor-mod/runtime-classpath.json") | ConvertFrom-Json) | ForEach-Object { $_.Replace([char]92,[char]47) })
 $FabricApi = $Runtime | Where-Object { $_ -match "net.fabricmc.fabric-api.fabric-api" } | Select-Object -First 1
 Copy-Item -LiteralPath $FabricApi -Destination $Mods -Force
-Copy-Item -LiteralPath (Join-Path $Editor "libs/oriel-fabric-26.1.2-0.11.0.jar"),(Join-Path $Build "libs/cadeditor-fabric-26.1.2-0.99.1.jar"),(Join-Path $Build "registry-probe/editor-registry-probe.jar") -Destination $Mods -Force
+Copy-Item -LiteralPath (Join-Path $Editor "libs/oriel-fabric-26.1.2-0.11.0.jar"),(Join-Path $Build "libs/cadeditor-fabric-26.1.2-0.99.2.jar"),(Join-Path $Build "registry-probe/editor-registry-probe.jar") -Destination $Mods -Force
 $Classpath = @($Runtime | Where-Object { $_ -notmatch "/Editor/libs/|net.fabricmc.fabric-api" })
 $Cache = Join-Path $env:USERPROFILE ".gradle/caches/fabric-loom"
 $Java = Join-Path $env:USERPROFILE ".jdks/jdk-25.0.5+8/bin/java.exe"

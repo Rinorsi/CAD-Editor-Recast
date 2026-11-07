@@ -12,7 +12,7 @@ if (!(Test-Path (Join-Path $Run 'saves/Editor-release-test/level.dat'))) {
 }
 $Runtime = @((Get-Content (Join-Path $Day 'scratch/editor-mod/runtime-classpath.json') | ConvertFrom-Json) | ForEach-Object { $_.Replace([char]92,[char]47) })
 $FabricApi = $Runtime | Where-Object { $_ -match 'net.fabricmc.fabric-api.fabric-api' } | Select-Object -First 1
-Copy-Item -LiteralPath $FabricApi,(Join-Path $Editor 'libs/oriel-fabric-26.1.2-0.11.0.jar'),(Join-Path $Build 'libs/cadeditor-fabric-26.1.2-0.99.1.jar'),(Join-Path $Build 'entity-probe/editor-entity-probe.jar') -Destination $Mods -Force
+Copy-Item -LiteralPath $FabricApi,(Join-Path $Editor 'libs/oriel-fabric-26.1.2-0.11.0.jar'),(Join-Path $Build 'libs/cadeditor-fabric-26.1.2-0.99.2.jar'),(Join-Path $Build 'entity-probe/editor-entity-probe.jar') -Destination $Mods -Force
 $Classpath = @($Runtime | Where-Object { $_ -notmatch '/Editor/libs/|net.fabricmc.fabric-api' })
 $Cache = Join-Path $env:USERPROFILE '.gradle/caches/fabric-loom'
 [IO.File]::WriteAllLines((Join-Path $Run 'options.txt'),@('pauseOnLostFocus:false','fullscreen:false','overrideWidth:640','overrideHeight:480','guiScale:2','narrator:0','lang:zh_cn','soundCategory_master:0'),[Text.UTF8Encoding]::new($false))

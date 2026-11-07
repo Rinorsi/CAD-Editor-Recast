@@ -17,7 +17,7 @@ $Classes = Join-Path $Out ('compiled-'+[Guid]::NewGuid().ToString('N'))
 $Probe = Join-Path $Out ('probe-'+[Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force $Run,$Classes,$Probe,(Join-Path $Run 'mods'),(Join-Path $Run 'saves') | Out-Null
 if (!$ClasspathFile) { $ClasspathFile = (Get-ChildItem ($Workspace+'/daily/*/scratch/editor-mod/runtime-classpath.json') | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).FullName }
-if (!$BaseJar) { $BaseJar = (Get-ChildItem ($Workspace+'/daily/*/scratch/editor-mod/build/fabric-26.1.2/libs/cadeditor-fabric-26.1.2-0.99.1.jar') | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).FullName }
+if (!$BaseJar) { $BaseJar = (Get-ChildItem ($Workspace+'/daily/*/scratch/editor-mod/build/fabric-26.1.2/libs/cadeditor-fabric-26.1.2-0.99.2.jar') | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).FullName }
 if (!$ClasspathFile -or !$BaseJar) { throw '缺少已构建的基础 jar、runtime-classpath.json ；请先按 TESTING.md 准备。' }
 $JavaBin = Join-Path $env:USERPROFILE '.jdks/jdk-25.0.5+8/bin'
 $Cache = Join-Path $env:USERPROFILE '.gradle/caches/fabric-loom'

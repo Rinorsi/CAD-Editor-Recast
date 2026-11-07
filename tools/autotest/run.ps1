@@ -15,7 +15,7 @@ $FabricApi=$Runtime | Where-Object {$_ -match 'net.fabricmc.fabric-api/fabric-ap
 $Classpath=@($Runtime | Where-Object {$_ -notmatch '/Editor/libs/|net.fabricmc.fabric-api/'})
 New-Item -ItemType Directory -Force -Path $Mods | Out-Null
 Copy-Item -LiteralPath $FabricApi -Destination $Mods -Force
-foreach($Name in @('oriel-fabric-26.1.2-0.11.0.jar','cadeditor-fabric-26.1.2-0.99.1.jar')){
+foreach($Name in @('oriel-fabric-26.1.2-0.11.0.jar','cadeditor-fabric-26.1.2-0.99.2.jar')){
     if($Mode -eq 'vanilla'){
         $Installed=Join-Path $Mods $Name
         if(Test-Path $Installed){$Backup=Join-Path $Run 'uninstalled-mods';New-Item -ItemType Directory -Force -Path $Backup | Out-Null;Move-Item -LiteralPath $Installed -Destination $Backup -Force}
