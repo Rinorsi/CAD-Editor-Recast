@@ -249,6 +249,8 @@ function weResult(r) {
       return;
     }
     var hint = WE_CODE[r.code]; WE.err = r.reason || r.code || '失败';
+    /* 服务器会说明是哪种“变了”：页面数据太旧 / 目标换了 / 会话失效 / 字段真的撞了（conflicts） */
+    if (r.code === 'target_changed' && !(Array.isArray(r.conflicts) && r.conflicts.length)) hint = r.stale === 'identity' ? '目标已经不是你打开时的那个了（被替换、换了类型或换了实体）。请重新打开。' : r.stale === 'client_revision' ? '你的页面数据已经过期（上一次保存的回执还没到，或目标已被别处改过）。请关闭后重新打开再改。' : r.stale === 'session' ? '编辑会话已经失效。请关闭后重新打开。' : hint;
     var cf = Array.isArray(r.conflicts) && r.conflicts.length ? String.fromCharCode(10) + '冲突的字段：' + r.conflicts.slice(0, 6).map(function (c) { return (c.path || []).join('.'); }).join('；') + (r.conflicts.length > 6 ? ' 等 ' + r.conflicts.length + ' 处' : '') : '';
     toast((hint || r.reason || r.code || '修改没有成功') + cf, 'error', 'we-error'); drawWorldFoot(); return;
   }
