@@ -1460,3 +1460,7 @@ textarea.world-snbt { min-height: 56px; }
 .k-card[data-card=model] .k-reset { display: none; }
 
 .k-pfoot > .k-phint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 左栏预览区收放时内容先淡出，避免 3D 模型被压扁 */
+.ed-stage > * { transition: opacity 90ms ease-out; }
+.ed-stage.folding > * { opacity: 0; }

@@ -424,10 +424,11 @@ function drawHero() {
 /* 左栏的折叠区（预览 / 属性 / 提示框预览）：收起时先滑出再重画，展开时重画后滑入，和卡片的折叠动画一致 */
 function heroFold(sel, isOpen, apply) {
   var hero = $('hero'), el = hero && hero.querySelector(sel);
-  if (isOpen && el) { uiSlide(el, false, function () { apply(false); drawHero(); }); return; }
+  /* 预览区里的 3D 模型 / 图标会跟着容器高度被压扁，滑动期间先把内容淡掉（folding），只让空的底板收放 */
+  if (isOpen && el) { el.classList.add('folding'); uiSlide(el, false, function () { apply(false); drawHero(); }); return; }
   apply(true); drawHero();
   var h2 = $('hero'), e2 = h2 && h2.querySelector(sel);
-  if (e2) uiSlide(e2, true);
+  if (e2) { e2.classList.add('folding'); uiSlide(e2, true, function () { e2.classList.remove('folding'); }); }
 }
 /* 提示框预览占满左栏下方剩余的空间：放得下就完整显示，放不下才在框内滚动 */
 function fitTip() {
