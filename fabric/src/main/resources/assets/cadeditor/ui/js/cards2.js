@@ -158,7 +158,6 @@ CARDS.extraAttrs = function (exclude, title) {
   });
   card.body.appendChild(h('div', { class: 'k-scrollbox tall' }, [list])); card.body.appendChild(add); draw();
   card.live.push(function () { var key = JSON.stringify(mine()); if (card._key !== key) { card._key = key; if (!list.querySelector('.k-xrow.open')) draw(); } });
-  card.body.appendChild(noteEl('属性加成按"装备槽位"生效：拿在主手、穿在身上才有效。模组添加的属性也能在列表里显示和编辑。'));
   return card;
 };
 
@@ -187,7 +186,7 @@ CARDS.reach = function () {
   card.body.appendChild(fieldRow('最近要隔开', mn.el, '离得太近反而打不到'));
   card.body.appendChild(fieldRow('判定箱放大', hb.el, '数值越大越容易打中'));
   card.live.push(function () { var o = Ctx.get('attack_range'); if (o) { mx.set(o.max_reach === undefined ? 3 : o.max_reach); mn.set(o.min_reach || 0); hb.set(o.hitbox_margin === undefined ? 0.3 : o.hitbox_margin); } });
-  if (!v) card.body.appendChild(noteEl('这个物品没有自带的攻击距离，改动任何一项即启用。'));
+  if (!v) card.body.appendChild(h('div', { class: 'k-sub', text: '这个物品没有自带的攻击距离，改动任何一项即启用。' }));
   return card;
 };
 
@@ -350,7 +349,6 @@ CARDS.dye = function () {
   var col = kColor(typeof v === 'number' ? v : (Array.isArray(v) ? ((Math.round(v[0] * 255) << 16) | (Math.round(v[1] * 255) << 8) | Math.round(v[2] * 255)) : 0xA06540), function (c) { Ctx.set('dyed_color', c, { label: '染色' }); });
   card.body.appendChild(col.el);
   card.live.push(function () { var x = Ctx.get('dyed_color'); if (typeof x === 'number') col.set(x); });
-  card.body.appendChild(noteEl('皮革默认色是棕色 #A06540。只有可染色的物品（皮革装备、皮革马铠）会显示这个颜色。'));
   return card;
 };
 

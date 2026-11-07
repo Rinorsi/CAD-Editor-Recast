@@ -1,7 +1,7 @@
 /* 自绘提示框：替代原生 title，并给被截断的文字自动补全文。
    触发：元素带 data-tip / title；或是会被截断的文字（见 CLAMP）且实际被截断。多行文字用 \n 分隔，第一行作标题。 */
 var Tip = (function () {
-  var CLAMP = '.s, .z, .k-cdesc, .k-sub, .k-chip, .k-xval, .k-tag, .tx, .ttl, .k-prow, .k-note, .pl span, .k-xhead, .snd-name, .rs-name, .rs-id, .pr-k';
+  var CLAMP = '.s, .z, .k-cdesc, .k-sub, .k-chip, .k-xval, .k-tag, .tx, .ttl, .k-prow, .pl span, .k-xhead, .snd-name, .rs-name, .rs-id, .pr-k';
   var el = null, owner = null, last = null, timer = null, hideT = null, hiddenAt = 0, mx = 0, my = 0;
   function trunc(n) {
     try {

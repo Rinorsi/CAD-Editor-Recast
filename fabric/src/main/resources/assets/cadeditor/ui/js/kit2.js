@@ -178,7 +178,7 @@ function kRich(value, o) {
   var parsed = tcRuns(value);
   if (!parsed) {
     var raw = wText({ t: 'text' }, value, function (v) { o.onChange(v, false); }, o);
-    return { el: h('div', { class: 'k-rich' }, [h('div', { class: 'k-note', text: '这段文字带有翻译、点击事件等高级内容，直接编辑 SNBT：' }), raw]), set: function () {} };
+    return { el: h('div', { class: 'k-rich' }, [raw]), set: function () {} };
   }
   var base = parsed.base, runs = parsed.runs;
   var wrap = h('div', { class: 'k-rich' + (o.compact ? ' compact' : '') });

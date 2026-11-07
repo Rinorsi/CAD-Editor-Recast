@@ -188,7 +188,6 @@ html, body { margin: 0; height: 100%; }
 .k-card.off .k-chead .k-btn { flex: none; }
 .k-effect { padding: 3px 6px; color: var(--tx2); line-height: 14px; background: var(--well); border-left: 2px solid var(--acc); }
 .k-effect.warn { border-left-color: var(--warn); color: #ffd9a0; } .k-effect.bad { border-left-color: var(--bad); color: #ffb0b8; } .k-effect.info { border-left-color: var(--info); }
-.k-note { color: var(--tx3); line-height: 14px; }
 .k-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .k-row > .lb { flex: none; width: 72px; color: var(--tx2); }
 .k-row.top { align-items: flex-start; } .k-row.wrap { flex-wrap: wrap; } .k-row > .grow { flex: 1; min-width: 0; }
@@ -610,8 +609,6 @@ html[data-motion=reduced] .ew, html[data-motion=reduced] .ed-body.enter .k-card,
 
 
 /* ======================= 第二轮修整：版面、颜色按钮、拖动手感 ======================= */
-/* 说明性小字一律不显示：卡片标题下的一行说明保留，其余提示不占版面 */
-.k-note { display: none; }
 .k-cdesc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* 分页内容顶部工具行 */
 .ed-tools { display: flex; align-items: center; gap: 6px; min-height: 24px; }
@@ -826,7 +823,7 @@ textarea.ed-code-in { min-height: 56px; }
 .ew.narrow .eb .crumb, .ew.narrow .k-search span, .ew.narrow .k-search .k-kbd { display: none; }
 .ew.narrow .ed-hero { width: var(--hw, 68px); }
 .ew.hthin .ed-hero { padding: 6px 4px; gap: 4px; align-items: center; }
-.ew.hthin .ed-hero .ed-stagehead, .ew.hthin .ed-hero .ed-tags, .ew.hthin .ed-hero .ed-stats, .ew.hthin .ed-hero .ed-tiphead, .ew.hthin .ed-hero .k-scrollbox, .ew.hthin .ed-hero .k-togrow, .ew.hthin .ed-hero .k-note { display: none; }
+.ew.hthin .ed-hero .ed-stagehead, .ew.hthin .ed-hero .ed-tags, .ew.hthin .ed-hero .ed-stats, .ew.hthin .ed-hero .ed-tiphead, .ew.hthin .ed-hero .k-scrollbox, .ew.hthin .ed-hero .k-togrow { display: none; }
 
 
 
@@ -1515,7 +1512,6 @@ textarea.world-snbt { min-height: 56px; }
 .vt-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .vt-tags { margin-bottom: 6px; }
 .vt-list { max-height: 330px; overflow-y: auto; }
-.vt-warn .k-note.bad { color: var(--bad); }
 
 .vt-top { width: 100%; }
 .vt-top .k-sbox { flex: 1; width: 100%; }

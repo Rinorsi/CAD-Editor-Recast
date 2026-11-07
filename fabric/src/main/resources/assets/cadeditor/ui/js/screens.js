@@ -988,7 +988,7 @@ function openImport() {
   function parse() { try { var p = parseStackString(ta.value); if (!ITEMSET[shortId(p.id)]) throw new Error('未知物品 ' + p.id); err.textContent = ''; return p; } catch (e) { err.textContent = '解析失败（第 ' + ((e.pos || 0) + 1) + ' 个字符附近）：' + e.message; return null; } }
   var nb = kBtn('替换当前物品', function () { var p = parse(); if (!p) return; var lb = Store.doc().label, sl = Store.doc().src; loadStack({ id: p.id, count: p.count, comps: p.comps, removed: p.removed, label: lb, slot: sl }); closeModal(); rebuild(); toast('已载入 ' + nameOfItem(p.id), 'ok'); }, { cls: 'pri', icon: 'download' });
   var mb = kBtn('合并到当前物品', function () { var p = parse(); if (!p || !Store.docs.length) return; var d = Store.doc(), comps = clone(d.comps), removed = clone(d.removed); Object.keys(p.comps).forEach(function (k) { comps[k] = p.comps[k]; delete removed[k]; }); Object.keys(p.removed).forEach(function (k) { delete comps[k]; removed[k] = 1; }); Store.replace(comps, removed, '从命令合并组件'); closeModal(); toast('已合并，可用 Ctrl+Z 撤销', 'ok'); }, { icon: 'plus' });
-  openModal(modalShell('从命令导入', '粘贴别处复制的物品命令', [ta, err, h('div', { class: 'k-note', text: '支持带数量和 !组件 移除语法；/give @s、/item replace entity @s … with 这类前缀会自动识别。' })], [kBtn('取消', closeModal), mb, nb]));
+  openModal(modalShell('从命令导入', '粘贴别处复制的物品命令', [ta, err], [kBtn('取消', closeModal), mb, nb]));
   ta.focus();
 }
 

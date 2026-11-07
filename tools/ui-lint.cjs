@@ -48,7 +48,17 @@ css.replace(/([^{}]+)\{([^{}]*)\}/g, (m, sels, body) => {
 });
 const hidden = {}; Object.keys(lastDisplay).forEach(k => { if (lastDisplay[k] === 'none' && !shown[k]) hidden[k] = 1; });
 const jsAll = order.map(f => src[f].join('\n')).join('\n');
+// 有意保留的「CSS 隐藏、JS 生成」：要么由 JS 用 style.display 切换，要么是自初始导入起就没有可见样式的旧版 forms.js 控件。新增项必须写原因。
+const ALLOW = {
+  'k-numwarn': 'JS 用 style.display 切换（kit.js 数字框的警告行）',
+  'k-redit': 'JS 用 style.display 切换（kit2.js 富文本折叠编辑区）',
+  'ed-tcpanel': 'JS 用 style.display 切换（forms.js 的文本组件折叠面板）',
+  'ed-enrow': '旧版 forms.js 附魔行，样式表自初始导入就是 display:none；第 5 步淘汰旧控件时一并处理',
+  'ed-pop': '旧版 forms.js 组合框弹层（Pop/popOpen），同上',
+  'ed-pop-item': '旧版 forms.js 组合框弹层条目，同上'
+};
 Object.keys(hidden).forEach(cls => {
+  if (ALLOW[cls]) return;
   const re = new RegExp(String.raw`class\s*:\s*['"][^'"]*?(?<![\w-])` + cls.replace(/-/g, '\\-') + String.raw`(?![\w-])`);
   const hit = [];
   for (const f of order) src[f].forEach((line, i) => { if (re.test(line)) hit.push(where(f, i)); });

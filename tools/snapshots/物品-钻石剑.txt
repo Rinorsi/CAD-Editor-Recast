@@ -183,7 +183,6 @@ div
               div.k-tile.m-ripple [title="粉紫色" style="--tone:#ff55ff"]
                 div.tl [style="color:#ff55ff"] "史诗"
                 div.ts "粉紫色"
-            div.k-note "只影响名称颜色，不改变任何功能。"
           div.k-div
         div.k-card [data-card="glint"]
           div.k-chead.m-spot
@@ -602,7 +601,7 @@ div
                     div.th [style="left:30%"]
                 div.k-numerr [style="display:none"]
                 div.k-numwarn [style="display:none"]
-            div.k-note "这个物品没有自带的攻击距离，改动任何一项即启用。"
+            div.k-sub "这个物品没有自带的攻击距离，改动任何一项即启用。"
           div.k-div
         div.k-card [data-card="swing"]
           div.k-chead.m-spot
@@ -692,7 +691,6 @@ div
             div.k-add
               img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
               "添加属性加成"
-            div.k-note "属性加成按"装备槽位"生效：拿在主手、穿在身上才有效。模组添加的属性也能在列表里显示和编辑。"
           div.k-div
 ## footer
 div
@@ -832,7 +830,6 @@ div
                 div.k-preset [title="钻石剑 的原版值"] "钻石 1561"
                 div.k-preset [title="下界合金剑 的原版值"] "下界合金 2031"
             div.k-effect "按每次使用损耗 1 点计算，大约能使用 1,561 次"
-            div.k-note "原版默认：1,561"
           div.k-div
         div.k-card [data-card="damage"]
           div.k-chead.m-spot
@@ -1188,7 +1185,6 @@ div
                 div.k-preset "14 铁"
                 div.k-preset "15 木/下界合金"
                 div.k-preset "22 金"
-            div.k-note "数值越高，附魔台越容易给出更强、更多条的附魔。金制装备最高（22）。"
           div.k-div
 ## footer
 div

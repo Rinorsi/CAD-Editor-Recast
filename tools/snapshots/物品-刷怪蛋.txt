@@ -651,7 +651,6 @@ div
               div.k-tile.m-ripple [title="粉紫色" style="--tone:#ff55ff"]
                 div.tl [style="color:#ff55ff"] "史诗"
                 div.ts "粉紫色"
-            div.k-note "只影响名称颜色，不改变任何功能。"
           div.k-div
         div.k-card [data-card="glint"]
           div.k-chead.m-spot
@@ -857,7 +856,7 @@ div
             div.k-chev [title="折叠 / 展开"]
               img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
           div.k-cbody.x-sliding [style="height:300px;opacity:1"]
-            div.k-note "这个物品没有耐久，所以没有磨损值。"
+            div.k-sub "这个物品没有耐久，所以没有磨损值。"
           div.k-div
         div.bare.k-card.off [data-card="unbr"]
           div.k-chead.m-spot

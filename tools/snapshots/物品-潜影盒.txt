@@ -158,7 +158,6 @@ div
               div.k-tile.m-ripple [title="粉紫色" style="--tone:#ff55ff"]
                 div.tl [style="color:#ff55ff"] "史诗"
                 div.ts "粉紫色"
-            div.k-note "只影响名称颜色，不改变任何功能。"
           div.k-div
         div.k-card [data-card="glint"]
           div.k-chead.m-spot
@@ -371,7 +370,6 @@ div
             div.dng.k-btn.m-ripple
               img.o-ico [src="oriel:textures/icons/trash.png" style="height:16px;width:16px"]
               span "全部清空"
-            div.k-note "格子数量按这个容器的种类显示（27 格）。里面物品自带的组件数据会被原样保留，带小黄点的格子表示有。"
           div.k-div
         div.k-card [data-card="stack"]
           div.k-chead.m-spot

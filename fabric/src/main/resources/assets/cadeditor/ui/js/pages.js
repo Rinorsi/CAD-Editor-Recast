@@ -259,9 +259,8 @@ CARDS.auto = function (cid) {
   var d = Store.doc();
   if (headK && !DETAIL_IN) { headAuto(card, cid, c, headK, d.comps[cid] !== undefined ? d.comps[cid] : clone(Ctx.proto(cid))); return card; }
   if (DETAIL_AUTO[cid] && !DETAIL_IN) { detailize(card, { cid: cid, title: CIDX[cid].name }); return card; }
-  if (AUTO_BODY[cid]) { AUTO_BODY[cid](card, cid, d.comps[cid] !== undefined ? d.comps[cid] : clone(Ctx.proto(cid))); if (c.app) card.body.appendChild(h('div', { class: 'k-note', text: c.app })); return card; }
+  if (AUTO_BODY[cid]) { AUTO_BODY[cid](card, cid, d.comps[cid] !== undefined ? d.comps[cid] : clone(Ctx.proto(cid))); return card; }
   card.body.appendChild(renderComponentForm(cid, d.comps[cid] !== undefined ? d.comps[cid] : clone(Ctx.proto(cid)), function (v, o) { Store.set(cid, v, { key: 'f-' + cid + (o && o.key ? o.key : ''), structural: false }); }, d));
-  if (c.app) card.body.appendChild(h('div', { class: 'k-note', text: c.app }));
   return card;
 };
 CARDS.raw = CARDS.auto;

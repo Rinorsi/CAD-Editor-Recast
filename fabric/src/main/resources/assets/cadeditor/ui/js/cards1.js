@@ -51,7 +51,6 @@ function fieldRow(label, node, sub) {
   else if (/k-num/.test(cn) && (node.querySelector('.k-slider') != null || node.querySelector('.k-presets') != null)) wide = true;
   return h('div', { class: 'k-fld' + (wide ? ' wide' : '') + (ico ? ' ic' : ''), title: sub || '' }, [h('div', { class: 'lb' }, [ico, (typeof label === 'string' ? h('span', { class: 'lt', text: label }) : label), sub ? h('span', { class: 'k-sub', text: '  ' + sub }) : null]), node]);
 }
-function noteEl(text) { return h('div', { class: 'k-note', text: text }); }
 function secTitle(text, sub) { return h('div', { class: 'ed-sec' }, [h('b', { text: text }), sub ? h('small', { text: sub }) : null]); }
 function presetsFromItems(ids, cid, prop, fmt) {
   var out = [];
@@ -64,7 +63,6 @@ function presetsFromItems(ids, cid, prop, fmt) {
   return out;
 }
 var TIER_TOOLS = ['wooden_sword', 'stone_sword', 'copper_sword', 'iron_sword', 'golden_sword', 'diamond_sword', 'netherite_sword'];
-function defaultNote(cid, fmt) { var p = Ctx.proto(cid); return p === undefined ? '这个物品原本没有此项' : '原版默认：' + (fmt ? fmt(p) : (typeof p === 'object' ? toSnbt(p, null, false) : String(p))); }
 /* 功能还没开：这一行只剩标题和右侧的开关，打开开关才会展开设置 */
 function enableBox(card, text, label, make) {
   card.el.classList.add('off'); card.make = make; card.offHint = text[1];
@@ -124,7 +122,6 @@ CARDS.rarity = function () {
   var tiles = kTiles(T, Ctx.get('rarity') || 'common', function (v) { Ctx.setSmart('rarity', v, { label: '稀有度' }); }, { pill: true });
   card.body.appendChild(tiles.el);
   card.live.push(function () { tiles.set(Ctx.get('rarity') || 'common'); });
-  card.body.appendChild(noteEl('只影响名称颜色，不改变任何功能。'));
   return card;
 };
 
@@ -211,14 +208,13 @@ CARDS.maxDamage = function () {
     var ub = (Ctx.get('enchantments') || {})['minecraft:unbreaking'];
     eff.set(hitsText(v) + (ub ? '；有耐久 ' + levelText(ub) + '，平均可延长到约 ' + fmtInt(v * (ub + 1)) + ' 次' : ''));
   });
-  card.body.appendChild(noteEl(defaultNote('max_damage', function (p) { return fmtInt(p); })));
   return card;
 };
 
 CARDS.damage = function () {
   var card = kCard({ id: 'damage', icon: 'hammer', title: '当前磨损', desc: '现在还剩多少耐久；设为满耐久就是一件全新的物品', comps: ['damage'] }, Ctx);
   var maxd = Ctx.get('max_damage');
-  if (typeof maxd !== 'number') { card.body.appendChild(noteEl('这个物品没有耐久，所以没有磨损值。')); return card; }
+  if (typeof maxd !== 'number') { card.body.appendChild(h('div', { class: 'k-sub', text: '这个物品没有耐久，所以没有磨损值。' })); return card; }
   var num = kNumber(maxd - (Ctx.get('damage') || 0), { min: 0, max: 2147483647, softMax: maxd, step: 1, big: true, unit: '/ ' + fmtInt(maxd), presets: [{ v: maxd, label: '全新' }, { v: Math.max(1, Math.round(maxd / 2)), label: '一半' }, { v: 1, label: '只剩 1 点' }], onChange: function (v) { Ctx.setSmart('damage', Math.max(0, maxd - v), { label: '当前磨损' }); } });
   var bar = h('div', { class: 'k-meter' }, [h('i', {})]);
   var eff = kEffect('');
@@ -393,6 +389,5 @@ CARDS.enchantable = function () {
   var num = kNumber(v0.value, { min: 1, max: 2147483647, softMax: 50, step: 1, big: true, presets: [{ v: 5, label: '5 石' }, { v: 9, label: '9 龟壳' }, { v: 10, label: '10 钻石' }, { v: 14, label: '14 铁' }, { v: 15, label: '15 木/下界合金' }, { v: 22, label: '22 金' }], onChange: function (v) { Ctx.setSmart('enchantable', { value: v }, { label: '附魔台适性' }); } });
   card.body.appendChild(num.el);
   card.live.push(function () { var v = Ctx.get('enchantable'); if (v) num.set(v.value); });
-  card.body.appendChild(noteEl('数值越高，附魔台越容易给出更强、更多条的附魔。金制装备最高（22）。'));
   return card;
 };
