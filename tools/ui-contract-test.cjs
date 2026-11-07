@@ -7,7 +7,7 @@ const events = {}, sent = [], toasts = [];
 const context = vm.createContext({ console, setTimeout: () => 1, clearTimeout() {},
   document: { addEventListener() {}, getElementById() { return null; } },
   oriel: { data: {}, on(k, fn) { events[k] = fn; }, send(k, value) { sent.push({k, value}); return true; } } });
-for (const file of ['data.js', 'core.js', 'nbt.js', 'reg.js', 'screens.js']) vm.runInContext(fs.readFileSync(path.join(dir,file),'utf8'),context);
+for (const file of ['data.js', 'core.js', 'nbt.js', 'reg.js', 'screens.js', 'worldedit.js']) vm.runInContext(fs.readFileSync(path.join(dir,file),'utf8'),context);
 for (const name of ['rebuild','drawHero','drawTabbar','drawTopbar','drawFooter','drawTabBody']) context[name] = () => {};
 context.toast = (message, kind) => toasts.push({message, kind});
 vm.runInContext(fs.readFileSync(path.join(dir,'app.js'),'utf8'),context);
