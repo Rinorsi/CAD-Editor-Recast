@@ -151,8 +151,7 @@ function spPool(arr, onChange, emptyText) {
         return [
           esEntityHeader({ id: eid, empty: '（未选择）',
             onPick: function (x) { it.data = it.data || {}; it.data.entity = it.data.entity || {}; it.data.entity.id = Reg.full(x); onChange(); xl.draw(); },
-            onEntityNbt: function (snbt) { it.data = it.data || {}; it.data.entity = vaultEntityObj(snbt); NBT_FORCE.block_entity_data = true; onChange(); xl.draw(); },
-            snbtText: function () { return it.data && it.data.entity ? toSnbt(it.data.entity, null, false) : '{}'; } }),
+            onEntityNbt: function (snbt) { it.data = it.data || {}; it.data.entity = vaultEntityObj(snbt); NBT_FORCE.block_entity_data = true; onChange(); xl.draw(); } }),
           xFoot('右上角的数字是权重：越大越容易被选中', function () { arr.splice(i, 1); onChange(); xl.select(-1); })
         ];
       } };
@@ -188,8 +187,7 @@ function buildMobSpawner(body, obj, beId, put) {
   body.appendChild(xSec('paw', '刷什么生物'));
   body.appendChild(esEntityHeader({ id: eid, empty: '（未指定）',
     onPick: function (x) { obj.SpawnData = isObj(obj.SpawnData) ? obj.SpawnData : {}; obj.SpawnData.entity = isObj(obj.SpawnData.entity) ? obj.SpawnData.entity : {}; obj.SpawnData.entity.id = Reg.full(x); put(); },
-    onEntityNbt: function (snbt) { obj.SpawnData = isObj(obj.SpawnData) ? obj.SpawnData : {}; obj.SpawnData.entity = vaultEntityObj(snbt); NBT_FORCE.block_entity_data = true; put(); },
-    snbtText: function () { return spEntityText(obj); } }));
+    onEntityNbt: function (snbt) { obj.SpawnData = isObj(obj.SpawnData) ? obj.SpawnData : {}; obj.SpawnData.entity = vaultEntityObj(snbt); NBT_FORCE.block_entity_data = true; put(); } }));
   /* 刷出来的生物自己的设置：外观、开关、属性、状态效果、装备——和刷怪蛋 / 世界实体共用同一个面板，写进 SpawnData.entity */
   if (eid) {
     body.appendChild(xSec('paw', '刷出的生物', '外观、属性、效果、装备'));
