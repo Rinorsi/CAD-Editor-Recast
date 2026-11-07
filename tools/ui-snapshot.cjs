@@ -110,9 +110,7 @@ for (const [name, fn] of SCENES) {
   let text; try { text = fn(); } catch (e) { text = '!! 场景渲染失败: ' + (e && e.stack || e).split('\n').slice(0, 4).join('\n') + '\n'; }
   const file = path.join(SNAP, name + '.txt');
   if (UPDATE) { fs.writeFileSync(file, text); console.log('写入', name, text.split('\n').length + ' 行' + (text.indexOf('!!') >= 0 ? '  ⚠ 含失败标记' : '')); continue; }
-  const old = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').replace(/
-/g, '
-') : null;   // git 可能把 LF 换成 CRLF，比较前统一
+  const old = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split('\r').join('') : null;   // git 可能把 LF 换成 CRLF，比较前去掉 \r
   if (old === text) { console.log('PASS', name); continue; }
   bad++;
   if (old === null) { console.log('FAIL', name, '：没有基线，先运行 --update'); continue; }
