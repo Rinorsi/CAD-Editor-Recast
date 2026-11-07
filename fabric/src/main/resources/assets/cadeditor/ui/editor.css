@@ -1610,3 +1610,6 @@ body.vault-only .ew { display: none; }
 .wp-acts { display: flex; align-items: center; gap: 4px; }
 .x-act { flex: none; display: flex; align-items: center; margin-right: 6px; }
 .wp-addbox { border-top: 1px solid var(--ln2); box-shadow: 0 -1px 0 var(--ln); margin-top: 4px; padding-top: 4px; }
+
+.vt-msg { display: flex; align-items: center; gap: 6px; padding: 3px 6px; color: var(--tx2); }
+.vt-msg.bad { color: var(--bad); }

@@ -158,7 +158,7 @@ function openVault(opts) {
     stat.setAttribute('title', Vault.st.storage ? '保存在：' + Vault.st.storage + '（这台电脑上所有存档和服务器共用）' : '');
     clear(warn);
     var w = Vault.st.storageError ? '保存到磁盘失败（' + Vault.st.storageError + '），修改保留在内存里，会自动重试' : Vault.st.readOnly ? '保险库文件版本比这个模组新，只读，不会被改动' : Vault.st.warning ? '保险库文件有问题：' + Vault.st.warning + '（原文件已另存，没有丢数据）' : '';
-    if (w) warn.appendChild(h('div', { class: 'k-note bad', text: w }));
+    if (w) warn.appendChild(h('div', { class: 'vt-msg bad', text: w }));
     pollPersisted();
   }
   function paintTags(tags) {
@@ -229,7 +229,7 @@ function openVault(opts) {
   function undoBar() {
     clear(undoEl);
     if (!Vault.undo || Date.now() > Vault.undo.until) return;
-    undoEl.appendChild(h('div', { class: 'k-note' }, [h('span', { text: '刚删除了条目  ' }), kBtn('撤销删除', function () { var t = Vault.undo.token; Vault.undo = null; Vault.call('restore', { token: t }, function (r) { if (r.ok) { toast('已恢复', 'ok'); refresh(); clear(undoEl); } else vaultErr(r); }); }, { icon: 'undo' })]));
+    undoEl.appendChild(h('div', { class: 'vt-msg' }, [h('span', { text: '刚删除了条目  ' }), kBtn('撤销删除', function () { var t = Vault.undo.token; Vault.undo = null; Vault.call('restore', { token: t }, function (r) { if (r.ok) { toast('已恢复', 'ok'); refresh(); clear(undoEl); } else vaultErr(r); }); }, { icon: 'undo' })]));
   }
   list = h('div', { class: 'vt-list' }, [xl.el, errBox]);
   var more = kBtn('显示更多', function () { load(true); }, { icon: 'down' }); more.style.display = 'none';
