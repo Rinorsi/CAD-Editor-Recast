@@ -45,11 +45,11 @@ function eggCard(id, icon, title, desc, comps) {
 CARDS.spawnEgg = function () {
   var card = eggCard('spawnEgg', 'paw', '生成的生物', '用这个蛋点击地面时生成的生物', ['entity_data']);
   var id = eggCur(), def = eggDefaultEntity(), info = id ? Reg.entityInfo(id) : null;
-  var pick = kBtn('更换生物', function () {
-    openRegPick({ reg: 'entity_type', current: id, title: '选择生物', onEntityNbt: function (snbt) { var o = vaultEntityObj(snbt); NBT_FORCE.entity_data = true; Ctx.setSmart('entity_data', o, { label: '刷怪蛋生物（来自保险库）' }); eggRedraw(); }, onPick: function (x) { var o = clone(eggData()); o.id = Reg.full(x); Ctx.setSmart('entity_data', o, { label: '刷怪蛋生物' }); eggRedraw(); } });
-  }, { icon: 'grid' });
-  var name = id ? spEntityName(id) : '（未选择）', sub = id ? Reg.full(id) + (def && Reg.full(id) === Reg.full(def) ? ' · 这个蛋本来的生物' : ' · 本来是' + spEntityName(def)) : '';
-  card.body.appendChild(h('div', { class: 'egg-who' }, [h('div', { class: 'egg-ico' }, [eggIconOf(id, 32)]), h('div', { class: 'tx' }, [h('b', { text: name }), h('span', { class: 'k-sub', text: sub })]), pick, id ? kBtn('存入保险库', function () { openVaultSaveEntity(eggEntityText(), name); }, { icon: 'chest', title: '把调好的整只生物存起来，之后在任何选择生物的地方取出' }) : null]));
+  var sub = id ? Reg.full(id) + (def && Reg.full(id) === Reg.full(def) ? ' · 这个蛋本来的生物' : ' · 本来是' + spEntityName(def)) : '';
+  card.body.appendChild(esEntityHeader({ id: id, sub: sub, iconFn: function (n) { return eggIconOf(id, n); },
+    onPick: function (x) { var o = clone(eggData()); o.id = Reg.full(x); Ctx.setSmart('entity_data', o, { label: '刷怪蛋生物' }); eggRedraw(); },
+    onEntityNbt: function (snbt) { var o = vaultEntityObj(snbt); NBT_FORCE.entity_data = true; Ctx.setSmart('entity_data', o, { label: '刷怪蛋生物（来自保险库）' }); eggRedraw(); },
+    snbtText: eggEntityText }));
   if (id && info === null) card.body.appendChild(xEmpty('正在向游戏读取这只生物的信息…'));
   card.body.appendChild(Valid.badge('entity_data'));
   return card;
@@ -149,7 +149,10 @@ function spPool(arr, onChange, emptyText) {
       wt.el.classList.add('k-xnum'); wt.el.addEventListener('click', function (ev) { ev.stopPropagation(); });
       return { chevron: true, icon: eid ? entityIcon(eid, 14) : uiIcon('paw', 14), title: eid ? spEntityName(eid) : '（未选择生物）', sub: eid || '', tip: eid, right: wt.el, body: function () {
         return [
-          xField('paw', '生物', kRegSelect({ reg: 'entity_type', value: eid, title: '选择生物', empty: '（未选择）', onEntityNbt: function (snbt) { it.data = it.data || {}; it.data.entity = vaultEntityObj(snbt); NBT_FORCE.block_entity_data = true; onChange(); xl.draw(); }, onChange: function (x) { it.data = it.data || {}; it.data.entity = it.data.entity || {}; it.data.entity.id = Reg.full(x); onChange(); xl.draw(); } }).el),
+          esEntityHeader({ id: eid, empty: '（未选择）',
+            onPick: function (x) { it.data = it.data || {}; it.data.entity = it.data.entity || {}; it.data.entity.id = Reg.full(x); onChange(); xl.draw(); },
+            onEntityNbt: function (snbt) { it.data = it.data || {}; it.data.entity = vaultEntityObj(snbt); NBT_FORCE.block_entity_data = true; onChange(); xl.draw(); },
+            snbtText: function () { return it.data && it.data.entity ? toSnbt(it.data.entity, null, false) : '{}'; } }),
           xFoot('右上角的数字是权重：越大越容易被选中', function () { arr.splice(i, 1); onChange(); xl.select(-1); })
         ];
       } };
@@ -183,13 +186,10 @@ function buildMobSpawner(body, obj, beId, put) {
   /* 当前刷怪实体：SpawnData.entity.id（没写 = 新放下的刷怪笼还没有指定） */
   var eid = obj.SpawnData && obj.SpawnData.entity && typeof obj.SpawnData.entity.id === 'string' ? obj.SpawnData.entity.id : '';
   body.appendChild(xSec('paw', '刷什么生物'));
-  body.appendChild(xField('paw', '当前生物', kRegSelect({ reg: 'entity_type', value: eid, title: '选择生物', empty: '（未指定）', onEntityNbt: function (snbt) {
-    obj.SpawnData = isObj(obj.SpawnData) ? obj.SpawnData : {}; obj.SpawnData.entity = vaultEntityObj(snbt); NBT_FORCE.block_entity_data = true; put();
-  }, onChange: function (x) {
-    obj.SpawnData = isObj(obj.SpawnData) ? obj.SpawnData : {}; obj.SpawnData.entity = isObj(obj.SpawnData.entity) ? obj.SpawnData.entity : {};
-    obj.SpawnData.entity.id = Reg.full(x); put();
-  } }).el));
-  if (eid) body.appendChild(h('div', { class: 'k-row' }, [kBtn('存入保险库', function () { openVaultSaveEntity(spEntityText(obj), spEntityName(eid)); }, { icon: 'chest', title: '把这只刷出的生物（含装备等数据）存起来' })]));
+  body.appendChild(esEntityHeader({ id: eid, empty: '（未指定）',
+    onPick: function (x) { obj.SpawnData = isObj(obj.SpawnData) ? obj.SpawnData : {}; obj.SpawnData.entity = isObj(obj.SpawnData.entity) ? obj.SpawnData.entity : {}; obj.SpawnData.entity.id = Reg.full(x); put(); },
+    onEntityNbt: function (snbt) { obj.SpawnData = isObj(obj.SpawnData) ? obj.SpawnData : {}; obj.SpawnData.entity = vaultEntityObj(snbt); NBT_FORCE.block_entity_data = true; put(); },
+    snbtText: function () { return spEntityText(obj); } }));
   /* 刷出来的生物自己的设置：外观、开关、属性、状态效果、装备——和刷怪蛋 / 世界实体共用同一个面板，写进 SpawnData.entity */
   if (eid) {
     body.appendChild(xSec('paw', '刷出的生物', '外观、属性、效果、装备'));

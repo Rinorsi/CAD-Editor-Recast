@@ -113,13 +113,12 @@ WEV.beehive = function (body, g) {
   function save() { weSetV(g, 'bees', clone(list)); }
   list.forEach(function (b, i) {
     var ed = b.entity_data || {};
-    var sel = kRegSelect({ reg: 'entity_type', value: ed.id || 'minecraft:bee', title: '选择生物', onEntityNbt: function (snbt) { list[i].entity_data = vaultEntityObj(snbt); save(); wvRedraw(); }, onChange: function (id) { list[i].entity_data = Object.assign({}, list[i].entity_data, { id: id }); save(); } });
     var t1 = kNumber(b.ticks_in_hive || 0, { min: 0, noSlider: true, step: 20, unit: '刻', onChange: function (v) { list[i].ticks_in_hive = v; save(); } });
     var t2 = kNumber(b.min_ticks_in_hive === undefined ? 600 : b.min_ticks_in_hive, { min: 0, noSlider: true, step: 20, unit: '刻', onChange: function (v) { list[i].min_ticks_in_hive = v; save(); } });
     var rm = kBtn('放走', function () { list.splice(i, 1); save(); wvRedraw(); }, { icon: 'trash', title: '放走这只蜜蜂' });
     body.appendChild(xRow({ icon: entityIcon(ed.id || 'minecraft:bee', 22), title: '蜜蜂 ' + (i + 1), sub: '已在里面 ' + (b.ticks_in_hive || 0) + ' 刻 · 最短待 ' + (b.min_ticks_in_hive === undefined ? 600 : b.min_ticks_in_hive) + ' 刻', chevron: true, open: !!UIOpen['we:bee:' + i],
       onHead: function () { UIOpen['we:bee:' + i] = !UIOpen['we:bee:' + i]; wvRedraw(); },
-      body: function () { return [xField('paw', '生物', sel.el), xField('clock', '已在里面', t1.el), xField('hourglass', '最短待多久', t2.el), h('div', { class: 'x2f' }, [h('div', { class: 'grow' }), rm])]; } }));
+      body: function () { return [esEntityHeader({ id: ed.id || 'minecraft:bee', onPick: function (id) { list[i].entity_data = Object.assign({}, list[i].entity_data, { id: id }); save(); wvRedraw(); }, onEntityNbt: function (snbt) { list[i].entity_data = vaultEntityObj(snbt); save(); wvRedraw(); } }), xField('clock', '已在里面', t1.el), xField('hourglass', '最短待多久', t2.el), h('div', { class: 'x2f' }, [h('div', { class: 'grow' }), rm])]; } }));
   });
   if (!max || list.length < max) body.appendChild(xAdd('放进一只蜜蜂', function () { list.push({ entity_data: { id: 'minecraft:bee' }, ticks_in_hive: 0, min_ticks_in_hive: 600 }); save(); wvRedraw(); }));
   body.appendChild(h('div', { class: 'k-sub', text: '蜂蜜等级在「方块状态」里改。' }));

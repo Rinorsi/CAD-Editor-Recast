@@ -371,3 +371,29 @@ function esTagsRow(s, o) {
   inp.addEventListener('change', function () { var t = inp.value.split(/[,，\s]+/).filter(function (x) { return x; }); edit(function (obj) { if (t.length) obj.Tags = t; else delete obj.Tags; }); });
   return xRow({ icon: false, title: '标签', sub: '给 /tag 和选择器用的标签', tip: 'Tags', right: inp });
 }
+
+/* ====================== 公共：生物头部（图标 + 名字 + ID + 按钮） ======================
+   刷怪蛋、刷怪笼（当前生物 / 随机池）、蜂巢里的蜜蜂、乘客、世界里的生物页都用它，样子和按钮位置一致。
+   o = {
+     id,                    当前生物 ID（可空）
+     sub?,                  名字下面那行字，默认是完整 ID
+     iconFn?(size),         图标，默认生物对应的刷怪蛋 / 通用图标
+     onPick?(fullId),       有它才显示「更换生物」
+     onEntityNbt?(snbt),    选择窗里「从保险库取生物」取出整只生物时
+     snbtText?()            有它才显示「存入保险库」（返回带类型的实体 SNBT 文本）
+     onApplyVault?(snbt)    有它才显示「从保险库套用」（放置好的生物不能换类型，只套数据）
+     empty?                 没有生物时的文字
+   } */
+function esEntityIcon(id, size) {
+  var info = id ? Reg.entityInfo(id) : null, eggs = info && info.spawn_eggs;
+  return eggs && eggs.length ? itemIcon(eggs[0], size) : uiIcon('paw', size > 20 ? 32 : 16);
+}
+function esEntityHeader(o) {
+  var id = o.id ? Reg.full(o.id) : '';
+  var name = id ? (Reg.nameOf2('entity_type', id) || humanId(shortId(id))) : (o.empty || '（未选择）');
+  var kids = [h('div', { class: 'egg-ico' }, [o.iconFn ? o.iconFn(32) : esEntityIcon(id, 32)]), h('div', { class: 'tx' }, [h('b', { text: name }), h('span', { class: 'k-sub', text: o.sub !== undefined ? o.sub : id })])];
+  if (o.onPick) kids.push(kBtn('更换生物', function () { openRegPick({ reg: 'entity_type', current: id, title: '选择生物', onEntityNbt: o.onEntityNbt, onPick: o.onPick }); }, { icon: 'grid' }));
+  if (o.onApplyVault) kids.push(kBtn('从保险库套用', function () { openVault({ kind: 'entity', pickEntity: function (snbt) { o.onApplyVault(snbt); } }); }, { icon: 'download', title: '把保险库里同类型生物的外观、属性、装备等套上来' }));
+  if (o.snbtText && id) kids.push(kBtn('存入保险库', function () { openVaultSaveEntity(o.snbtText(), name); }, { icon: 'chest', title: '把调好的整只生物存起来，之后在任何选择生物的地方取出' }));
+  return h('div', { class: 'egg-who' }, kids);
+}

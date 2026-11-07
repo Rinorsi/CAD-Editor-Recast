@@ -231,8 +231,7 @@ function evRidingTab(body) {
   if (!ps.length) body.appendChild(xEmpty('没有乘客。'));
   ps.forEach(function (p) { node(p, 0); });
   var type = WE.rideType || 'minecraft:chicken', data = WE.rideData || '';
-  var sel = kRegSelect({ reg: 'entity_type', value: type, title: '选择生物', onEntityNbt: function (snbt) { var o = vaultEntityObj(snbt); WE.rideType = o.id || WE.rideType; delete o.id; WE.rideData = toSnbt(o, null, false); weRedrawBody(); }, onChange: function (id) { WE.rideType = id; } });
-  addBox.appendChild(xRow({ icon: false, title: '生物', right: sel.el }));
+  addBox.appendChild(esEntityHeader({ id: type, onPick: function (id) { WE.rideType = id; weRedrawBody(); }, onEntityNbt: function (snbt) { var o = vaultEntityObj(snbt); WE.rideType = o.id || WE.rideType; delete o.id; WE.rideData = toSnbt(o, null, false); weRedrawBody(); } }));
   var inp = kInput(data, function () {}, { placeholder: '可选的数据，比如 {CustomName:"小鸡"}' }); inp.classList.add('we-in');
   inp.addEventListener('change', function () { WE.rideData = inp.value; });
   addBox.appendChild(xRow({ icon: false, title: '初始数据', sub: 'SNBT，可以不填', right: inp }));

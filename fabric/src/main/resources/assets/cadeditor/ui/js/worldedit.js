@@ -184,17 +184,14 @@ function weSpawnerTab(body) {
 /* ---------- 实体：变种、常用开关、装备（eschema.js，数据来自游戏的 entity_schema）；其余字段在「数据」页 ---------- */
 function weEntityTab(body) {
   weObj();
-  /* 整只生物存进保险库 / 把保险库里的生物数据套到这只上（类型必须相同；位置、UUID 不动） */
-  body.appendChild(h('div', { class: 'k-row' }, [
-    kBtn('存入保险库', function () { var t = WE.text; try { t = nbtPrint(nbtParse(WE.text), false); } catch (e) {} openVaultSaveEntity(t, weName()); }, { icon: 'chest', title: '把这只生物的数据存起来（位置、UUID 等运行时数据不会存）' }),
-    kBtn('从保险库套用', function () {
-      openVault({ kind: 'entity', pickEntity: function (snbt) {
-        var o = vaultEntityObj(snbt), cur = weObj();
-        if (o.id && Reg.full(o.id) !== Reg.full(WE.w.type)) { toast('类型不同：这是 ' + spEntityName(o.id) + '，这里是 ' + weName() + '。放置好的生物不能换类型。', 'warn'); return; }
-        Object.keys(o).forEach(function (k) { if (k !== 'id') cur[k] = o[k]; });
-        WE.obj = cur; wePut(); weRedrawBody();
-      } });
-    }, { icon: 'download', title: '把保险库里同类型生物的外观、属性、装备等套上来' })]));
+  body.appendChild(esEntityHeader({ id: WE.w.type, sub: shortId(WE.w.type) + ' · 放置好的生物不能换类型',
+    snbtText: function () { var t = WE.text; try { t = nbtPrint(nbtParse(WE.text), false); } catch (e) {} return t; },
+    onApplyVault: function (snbt) {
+      var o = vaultEntityObj(snbt), cur = weObj();
+      if (o.id && Reg.full(o.id) !== Reg.full(WE.w.type)) { toast('类型不同：这是 ' + spEntityName(o.id) + '，这里是 ' + weName() + '。放置好的生物不能换类型。', 'warn'); return; }
+      Object.keys(o).forEach(function (k) { if (k !== 'id') cur[k] = o[k]; });
+      WE.obj = cur; wePut(); weRedrawBody();
+    } }));
   body.appendChild(esPanel({ type: WE.w.type, get: function () { return WE.obj; }, set: function (o) { WE.obj = o; wePut(); } }));
   body.appendChild(h('div', { class: 'k-sub', text: '位置、UUID 等其余字段在「数据」页用 SNBT 编辑。' }));
 }
