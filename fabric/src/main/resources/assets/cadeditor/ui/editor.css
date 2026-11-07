@@ -99,7 +99,7 @@ html, body { margin: 0; height: 100%; }
 .ed-stage { position: relative; flex: none; height: 76px; display: flex; align-items: center; justify-content: center; }
 .ed-stage .plate { position: absolute; left: 50%; top: 50%; width: 84px; height: 84px; margin: -42px 0 0 -42px; background: radial-gradient(circle, color-mix(in srgb, var(--cat) 52%, transparent), rgba(0, 0, 0, 0) 68%); }
 .ed-stage .k-ico { position: relative; image-rendering: pixelated; }
-.ed-stage.ent { height: 120px; overflow: hidden; }
+.ed-stage.ent { height: 160px; overflow: hidden; }
 .ed-stage .k-ent { position: relative; width: 100%; height: 100%; -mc-entity-focus: center; -mc-yaw: -24deg; -mc-pitch: 8deg; }
 .ed-stage .k-model { position: relative; width: 64px; height: 64px; -mc-pitch: 14deg; animation: ed-turn 8s linear infinite; }
 @keyframes ed-turn { from { -mc-yaw: 0deg; } to { -mc-yaw: 360deg; } }

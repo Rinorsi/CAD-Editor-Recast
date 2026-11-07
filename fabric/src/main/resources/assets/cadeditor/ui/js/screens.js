@@ -408,7 +408,7 @@ function drawHero() {
     shead.appendChild(seg);
   }
   if (entView && open) {
-    var rv = h('div', { class: 'k-mini ed-view', title: '恢复默认视角（角度、缩放、位置）' }, [uiIcon('undo', 11)]);
+    var rv = h('div', { class: 'k-mini ed-view', title: '恢复默认视角。左键拖动旋转，滚轮缩放，右键拖动移动' }, [uiIcon('undo', 11)]);
     rv.addEventListener('click', function (e) { e.stopPropagation(); UI.entView = null; var o = $('hero') && $('hero').querySelector('.k-ent'); if (o) o.remove(); drawHero(); });
     shead.appendChild(rv);
   }

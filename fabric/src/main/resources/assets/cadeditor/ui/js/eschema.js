@@ -214,7 +214,7 @@ var ES_PAN = null;
 function heroEntity(type, data, old) {
   var full = Reg.full(type), v = UI.entView;
   if (!v || v.type !== full) v = UI.entView = { type: full, s: 1, x: 0, y: 0 };
-  var el = old && old.getAttribute('type') === full ? old : h('entity', { class: 'k-ent', type: full, rotatable: true, title: '左键拖动旋转 · 滚轮缩放 · 右键拖动移动位置' });
+  var el = old && old.getAttribute('type') === full ? old : h('entity', { class: 'k-ent', type: full, rotatable: true });
   var pa = esPreviewAttrs(full, data);
   ['baby', 'components'].concat(Object.keys(ES_SLOT)).forEach(function (k) {
     if (pa[k] === undefined) { if (el.getAttribute(k) !== null) el.removeAttribute(k); }
@@ -226,7 +226,7 @@ function heroEntity(type, data, old) {
     el.addEventListener('wheel', function (e) {
       e.preventDefault(); if (e.stopPropagation) e.stopPropagation();
       var w = UI.entView; if (!w) return;
-      w.s = Math.max(0.4, Math.min(6, w.s * (e.deltaY < 0 ? 1.15 : 1 / 1.15)));
+      w.s = Math.max(0.5, Math.min(3, w.s * (e.deltaY < 0 ? 1.15 : 1 / 1.15)));
       esEntPaint(el);
     });
     el.addEventListener('mousedown', function (e) {
@@ -246,8 +246,11 @@ document.addEventListener('mousemove', function (e) {
   if (!ES_PAN) return;
   if (e.buttons !== undefined && !(e.buttons & 6)) { ES_PAN = null; return; }
   var w = UI.entView; if (!w) { ES_PAN = null; return; }
-  w.x = Math.max(-120, Math.min(120, ES_PAN.x + e.clientX - ES_PAN.x0));
-  w.y = Math.max(-90, Math.min(90, ES_PAN.y + e.clientY - ES_PAN.y0));
+  /* 最多移到框的边上，生物不会整个移出去 */
+  var r = ES_PAN.el.parentNode && ES_PAN.el.parentNode.getBoundingClientRect ? ES_PAN.el.parentNode.getBoundingClientRect() : { width: 200, height: 150 };
+  var mx = r.width / 2, my = r.height / 2;
+  w.x = Math.max(-mx, Math.min(mx, ES_PAN.x + e.clientX - ES_PAN.x0));
+  w.y = Math.max(-my, Math.min(my, ES_PAN.y + e.clientY - ES_PAN.y0));
   esEntPaint(ES_PAN.el);
 });
 document.addEventListener('mouseup', function (e) { if (ES_PAN && (e.button === 1 || e.button === 2)) ES_PAN = null; });
