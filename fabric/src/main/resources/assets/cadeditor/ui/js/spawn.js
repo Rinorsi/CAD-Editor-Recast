@@ -183,6 +183,13 @@ function buildMobSpawner(body, obj, beId, put) {
     obj.SpawnData = isObj(obj.SpawnData) ? obj.SpawnData : {}; obj.SpawnData.entity = isObj(obj.SpawnData.entity) ? obj.SpawnData.entity : {};
     obj.SpawnData.entity.id = Reg.full(x); put();
   } }).el));
+  /* 刷出来的生物身上的装备：和刷怪蛋共用装备格子（可从保险库取），写进 SpawnData.entity */
+  if (eid) {
+    body.appendChild(xSec('helmet', '刷出的生物穿的装备', '只对「当前生物」生效'));
+    var gearHost = h('div'), gearIo = { get: function () { return obj.SpawnData.entity; }, set: function (e) { obj.SpawnData.entity = e; put(); }, redraw: function () { paintGear(); } };
+    var paintGear = function () { clear(gearHost); var okS = esReady(Reg.full(eid), gearHost); if (okS) gearHost.appendChild(esGearGrid(okS, gearIo, Reg.full(eid))); };
+    paintGear(); body.appendChild(gearHost);
+  }
   body.appendChild(xSec('list', '随机池', '有池子时，每次按权重从里面挑一种'));
   var pot = Array.isArray(obj.SpawnPotentials) ? obj.SpawnPotentials : [];
   var pool = spPool(pot, function () { if (pot.length) obj.SpawnPotentials = pot; else delete obj.SpawnPotentials; put(); }, '没有随机池，只刷上面的生物');

@@ -170,6 +170,7 @@ AUTO_BODY.charged_projectiles=function(card,cid,v){
     var rest=clone(it);delete rest.id;delete rest.count;
     body.appendChild(worldFold('弹药附加数据',worldRaw(rest,function(x){worldCompound(x);if(x.id!==undefined||x.count!==undefined)throw new Error('物品和数量请在上方修改');var id=it.id,n=it.count;Object.keys(it).forEach(function(k){delete it[k];});Object.keys(x).forEach(function(k){it[k]=x[k];});it.id=id;it.count=n;ch();}),false));
   },{add:function(){openRegPick({reg:'item',title:'添加弹药',onPick:function(id){arr.push({id:id,count:1});autoPut(cid,arr);drawDetail();}});},remove:function(i){arr.splice(i,1);autoPut(cid,arr);},changed:function(){autoPut(cid,arr);},title:function(it){return nameOfItem(it.id);},icon:function(it){return itemIcon(it.id,16);},summary:function(it){return '× '+(it.count||1);}},'添加弹药','尚未装填弹药');
+  card.body.appendChild(h('div',{class:'k-row'},[kBtn('从保险库取一件',function(){openVault({pick:function(stack){arr.push(vaultNested(stack));NBT_FORCE.charged_projectiles=true;autoPut(cid,arr);drawDetail();}});},{icon:'chest',title:'带着它的全部自定义组件放进来'})]));
 };
 
 AUTO_BODY.bees=function(card,cid,v){
