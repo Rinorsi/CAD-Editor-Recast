@@ -9,6 +9,8 @@
 /logs/
 /daily/
 /.backend-b/
+/.world-edit/
+/.search-tooltip-api.tmp
 /.search/
 fabric/versions/*/logs/
 fabric/versions/*/run/
