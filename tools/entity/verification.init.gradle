@@ -1,5 +1,15 @@
 gradle.projectsEvaluated {
     def p = gradle.rootProject.project(":fabric:26.1.2")
+    ['entitySchemaTest':true, 'entitySchemaServerTest':false].each { taskName, clientSide ->
+        if (!p.tasks.findByName(taskName)) p.tasks.register(taskName, JavaExec) {
+            dependsOn p.tasks.named('codecVerificationClasses')
+            classpath = p.sourceSets.codecVerification.runtimeClasspath
+            mainClass = 'dev.rinorsi.editor.registry.EntitySchemaTest'
+            workingDir = gradle.rootProject.projectDir
+            jvmArgs '-Djava.awt.headless=true', '-Dcadeditor.schema.client=' + clientSide
+            args gradle.rootProject.file('logs/entity-schema/captured-' + (clientSide ? 'client' : 'server') + '.json').absolutePath
+        }
+    }
     p.tasks.register("spawnerApplyTest", JavaExec) {
         dependsOn p.tasks.named("codecVerificationClasses")
         classpath = p.sourceSets.codecVerification.runtimeClasspath

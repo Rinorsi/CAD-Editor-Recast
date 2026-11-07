@@ -1,0 +1,1837 @@
+{
+  "cat": {
+    "id": "minecraft:cat",
+    "variants": [
+      {
+        "id": "minecraft:cat/variant",
+        "label": "minecraft:cat/variant",
+        "kind": "holder",
+        "nbt": {
+          "path": [
+            "variant"
+          ],
+          "valueFormat": "snbt"
+        },
+        "default": "minecraft:black",
+        "options": [
+          {
+            "value": "minecraft:red",
+            "snbt": "\"minecraft:red\"",
+            "label": "minecraft:red"
+          },
+          {
+            "value": "minecraft:white",
+            "snbt": "\"minecraft:white\"",
+            "label": "minecraft:white"
+          },
+          {
+            "value": "minecraft:tabby",
+            "snbt": "\"minecraft:tabby\"",
+            "label": "minecraft:tabby"
+          },
+          {
+            "value": "minecraft:calico",
+            "snbt": "\"minecraft:calico\"",
+            "label": "minecraft:calico"
+          },
+          {
+            "value": "minecraft:black",
+            "snbt": "\"minecraft:black\"",
+            "label": "minecraft:black"
+          },
+          {
+            "value": "minecraft:siamese",
+            "snbt": "\"minecraft:siamese\"",
+            "label": "minecraft:siamese"
+          },
+          {
+            "value": "minecraft:persian",
+            "snbt": "\"minecraft:persian\"",
+            "label": "minecraft:persian"
+          },
+          {
+            "value": "minecraft:jellie",
+            "snbt": "\"minecraft:jellie\"",
+            "label": "minecraft:jellie"
+          },
+          {
+            "value": "minecraft:ragdoll",
+            "snbt": "\"minecraft:ragdoll\"",
+            "label": "minecraft:ragdoll"
+          },
+          {
+            "value": "minecraft:all_black",
+            "snbt": "\"minecraft:all_black\"",
+            "label": "minecraft:all_black"
+          },
+          {
+            "value": "minecraft:british_shorthair",
+            "snbt": "\"minecraft:british_shorthair\"",
+            "label": "minecraft:british_shorthair"
+          }
+        ],
+        "registry": "minecraft:cat_variant"
+      },
+      {
+        "id": "minecraft:cat/sound_variant",
+        "label": "minecraft:cat/sound_variant",
+        "kind": "holder",
+        "nbt": {
+          "path": [
+            "sound_variant"
+          ],
+          "valueFormat": "snbt"
+        },
+        "default": "minecraft:classic",
+        "options": [
+          {
+            "value": "minecraft:classic",
+            "snbt": "\"minecraft:classic\"",
+            "label": "minecraft:classic"
+          },
+          {
+            "value": "minecraft:royal",
+            "snbt": "\"minecraft:royal\"",
+            "label": "minecraft:royal"
+          }
+        ],
+        "registry": "minecraft:cat_sound_variant"
+      },
+      {
+        "id": "minecraft:cat/collar",
+        "label": "minecraft:cat/collar",
+        "kind": "enum",
+        "nbt": {
+          "path": [
+            "CollarColor"
+          ],
+          "valueFormat": "snbt",
+          "mask": 15
+        },
+        "default": 14,
+        "options": [
+          {
+            "value": 0,
+            "snbt": "0b",
+            "label": "white"
+          },
+          {
+            "value": 1,
+            "snbt": "1b",
+            "label": "orange"
+          },
+          {
+            "value": 2,
+            "snbt": "2b",
+            "label": "magenta"
+          },
+          {
+            "value": 3,
+            "snbt": "3b",
+            "label": "light_blue"
+          },
+          {
+            "value": 4,
+            "snbt": "4b",
+            "label": "yellow"
+          },
+          {
+            "value": 5,
+            "snbt": "5b",
+            "label": "lime"
+          },
+          {
+            "value": 6,
+            "snbt": "6b",
+            "label": "pink"
+          },
+          {
+            "value": 7,
+            "snbt": "7b",
+            "label": "gray"
+          },
+          {
+            "value": 8,
+            "snbt": "8b",
+            "label": "light_gray"
+          },
+          {
+            "value": 9,
+            "snbt": "9b",
+            "label": "cyan"
+          },
+          {
+            "value": 10,
+            "snbt": "10b",
+            "label": "purple"
+          },
+          {
+            "value": 11,
+            "snbt": "11b",
+            "label": "blue"
+          },
+          {
+            "value": 12,
+            "snbt": "12b",
+            "label": "brown"
+          },
+          {
+            "value": 13,
+            "snbt": "13b",
+            "label": "green"
+          },
+          {
+            "value": 14,
+            "snbt": "14b",
+            "label": "red"
+          },
+          {
+            "value": 15,
+            "snbt": "15b",
+            "label": "black"
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "slot": "mainhand",
+        "nbtPath": [
+          "equipment",
+          "mainhand"
+        ],
+        "canHold": true,
+        "dropChance": 0.085,
+        "dropChancePath": [
+          "drop_chances",
+          "mainhand"
+        ]
+      },
+      {
+        "slot": "offhand",
+        "nbtPath": [
+          "equipment",
+          "offhand"
+        ],
+        "canHold": true,
+        "dropChance": 0.085,
+        "dropChancePath": [
+          "drop_chances",
+          "offhand"
+        ]
+      },
+      {
+        "slot": "feet",
+        "nbtPath": [
+          "equipment",
+          "feet"
+        ],
+        "canHold": true,
+        "dropChance": 0.085,
+        "dropChancePath": [
+          "drop_chances",
+          "feet"
+        ]
+      },
+      {
+        "slot": "legs",
+        "nbtPath": [
+          "equipment",
+          "legs"
+        ],
+        "canHold": true,
+        "dropChance": 0.085,
+        "dropChancePath": [
+          "drop_chances",
+          "legs"
+        ]
+      },
+      {
+        "slot": "chest",
+        "nbtPath": [
+          "equipment",
+          "chest"
+        ],
+        "canHold": true,
+        "dropChance": 0.085,
+        "dropChancePath": [
+          "drop_chances",
+          "chest"
+        ]
+      },
+      {
+        "slot": "head",
+        "nbtPath": [
+          "equipment",
+          "head"
+        ],
+        "canHold": true,
+        "dropChance": 0.085,
+        "dropChancePath": [
+          "drop_chances",
+          "head"
+        ]
+      },
+      {
+        "slot": "body",
+        "nbtPath": [
+          "equipment",
+          "body"
+        ],
+        "canHold": true,
+        "dropChance": 0.085,
+        "dropChancePath": [
+          "drop_chances",
+          "body"
+        ]
+      },
+      {
+        "slot": "saddle",
+        "nbtPath": [
+          "equipment",
+          "saddle"
+        ],
+        "canHold": true,
+        "dropChance": 0.085,
+        "dropChancePath": [
+          "drop_chances",
+          "saddle"
+        ]
+      }
+    ],
+    "flags": [
+      {
+        "key": "Silent",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": false,
+        "id": "silent",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "Invulnerable",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": true,
+        "id": "invulnerable",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "NoGravity",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": false,
+        "id": "no_gravity",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "Glowing",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": false,
+        "id": "glowing",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "CustomNameVisible",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": false,
+        "id": "custom_name_visible",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "CustomName",
+        "type": "component",
+        "default": null,
+        "present_by_default": false,
+        "id": "custom_name",
+        "common": true,
+        "enabledValue": "schema probe",
+        "enabledSnbt": "\"schema probe\""
+      },
+      {
+        "key": "NoAI",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": false,
+        "id": "no_ai",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "PersistenceRequired",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": true,
+        "id": "persistence",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "Health",
+        "type": "float",
+        "default": 10.0,
+        "present_by_default": true,
+        "id": "health",
+        "common": true,
+        "enabledValue": 5.0,
+        "enabledSnbt": "5.0f",
+        "min": 0,
+        "max": 10.0,
+        "max_scope": "default_entity; apply recomputes after variant/attributes load"
+      },
+      {
+        "key": "Age",
+        "type": "int",
+        "default": 1,
+        "present_by_default": true,
+        "id": "baby",
+        "common": true,
+        "enabledValue": -1,
+        "enabledSnbt": "-1",
+        "babyAge": -24000,
+        "adultAge": 0,
+        "roundtrip": "baby-sign-only"
+      },
+      {
+        "key": "AgeLocked",
+        "type": "BYTE",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Brain",
+        "type": "COMPOUND",
+        "default": {
+          "memories": {}
+        },
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "HurtByTimestamp",
+        "type": "INT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Sitting",
+        "type": "BYTE",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "FallFlying",
+        "type": "BYTE",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "ForcedAge",
+        "type": "INT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "sound_variant",
+        "type": "STRING",
+        "default": "minecraft:classic",
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "PortalCooldown",
+        "type": "INT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "AbsorptionAmount",
+        "type": "FLOAT",
+        "default": 0.0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "InLove",
+        "type": "INT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "DeathTime",
+        "type": "SHORT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "variant",
+        "type": "STRING",
+        "default": "minecraft:black",
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "id",
+        "type": "STRING",
+        "default": "minecraft:cat",
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "CollarColor",
+        "type": "BYTE",
+        "default": 14,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Motion",
+        "type": "LIST",
+        "default": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "LeftHanded",
+        "type": "BYTE",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "fall_distance",
+        "type": "DOUBLE",
+        "default": 0.0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Air",
+        "type": "SHORT",
+        "default": 300,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "OnGround",
+        "type": "BYTE",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Rotation",
+        "type": "LIST",
+        "default": [
+          0.23574468,
+          0.0
+        ],
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "current_impulse_context_reset_grace_time",
+        "type": "INT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Pos",
+        "type": "LIST",
+        "default": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Fire",
+        "type": "SHORT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "CanPickUpLoot",
+        "type": "BYTE",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "attributes",
+        "type": "LIST",
+        "default": [],
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "HurtTime",
+        "type": "SHORT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      }
+    ],
+    "warnings": [],
+    "preview": {
+      "width": 0.6,
+      "height": 0.7,
+      "eyeHeight": 0.35
+    },
+    "available": true,
+    "canBePreviewed": true,
+    "defaults_source": "factory-load-save",
+    "default_nbt": "{AbsorptionAmount:0.0f,Age:1,AgeLocked:0b,Air:300s,Brain:{memories:{}},CanPickUpLoot:0b,CollarColor:14b,DeathTime:0s,FallFlying:0b,Fire:0s,ForcedAge:0,Health:10.0f,HurtByTimestamp:0,HurtTime:0s,InLove:0,Invulnerable:0b,LeftHanded:0b,Motion:[0.0d,0.0d,0.0d],OnGround:0b,PersistenceRequired:0b,PortalCooldown:0,Pos:[0.0d,0.0d,0.0d],Rotation:[0.23574468f,0.0f],Sitting:0b,attributes:[],current_impulse_context_reset_grace_time:0,fall_distance:0.0d,id:\"minecraft:cat\",sound_variant:\"minecraft:classic\",variant:\"minecraft:black\"}"
+  },
+  "sheep": {
+    "id": "minecraft:sheep",
+    "variants": [
+      {
+        "id": "minecraft:sheep/color",
+        "label": "minecraft:sheep/color",
+        "kind": "enum",
+        "nbt": {
+          "path": [
+            "Color"
+          ],
+          "valueFormat": "snbt",
+          "mask": 15
+        },
+        "default": 0,
+        "options": [
+          {
+            "value": 0,
+            "snbt": "0b",
+            "label": "white"
+          },
+          {
+            "value": 1,
+            "snbt": "1b",
+            "label": "orange"
+          },
+          {
+            "value": 2,
+            "snbt": "2b",
+            "label": "magenta"
+          },
+          {
+            "value": 3,
+            "snbt": "3b",
+            "label": "light_blue"
+          },
+          {
+            "value": 4,
+            "snbt": "4b",
+            "label": "yellow"
+          },
+          {
+            "value": 5,
+            "snbt": "5b",
+            "label": "lime"
+          },
+          {
+            "value": 6,
+            "snbt": "6b",
+            "label": "pink"
+          },
+          {
+            "value": 7,
+            "snbt": "7b",
+            "label": "gray"
+          },
+          {
+            "value": 8,
+            "snbt": "8b",
+            "label": "light_gray"
+          },
+          {
+            "value": 9,
+            "snbt": "9b",
+            "label": "cyan"
+          },
+          {
+            "value": 10,
+            "snbt": "10b",
+            "label": "purple"
+          },
+          {
+            "value": 11,
+            "snbt": "11b",
+            "label": "blue"
+          },
+          {
+            "value": 12,
+            "snbt": "12b",
+            "label": "brown"
+          },
+          {
+            "value": 13,
+            "snbt": "13b",
+            "label": "green"
+          },
+          {
+            "value": 14,
+            "snbt": "14b",
+            "label": "red"
+          },
+          {
+            "value": 15,
+            "snbt": "15b",
+            "label": "black"
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "slot": "mainhand",
+        "nbtPath": [
+          "equipment",
+          "mainhand"
+        ],
+        "canHold": true,
+        "dropChance": 0.085,
+        "dropChancePath": [
+          "drop_chances",
+          "mainhand"
+        ]
+      },
+      {
+        "slot": "offhand",
+        "nbtPath": [
+          "equipment",
+          "offhand"
+        ],
+        "canHold": true,
+        "dropChance": 0.085,
+        "dropChancePath": [
+          "drop_chances",
+          "offhand"
+        ]
+      },
+      {
+        "slot": "feet",
+        "nbtPath": [
+          "equipment",
+          "feet"
+        ],
+        "canHold": true,
+        "dropChance": 0.085,
+        "dropChancePath": [
+          "drop_chances",
+          "feet"
+        ]
+      },
+      {
+        "slot": "legs",
+        "nbtPath": [
+          "equipment",
+          "legs"
+        ],
+        "canHold": true,
+        "dropChance": 0.085,
+        "dropChancePath": [
+          "drop_chances",
+          "legs"
+        ]
+      },
+      {
+        "slot": "chest",
+        "nbtPath": [
+          "equipment",
+          "chest"
+        ],
+        "canHold": true,
+        "dropChance": 0.085,
+        "dropChancePath": [
+          "drop_chances",
+          "chest"
+        ]
+      },
+      {
+        "slot": "head",
+        "nbtPath": [
+          "equipment",
+          "head"
+        ],
+        "canHold": true,
+        "dropChance": 0.085,
+        "dropChancePath": [
+          "drop_chances",
+          "head"
+        ]
+      },
+      {
+        "slot": "body",
+        "nbtPath": [
+          "equipment",
+          "body"
+        ],
+        "canHold": true,
+        "dropChance": 0.085,
+        "dropChancePath": [
+          "drop_chances",
+          "body"
+        ]
+      },
+      {
+        "slot": "saddle",
+        "nbtPath": [
+          "equipment",
+          "saddle"
+        ],
+        "canHold": true,
+        "dropChance": 0.085,
+        "dropChancePath": [
+          "drop_chances",
+          "saddle"
+        ]
+      }
+    ],
+    "flags": [
+      {
+        "key": "Silent",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": false,
+        "id": "silent",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "Invulnerable",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": true,
+        "id": "invulnerable",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "NoGravity",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": false,
+        "id": "no_gravity",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "Glowing",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": false,
+        "id": "glowing",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "CustomNameVisible",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": false,
+        "id": "custom_name_visible",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "CustomName",
+        "type": "component",
+        "default": null,
+        "present_by_default": false,
+        "id": "custom_name",
+        "common": true,
+        "enabledValue": "schema probe",
+        "enabledSnbt": "\"schema probe\""
+      },
+      {
+        "key": "NoAI",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": false,
+        "id": "no_ai",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "PersistenceRequired",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": true,
+        "id": "persistence",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "Health",
+        "type": "float",
+        "default": 8.0,
+        "present_by_default": true,
+        "id": "health",
+        "common": true,
+        "enabledValue": 4.0,
+        "enabledSnbt": "4.0f",
+        "min": 0,
+        "max": 8.0,
+        "max_scope": "default_entity; apply recomputes after variant/attributes load"
+      },
+      {
+        "key": "Age",
+        "type": "int",
+        "default": 1,
+        "present_by_default": true,
+        "id": "baby",
+        "common": true,
+        "enabledValue": -1,
+        "enabledSnbt": "-1",
+        "babyAge": -24000,
+        "adultAge": 0,
+        "roundtrip": "baby-sign-only"
+      },
+      {
+        "key": "AgeLocked",
+        "type": "BYTE",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Brain",
+        "type": "COMPOUND",
+        "default": {
+          "memories": {}
+        },
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "HurtByTimestamp",
+        "type": "INT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "FallFlying",
+        "type": "BYTE",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "ForcedAge",
+        "type": "INT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "PortalCooldown",
+        "type": "INT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "AbsorptionAmount",
+        "type": "FLOAT",
+        "default": 0.0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "InLove",
+        "type": "INT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "DeathTime",
+        "type": "SHORT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "id",
+        "type": "STRING",
+        "default": "minecraft:sheep",
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Motion",
+        "type": "LIST",
+        "default": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Color",
+        "type": "BYTE",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "LeftHanded",
+        "type": "BYTE",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "fall_distance",
+        "type": "DOUBLE",
+        "default": 0.0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Air",
+        "type": "SHORT",
+        "default": 300,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "OnGround",
+        "type": "BYTE",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Rotation",
+        "type": "LIST",
+        "default": [
+          3.5594277,
+          0.0
+        ],
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "current_impulse_context_reset_grace_time",
+        "type": "INT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Pos",
+        "type": "LIST",
+        "default": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Fire",
+        "type": "SHORT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "CanPickUpLoot",
+        "type": "BYTE",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "attributes",
+        "type": "LIST",
+        "default": [],
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Sheared",
+        "type": "BYTE",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "HurtTime",
+        "type": "SHORT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      }
+    ],
+    "warnings": [],
+    "preview": {
+      "width": 0.9,
+      "height": 1.3,
+      "eyeHeight": 1.235
+    },
+    "available": true,
+    "canBePreviewed": true,
+    "defaults_source": "factory-load-save",
+    "default_nbt": "{AbsorptionAmount:0.0f,Age:1,AgeLocked:0b,Air:300s,Brain:{memories:{}},CanPickUpLoot:0b,Color:0b,DeathTime:0s,FallFlying:0b,Fire:0s,ForcedAge:0,Health:8.0f,HurtByTimestamp:0,HurtTime:0s,InLove:0,Invulnerable:0b,LeftHanded:0b,Motion:[0.0d,0.0d,0.0d],OnGround:0b,PersistenceRequired:0b,PortalCooldown:0,Pos:[0.0d,0.0d,0.0d],Rotation:[3.5594277f,0.0f],Sheared:0b,attributes:[],current_impulse_context_reset_grace_time:0,fall_distance:0.0d,id:\"minecraft:sheep\"}"
+  },
+  "zombie": {
+    "id": "minecraft:zombie",
+    "variants": [],
+    "equipment": [
+      {
+        "slot": "mainhand",
+        "nbtPath": [
+          "equipment",
+          "mainhand"
+        ],
+        "canHold": true,
+        "dropChance": 0.085,
+        "dropChancePath": [
+          "drop_chances",
+          "mainhand"
+        ]
+      },
+      {
+        "slot": "offhand",
+        "nbtPath": [
+          "equipment",
+          "offhand"
+        ],
+        "canHold": true,
+        "dropChance": 0.085,
+        "dropChancePath": [
+          "drop_chances",
+          "offhand"
+        ]
+      },
+      {
+        "slot": "feet",
+        "nbtPath": [
+          "equipment",
+          "feet"
+        ],
+        "canHold": true,
+        "dropChance": 0.085,
+        "dropChancePath": [
+          "drop_chances",
+          "feet"
+        ]
+      },
+      {
+        "slot": "legs",
+        "nbtPath": [
+          "equipment",
+          "legs"
+        ],
+        "canHold": true,
+        "dropChance": 0.085,
+        "dropChancePath": [
+          "drop_chances",
+          "legs"
+        ]
+      },
+      {
+        "slot": "chest",
+        "nbtPath": [
+          "equipment",
+          "chest"
+        ],
+        "canHold": true,
+        "dropChance": 0.085,
+        "dropChancePath": [
+          "drop_chances",
+          "chest"
+        ]
+      },
+      {
+        "slot": "head",
+        "nbtPath": [
+          "equipment",
+          "head"
+        ],
+        "canHold": true,
+        "dropChance": 0.085,
+        "dropChancePath": [
+          "drop_chances",
+          "head"
+        ]
+      },
+      {
+        "slot": "body",
+        "nbtPath": [
+          "equipment",
+          "body"
+        ],
+        "canHold": true,
+        "dropChance": 0.085,
+        "dropChancePath": [
+          "drop_chances",
+          "body"
+        ]
+      },
+      {
+        "slot": "saddle",
+        "nbtPath": [
+          "equipment",
+          "saddle"
+        ],
+        "canHold": true,
+        "dropChance": 0.085,
+        "dropChancePath": [
+          "drop_chances",
+          "saddle"
+        ]
+      }
+    ],
+    "flags": [
+      {
+        "key": "Silent",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": false,
+        "id": "silent",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "Invulnerable",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": true,
+        "id": "invulnerable",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "NoGravity",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": false,
+        "id": "no_gravity",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "Glowing",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": false,
+        "id": "glowing",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "CustomNameVisible",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": false,
+        "id": "custom_name_visible",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "CustomName",
+        "type": "component",
+        "default": null,
+        "present_by_default": false,
+        "id": "custom_name",
+        "common": true,
+        "enabledValue": "schema probe",
+        "enabledSnbt": "\"schema probe\""
+      },
+      {
+        "key": "NoAI",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": false,
+        "id": "no_ai",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "PersistenceRequired",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": true,
+        "id": "persistence",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "Health",
+        "type": "float",
+        "default": 20.0,
+        "present_by_default": true,
+        "id": "health",
+        "common": true,
+        "enabledValue": 10.0,
+        "enabledSnbt": "10.0f",
+        "min": 0,
+        "max": 20.0,
+        "max_scope": "default_entity; apply recomputes after variant/attributes load"
+      },
+      {
+        "key": "IsBaby",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": true,
+        "id": "baby",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "Brain",
+        "type": "COMPOUND",
+        "default": {
+          "memories": {}
+        },
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "HurtByTimestamp",
+        "type": "INT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "FallFlying",
+        "type": "BYTE",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "PortalCooldown",
+        "type": "INT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "AbsorptionAmount",
+        "type": "FLOAT",
+        "default": 0.0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "InWaterTime",
+        "type": "INT",
+        "default": -1,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "DeathTime",
+        "type": "SHORT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "id",
+        "type": "STRING",
+        "default": "minecraft:zombie",
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Motion",
+        "type": "LIST",
+        "default": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "LeftHanded",
+        "type": "BYTE",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "fall_distance",
+        "type": "DOUBLE",
+        "default": 0.0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Air",
+        "type": "SHORT",
+        "default": 300,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "OnGround",
+        "type": "BYTE",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Rotation",
+        "type": "LIST",
+        "default": [
+          0.8581907,
+          0.0
+        ],
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "current_impulse_context_reset_grace_time",
+        "type": "INT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Pos",
+        "type": "LIST",
+        "default": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "CanBreakDoors",
+        "type": "BYTE",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Fire",
+        "type": "SHORT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "CanPickUpLoot",
+        "type": "BYTE",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "attributes",
+        "type": "LIST",
+        "default": [],
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "HurtTime",
+        "type": "SHORT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "DrownedConversionTime",
+        "type": "INT",
+        "default": -1,
+        "present_by_default": true,
+        "common": false
+      }
+    ],
+    "warnings": [],
+    "preview": {
+      "width": 0.6,
+      "height": 1.95,
+      "eyeHeight": 1.74
+    },
+    "available": true,
+    "canBePreviewed": true,
+    "defaults_source": "factory-load-save",
+    "default_nbt": "{AbsorptionAmount:0.0f,Air:300s,Brain:{memories:{}},CanBreakDoors:0b,CanPickUpLoot:0b,DeathTime:0s,DrownedConversionTime:-1,FallFlying:0b,Fire:0s,Health:20.0f,HurtByTimestamp:0,HurtTime:0s,InWaterTime:-1,Invulnerable:0b,IsBaby:0b,LeftHanded:0b,Motion:[0.0d,0.0d,0.0d],OnGround:0b,PersistenceRequired:0b,PortalCooldown:0,Pos:[0.0d,0.0d,0.0d],Rotation:[0.8581907f,0.0f],attributes:[],current_impulse_context_reset_grace_time:0,fall_distance:0.0d,id:\"minecraft:zombie\"}"
+  },
+  "armor_stand": {
+    "id": "minecraft:armor_stand",
+    "variants": [],
+    "equipment": [
+      {
+        "slot": "mainhand",
+        "nbtPath": [
+          "equipment",
+          "mainhand"
+        ],
+        "canHold": false,
+        "requires": {
+          "ShowArms": 1
+        },
+        "requiresSnbt": "{ShowArms:1b}"
+      },
+      {
+        "slot": "offhand",
+        "nbtPath": [
+          "equipment",
+          "offhand"
+        ],
+        "canHold": false,
+        "requires": {
+          "ShowArms": 1
+        },
+        "requiresSnbt": "{ShowArms:1b}"
+      },
+      {
+        "slot": "feet",
+        "nbtPath": [
+          "equipment",
+          "feet"
+        ],
+        "canHold": true
+      },
+      {
+        "slot": "legs",
+        "nbtPath": [
+          "equipment",
+          "legs"
+        ],
+        "canHold": true
+      },
+      {
+        "slot": "chest",
+        "nbtPath": [
+          "equipment",
+          "chest"
+        ],
+        "canHold": true
+      },
+      {
+        "slot": "head",
+        "nbtPath": [
+          "equipment",
+          "head"
+        ],
+        "canHold": true
+      }
+    ],
+    "flags": [
+      {
+        "key": "Silent",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": false,
+        "id": "silent",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "Invulnerable",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": true,
+        "id": "invulnerable",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "NoGravity",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": false,
+        "id": "no_gravity",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "Glowing",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": false,
+        "id": "glowing",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "CustomNameVisible",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": false,
+        "id": "custom_name_visible",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "CustomName",
+        "type": "component",
+        "default": null,
+        "present_by_default": false,
+        "id": "custom_name",
+        "common": true,
+        "enabledValue": "schema probe",
+        "enabledSnbt": "\"schema probe\""
+      },
+      {
+        "key": "Health",
+        "type": "float",
+        "default": 20.0,
+        "present_by_default": true,
+        "id": "health",
+        "common": true,
+        "enabledValue": 10.0,
+        "enabledSnbt": "10.0f",
+        "min": 0,
+        "max": 20.0,
+        "max_scope": "default_entity; apply recomputes after variant/attributes load"
+      },
+      {
+        "key": "ShowArms",
+        "type": "byte-bool",
+        "default": false,
+        "present_by_default": true,
+        "id": "show_arms",
+        "common": true,
+        "enabledValue": 1,
+        "enabledSnbt": "1b"
+      },
+      {
+        "key": "Brain",
+        "type": "COMPOUND",
+        "default": {
+          "memories": {}
+        },
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "HurtByTimestamp",
+        "type": "INT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "FallFlying",
+        "type": "BYTE",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "PortalCooldown",
+        "type": "INT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "AbsorptionAmount",
+        "type": "FLOAT",
+        "default": 0.0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "DisabledSlots",
+        "type": "INT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "DeathTime",
+        "type": "SHORT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Pose",
+        "type": "COMPOUND",
+        "default": {},
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Invisible",
+        "type": "BYTE",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "id",
+        "type": "STRING",
+        "default": "minecraft:armor_stand",
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Motion",
+        "type": "LIST",
+        "default": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Small",
+        "type": "BYTE",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "fall_distance",
+        "type": "DOUBLE",
+        "default": 0.0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Air",
+        "type": "SHORT",
+        "default": 300,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "OnGround",
+        "type": "BYTE",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Rotation",
+        "type": "LIST",
+        "default": [
+          1.2327645,
+          0.0
+        ],
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "current_impulse_context_reset_grace_time",
+        "type": "INT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Pos",
+        "type": "LIST",
+        "default": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "Fire",
+        "type": "SHORT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "NoBasePlate",
+        "type": "BYTE",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "attributes",
+        "type": "LIST",
+        "default": [],
+        "present_by_default": true,
+        "common": false
+      },
+      {
+        "key": "HurtTime",
+        "type": "SHORT",
+        "default": 0,
+        "present_by_default": true,
+        "common": false
+      }
+    ],
+    "warnings": [],
+    "preview": {
+      "width": 0.5,
+      "height": 1.975,
+      "eyeHeight": 1.7775
+    },
+    "available": true,
+    "canBePreviewed": true,
+    "defaults_source": "factory-load-save",
+    "default_nbt": "{AbsorptionAmount:0.0f,Air:300s,Brain:{memories:{}},DeathTime:0s,DisabledSlots:0,FallFlying:0b,Fire:0s,Health:20.0f,HurtByTimestamp:0,HurtTime:0s,Invisible:0b,Invulnerable:0b,Motion:[0.0d,0.0d,0.0d],NoBasePlate:0b,OnGround:0b,PortalCooldown:0,Pos:[0.0d,0.0d,0.0d],Pose:{},Rotation:[1.2327645f,0.0f],ShowArms:0b,Small:0b,attributes:[],current_impulse_context_reset_grace_time:0,fall_distance:0.0d,id:\"minecraft:armor_stand\"}"
+  }
+}
