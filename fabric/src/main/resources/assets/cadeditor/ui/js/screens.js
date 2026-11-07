@@ -378,7 +378,7 @@ function drawHero() {
   /* 预览头：可折叠（折叠后不再渲染 3D 模型），右边是 2D / 3D 切换 */
   var open = UI.stageOpen !== false;
   var shead = h('div', { class: 'ed-stagehead' }, [uiIcon(open ? 'down' : 'forward', 8), h('span', { text: '预览' }), h('div', { class: 'grow' })]);
-  shead.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.ed-view')) return; UI.stageOpen = !open; Prefs.set('stageOpen', UI.stageOpen); drawHero(); });
+  shead.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.ed-view')) return; heroFold('.ed-stage', open, function (v) { UI.stageOpen = v; Prefs.set('stageOpen', v); }); });
   if (can3d && open) {
     var seg = h('div', { class: 'k-seg ed-view', title: '物品预览：2D 图标 / 3D 模型（会记住你的选择）' });
     ['2d', '3d'].forEach(function (v) {
@@ -404,7 +404,7 @@ function drawHero() {
   }
   var sOpen = UI.statsOpen !== false;
   var sh = h('div', { class: 'ed-stagehead' }, [uiIcon(sOpen ? 'down' : 'forward', 8), h('span', { text: '属性' }), h('div', { class: 'grow' })]);
-  sh.addEventListener('click', function () { UI.statsOpen = !sOpen; Prefs.set('statsOpen', UI.statsOpen); drawHero(); });
+  sh.addEventListener('click', function () { heroFold('.ed-stats', sOpen, function (v) { UI.statsOpen = v; Prefs.set('statsOpen', v); }); });
   hero.appendChild(sh);
   if (sOpen) hero.appendChild(stats);
   /* 提示框预览：可折叠、限高、内部滚动，放得下几十条附魔 */
@@ -412,7 +412,7 @@ function drawHero() {
   var dbg = h('div', { class: 'k-mini' + (UI.tipAdv ? ' on' : ''), title: '调试信息（F3+H）：显示物品 ID 和耐久' }, [uiIcon('bug', 11)]); dbg.addEventListener('click', function (e) { e.stopPropagation(); UI.tipAdv = !UI.tipAdv; drawHero(); });
   var big = h('div', { class: 'k-mini', title: '放大查看（近似预览，游戏内以原版绘制为准）' }, [uiIcon('maximize', 11)]); big.addEventListener('click', function (e) { e.stopPropagation(); openTipModal(); });
   tipHead.appendChild(dbg); tipHead.appendChild(big);
-  tipHead.addEventListener('click', function () { UI.tipOpen = !UI.tipOpen; drawHero(); });
+  tipHead.addEventListener('click', function () { heroFold('.k-scrollbox.tip', !!UI.tipOpen, function (v) { UI.tipOpen = v; }); });
   hero.appendChild(tipHead);
   if (UI.tipOpen) {
     var tip = buildTooltip(d, UI.tipAdv);
@@ -420,6 +420,14 @@ function drawHero() {
   }
   hero.scrollTop = scrollTop;
   fitTip();
+}
+/* 左栏的折叠区（预览 / 属性 / 提示框预览）：收起时先滑出再重画，展开时重画后滑入，和卡片的折叠动画一致 */
+function heroFold(sel, isOpen, apply) {
+  var hero = $('hero'), el = hero && hero.querySelector(sel);
+  if (isOpen && el) { uiSlide(el, false, function () { apply(false); drawHero(); }); return; }
+  apply(true); drawHero();
+  var h2 = $('hero'), e2 = h2 && h2.querySelector(sel);
+  if (e2) uiSlide(e2, true);
 }
 /* 提示框预览占满左栏下方剩余的空间：放得下就完整显示，放不下才在框内滚动 */
 function fitTip() {
