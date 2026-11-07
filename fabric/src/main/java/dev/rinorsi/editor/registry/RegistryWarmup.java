@@ -13,6 +13,7 @@ public final class RegistryWarmup {
         Thread thread = new Thread(r, "editor-registry-index"); thread.setDaemon(true); return thread;
     });
     private final String generation;
+    private final boolean lazyStorage;
     private final Iterator<Map.Entry<String, Supplier<Iterator<JsonObject>>>> sources;
     private Map.Entry<String, Supplier<Iterator<JsonObject>>> source;
     private Iterator<JsonObject> rows;
@@ -35,7 +36,10 @@ public final class RegistryWarmup {
         catch (RejectedExecutionException error) { return CompletableFuture.failedFuture(error); }
     }
     public RegistryWarmup(String generation, Map<String, Supplier<Iterator<JsonObject>>> sources) {
-        this.generation = generation; this.sources = sources.entrySet().iterator();
+        this(generation,sources,false);
+    }
+    public RegistryWarmup(String generation, Map<String, Supplier<Iterator<JsonObject>>> sources,boolean lazyStorage) {
+        this.generation = generation; this.sources = sources.entrySet().iterator();this.lazyStorage=lazyStorage;
     }
     public void tick() {
         if (completeNs != 0) return;
@@ -66,7 +70,13 @@ public final class RegistryWarmup {
                 List<JsonObject> detached = captured; captured = new ArrayList<>();
                 String name = source.getKey();
                 try { futures.put(name, CompletableFuture.supplyAsync(() -> {
-                    try { var index = RegistryIndex.build(name, generation, detached); if (!generation.equals("prime")) SearchChannel.offer(name, generation, detached); return index; }
+                    try {
+                        boolean lazy=lazyStorage&&dev.rinorsi.editor.registry.search.LazyCatalog.lazy(name,detached.size());
+                        RegistryIndex index;
+                        if(lazy){for(JsonObject row:detached){String id=row.get("id").getAsString(),display=row.has("name")?row.get("name").getAsString():id;row.addProperty("search_key",(display+" "+id).toLowerCase(Locale.ROOT));}index=RegistryIndex.indexOnly(name,generation,detached.size());}
+                        else index=RegistryIndex.build(name,generation,detached);
+                        if (!generation.equals("prime")) SearchChannel.offer(name, generation, detached); return index;
+                    }
                     catch (RuntimeException error) { return error(name, error); }
                 }, WORKER)); }
                 catch (RejectedExecutionException error) { futures.put(name, CompletableFuture.completedFuture(error(name, error))); }

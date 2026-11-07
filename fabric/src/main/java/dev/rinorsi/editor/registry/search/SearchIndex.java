@@ -8,8 +8,9 @@ import java.util.function.IntConsumer;
 public final class SearchIndex {
     public static final int MAX_ROWS = 250_000, MAX_TEXT_CHARS = 512, MAX_QUERY = 128, MAX_OFFSET = 10_000, MAX_LIMIT = 200;
     public static final long MAX_INDEX_BYTES = 256L * 1024 * 1024;
-    public record Row(String id, String name, String english, String subtitle, List<String> tags) {
-        public Row { Objects.requireNonNull(id); name = name == null ? id : name; english = english == null ? "" : english; subtitle = subtitle == null ? "" : subtitle; tags = List.copyOf(tags); }
+    public record Row(String id, String name, String english, String subtitle, List<String> tags, Map<String,Object> fields) {
+        public Row(String id,String name,String english,String subtitle,List<String> tags){this(id,name,english,subtitle,tags,Map.of());}
+        public Row { Objects.requireNonNull(id); name = name == null ? id : name; english = english == null ? "" : english; subtitle = subtitle == null ? "" : subtitle; tags = List.copyOf(tags); fields=fields.isEmpty()?Map.of():fields instanceof RowFields?fields:new RowFields(fields); }
         public String namespace() { int colon = id.indexOf(':'); return colon < 0 ? "minecraft" : id.substring(0, colon); }
     }
     private record Entry(Row row, String[] fields, String han, String full, String initials, long letters) {}
@@ -40,6 +41,8 @@ public final class SearchIndex {
             out[i]=new Entry(r,fields,hanText,full,initial,letterMask(allReadings(hanText,pinyin)));
             if(pinyin.hasHan(hanText))han.set(i);
             mods.merge(r.namespace(),1,Integer::sum);
+            bytes+=48+r.fields().size()*32L;
+            for(var extra:r.fields().entrySet())if(!Set.of("id","name","subtitle","tags","search_key").contains(extra.getKey()))bytes+=payloadBytes(extra.getValue());
             bytes+=240;for(String f:fields)bytes+=40L+2L*f.length();for(String tag:r.tags())bytes+=48L+2L*tag.length();
             // Fixed hashed bigram domain bounds vocabulary growth. Collisions are verified below.
             Set<Integer> unique=new HashSet<>();
@@ -49,12 +52,27 @@ public final class SearchIndex {
         }
         check(cancel);progress.accept(out.length);return new SearchIndex(out,Map.copyOf(grams),han,pinyin,mods,bytes+grams.size()*96L);
     }
+    private static long payloadBytes(Object value){
+        if(value instanceof Map<?,?> map){long bytes=64+map.size()*40L;for(Object v:map.values())bytes+=payloadBytes(v);return bytes;}
+        if(value instanceof List<?> list){long bytes=32+list.size()*8L;for(Object v:list)bytes+=payloadBytes(v);return bytes;}
+        if(value instanceof String text)return 40+text.length()*2L;return 24;
+    }
     private static int gram(char a,char b){return ((a*31+b)*0x9e3779b9>>>22)&1023;}
     private static String allReadings(String s,Pinyin p){StringBuilder b=new StringBuilder(s);for(char c:s.toCharArray()){String[] rs=p.readings(c);if(rs!=null)for(String r:rs)b.append(r);}return b.toString();}
     private static void check(BooleanSupplier cancel){if(cancel.getAsBoolean()||Thread.currentThread().isInterrupted())throw new java.util.concurrent.CancellationException();}
     public int size(){return entries.length;}
     public long estimatedBytes(){return estimatedBytes;}
     public Map<String,Integer> namespaces(){return namespaces;}
+    public List<Row> allRows(){return Arrays.stream(entries).map(Entry::row).toList();}
+    public record Lookup(List<Row> rows,List<String> missing){}
+    public Lookup lookup(List<String> ids,BooleanSupplier cancel){
+        if(ids.size()>64)throw new IllegalArgumentException("BAD_REQUEST");
+        List<Row> rows=new ArrayList<>();List<String> missing=new ArrayList<>();
+        for(String id:ids){check(cancel);int lo=0,hi=entries.length-1;Row found=null;
+            while(lo<=hi){int mid=(lo+hi)>>>1;int cmp=entries[mid].row().id().compareTo(id);if(cmp==0){found=entries[mid].row();break;}if(cmp<0)lo=mid+1;else hi=mid-1;}
+            if(found==null)missing.add(id);else rows.add(found);
+        }return new Lookup(List.copyOf(rows),List.copyOf(missing));
+    }
     public Result query(String raw,int offset,int limit,Set<String> namespaces,Set<String> tags,BooleanSupplier cancel) {
         if(raw.length()>MAX_QUERY||offset<0||offset>MAX_OFFSET||limit<1||limit>MAX_LIMIT)throw new IllegalArgumentException("BAD_REQUEST");
         String q=normalize(raw);BitSet candidates=new BitSet(entries.length);

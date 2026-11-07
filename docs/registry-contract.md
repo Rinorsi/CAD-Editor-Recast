@@ -1,5 +1,9 @@
 # 实时注册表合同 v1
 
+## 2026-11-07：协商式惰性目录
+
+本地Document第一条registry消息可发{name:"client_features",features:["lazy-catalog-v1"]}。回复顶层字面键registry.client_features，形状{accepted:["lazy-catalog-v1"],lazy:{items:{count:N},...}}；registry.meta新增同形lazy。协商页面不再自动接收items/blocks/sounds、全部tags目录、loot/recipe、五类资源ID以及其它超过600行的目录；未协商页面保留旧信封和全部推送。显式{name:"items"}仍能读取全目录。新search/lookup行保留旧字段并加namespace，协议、固定kind别名、真实回执与内存边界见[search-contract.md](search-contract.md#lazy-catalog-v12026-11-07)。阈值唯一常量LazyCatalog.THRESHOLD=600。按ID defaults、元信息、实体及方块属性接口不受影响。
+
 前端接线与真实回执摘录见 [frontend-wiring.md](frontend-wiring.md)，包括 apply 的 component_formats/component_snbt、29种变种、物品元信息全部字段、刷怪器范围与错误形态。
 
 ## 2026-11-07：标签显示名与枚举符号（向后兼容补充）

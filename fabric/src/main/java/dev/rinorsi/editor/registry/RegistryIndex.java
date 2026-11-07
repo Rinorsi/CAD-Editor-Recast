@@ -29,6 +29,8 @@ public final class RegistryIndex {
         String message = error.getMessage(); page.addProperty("error", message == null ? error.getClass().getSimpleName() : message.substring(0, Math.min(512, message.length())));
         return new RegistryIndex(name, generation, 0, Map.of(), List.of(page.toString()));
     }
+    public static RegistryIndex indexOnly(String name,String generation,int count){return new RegistryIndex(name,generation,count,Map.of(),List.of());}
+    public boolean indexOnly(){return pages.isEmpty();}
     public List<String> pages() { return pages; }
     public JsonObject find(String id) { var row = byId.get(id); return row == null ? null : row.deepCopy(); }
     public JsonArray search(String query, int limit) {

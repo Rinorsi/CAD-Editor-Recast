@@ -131,3 +131,21 @@ tasks.register('exportAutotestClasspath') {
         output.text = groovy.json.JsonOutput.toJson(configurations.runtimeClasspath.files.collect { it.absolutePath })
     }
 }
+
+// Standalone additive lazy-catalog policy/shape checks.
+tasks.register('lazyCatalogTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.registry.LazyCatalogTest'
+    args rootProject.file('fabric/src/main/resources/assets/cadeditor/ui/js/pinyin-data.js').absolutePath
+    workingDir = rootProject.projectDir
+}
+tasks.named('check') { dependsOn('lazyCatalogTest') }
+tasks.register('catalogMemoryBench', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.registry.CatalogMemoryBench'
+    args rootProject.file('fabric/src/main/resources/assets/cadeditor/ui/js/pinyin-data.js').absolutePath
+    maxHeapSize = '3G'
+    workingDir = rootProject.projectDir
+}

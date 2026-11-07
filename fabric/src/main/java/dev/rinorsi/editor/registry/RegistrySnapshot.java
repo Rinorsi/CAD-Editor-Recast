@@ -54,6 +54,9 @@ public final class RegistrySnapshot {
         access.registries().forEach(r -> registries.put(r.key().identifier(), r.value()));
         this.subtitles = subtitles;
     }
+    public Map<String,Integer> catalogCounts(){
+        Map<String,Integer> out=new LinkedHashMap<>();registries.forEach((id,registry)->{out.put(id.toString(),registry.size());out.put("tags:"+id,(int)registry.getTags().count());});return out;
+    }
     public JsonArray entries(Identifier registryId) {
         Registry<?> registry = registries.get(registryId);
         if (registry == null) throw new IllegalArgumentException("当前客户端没有注册表: " + registryId);

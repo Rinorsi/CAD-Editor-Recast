@@ -7,13 +7,13 @@ import java.util.function.BooleanSupplier;
 
 /** Reload epochs and memory admission are independent of Minecraft and testable on a plain JVM. */
 public final class SearchCatalog implements AutoCloseable {
-    public static final long MAX_BYTES = 384L*1024*1024;
-    public static final int MAX_KINDS = 32;
+    public static final long MAX_BYTES = 768L*1024*1024;
+    public static final int MAX_KINDS = 64;
     public static final class Slot {
         public volatile SearchIndex index;
         public volatile String error;
         public final AtomicInteger progress=new AtomicInteger();
-        public volatile int total;
+        public volatile int total=-1;
         private boolean started;
     }
     private final ExecutorService builder=new ThreadPoolExecutor(1,1,0,TimeUnit.MILLISECONDS,new ArrayBlockingQueue<>(32),r->{Thread t=new Thread(r,"cadeditor-search-build");t.setDaemon(true);return t;});
@@ -35,6 +35,7 @@ public final class SearchCatalog implements AutoCloseable {
         },builder);}catch(RejectedExecutionException error){slot.error="BUSY";return CompletableFuture.failedFuture(error);}
     }
     public synchronized void fail(String kind,String error){reserve(kind).error=error;}
+    public synchronized Map<String,Integer> counts(){Map<String,Integer> out=new LinkedHashMap<>();slots.forEach((kind,slot)->out.put(kind,slot.index==null?(slot.error==null?slot.total:Math.max(0,slot.total)):slot.index.size()));return out;}
     public synchronized long estimatedBytes(){return bytes;}
     /** One latest token per caller-owned view. A new request cancels running work and suppresses its delivery. */
     public static final class Session {

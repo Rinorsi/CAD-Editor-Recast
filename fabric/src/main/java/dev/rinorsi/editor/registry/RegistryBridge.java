@@ -18,6 +18,9 @@ public final class RegistryBridge {
     private record Batch(String key, java.util.Iterator<String> pages) {}
     private static final class State {
         Object document; boolean pending; String generation;
+        final dev.rinorsi.editor.registry.search.LazyCatalog features=new dev.rinorsi.editor.registry.search.LazyCatalog();
+        JsonObject meta; String lazySignature="";boolean featureReplyPending;
+        final Map<String,java.util.concurrent.CompletableFuture<java.util.List<String>>> legacyCatalogs=new java.util.LinkedHashMap<>();
         final java.util.LinkedHashMap<String, Batch> pages = new java.util.LinkedHashMap<>();
         final java.util.LinkedHashMap<String, Batch> interactive = new java.util.LinkedHashMap<>();
         final java.util.List<Runnable> waiting = new java.util.ArrayList<>();
@@ -29,11 +32,14 @@ public final class RegistryBridge {
     private static Object world, language;
     private static long observedReload = -1;
     private static RegistryWarmup warmup;
+    private static Map<String,Integer> LIVE_COUNTS=Map.of();
+    private static final Map<String,Integer> EXTRA_COUNTS=new java.util.concurrent.ConcurrentHashMap<>();
     private static double maxPushMs;
     private static double maxRegistryTickMs;
     private static String maxPushKey;
     private static final long PUSH_BUDGET_NS = 2_000_000;
     private static final int MAX_PUSH_PAGES = 8;
+    private static final java.util.List<String> LAZY_SOURCES=java.util.List.of("item_model","camera_overlay","profile_texture","profile_cape","profile_elytra","loot_table","recipe");
     private static long estimatedPageNs = 250_000, maxPageNs, pushBudgetOverruns;
     private static int maxPagesPerTick;
     private static final Map<String, java.util.concurrent.CompletableFuture<java.util.List<String>>> RESOURCE_CACHE = new java.util.LinkedHashMap<>(64, 0.75f, true);
@@ -65,12 +71,17 @@ public final class RegistryBridge {
                 if (world != client.level || language != currentLanguage || observedReload != RELOAD.get()) {
                     world = client.level; language = currentLanguage; observedReload = RELOAD.get();
                     var snapshot = snapshot();
+                    LIVE_COUNTS=snapshot.catalogCounts();
                     Map<String, java.util.function.Supplier<java.util.Iterator<JsonObject>>> sources = new java.util.LinkedHashMap<>();
                     RegistrySnapshot.KINDS.forEach((kind, path) -> sources.put("minecraft:" + path, () -> snapshot.iterator(Identifier.withDefaultNamespace(path))));
-                    warmup = new RegistryWarmup(Long.toString(GENERATION.incrementAndGet()), sources);
+                    warmup = new RegistryWarmup(Long.toString(GENERATION.incrementAndGet()), sources,true);
                     SearchChannel.reset(warmup.generation());
-                    DOCUMENTS.values().forEach(state -> { state.generation = null; state.pages.clear(); state.interactive.clear(); state.waiting.clear(); });
-                    RESOURCE_CACHE.clear();
+                    DOCUMENTS.values().forEach(state -> { state.generation = null; state.pages.clear(); state.interactive.clear(); state.waiting.clear();state.legacyCatalogs.clear(); });
+                    RESOURCE_CACHE.clear();EXTRA_COUNTS.clear();
+                    if(DOCUMENTS.values().stream().anyMatch(state->state.features.enabled())){
+                        for(String source:LAZY_SOURCES)SearchChannel.prepare(source);
+                        DOCUMENTS.values().forEach(state->{if(state.features.enabled())state.featureReplyPending=true;});
+                    }
                 }
                 warmup.tick();
                 SearchChannel.tick();
@@ -80,10 +91,20 @@ public final class RegistryBridge {
                     var d = entry.getKey();
                     var state = entry.getValue();
                     if (d.serverSession() || d.document() == null) continue;
-                    if (d.document() != state.document) {
-                        state.document = d.document(); state.pending = true; state.pages.clear(); state.interactive.clear(); state.generation = null;
-                    } else if ((state.pending || !warmup.generation().equals(state.generation)) && warmup.complete()) {
+                    boolean changed=d.document()!=state.document;
+                    if(changed){
+                        state.document = d.document(); state.features.document(d.document()); state.pending = true; state.pages.clear(); state.interactive.clear(); state.generation = null;state.legacyCatalogs.clear();if(!state.features.enabled())state.featureReplyPending=false;
+                    }
+                    if(state.featureReplyPending){
+                        var known=SearchChannel.counts();if(LAZY_SOURCES.stream().anyMatch(raw->known.getOrDefault(SearchChannel.canonical(raw),-1)<0))continue;
+                        featureReply(d,state);state.featureReplyPending=false;
+                    }
+                    if (!changed && (state.pending || !warmup.generation().equals(state.generation)) && warmup.complete()) {
                         state.pending = false; publish(d);
+                    }
+                    if(state.features.enabled()&&state.meta!=null&&warmup.complete()){
+                        JsonObject lazy=lazyCounts();String signature=lazy.toString();
+                        if(!signature.equals(state.lazySignature)){state.lazySignature=signature;state.meta.add("lazy",lazy);queue(d,"registry.meta",state.meta.toString());}
                     }
                     if (warmup.complete() && !state.waiting.isEmpty()) {
                         // Requests queued during warmup must not all materialize in one frame.
@@ -148,15 +169,41 @@ public final class RegistryBridge {
         RegistrySnapshot.KINDS.forEach((kind, path) -> {
             RegistryIndex index = warmup.index("minecraft:" + path); counts.addProperty(kind, index == null ? 0 : index.size);
         });
-        meta.add("performance", performance()); queue(driver, "registry.meta", meta.toString());
+        meta.add("performance", performance());
+        if(state.features.enabled()){JsonObject lazy=lazyCounts();meta.add("lazy",lazy);state.lazySignature=lazy.toString();state.meta=meta;}
+        queue(driver, "registry.meta", meta.toString());
         RegistrySnapshot.KINDS.forEach((kind, path) -> {
             RegistryIndex index = warmup.index("minecraft:" + path);
-            if (index != null) queuePages(driver, "registry." + kind, index.pages(), new JsonObject(), false);
+            if (index != null && !(state.features.enabled()&&dev.rinorsi.editor.registry.search.LazyCatalog.lazy(kind,index.size))) initialPages(driver,"registry."+kind,index,false);
         });
         // The pattern registry no longer contains template items in 26.1.2. Enrich the initial
         // pattern publication from actual smithing recipes on the integrated-server thread.
         JsonObject patterns = new JsonObject(); patterns.addProperty("name", "trim_patterns");
-        supplementRequest(driver, patterns, "trim_patterns", false);
+        if(!state.features.enabled()||!dev.rinorsi.editor.registry.search.LazyCatalog.lazy("trim_patterns",warmup.index("minecraft:trim_pattern").size))supplementRequest(driver, patterns, "trim_patterns", false);
+    }
+    private static void initialPages(DocumentDriver driver,String key,RegistryIndex index,boolean priority){
+        if(!index.indexOnly()){queuePages(driver,key,index.pages(),new JsonObject(),priority);return;}
+        Object document=driver.document();String generation=index.generation;
+        State state=DOCUMENTS.get(driver);if(state==null)return;
+        var encoded=state.features.enabled()?SearchChannel.legacyPages(index.name,generation):state.legacyCatalogs.computeIfAbsent(index.name,catalogName->SearchChannel.legacyPages(catalogName,generation));
+        encoded.whenComplete((pages,error)->Minecraft.getInstance().execute(()->{
+            if(!DOCUMENTS.containsKey(driver)||driver.document()!=document||warmup==null||!generation.equals(warmup.generation()))return;
+            if(error!=null){JsonObject failure=RegistryPages.split(index.name,generation,new JsonArray()).getFirst();failure.addProperty("error",String.valueOf(error.getMessage()));queuePages(driver,key,java.util.List.of(failure.toString()),new JsonObject(),priority);}
+            else queuePages(driver,key,pages,new JsonObject(),priority);
+        }));
+    }
+    private static void featureReply(DocumentDriver driver,State state){
+        JsonObject reply=new JsonObject();JsonArray accepted=new JsonArray();if(state.features.enabled())accepted.add(dev.rinorsi.editor.registry.search.LazyCatalog.FEATURE);reply.add("accepted",accepted);reply.add("lazy",state.features.enabled()?lazyCounts():new JsonObject());driver.patch("registry.client_features",reply);
+    }
+    private static JsonObject lazyCounts(){
+        Map<String,Integer> all=new java.util.TreeMap<>();
+        if(Minecraft.getInstance().level!=null)LIVE_COUNTS.forEach((kind,count)->{
+            if(dev.rinorsi.editor.registry.search.LazyCatalog.lazy(kind,count)){all.put(kind,count);if(kind.startsWith("tags:minecraft:"))all.put("tags:"+kind.substring(15),count);}
+        });
+        RegistrySnapshot.KINDS.forEach((alias,path)->{Integer count=all.get("minecraft:"+path);if(count!=null)all.put(alias,count);});
+        SearchChannel.counts().forEach((kind,count)->{if(count>=0&&dev.rinorsi.editor.registry.search.LazyCatalog.lazy(kind,count)){all.put(kind,count);if(kind.startsWith("tags:minecraft:"))all.put("tags:"+kind.substring(15),count);if(kind.equals("minecraft:loot_table")){all.put("loot_table",count);all.put("loot_tables",count);}if(kind.equals("minecraft:recipe")){all.put("recipe",count);all.put("recipes",count);}}});
+        EXTRA_COUNTS.forEach((kind,count)->{if(dev.rinorsi.editor.registry.search.LazyCatalog.lazy(kind,count)){all.put(kind,count);all.put(SearchChannel.canonical(kind),count);}});
+        JsonObject lazy=new JsonObject();all.forEach((kind,count)->{JsonObject value=new JsonObject();value.addProperty("count",count);lazy.add(kind,value);});return lazy;
     }
     private static void queue(DocumentDriver driver, String key, String json) { queuePages(driver, key, java.util.List.of(json)); }
     private static void queuePages(DocumentDriver driver, String key, java.util.List<String> json) {
@@ -183,6 +230,16 @@ public final class RegistryBridge {
         if (!request.has("name") || !request.get("name").isJsonPrimitive() || !request.getAsJsonPrimitive("name").isString()) return;
         String raw = request.get("name").getAsString();
         if (raw.length() > 247) return;
+        State negotiated=DOCUMENTS.get(driver);if(negotiated==null)return;
+        negotiated.features.document(driver.document());
+        java.util.List<String> features=new java.util.ArrayList<>();
+        if(raw.equals("client_features")&&request.has("features")&&request.get("features").isJsonArray())for(var feature:request.getAsJsonArray("features"))if(feature.isJsonPrimitive()&&feature.getAsJsonPrimitive().isString())features.add(feature.getAsString());
+        boolean lazy=negotiated.features.message(raw,features);
+        if(raw.equals("client_features")){
+            if(lazy){for(String source:LAZY_SOURCES)SearchChannel.prepare(source);negotiated.featureReplyPending=true;negotiated.pages.clear();negotiated.legacyCatalogs.clear();negotiated.pending=true;}
+            else featureReply(driver,negotiated);
+            return;
+        }
         if (EntityRegistryChannel.supports(raw) && (Minecraft.getInstance().level == null || !snapshot().containsRegistry(Identifier.tryParse(raw)))) {
             EntityRegistryChannel.request(request, raw, (pages, context) -> queuePages(driver, "registry." + raw, pages, context));
             return;
@@ -216,7 +273,7 @@ public final class RegistryBridge {
                 return;
             }
             RegistryIndex index = warmup.index(Identifier.parse(initialName).toString());
-            if (index != null) queuePages(driver, "registry." + raw, index.pages());
+            if (index != null) initialPages(driver,"registry."+raw,index,true);
             return;
         }
         if (raw.equals("tooltip_style") || raw.equals("item_model_hints") || ResourceIds.handles(raw)) {
@@ -300,6 +357,7 @@ public final class RegistryBridge {
                         .map(Map.Entry::getKey).findFirst().ifPresent(RESOURCE_CACHE::remove);
                 var result = RegistrySupplement.read(mc, raw, only);
                 RESOURCE_CACHE.put(cacheKey, result.thenCompose(value -> RegistryWarmup.async(() -> {
+                    if(!raw.equals("block_properties")&&SearchChannel.currentGeneration(generation))EXTRA_COUNTS.put(raw,value.entries().size());
                     JsonObject envelope = context.deepCopy(); value.context().entrySet().forEach(e -> envelope.add(e.getKey(), e.getValue()));
                     return RegistryPages.split(raw, generation, value.entries(), envelope).stream().map(Object::toString).toList();
                 })).exceptionally(error -> {
@@ -310,7 +368,7 @@ public final class RegistryBridge {
             Object document = driver.document();
             RESOURCE_CACHE.get(cacheKey).thenAccept(pages -> mc.execute(() -> {
                 if (warmup != null && generation.equals(warmup.generation()) && DOCUMENTS.containsKey(driver) && driver.document() == document)
-                    queuePages(driver, "registry." + raw, pages, context, priority);
+                    {queuePages(driver, "registry." + raw, pages, context, priority);if(DOCUMENTS.get(driver).features.enabled()&&dev.rinorsi.editor.registry.search.LazyCatalog.lazy(raw,EXTRA_COUNTS.getOrDefault(raw,0)))RESOURCE_CACHE.remove(cacheKey);}
             }));
         } catch (RuntimeException error) {
             JsonObject page = RegistryPages.split(raw, generation, new JsonArray(), context).getFirst();
@@ -342,6 +400,7 @@ public final class RegistryBridge {
             try {
                 JsonArray rows = ResourceIds.handles(raw) ? ResourceIds.entries(resources, raw)
                         : raw.equals("tooltip_style") ? RegistryChoices.tooltipStyles(resources) : ModelHints.read(resources, resolvedModel);
+                if(!raw.equals("item_model_hints")&&SearchChannel.currentGeneration(generation))EXTRA_COUNTS.put(raw,rows.size());
                 for (var page : RegistryPages.split(raw, generation, rows, context)) pages.add(page.toString());
             } catch (RuntimeException error) {
                 JsonObject page = RegistryPages.split(raw, generation, new JsonArray(), context).getFirst(); page.addProperty("error", error.getMessage()); pages.add(page.toString());
@@ -353,7 +412,7 @@ public final class RegistryBridge {
         Object document = driver.document();
         future.thenAccept(pages -> mc.execute(() -> {
             if (warmup != null && generation.equals(warmup.generation()) && DOCUMENTS.containsKey(driver) && driver.document() == document)
-                queuePages(driver, "registry." + raw, pages, context);
+                {queuePages(driver, "registry." + raw, pages, context);if(DOCUMENTS.get(driver).features.enabled()&&dev.rinorsi.editor.registry.search.LazyCatalog.lazy(raw,EXTRA_COUNTS.getOrDefault(raw,0)))RESOURCE_CACHE.remove(cacheKey);}
         }));
     }
 }

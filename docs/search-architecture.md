@@ -78,7 +78,7 @@ git clone --depth 1读取真实仓库，再fetch JEI1.16核对历史。副本在
 | 匹配/排名 | JS拼音缓存/切片，无宿主排名 | 中文/英文/ID/拼音/混写/多音，exact/prefix/boundary/substring，ID稳定排序 |
 | 取消/重载 | JS可取消切片，无宿主token | latest-wins、close/reload/旧Document响应抑制，纯JVM覆盖 |
 | 结果量 | registry.*全量入JS，picker扫全量再画80–200行 | 搜索只回≤200行/≤24k、nextOffset；旧全量仍保留 |
-| 内存 | JSON、编码页、原始JS列表、归一化缓存多份 | 新索引约165MiB/20万合成行；估算目录384MiB、单kind256MiB准入；非RSS上限，双份存储未迁移 |
+| 内存 | JSON、编码页、原始JS列表、归一化缓存多份 | 新索引约165MiB/20万合成行；估算目录768MiB、单kind256MiB准入；非RSS上限，双份存储未迁移 |
 | 元信息 | 当前语言名，标签部分导出 | 所有注册表行补真实holder tags；英文en_us映射；namespace/count，namespace不保证=modId |
 | UI虚拟化 | JS扫描+DOM；Enter/按钮只改变触发方式 | 未改受保护UI，需前端改用search.result并限制DOM |
 
@@ -119,7 +119,7 @@ limit=80、offset=0，不含UI、客户端tick或patch解析；单位ms（p50 / 
 **应停止把200k行先全部推给Rhino。** 新search是增量部分，若保留旧全量缓存反会增加Java/JS内存，不能宣称整包优化完成。
 
 1. UI先将物品/声音/方块选择器改search窗口，菜单只留kind/count/generation/namespace元信息，保留手动ID及单件defaults/关系/属性查询。
-2. 增加明确页面能力协商，例如search-v1，只有声明支持的Document才停发大目录。小枚举/当前物品必要数据可初始交付，老页面保留旧协议。**本次未默认停推，也未提前实现未经前端接线验证的开关。**
+2. 增加明确页面能力协商，例如search-v1，只有声明支持的Document才停发大目录。小枚举/当前物品必要数据可初始交付，老页面保留旧协议。**后续已实现显式lazy-catalog-v1协商；默认未协商页面继续全推，见文末追加验证。**
 3. 协商上线后去掉大目录的JS缓存；Java端采用轻量SearchIndex + 必要按ID资料，减少RegistryIndex JSON/编码页重复常驻，旧页按需兼容。
 4. 用300–500实际模组测入世界采集峰值、首次可搜索时间、常驻堆/重载峰值、查询取消和可见帧。若混写回退仍高，用更精确的读音token候选索引；若heap不够，改紧凑列式/可逐出索引，不能靠放大堆掩盖双份存储。
 
@@ -128,3 +128,33 @@ limit=80、offset=0，不含UI、客户端tick或patch解析；单位ms（p50 / 
 纯JVM覆盖排名、中文、拼音/首字母/混写/多音/ü、英文、namespace/tag、稳定分页、取消、构建中取消、reload、容量拒绝；全Java源独立javac通过。searchTest已加入Gradle check；实际执行 :fabric:26.1.2:searchTest 与 :fabric:26.1.2:build 通过，完整输出见logs/search/gradle-build.log。运行前检查未发现用户游戏进程，记录见logs/search/pre-gradle-processes.json。
 
 未验证：真实300–500模组包、远程服务器连接、真实资源热重载完整UI恢复、完整选择窗虚拟化/GPU帧率、三款配方查看器运行时总堆。通用mod注册表/其余资源类只有编译与共享实现覆盖，没有逐类真客户端穷举。未改Oriel库。
+
+## 后续落地：lazy-catalog-v1
+
+已实现协商式迁移，不再仅停留在建议：RegistryBridge按Document记录第一条registry消息的feature，meta.lazy返回真实数量；默认LAZY为items/blocks/sounds、全部tags目录、loot/recipe和五类ResourceIds，其他目录>600行同样惰性。未协商页面仍收到相同字段、排序、数量和分页的旧目录。协商页只自动接收小目录，仍可显式请求完整大目录作为逃生口。
+
+预热对这些大kind不再生成RegistryIndex的Gson行表/编码页，只保留count占位。SearchIndex保存旧行字段的紧凑载荷（最多64种共享schema+每行值数组），查询/lookup重建当前窗口JSON；没有Gson行树的第二份长期常驻。仅旧Document缓存其完整编码页；与新页面共存时这些页仍因旧页面需要而存在，不能声称全进程绝对零旧页。关闭或换代释放。小目录与按ID业务接口保留原方式。
+
+search新增ids模式，≤64项、保持请求顺序/重复、missing明确列出未知ID、固定lookup view与picker互不取消。所有搜索行与旧目录字段和值一致再加namespace，不丢掉resource/count/translation_key等前端需要的内容。过滤查询仍提供整个kind的namespace数量。完整协议见search-contract.md。
+
+为容纳items+blocks+sounds各20万行的本轮合成负载，总目录估算准入预算从384提升为768MiB，单kind仍256MiB、最多64kind（其中23个协议核心来源先预留空槽，避免其它目录挤满后协商无法完成）。不是无界缓存，也不是RSS硬上限；达到限制应显示INDEX_LIMIT。保留完整旧行字段有真实代价，本轮不是把全部搜索内存消掉。
+
+本轮验证：pure JVM策略/阈值、lookup顺序/缺失/65项拒绝、每种固定LAZY行的字段/值/JSON顺序往返、动态嵌套行、count-only预热无行/页；真客户端在同一世界先打开旧Document再打开协商Document，旧items/blocks/sounds逐行和实际RegistrySnapshot导出比对；协商页无大目录push，含features/meta.lazy，对items/blocks/sounds/tags:item/item_model分别query和lookup并逐字段比对旧行，最后显式items逃生口。真实计数1506/1168/1902/471/1507来自探针，不是产品候选硬编码。
+
+门禁和内存实测见logs/search/lazy/与lazy-*-smoke.log。300–500模组包、远程真实服务器、资源热重载完整UI恢复和JS常驻堆仍未验证；前端接线由UI作者并行完成，本任务没有修改UI/Oriel。
+
+### 60万行宿主保留堆：协商前后
+
+Java25 / -Xmx3G，items、blocks、sounds各200000行，400个合成namespace、80%中文、真实拼音表；同一批不可变索引，切换“旧Document完整编码页缓存”与“协商Document仅索引”。三次显式GC后测差，输入Json树与分页临时Json树在辅助方法返回后释放；不包含预先载入词表，不包含Rhino堆、GPU或真实模组包。
+
+| 场景 | 新增保留堆bytes | MiB |
+|---|---:|---:|
+| 未协商旧Document（索引+完整页缓存） | 760698576 | 725.459 |
+| lazy-catalog-v1（仅索引+计数占位） | 610723936 | 582.432 |
+| 减少 | 149974640 | 143.027 |
+
+旧页共3935页、78164102个UTF-16字符；协商路径这些kind为0页。该比较是本轮实现的feature开/关，不是把历史Gson行缓存或JS副本的未测节省也算进来。正常客户端发送旧页期间存在额外临时对象，表中不表示峰值。约582MiB的60万行索引本身仍很大，不能称整包内存已解决。
+
+### 本轮构建边界
+
+本轮14个既有JVM入口+SearchTest+LazyCatalogTest、全主源/测试独立javac及三组离屏客户端探针日志均单独保存。正式Gradle build没有运行：进程检查发现用户Oriel-UI runClient（PID25012；其wrapper PID25760），严格遵守不与用户游戏并行运行Gradle的限制；完整命令行记录在logs/search/lazy/pre-gradle-processes.json，blocked日志logs/search/lazy/gradle-build.log。文中前面的Gradle成功只属于上一轮search实现，不代表本轮lazy改动已通过正式build。用户关闭游戏后应补跑: 根据tools/entity/integration.init.gradle运行integrationJvmTests、searchTest、lazyCatalogTest与build。
