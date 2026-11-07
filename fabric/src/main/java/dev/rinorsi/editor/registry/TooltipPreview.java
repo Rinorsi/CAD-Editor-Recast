@@ -44,7 +44,7 @@ public final class TooltipPreview {
         List<Component> vanilla=stack.getTooltipLines(context,player,advanced?TooltipFlag.ADVANCED:TooltipFlag.NORMAL);
         boolean hidden=display.hideTooltip();
         JsonObject out=new JsonObject();out.addProperty("version",1);out.addProperty("requestId",requestId);out.addProperty("ok",true);
-        Budget budget=new Budget();JsonArray name=hidden?new JsonArray():flatten(stack.getStyledHoverName(),budget);out.add("name",name);
+        Budget budget=new Budget();JsonArray name=hidden?new JsonArray():flatten(vanilla.isEmpty()?stack.getStyledHoverName():vanilla.getFirst(),budget);out.add("name",name);
         JsonArray lines=new JsonArray();
         if(!hidden)for(Component component:vanilla){if(lines.size()>=MAX_LINES||budget.partial){budget.partial=true;break;}lines.add(flatten(component,budget));}
         out.add("lines",lines);out.addProperty("rarityColor",color(stack.getRarity().color().getColor()));
@@ -54,7 +54,7 @@ public final class TooltipPreview {
             var image=stack.getTooltipImage();
             if(image.isPresent()){
                 JsonObject info=new JsonObject();Object data=image.get();
-                if(data instanceof BundleContents bundle){info.addProperty("type","bundle");info.addProperty("count",bundle.size());info.addProperty("selectedIndex",bundle.getSelectedItemIndex());JsonArray items=new JsonArray();bundle.itemCopyStream().limit(27).forEach(item->items.add(summary(item)));info.add("items",items);info.addProperty("truncated",bundle.size()>27);}
+                if(data instanceof net.minecraft.world.inventory.tooltip.BundleTooltip tooltip){BundleContents bundle=tooltip.contents();info.addProperty("type","bundle");info.addProperty("count",bundle.size());info.addProperty("selectedIndex",bundle.getSelectedItemIndex());JsonArray items=new JsonArray();bundle.itemCopyStream().limit(27).forEach(item->items.add(summary(item)));info.add("items",items);info.addProperty("truncated",bundle.size()>27);}
                 else {info.addProperty("type","tooltip_component");info.addProperty("class",data.getClass().getName());}
                 extra.add(info);budget.partial=true;
             }
@@ -69,7 +69,7 @@ public final class TooltipPreview {
         boolean truncated=budget.partial&&budget.chars>=MAX_CODEPOINTS;
         while(out.toString().length()>MAX_CHARS&&!lines.isEmpty()){lines.remove(lines.size()-1);truncated=true;}
         if(out.toString().length()>MAX_CHARS){extra=new JsonArray();out.add("extra",extra);truncated=true;}
-        if(truncated||lines.size()<(!hidden?vanilla.size():0)){out.addProperty("partial",true);out.addProperty("truncated",true);}
+        if(truncated||budget.runs>=MAX_RUNS||lines.size()<(!hidden?vanilla.size():0)){out.addProperty("partial",true);out.addProperty("truncated",true);}
         if(out.toString().length()>MAX_CHARS)throw new IllegalArgumentException("Tooltip name exceeds response size limit");
         return out;
     }
