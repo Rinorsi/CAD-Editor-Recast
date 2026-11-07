@@ -3,6 +3,7 @@
 var Reg = {
   meta: null, kinds: {}, subs: [], cache: {},
   ingest: function (key, val) {
+    if (key === 'search.result') { if (typeof HostSearch !== 'undefined') HostSearch.receive(val); return; }
     if (key === 'validate_component.result') { if (typeof Valid !== 'undefined') Valid.receive(val); return; }
     if (typeof key !== 'string' || key.indexOf('registry.') !== 0) return;
     if (key === 'registry.meta') { this.meta = val; this.cache = {}; this.fire(); return; }
@@ -156,6 +157,8 @@ var Reg = {
     var v = m ? m[this.full(attr)] : undefined;
     return typeof v === 'number' ? v : dflt;
   },
+  /* 宿主搜索（search 消息）里这类候选对应的 kind：和 options() 用同一套映射 */
+  hostKind: function (reg) { return this.KIND[reg] || (this.isDirect(reg) ? reg : 'minecraft:' + reg); },
   /* 请求名就是它自己、不带 minecraft: 前缀的：枚举 / 标签（带冒号）和资源 ID 类（装备外观、提示框样式、物品模型、遮罩与皮肤贴图） */
   DIRECT: { equipment_asset: 1, tooltip_style: 1, item_model: 1, camera_overlay: 1, profile_texture: 1, profile_cape: 1, profile_elytra: 1 },
   isDirect: function (reg) { return reg.indexOf(':') > 0 || this.DIRECT[reg] === 1; },

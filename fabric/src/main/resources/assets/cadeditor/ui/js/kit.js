@@ -104,10 +104,10 @@ function pickItem(anchor, onPick, o) {
   var grid = h('div', { class: 'k-pgrid' }), hint = h('div', { class: 'k-phint' }), cancel = null;
   /* 候选来自游戏实时注册表（含模组物品）；没有宿主时才用内置清单。原版物品用短 ID，模组物品用完整 ID。
      搜索按时间片分批（kFilterSliced）：一千多个物品的拼音匹配不能在一次脚本入口里做完，否则会被引擎停页 */
-  function show(list, s, src) {
+  function show(list, s, src, hostTotal) {
     clear(grid);
-    var n = 0, total = list.length;
-    for (var i = 0; i < total && n < 56; i++) {
+    var n = 0, total = hostTotal || list.length;
+    for (var i = 0; i < list.length && n < 56; i++) {
       n++;
       (function (id) {
         var c = h('div', { class: 'k-pcell', title: nameOfItem(id) + '\n' + fullId(id) }, [itemIcon(id, 16)]);
@@ -125,6 +125,12 @@ function pickItem(anchor, onPick, o) {
     var src = Reg.has('items') ? Reg.list('items').map(function (e) { return shortId(e.id); }) : EDATA.items;
     var pool = o.filter ? src.filter(function (id) { return o.filter(id); }) : src;
     if (!s) { show(pool, s, src); return; }
+    /* 没有额外过滤条件时让宿主的后台索引搜（含拼音 / 模组物品），否则本地分批 */
+    if (!o.filter && HostSearch.query({ view: 'item-picker', kind: 'items', query: s, limit: 56 }, function (r) {
+      if (r.fallback) { cancel = kFilterSliced(pool, function (id) { return kMatch(id, s) || kMatch(nameOfItem(id), s); }, function (list) { show(list, s, src); }); return; }
+      var ids = (r.entries || []).map(function (e) { return Reg.isMod(Reg.full(e.id)) ? e.id : shortId(e.id); });
+      show(ids, s, src, r.total);
+    })) return;
     cancel = kFilterSliced(pool, function (id) { return kMatch(id, s) || kMatch(nameOfItem(id), s); }, function (list) { show(list, s, src); });
   }
   var sbox = kSearchBox(q, paint);

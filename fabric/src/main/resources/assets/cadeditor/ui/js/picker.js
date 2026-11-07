@@ -67,7 +67,7 @@ function openPicker(o) {
   }
   var list = h('div', { class: 'addlist' }), cats = h('div', { class: 'addcats' }), foot = h('div', { class: 'k-mf' });
   var info = h('span', { class: 'k-sub' }), confirm;
-  if (o.entriesFn) { o.entries = o.entriesFn(); var unsub = Reg.on(function () { if (!$('modal')) { unsub(); return; } o.entries = o.entriesFn(); paintCats(); paint(); }); }
+  if (o.entriesFn) { o.entries = o.entriesFn(); var unsub = Reg.on(function () { if (!$('modal')) { unsub(); return; } o.entries = o.entriesFn(); byFull = null; paintCats(); paint(); }); }
   var search = h('input', { class: 'k-input', type: 'text', placeholder: (o.searchHint || '搜索名称或 ID') + (o.custom && !o.custom.hash ? '；也可直接输入 模组id:名字' : ''), spellcheck: 'false' });
   function catOf(id) { for (var i = 0; i < o.cats.length; i++) if (o.cats[i].id === id) return o.cats[i]; return o.cats[0]; }
   function visible() {
@@ -100,15 +100,49 @@ function openPicker(o) {
   }
   /* 过滤：条目多时按时间片分批（kFilterSliced），每批都是一次新的脚本入口，不会触发单次入口指令预算而停页。
      分批期间旧列表保持原样，算完再换，不会闪空白。 */
-  var filterCancel = null, lastVis = [];
+  var filterCancel = null, lastVis = [], hostMore = null, byFull = null;
+  /* 宿主搜索：有 hostKind 且分类是“全部”时，让游戏的后台索引排好序，只回来一小窗口；页面只把这些 ID 对回已有的行。
+     宿主没回应 / 不支持这个类别 / 老版本时退回下面的本地分批过滤。 */
+  function rowsOf(r) {
+    if (!byFull) { byFull = {}; o.entries.forEach(function (e) { byFull[e.full] = e; }); }
+    var out = [];
+    (r.entries || []).forEach(function (x) { var e = byFull[Reg.full(x.id)]; if (e) out.push(e); });
+    return out;
+  }
+  function hostPaint(s, cat) {
+    if (!o.hostKind || (cat.filter && cat.id !== 'all')) return false;
+    var started = HostSearch.query({ view: 'picker', kind: o.hostKind, query: s, limit: 200 }, function (r) {
+      if (r.fallback) { localPaint(s, cat); return; }
+      var rows = rowsOf(r);
+      hostMore = r.nextOffset !== undefined && !r.done ? { s: s, offset: r.nextOffset, total: r.total } : null;
+      render(rows, hostMore ? r.total : rows.length);
+    });
+    return started;
+  }
+  function hostNext() {
+    if (!hostMore) return;
+    var m = hostMore, prev = lastVis;
+    HostSearch.query({ view: 'picker', kind: o.hostKind, query: m.s, offset: m.offset, limit: 200 }, function (r) {
+      if (r.fallback) return;
+      var rows = prev.concat(rowsOf(r));
+      hostMore = r.nextOffset !== undefined && !r.done ? { s: m.s, offset: r.nextOffset, total: m.total } : null;
+      limit = rows.length;
+      render(rows, hostMore ? m.total : rows.length);
+    });
+  }
   function paint() {
     if (filterCancel) { filterCancel(); filterCancel = null; }
     var cat = catOf(catSel), s = q.trim().toLowerCase();
+    hostMore = null;
+    if (s && hostPaint(s, cat)) return;
+    localPaint(s, cat);
+  }
+  function localPaint(s, cat) {
     var pool = o.entries.filter(function (e) { return !cat.filter || cat.filter(e); });
     if (!s) { render(pool); return; }
     filterCancel = kFilterSliced(pool, function (e) { return kMatch(e.name + ' ' + e.full + ' ' + (e.sub || ''), s); }, render);
   }
-  function render(vis) {
+  function render(vis, total) {
     lastVis = vis;
     var shown = vis.slice(0, limit);
     clear(list);
@@ -131,7 +165,8 @@ function openPicker(o) {
       row.addEventListener('click', function () { pick(e, row); });
       list.appendChild(row);
     });
-    if (vis.length > shown.length) { var more = h('div', { class: 'k-add', text: '显示更多（还有 ' + (vis.length - shown.length) + ' 个）' }); activate(more, function () { limit += 120; render(lastVis); }); list.appendChild(more); }
+    if (vis.length > shown.length) { var more = h('div', { class: 'k-add', text: '显示更多（还有 ' + (vis.length - shown.length) + ' 个）' }); activate(more, function () { limit += 120; render(lastVis, total); }); list.appendChild(more); }
+    else if (hostMore) { var more2 = h('div', { class: 'k-add', text: '显示更多（共 ' + total + ' 个匹配）' }); activate(more2, hostNext); list.appendChild(more2); }
     if (!vis.length) list.appendChild(xEmpty(emptyReason(q, openedAt, o.emptyReg)));
   }
   var sbox = kSearchBox(search, function (v) { q = v; limit = 80; paint(); });   // 回车或点「搜索」才搜
@@ -296,7 +331,7 @@ function openRegPick(o) {   /* o: { reg, tag, current, title, fallback, onPick(i
     return l.map(function (e) { return { full: Reg.full(e.v), name: refName(o.reg, e), sub: e.v, icon: function () { return refIcon(o.reg, e.v); } }; });
   }
   var cats = [{ id: "all", name: "全部", icon: "grid" }, { id: "mod", name: "模组", icon: "cube", filter: function (en) { return Reg.isMod(en.full); } }];
-  openPicker({ kind: "regpick-" + o.reg, emptyReg: o.reg, title: o.title || "选择", sub: o.multi ? "勾选后一次添加" : "", icon: "grid", single: !o.multi, locked: o.locked, entriesFn: build, cats: cats, live: Reg.live(), searchHint: "搜索名称或 ID", custom: { placeholder: "或输入 ID，回车选中" }, confirmLabel: o.multi ? "添加所选" : "使用这个", onConfirm: function (ids) { if (o.multi) o.onPickMany(ids); else o.onPick(ids[0]); } });
+  openPicker({ kind: "regpick-" + o.reg, emptyReg: o.reg, hostKind: Reg.hostKind(o.reg), title: o.title || "选择", sub: o.multi ? "勾选后一次添加" : "", icon: "grid", single: !o.multi, locked: o.locked, entriesFn: build, cats: cats, live: Reg.live(), searchHint: "搜索名称或 ID", custom: { placeholder: "或输入 ID，回车选中" }, confirmLabel: o.multi ? "添加所选" : "使用这个", onConfirm: function (ids) { if (o.multi) o.onPickMany(ids); else o.onPick(ids[0]); } });
 }
 /* 条目名：有翻译名就用翻译名；没有就用物品名（装备外观、方块和物品同名）；再不行才把路径变成易读的英文。完整 ID 不再当名字 */
 function refName(reg, e) {

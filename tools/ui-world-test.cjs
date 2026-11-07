@@ -30,7 +30,7 @@ const root=new Element('body'),overlays=new Element('div');overlays.id='overlays
 const doc={body:root,activeElement:null,addEventListener(){},createElement(tag){return new Element(tag);},createTextNode(t){const el=new Element('text');el.textContent=t;return el;},getElementById(id){return root.querySelector('#'+id);}};
 const c=vm.createContext({document:doc,window:{innerWidth:760,innerHeight:560},console,setTimeout(){},clearTimeout(){},oriel:{data:{},send(){return true;}}});
 const dir=path.resolve(__dirname,'../fabric/src/main/resources/assets/cadeditor/ui/js');
-for(const f of ['data','core','forms','kit','kit2','nbt','xlist','reg','picker','cards1','cards2','cards3','cards5','world','rules','spawn','screens'])vm.runInContext(fs.readFileSync(path.join(dir,f+'.js'),'utf8'),c);
+for(const f of ['data','core','pinyin-data','search','forms','kit','kit2','nbt','xlist','reg','hostsearch','picker','cards1','cards2','cards3','cards5','world','rules','spawn','screens'])vm.runInContext(fs.readFileSync(path.join(dir,f+'.js'),'utf8'),c);
 c.uiIcon=()=>new Element('i');c.itemIcon=()=>new Element('i');c.uiClick=()=>{};c.snd=()=>{};c.toast=()=>{};
 let saved,disabled=0,writes=0;
 c.autoPut=(cid,value)=>{saved=JSON.parse(JSON.stringify(value));writes++;};
@@ -251,3 +251,64 @@ console.log('PASS spawn egg / spawner / trial spawner cards.');
   assert.equal(calls.length, 3, '没变化不重复触发');
 }
 console.log('PASS search box: search only on Enter / button, clear resets.');
+
+// 宿主搜索：发 search、按 requestId 收、旧回应忽略、没回应则退回本地
+{
+  const sent = []; let timers = [];
+  c.oriel.send = (k, v) => { sent.push([k, v]); return true; };
+  c.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return timers.length; }; c.clearTimeout = () => {};
+  c.Reg.meta = {}; c.Reg.kinds = {};
+  assert.equal(c.Reg.hostKind('item'), 'items'); assert.equal(c.Reg.hostKind('loot_table'), 'minecraft:loot_table'); assert.equal(c.Reg.hostKind('item_model'), 'item_model');
+  const got = [];
+  assert.equal(c.HostSearch.query({ view: 'picker', kind: 'items', query: 'zsj', limit: 80 }, r => got.push(r)), true);
+  assert.equal(sent[0][0], 'search'); assert.equal(sent[0][1].query, 'zsj'); assert.equal(sent[0][1].view, 'picker');
+  const id1 = sent[0][1].requestId;
+  // 新请求取代旧请求：旧回应被忽略
+  c.HostSearch.query({ view: 'picker', kind: 'items', query: 'dia', limit: 80 }, r => got.push(r));
+  const id2 = sent[1][1].requestId;
+  c.Reg.ingest('search.result', { requestId: id1, ready: true, entries: [{ id: 'minecraft:old' }] });
+  assert.equal(got.length, 0, '被取代的旧请求回应不更新');
+  c.Reg.ingest('search.result', { requestId: id2, ready: false, phase: 'building', progress: 3, total: 10 });
+  assert.equal(got.length, 0, 'ready:false 继续等');
+  c.Reg.ingest('search.result', { requestId: id2, ready: true, total: 1, entries: [{ id: 'minecraft:diamond_sword' }], done: true });
+  assert.equal(got.length, 1); assert.equal(got[0].entries[0].id, 'minecraft:diamond_sword'); assert.equal(c.HostSearch.supported, true);
+  // 宿主报错（该类别不支持）→ 回退标记
+  c.HostSearch.query({ view: 'picker', kind: 'x', query: 'a' }, r => got.push(r));
+  c.Reg.ingest('search.result', { requestId: sent[2][1].requestId, ready: false, error: 'UNKNOWN_KIND' });
+  assert.equal(got[1].fallback, true); assert.equal(got[1].error, 'UNKNOWN_KIND');
+  // 老宿主：第一次就没回应 → 超时退回本地，之后不再等
+  c.HostSearch.supported = null; timers = [];
+  c.HostSearch.query({ view: 'picker', kind: 'items', query: 'a' }, r => got.push(r));
+  timers[timers.length - 1].fn();
+  assert.equal(got[2].fallback, true); assert.equal(c.HostSearch.supported, false);
+  assert.equal(c.HostSearch.query({ view: 'picker', kind: 'items', query: 'a' }, () => {}), false, '已判定老宿主就不再发');
+  c.HostSearch.supported = null; c.Reg.meta = null; c.Reg.kinds = {};
+}
+console.log('PASS host search client: request supersede, ready:false wait, error/timeout fallback.');
+
+// 选择窗接宿主搜索：搜索词交给宿主，结果 ID 对回已有的行；宿主不支持就本地搜
+{
+  const sent = []; c.oriel.send = (k, v) => { sent.push([k, v]); return true; };
+  c.setTimeout = (fn) => 1; c.clearTimeout = () => {};
+  c.Reg.meta = {}; c.Reg.kinds = {}; c.HostSearch.supported = null; c.HostSearch.views = {};
+  c.Reg.ingest('registry.entity_types', { generation: 1, offset: 0, total: 3, done: true, entries: [{ id: 'minecraft:zombie', name: '僵尸' }, { id: 'minecraft:skeleton', name: '骷髅' }, { id: 'minecraft:pig', name: '猪' }] });
+  c.openRegPick({ reg: 'entity_type', title: '选择生物', onPick() {} });
+  const modal = doc.body.querySelector('.addwin') || doc.body.querySelectorAll('.k-modal')[0] || overlays;
+  const inp = overlays.querySelectorAll('input')[0];
+  assert.ok(inp, '选择窗有搜索框');
+  inp.value = 'jiangshi';
+  inp.events.keydown.forEach(fn => fn({ key: 'Enter', preventDefault() {}, stopPropagation() {} }));
+  const s = sent.filter(x => x[0] === 'search').pop();
+  assert.ok(s, '回车后向宿主发了 search'); assert.equal(s[1].query, 'jiangshi'); assert.equal(s[1].kind, 'entity_types');
+  c.Reg.ingest('search.result', { requestId: s[1].requestId, ready: true, total: 1, done: true, entries: [{ id: 'minecraft:zombie', name: '僵尸' }] });
+  const rows = overlays.querySelectorAll('.addrow');
+  assert.equal(rows.length, 1, '只显示宿主返回的行'); assert.ok(rows[0].textContent.includes('僵尸'));
+  // 宿主说不支持这个类别 → 本地过滤
+  inp.value = 'pig'; inp.events.keydown.forEach(fn => fn({ key: 'Enter', preventDefault() {}, stopPropagation() {} }));
+  const s2 = sent.filter(x => x[0] === 'search').pop();
+  c.Reg.ingest('search.result', { requestId: s2[1].requestId, ready: false, error: 'UNKNOWN_KIND' });
+  const rows2 = overlays.querySelectorAll('.addrow');
+  assert.ok(rows2.length >= 1 && rows2.some(r => r.textContent.includes('猪')), '回退到本地搜索');
+  c.Reg.meta = null; c.Reg.kinds = {}; c.HostSearch.supported = null;
+}
+console.log('PASS picker uses host search with local fallback.');
