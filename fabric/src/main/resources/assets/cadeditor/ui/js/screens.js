@@ -318,9 +318,16 @@ function crumbBind(body, tab) {
   body.addEventListener('scroll', function () { if (crumbT) return; crumbT = setTimeout(function () { crumbT = null; updateCrumb(); }, 60); });
 }
 function updateCrumb() {
-  var body = $('edbody'), host = document.querySelector('.ed-tools-t'); if (!body || !host || !crumbTab) return;
-  var top = body.getBoundingClientRect().top + 12, parts = [{ t: crumbTab.label, el: null }];
-  if (body.scrollTop > 6) {
+  var wmode = typeof weActive === 'function' && weActive();
+  var body = $('edbody'), host = document.querySelector('.ed-tools-t'); if (!body || !host || (!wmode && !crumbTab)) return;
+  var top = body.getBoundingClientRect().top + 12, parts = [{ t: wmode ? weTabLabel() : crumbTab.label, el: null }];
+  if (wmode) {
+    if (body.scrollTop > 6) {
+      var wc = body.querySelectorAll('.w-card'), cur2 = null;
+      for (var k = 0; k < wc.length; k++) { if (wc[k].getBoundingClientRect().top <= top) cur2 = wc[k]; else break; }
+      if (cur2 && cur2._card && cur2._card.spec.title) parts.push({ t: cur2._card.spec.title, el: cur2 });
+    }
+  } else if (body.scrollTop > 6) {
     var sec = null, secs = body.querySelectorAll('.k-sech');
     for (var i = 0; i < secs.length; i++) { if (secs[i].getBoundingClientRect().top <= top) sec = secs[i]; else break; }
     var cards = UI.page ? UI.page.cards : [], cur = null;

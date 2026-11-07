@@ -111,6 +111,7 @@ function drawWorldScreen() {
   weTabBody(body);
 }
 function weTabBody(body) {
+  ES_WAIT = false;
   if (typeof weDndReset === 'function') weDndReset();
   if (WE.tab === 'pinv') wpInventoryTab(body);
   else if (WE.tab === 'pender') wpEnderTab(body);
@@ -131,12 +132,14 @@ function weTabBody(body) {
   else weDataTab(body);
   foldify(body, 'w:' + WE.tab); weTools();
 }
+function weTabLabel() { var tab = weTabs().filter(function (x) { return x.id === WE.tab; })[0]; return tab ? tab.label : ''; }
 /* 工具行：当前页名 + 折叠 / 展开本页全部卡片（和物品页的 buildToolsRow 同一个样子） */
 function weTools() {
   var t = $('edtools'); if (!t) return; clear(t);
   var cards = Array.prototype.slice.call(($('edbody') || document).querySelectorAll('.w-card')), tab = weTabs().filter(function (x) { return x.id === WE.tab; })[0];
   t.style.display = cards.length > 1 ? '' : 'none';
   t.appendChild(h('span', { class: 'ed-tools-t', text: tab ? tab.label : '' })); t.appendChild(h('div', { class: 'grow' }));
+  crumbLast = ''; crumbBind($('edbody'), null); setTimeout(updateCrumb, 0);
   var all = h('div', { class: 'k-mini', title: '折叠 / 展开本页全部卡片' }, [uiIcon('layers', 14)]);
   activate(all, function () { var collapse = cards.some(function (c) { return !c.classList.contains('collapsed'); }); cards.forEach(function (c) { if (c._card) c._card.setCollapsed(collapse); }); });
   t.appendChild(all);
@@ -181,6 +184,17 @@ function weSpawnerTab(body) {
 /* ---------- 实体：变种、常用开关、装备（eschema.js，数据来自游戏的 entity_schema）；其余字段在「数据」页 ---------- */
 function weEntityTab(body) {
   weObj();
+  /* 整只生物存进保险库 / 把保险库里的生物数据套到这只上（类型必须相同；位置、UUID 不动） */
+  body.appendChild(h('div', { class: 'k-row' }, [
+    kBtn('存入保险库', function () { var t = WE.text; try { t = nbtPrint(nbtParse(WE.text), false); } catch (e) {} openVaultSaveEntity(t, weName()); }, { icon: 'chest', title: '把这只生物的数据存起来（位置、UUID 等运行时数据不会存）' }),
+    kBtn('从保险库套用', function () {
+      openVault({ kind: 'entity', pickEntity: function (snbt) {
+        var o = vaultEntityObj(snbt), cur = weObj();
+        if (o.id && Reg.full(o.id) !== Reg.full(WE.w.type)) { toast('类型不同：这是 ' + spEntityName(o.id) + '，这里是 ' + weName() + '。放置好的生物不能换类型。', 'warn'); return; }
+        Object.keys(o).forEach(function (k) { if (k !== 'id') cur[k] = o[k]; });
+        WE.obj = cur; wePut(); weRedrawBody();
+      } });
+    }, { icon: 'download', title: '把保险库里同类型生物的外观、属性、装备等套上来' })]));
   body.appendChild(esPanel({ type: WE.w.type, get: function () { return WE.obj; }, set: function (o) { WE.obj = o; wePut(); } }));
   body.appendChild(h('div', { class: 'k-sub', text: '位置、UUID 等其余字段在「数据」页用 SNBT 编辑。' }));
 }
@@ -241,6 +255,8 @@ function weSaved(world) {
   var keepTab = WE.tab;
   weOpen(world); WE.tab = weTabs().some(function (t) { return t.id === keepTab; }) ? keepTab : weTabs()[0].id; weRender();
 }
+/* 注册表整体就绪（registry.meta）时，如果当前页是占位的「正在读取」，重画一次让它去发请求 */
+Reg.on(function () { if (weActive() && ES_WAIT && Reg.live() && !$('modal')) { try { weRedrawBody(); } catch (e) {} } });
 /* 世界实体页：entity_schema 到了再画一次（物品页的重画在 app.js，世界页没有物品文档，要自己接） */
 Reg.on(function (kind, kinds) { if (weActive() && (WE.tab === 'entity' || WE.tab === 'spawner') && (kinds || [kind]).indexOf('entity_schema') >= 0 && !$('modal')) { try { drawWorldScreen(); } catch (e) {} } });
 

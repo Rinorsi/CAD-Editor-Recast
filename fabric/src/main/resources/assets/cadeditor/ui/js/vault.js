@@ -50,6 +50,22 @@ var Vault = {
     var me = this, up = JSON.stringify(stack), g = {}; for (k in meta) if (meta[k] !== undefined && meta[k] !== '') g[k] = meta[k];
     this.upload(up, function (r) { if (!r.ok) { cb(r); return; } g.uploadToken = r.token; me.call('save', g, cb); });
   },
+  /* 存一只生物：snbt 是带类型的实体 SNBT 文本（后端会剔除 UUID / 位置 / 乘客等运行时字段，剔除了什么在回执 stripped 里） */
+  saveEntity: function (snbt, meta, cb) {
+    var f = { kind: 'entity', snbt: snbt }, k; meta = meta || {};
+    for (k in meta) if (meta[k] !== undefined && meta[k] !== '') f[k] = meta[k];
+    if (JSON.stringify(f).length < 7000) { this.call('save', f, cb); return; }
+    var me = this, g = { kind: 'entity' }; for (k in meta) if (meta[k] !== undefined && meta[k] !== '') g[k] = meta[k];
+    this.upload(snbt, function (r) { if (!r.ok) { cb(r); return; } g.uploadToken = r.token; me.call('save', g, cb); });
+  },
+  /* 取出一只生物的 SNBT 文本 */
+  takeEntity: function (id, cb) {
+    this.call('get', { ids: [id] }, function (r) {
+      if (!r.ok) { cb(r); return; }
+      var e = r.entries && r.entries[0];
+      if (e && typeof e.snbt === 'string') cb({ ok: true, snbt: e.snbt, entry: e }); else cb({ ok: false, error: 'NOT_FOUND', reason: '这一条已经不存在，或不是生物' });
+    });
+  },
   /* 取出完整的栈（编辑器 wire 格式）；get 超限就按 export 分页拼 */
   take: function (id, cb) {
     var me = this;
@@ -89,12 +105,26 @@ function vaultNested(stack) {
 
 /* ---------- 窗口 ---------- */
 /* 列表行下面一行：标签小标记 + 备注（一行，放不下就截断，完整内容在 tip / 展开里） */
-function vaultMeta(e) {
+function vaultMeta(e, isEnt) {
   var tags = (e.tags || []), note = (e.note || '').replace(/s+/g, ' ').trim();
-  if (!tags.length && !note) return null;
-  var kids = tags.map(function (t) { return h('span', { class: 'k-tag dim', text: t }); });
+  if (!tags.length && !note && !isEnt) return null;
+  var kids = []; if (isEnt) kids.push(h('span', { class: 'k-tag', text: 'SNBT', title: '带类型的实体数据，取出时整段使用' }));
+  tags.forEach(function (t) { kids.push(h('span', { class: 'k-tag dim', text: t })); });
   if (note) kids.push(h('span', { class: 'vt-note', text: note.length > 40 ? note.slice(0, 40) + '…' : note }));
   return h('div', { class: 'vt-meta' }, kids);
+}
+/* 生物条目：从保险库取出的 SNBT 文本 → 编辑器里用的 JSON（类型后缀登记成手输类型，提交时整段按 SNBT 输出） */
+function vaultEntityObj(snbt) { return parseSnbtUser(snbt); }
+function vaultEntInfo(e) { var s = e.summary || e.entity || {}; return { id: e.entityId || s.id || (e.entity && e.entity.id) || '', s: s }; }
+function vaultEntitySummary(e) {
+  var i = vaultEntInfo(e), s = i.s, bits = [];
+  if (i.id) bits.push(Reg.nameOf2('entity_type', i.id) || humanId(shortId(i.id)));
+  if (s.baby) bits.push('幼体');
+  if (s.hasCustomName) bits.push('有名字');
+  if (s.equipmentCount) bits.push(s.equipmentCount + ' 件装备');
+  if (s.attributeCount) bits.push(s.attributeCount + ' 项属性');
+  if (s.effectCount) bits.push(s.effectCount + ' 个效果');
+  return bits.join(' · ');
 }
 function vaultSummary(e) {
   var s = e.summary || {}, bits = [];
@@ -112,11 +142,12 @@ function vaultErr(r) { toast((r && r.reason) || (r && r.error) || '保险库操�
 /* opts.pick(stack, entry)：作为选择器打开时，点「使用」把栈交出去；不传就是普通的保险库窗口 */
 function openVault(opts) {
   opts = opts || {};
-  var V = { query: '', tags: [], sort: 'recent', rows: [], total: 0, next: null, token: 0, open: -1 };
+  var V = { query: '', tags: [], sort: 'recent', rows: [], total: 0, next: null, token: 0, open: -1, kind: opts.pickEntity || opts.kind === 'entity' ? 'entity' : 'item' };
+  var fixedKind = !!(opts.pick || opts.pickEntity);   // 作为选择器打开时只看对应的一类
   var q = h('input', { class: 'k-input', type: 'text', placeholder: '搜索名称、标签、物品（支持拼音）', spellcheck: 'false' });
   var sbox = kSearchBox(q, function (v) { V.query = v; refresh(); });
   var tagBar = h('div', { class: 'k-chips vt-tags' }), list, stat = h('span', { class: 'k-sub vt-stat' }), warn = h('div', { class: 'vt-warn' });
-  var sort = kSeg([{ v: 'recent', label: '最近' }, { v: 'name', label: '名称' }, { v: 'item', label: '物品' }], 'recent', function (v) { V.sort = v; refresh(); });
+  var sort = kSeg([{ v: 'recent', label: '最近' }, { v: 'name', label: '名称' }, { v: 'item', label: '类型' }], 'recent', function (v) { V.sort = v; refresh(); });
   var persistPoll = 0;
   function pollPersisted() {   // 后台落盘完成时游戏不会主动通知：还显示“正在保存…”就隔一会儿问一次
     if (Vault.st.persisted || persistPoll >= 12 || !$('modal')) return;
@@ -141,7 +172,7 @@ function openVault(opts) {
   function load(append, tries) {
     if (append && V.next === null) return;
     var tok = ++V.token;
-    Vault.call('list', { query: V.query, tags: V.tags, sort: V.sort, offset: append ? V.next : 0, limit: 40 }, function (r) {
+    Vault.call('list', { kind: V.kind, query: V.query, tags: V.tags, sort: V.sort, offset: append ? V.next : 0, limit: 40 }, function (r) {
       if (tok !== V.token) return;
       if (!r.ok) {
         if (r.error === 'NOT_READY' && (tries || 0) < 8) { setTimeout(function () { if (tok === V.token) load(append, (tries || 0) + 1); }, r.retryAfterMs || 500); return; }   // 文件还在加载：等一下再要，不把“还没读完”当成“是空的”
@@ -158,11 +189,14 @@ function openVault(opts) {
   function vaultErrRow(r) { clear(errBox); errBox.appendChild(xEmpty((r.reason || r.error || '读取保险库失败') + (r.error === 'NOT_READY' ? '（文件还在加载，稍后再点一下搜索）' : ''))); }
   function takeAnd(e, fn) { Vault.take(e.id, function (r) { if (!r.ok) { vaultErr(r); return; } fn(r.stack, r.entry); }); }
   var xl = xList({
-    items: function () { return V.rows; }, empty: V.query || V.tags.length ? '没有匹配的条目' : '保险库还是空的。编辑好物品后点上面的“存入当前物品”。',
+    items: function () { return V.rows; }, empty: V.query || V.tags.length ? '没有匹配的条目' : V.kind === 'entity' ? '还没有存过生物。在刷怪蛋、刷怪笼或世界里的生物编辑页点“存入保险库”。' : '保险库还是空的。编辑好物品后点上面的“存入当前物品”。',
     row: function (e, i) {
       var tagEls = (e.tags || []).map(function (t) { return h('span', { class: 'k-tag dim', text: t }); });
       var acts = h('div', { class: 'x-rt' }, []);
-      if (opts.pick) acts.appendChild(kBtn('使用', function () { takeAnd(e, function (stack, entry) { closeModal(); opts.pick(stack, entry); }); }, { cls: 'pri', icon: 'check' }));
+      var isEnt = V.kind === 'entity';
+      if (isEnt && opts.pickEntity) acts.appendChild(kBtn('使用', function () { Vault.takeEntity(e.id, function (r) { if (!r.ok) { vaultErr(r); return; } closeModal(); opts.pickEntity(r.snbt, r.entry); }); }, { cls: 'pri', icon: 'check' }));
+      else if (isEnt) { /* 生物条目在窗口里只管理；取出在各处“选择生物”里 */ }
+      else if (opts.pick) acts.appendChild(kBtn('使用', function () { takeAnd(e, function (stack, entry) { closeModal(); opts.pick(stack, entry); }); }, { cls: 'pri', icon: 'check' }));
       else {
         var giveBtn = kBtn('给我', function () {
           if (VaultGivePending[e.id]) return;   // 回执回来之前不重复发，不然会给出好几份
@@ -174,7 +208,8 @@ function openVault(opts) {
         }, { icon: 'download', title: '放进背包的空位（创造模式直接写进你的背包；生存需要 OP 权限）' });
         acts.appendChild(giveBtn);
       }
-      return { chevron: true, icon: itemIcon(e.item && e.item.id || 'minecraft:stick', 16), title: e.name, sub: vaultSummary(e) || (e.item && e.item.id) || '', tip: (e.note || '') + (e.translatedName ? '\n' + e.translatedName : ''), right: acts, meta: vaultMeta(e),
+      var entI = isEnt ? vaultEntInfo(e) : null;
+      return { chevron: true, icon: isEnt ? entityIcon(entI.id || 'minecraft:pig', 16) : itemIcon(e.item && e.item.id || 'minecraft:stick', 16), title: e.name, sub: isEnt ? (vaultEntitySummary(e) || entI.id) : (vaultSummary(e) || (e.item && e.item.id) || ''), tip: (e.note || '') + (e.translatedName ? '\n' + e.translatedName : ''), right: acts, meta: vaultMeta(e, isEnt),
         body: function () {
           var nm = vInput(e.name || '', function (v) { if (!v.trim()) return; Vault.call('update', { id: e.id, name: v }, function (r) { if (r.ok) { e.name = v; paintState(); } else vaultErr(r); }); }, '名称');
           var tg = vInput((e.tags || []).join('，'), function (v) { var t = v.split(/[,，\s]+/).filter(function (x) { return x; }).slice(0, 8); Vault.call('update', { id: e.id, tags: t }, function (r) { if (r.ok) { e.tags = t; refresh();  xl.draw(); } else vaultErr(r); }); }, '标签，用逗号隔开（最多 8 个）');
@@ -194,14 +229,31 @@ function openVault(opts) {
   }
   list = h('div', { class: 'vt-list' }, [xl.el, errBox]);
   var more = kBtn('显示更多', function () { load(true); }, { icon: 'down' }); more.style.display = 'none';
-  var saveBtn = Store.docs && Store.docs.length ? kBtn('存入当前物品', function () { openVaultSave(function () { refresh(); }); }, { cls: 'pri', icon: 'plus' }) : null;
+  var saveBtn = kBtn('存入当前物品', function () { openVaultSave(function () { refresh(); }); }, { cls: 'pri', icon: 'plus' });
+  if (!(Store.docs && Store.docs.length) || V.kind !== 'item' || opts.pickEntity) saveBtn.style.display = 'none';
   var impBtn = kBtn('导入…', function () { openVaultImport(refresh); }, { icon: 'upload' });
   var expBtn = kBtn('导出全部', function () { vaultExport(); }, { icon: 'download' });
+  var kindSeg = fixedKind ? null : kSeg([{ v: 'item', label: '物品', icon: 'backpack' }, { v: 'entity', label: '生物', icon: 'paw' }], V.kind, function (v) { V.kind = v; V.tags = []; saveBtn.style.display = v === 'item' && Store.docs && Store.docs.length ? '' : 'none'; q.setAttribute('placeholder', v === 'entity' ? '搜索名称、标签、生物（支持拼音）' : '搜索名称、标签、物品（支持拼音）'); refresh(); }).el;
   var top = h('div', { class: 'vt-top' }, [sbox.el]);
-  var body = [top, h('div', { class: 'vt-bar' }, [sort.el, saveBtn, h('div', { class: 'grow' }), stat]), tagBar, warn, undoEl, list, more];
-  var win = modalShell('保险库', opts.pick ? '选一件放进去' : '存在这台电脑上，所有存档和服务器通用', body, [impBtn, expBtn, h('div', { class: 'grow' }), kBtn('完成', closeModal, { cls: 'pri' })], 'wide vtwin');
+  var body = [top, h('div', { class: 'vt-bar' }, [kindSeg, sort.el, saveBtn, h('div', { class: 'grow' }), stat]), tagBar, warn, undoEl, list, more];
+  var win = modalShell('保险库', opts.pickEntity ? '选一只生物' : opts.pick ? '选一件放进去' : '存在这台电脑上，所有存档和服务器通用', body, [impBtn, expBtn, h('div', { class: 'grow' }), kBtn('完成', closeModal, { cls: 'pri' })], 'wide vtwin');
   openModal(win, !!opts.pick); windowify(win, 'vault');   // 和别的大窗口一样：能拖、能拉大小
   refresh(); paintState();
+}
+
+/* 存入一只生物：snbt 是带类型的实体数据文本；名称默认用生物名 */
+function openVaultSaveEntity(snbt, defName, done) {
+  if (!snbt || snbt === '{}') { toast('这只生物还没有数据', 'warn'); return; }
+  var nm = kInput(defName || '', function () {}, { placeholder: '名称' }), tg = kInput('', function () {}, { placeholder: '标签，用逗号隔开（可不填）' }), nt = kInput('', function () {}, { placeholder: '备注（可不填）' });
+  var go = kBtn('存入', function () {
+    var tags = (tg.value || '').split(/[,，\s]+/).filter(function (x) { return x; }).slice(0, 8);
+    Vault.saveEntity(snbt, { name: (nm.value || '').trim(), tags: tags, note: nt.value || '' }, function (r) {
+      if (!r.ok) { vaultErr(r); return; }
+      closeModal(); toast((r.duplicate ? '保险库里已经有一模一样的了：' : '已存入保险库：') + (r.entry ? r.entry.name : '') + (r.stripped && r.stripped.length ? '（位置、UUID 等运行时数据没有存）' : ''), 'ok');
+      if (done) done();
+    });
+  }, { cls: 'pri', icon: 'check' });
+  openModal(modalShell('存入保险库', '生物', [fieldRow('名称', nm), fieldRow('标签', tg), fieldRow('备注', nt)], [h('div', { class: 'grow' }), kBtn('取消', closeModal), go]), true);
 }
 
 /* 存入当前物品：名称 / 标签 / 备注可以填，不填就用默认 */

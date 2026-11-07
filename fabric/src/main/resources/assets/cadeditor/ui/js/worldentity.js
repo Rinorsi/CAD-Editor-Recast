@@ -216,7 +216,13 @@ function evRidingTab(body) {
   body.appendChild(xSec('users', '骑乘关系'));
   if (vh) body.appendChild(xRow({ icon: entityIcon(vh.type, 22), title: '正骑着：' + (vh.summary || nameOfEntity(vh.type)), sub: shortId(vh.type), right: kBtn('下来', function () { evRideSend({ action: 'dismount' }, '正在让它下来…'); }, { icon: 'down' }) }));
   else body.appendChild(h('div', { class: 'k-sub', text: '没有骑着别的东西。' }));
-  body.appendChild(xSec('paw', '身上的乘客', ps.length ? ps.length + ' 个' : ''));
+  /* 乘客卡片：头部右侧放「添加」和「全部赶下去」，列表在下面，添加表单点「添加」才展开 */
+  var addOpen = WE.rideAddOpen === undefined ? !ps.length : !!WE.rideAddOpen, addBox = h('div', { class: 'wp-addbox' });
+  var acts = h('span', { class: 'wp-acts' }, [
+    ps.length ? kBtn('全部赶下去', function () { evRideSend({ action: 'eject' }, '正在让乘客全部下来…'); }, { icon: 'close', title: '只解除骑乘，生物不会被删除' }) : null,
+    kBtn('添加', function () { addOpen = !addOpen; WE.rideAddOpen = addOpen; if (addOpen) { addBox.style.display = ''; uiSlide(addBox, true); } else uiSlide(addBox, false, function () { addBox.style.display = 'none'; }); }, { icon: 'plus', cls: 'pri', title: '给它加一个乘客' })
+  ]);
+  body.appendChild(xSec('paw', '乘客', ps.length ? ps.length + ' 个' : '没有', acts));
   function node(p, depth) {
     body.appendChild(xRow({ icon: entityIcon(p.type, 22), title: (depth ? '↳ ' : '') + (p.summary || nameOfEntity(p.type)), sub: shortId(p.type) + (p.passengers && p.passengers.length ? ' · 背着 ' + p.passengers.length + ' 个' : ''), tip: p.uuid,
       right: kBtn('赶下去', function () { evRideSend({ action: 'remove', uuid: p.uuid }, '正在让它下来…'); }, { icon: 'close', title: '只解除骑乘，生物不会被删除' }) }));
@@ -224,18 +230,19 @@ function evRidingTab(body) {
   }
   if (!ps.length) body.appendChild(xEmpty('没有乘客。'));
   ps.forEach(function (p) { node(p, 0); });
-  if (ps.length) body.appendChild(h('div', { class: 'k-row' }, [kBtn('全部赶下去', function () { evRideSend({ action: 'eject' }, '正在让乘客全部下来…'); }, { icon: 'close' })]));
-  body.appendChild(xSec('plus', '加一个乘客', '新生物会按游戏的规则判断能不能骑上去'));
   var type = WE.rideType || 'minecraft:chicken', data = WE.rideData || '';
-  var sel = kRegSelect({ reg: 'entity_type', value: type, title: '选择生物', onChange: function (id) { WE.rideType = id; } });
-  body.appendChild(xRow({ icon: false, title: '生物', right: sel.el }));
+  var sel = kRegSelect({ reg: 'entity_type', value: type, title: '选择生物', onEntityNbt: function (snbt) { var o = vaultEntityObj(snbt); WE.rideType = o.id || WE.rideType; delete o.id; WE.rideData = toSnbt(o, null, false); weRedrawBody(); }, onChange: function (id) { WE.rideType = id; } });
+  addBox.appendChild(xRow({ icon: false, title: '生物', right: sel.el }));
   var inp = kInput(data, function () {}, { placeholder: '可选的数据，比如 {CustomName:"小鸡"}' }); inp.classList.add('we-in');
   inp.addEventListener('change', function () { WE.rideData = inp.value; });
-  body.appendChild(xRow({ icon: false, title: '初始数据', sub: 'SNBT，可以不填', right: inp }));
-  body.appendChild(h('div', { class: 'k-row' }, [kBtn('加上去', function () {
+  addBox.appendChild(xRow({ icon: false, title: '初始数据', sub: 'SNBT，可以不填', right: inp }));
+  addBox.appendChild(h('div', { class: 'k-row' }, [kBtn('加上去', function () {
     var act = { action: 'add', type: WE.rideType || 'minecraft:chicken' }; if ((WE.rideData || '').trim()) act.entity_data = WE.rideData.trim();
     evRideSend(act, '正在加上乘客…');
   }, { cls: 'pri', icon: 'plus' })]));
-  body.appendChild(h('div', { class: 'k-sub', text: '骑乘关系的修改不能撤销。' }));
+  addBox.appendChild(h('div', { class: 'k-sub', text: '骑乘关系的修改不能撤销。' }));
+  addBox.insertBefore(h('div', { class: 'k-sub', text: '新生物会按游戏的规则判断能不能骑上去' }), addBox.firstChild);
+  addBox.style.display = addOpen ? '' : 'none';
+  body.appendChild(addBox);
 }
 function nameOfEntity(t) { return Reg.nameOf2('entity_type', t) || humanId(shortId(t)); }

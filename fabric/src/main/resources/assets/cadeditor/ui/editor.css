@@ -1605,3 +1605,8 @@ body.vault-only .ew { display: none; }
 .wp-col { min-width: 204px; }
 .wp-inv { overflow-x: auto; justify-content: flex-start; }
 .wp-inv > :first-child { margin-left: auto; } .wp-inv > :last-child { margin-right: auto; }
+
+/* 卡片头部右侧的操作按钮（foldify 把 xSec 的 action 放进 .x-act） */
+.wp-acts { display: flex; align-items: center; gap: 4px; }
+.x-act { flex: none; display: flex; align-items: center; margin-right: 6px; }
+.wp-addbox { border-top: 1px solid var(--ln2); box-shadow: 0 -1px 0 var(--ln); margin-top: 4px; padding-top: 4px; }

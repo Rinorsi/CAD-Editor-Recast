@@ -225,7 +225,7 @@ function openPicker(o) {
   }
   var cancel = kBtn('取消', closeModal);
   confirm = kBtn(o.confirmLabel || '添加所选', function () { if (!selN) return; var ids = Object.keys(sel); closeModal(); o.onConfirm(ids, vals); }, { cls: 'pri' });
-  foot.appendChild(info); foot.appendChild(h('div', { class: 'grow' })); foot.appendChild(cancel); foot.appendChild(confirm);
+  foot.appendChild(info); (o.footExtra || []).forEach(function (b) { foot.appendChild(b); }); foot.appendChild(h('div', { class: 'grow' })); foot.appendChild(cancel); foot.appendChild(confirm);
   var x = h('div', { class: 'k-mini', text: '×' }); activate(x, closeModal);
   var srcTag = h('span', { class: 'k-tag' + (o.live ? '' : ' dim'), text: o.live ? '游戏实时注册表' : '内置数据（未连接游戏）' });
   var win = h('div', { class: 'k-modal addwin pickwin' }, [
@@ -318,7 +318,7 @@ function kRegSelect(o) {
     idEl.textContent = (name === cur || name === humanId(shortId(cur)) && !e) ? (isTag ? cur : "") : cur;
   }
   var pick = kBtn("选择…", function () {
-    openRegPick({ reg: o.reg, tag: o.tag, current: cur, title: o.title, fallback: o.fallback, onPick: function (id) { cur = id; paint(); o.onChange(cur); } });
+    openRegPick({ reg: o.reg, tag: o.tag, current: cur, title: o.title, fallback: o.fallback, onEntityNbt: o.onEntityNbt, onPick: function (id) { cur = id; paint(); o.onChange(cur); } });
   }, { icon: "grid" });
   var kids = [h("div", { class: "rs-txt" }, [nm, idEl]), pick];
   if (o.allowClear) kids.push(kBtn("清除", function () { cur = ""; paint(); o.onChange(""); }, { icon: "close" }));
@@ -371,7 +371,10 @@ regEnumTable('rarity', RARITY, function (x) { return x.v; }, function (id, n) { 
 regEnumTable('equipment_slot_group', SLOTS, function (x) { return x; }, function (id, n) { SLOT_ZH[id] = SLOT_ZH[id] || n; return id; });
 
 /* ---- 通用表单里的“选择…”：单选一个注册表条目，标签字段还能选 #标签；数据到达后列表自动刷新，也能手输 ---- */
-function openRegPick(o) {   /* o: { reg, tag, current, title, fallback, onPick(id) } */
+function openRegPick(o) {   /* o: { reg, tag, current, title, fallback, onPick(id), onEntityNbt(snbtText, entry) } */
+  if (o.reg === 'entity_type' && !o.tag && o.onEntityNbt && !o.footExtra) {
+    o = Object.assign({}, o, { footExtra: [kBtn('从保险库取生物', function () { openVault({ kind: 'entity', pickEntity: function (snbt, entry) { closeModal(); o.onEntityNbt(snbt, entry); } }); }, { icon: 'chest', title: '取出保险库里存好的整只生物（带外观、属性、装备等全部数据）' })] });
+  }
   if (o.reg === "sound_event") { openSoundPicker({ current: o.current, onConfirm: o.onPick }); return; }   // 和食用/穿戴音效是同一个带试听的音效选择窗
   if (o.reg === "jukebox_song" || o.reg === "instrument") {   // 唱片曲目 / 山羊角：带试听（用它们各自的声音事件）
     var snds = {};
@@ -388,11 +391,11 @@ function openRegPick(o) {   /* o: { reg, tag, current, title, fallback, onPick(i
   var lk = Reg.lazyKind(o.reg);
   if (lk) {   // 大目录：不在页面里，选择窗直接问宿主
     openPicker({ kind: "regpick-" + o.reg, emptyReg: o.reg, lazy: true, lazyKind: lk, rowFn: function (r) { var e = Reg.rowToOpt(o.reg, r); return { full: Reg.full(e.v), name: refName(o.reg, e), sub: e.v, icon: function () { return refIcon(o.reg, e.v); } }; },
-      title: o.title || "选择", sub: o.multi ? "勾选后一次添加" : "", icon: "grid", single: !o.multi, locked: o.locked, entries: [], cats: [{ id: "all", name: "全部", icon: "grid" }, { id: "mod", name: "模组", icon: "cube" }],
+      footExtra: o.footExtra, title: o.title || "选择", sub: o.multi ? "勾选后一次添加" : "", icon: "grid", single: !o.multi, locked: o.locked, entries: [], cats: [{ id: "all", name: "全部", icon: "grid" }, { id: "mod", name: "模组", icon: "cube" }],
       live: true, searchHint: "搜索名称或 ID", custom: { placeholder: "或输入 ID，回车选中" }, confirmLabel: o.multi ? "添加所选" : "使用这个", onConfirm: function (ids) { if (o.multi) o.onPickMany(ids); else o.onPick(ids[0]); } });
     return;
   }
-  openPicker({ kind: "regpick-" + o.reg, emptyReg: o.reg, hostKind: Reg.hostKind(o.reg), title: o.title || "选择", sub: o.multi ? "勾选后一次添加" : "", icon: "grid", single: !o.multi, locked: o.locked, entriesFn: build, cats: cats, live: Reg.live(), searchHint: "搜索名称或 ID", custom: { placeholder: "或输入 ID，回车选中" }, confirmLabel: o.multi ? "添加所选" : "使用这个", onConfirm: function (ids) { if (o.multi) o.onPickMany(ids); else o.onPick(ids[0]); } });
+  openPicker({ kind: "regpick-" + o.reg, emptyReg: o.reg, hostKind: Reg.hostKind(o.reg), footExtra: o.footExtra, title: o.title || "选择", sub: o.multi ? "勾选后一次添加" : "", icon: "grid", single: !o.multi, locked: o.locked, entriesFn: build, cats: cats, live: Reg.live(), searchHint: "搜索名称或 ID", custom: { placeholder: "或输入 ID，回车选中" }, confirmLabel: o.multi ? "添加所选" : "使用这个", onConfirm: function (ids) { if (o.multi) o.onPickMany(ids); else o.onPick(ids[0]); } });
 }
 /* 条目名：有翻译名就用翻译名；没有就用物品名（装备外观、方块和物品同名）；再不行才把路径变成易读的英文。完整 ID 不再当名字 */
 function refName(reg, e) {

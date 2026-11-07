@@ -113,7 +113,7 @@ WEV.beehive = function (body, g) {
   function save() { weSetV(g, 'bees', clone(list)); }
   list.forEach(function (b, i) {
     var ed = b.entity_data || {};
-    var sel = kRegSelect({ reg: 'entity_type', value: ed.id || 'minecraft:bee', title: '选择生物', onChange: function (id) { list[i].entity_data = Object.assign({}, list[i].entity_data, { id: id }); save(); } });
+    var sel = kRegSelect({ reg: 'entity_type', value: ed.id || 'minecraft:bee', title: '选择生物', onEntityNbt: function (snbt) { list[i].entity_data = vaultEntityObj(snbt); save(); wvRedraw(); }, onChange: function (id) { list[i].entity_data = Object.assign({}, list[i].entity_data, { id: id }); save(); } });
     var t1 = kNumber(b.ticks_in_hive || 0, { min: 0, noSlider: true, step: 20, unit: '刻', onChange: function (v) { list[i].ticks_in_hive = v; save(); } });
     var t2 = kNumber(b.min_ticks_in_hive === undefined ? 600 : b.min_ticks_in_hive, { min: 0, noSlider: true, step: 20, unit: '刻', onChange: function (v) { list[i].min_ticks_in_hive = v; save(); } });
     var rm = kBtn('放走', function () { list.splice(i, 1); save(); wvRedraw(); }, { icon: 'trash', title: '放走这只蜜蜂' });

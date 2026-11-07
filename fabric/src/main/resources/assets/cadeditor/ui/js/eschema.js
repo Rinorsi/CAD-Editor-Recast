@@ -57,10 +57,17 @@ function esOwnedKeys(s) {
 }
 
 /* 读不到 schema 时给一句原因；能用就返回 schema */
+var ES_WAIT = false, ES_TO = null;   /* 当前页面有没有因为「还在读」而画成占位——注册表 / 生物信息到了要重画 */
 function esReady(type, host) {
   var s = type ? Reg.entitySchema(type) : false;
   if (!type) { host.appendChild(xEmpty('先选择生物')); return null; }
-  if (s === null) { host.appendChild(xEmpty('正在向游戏读取这只生物能改什么…')); return null; }
+  if (s === null) {
+    var at = Reg.esAt && Reg.esAt[Reg.full(type)];
+    if (at && Date.now() - at > 6000) { host.appendChild(xEmpty('游戏没有返回这只生物的信息（游戏里的编辑器模组可能还是旧版本，请更新并重启游戏）。可以在「其他数据」里直接添加字段。')); return null; }
+    ES_WAIT = true;
+    if (!ES_TO && typeof setTimeout === 'function') ES_TO = setTimeout(function () { ES_TO = null; if (ES_WAIT && typeof weActive === 'function' && weActive() && !$('modal')) { try { weRedrawBody(); } catch (e) {} } }, 6200);
+    host.appendChild(xEmpty('正在向游戏读取这只生物能改什么…')); return null;
+  }
   if (!s) { host.appendChild(xEmpty('没有连接游戏，读不到这只生物的变种和开关。可以在「其他数据」里直接添加字段。')); return null; }
   if (!s.available) { host.appendChild(xEmpty((s.error || '游戏没能生成这只生物的模板') + '。可以在「其他数据」里直接添加字段。')); return null; }
   return s;

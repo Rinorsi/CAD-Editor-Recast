@@ -10,7 +10,7 @@ var Reg = {
     if (key === 'validate_component.result') { if (typeof Valid !== 'undefined') Valid.receive(val); return; }
     if (typeof key !== 'string' || key.indexOf('registry.') !== 0) return;
     if (key === 'registry.client_features') { if (val && val.accepted) this.features = val.accepted; if (val && val.lazy) this.setLazy(val.lazy); this.fire(); return; }
-    if (key === 'registry.meta') { this.meta = val; this.cache = {}; this.eschema = {}; this.esAsk = {}; if (val && val.lazy) this.setLazy(val.lazy); this.askSchema(); this.fire(); return; }
+    if (key === 'registry.meta') { this.meta = val; this.cache = {}; this.eschema = {}; this.esAsk = {}; this.esAt = {}; if (val && val.lazy) this.setLazy(val.lazy); this.askSchema(); this.fire(); return; }
     if (!val || typeof val !== 'object') return;
     if (key === 'registry.relation') { this.ingestRel(val); return; }
     var kind = key.substring(9), k = this.kinds[kind];
@@ -122,7 +122,7 @@ var Reg = {
   },
   /* 实体能改什么（entity_schema）：变种、常用开关、装备槽。按需请求；离线 / 未知实体 = false，还在等 = null，
      工厂不可用 = {available:false}。世界或语言换了（registry.meta 重新推送）就重新要 */
-  eschema: {}, esAsk: {},
+  eschema: {}, esAsk: {}, esAt: {},
   ingestES: function (v) {
     var ents = v.entries || [];
     ents.forEach(function (e) { if (e && e.id) Reg.eschema[Reg.full(e.id)] = e; });
@@ -130,11 +130,12 @@ var Reg = {
     this.fire('entity_schema');
   },
   entitySchema: function (full) {
-    if (!this.live()) return false;
     full = this.full(full);
+    /* 有宿主但注册表还没到：算「正在读取」，等 registry.meta 来了再重画并发请求；只有根本没有宿主（浏览器预览）才算没连接 */
+    if (!this.live()) { if (typeof oriel !== 'undefined' && oriel.send) { if (!this.esAt[full]) this.esAt[full] = Date.now(); return null; } return false; }
     var p = this.eschema[full];
     if (p !== undefined) return p;
-    if (!this.esAsk[full] && typeof oriel !== 'undefined' && oriel.send) { this.esAsk[full] = 1; oriel.send('registry', { name: 'entity_schema', id: full }); }
+    if (!this.esAsk[full] && typeof oriel !== 'undefined' && oriel.send) { this.esAsk[full] = 1; if (!this.esAt[full]) this.esAt[full] = Date.now(); oriel.send('registry', { name: 'entity_schema', id: full }); }
     return null;
   },
   /* 物品元信息（item_meta_one / item_meta）：武器 / 工具 / 食物 / 盔甲槽 / 容器格数 / 收纳袋容量 / 刷怪蛋实体 等事实。
