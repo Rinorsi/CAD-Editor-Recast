@@ -183,13 +183,9 @@ CARDS.model = function () {
   function draw() {
     clear(holder);
     var m = Ctx.get('item_model'), id = m ? shortId(m) : Ctx.id();
-    var btn = h('div', { class: 'k-btn' }, [itemIcon(id, 20), h('span', { text: '外观：' + nameOfItem(id) }), uiIcon('down', 10)]);
+    var btn = h('div', { class: 'k-btn' }, [itemIcon(id, 20), h('span', { class: 'hd-model', text: '外观：' + nameOfItem(id), title: nameOfItem(id) + '\n' + fullId(id) }), uiIcon('down', 10)]);
     activate(btn, function () { pickItem(btn, function (pid) { Ctx.setSmart('item_model', fullId(pid), { label: '借用外观' }); draw(); }); });
     holder.appendChild(btn);
-    /* 物品模型定义不止“某个物品”（模组 / 资源包自己的模型也行）：从游戏当前资源包里列出来选，也能手输 */
-    var more = h('div', { class: 'k-btn' }, [uiIcon('grid', 12), h('span', { text: '其他模型…' })]);
-    activate(more, function () { openRegPick({ reg: 'item_model', title: '选择物品模型', current: m ? fullId(m) : '', onPick: function (x) { if (x) { Ctx.setSmart('item_model', Reg.full(x), { label: '借用外观' }); draw(); } } }); });
-    holder.appendChild(more);
   }
   draw(); card.live.push(draw);
   var hd = card.el.firstChild; hd.insertBefore(holder, hd.querySelector('.k-cval')); card.el.classList.add('flat');

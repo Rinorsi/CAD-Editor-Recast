@@ -1439,3 +1439,7 @@ textarea.world-snbt { min-height: 56px; }
 .k-sbox { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .k-sbox > .k-input { flex: 1; min-width: 0; width: auto; }
 .k-sbox > .k-sbtn { flex: none; }
+
+/* 外观借用：头部那个按钮名字太长时截断，不挤掉卡片说明 */
+.hd-pick .k-btn { max-width: 170px; min-width: 0; }
+.hd-pick .k-btn > .hd-model { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
