@@ -30,7 +30,7 @@ const root=new Element('body'),overlays=new Element('div');overlays.id='overlays
 const doc={body:root,activeElement:null,addEventListener(){},createElement(tag){return new Element(tag);},createTextNode(t){const el=new Element('text');el.textContent=t;return el;},getElementById(id){return root.querySelector('#'+id);}};
 const c=vm.createContext({document:doc,window:{innerWidth:760,innerHeight:560},console,setTimeout(){},clearTimeout(){},oriel:{data:{},send(){return true;}}});
 const dir=path.resolve(__dirname,'../fabric/src/main/resources/assets/cadeditor/ui/js');
-for(const f of ['data','core','pinyin-data','search','forms','kit','kit2','nbt','xlist','reg','hostsearch','picker','cards1','cards2','cards3','cards5','world','rules','spawn','eschema','screens','worldedit','worldview','worldentity','vault'])vm.runInContext(fs.readFileSync(path.join(dir,f+'.js'),'utf8'),c);
+for(const f of ['data','core','pinyin-data','search','forms','kit','kit2','nbt','xlist','reg','hostsearch','picker','cards1','cards2','cards3','cards5','world','rules','spawn','eschema','screens','worldedit','worldview','worldentity','worldplayer','vault'])vm.runInContext(fs.readFileSync(path.join(dir,f+'.js'),'utf8'),c);
 c.uiIcon=()=>new Element('i');c.itemIcon=()=>new Element('i');c.uiClick=()=>{};c.snd=()=>{};c.toast=()=>{};
 let saved,disabled=0,writes=0;
 c.autoPut=(cid,value)=>{saved=JSON.parse(JSON.stringify(value));writes++;};
@@ -841,3 +841,29 @@ console.log('PASS world entity: pose, frame, display, trades, riding.');
   for (const k of Object.keys(warm)) assert.ok(after[k] <= warm[k] + 3, '不应随使用时间增长：' + k + ' ' + warm[k] + ' → ' + after[k]);
 }
 console.log('PASS soak: caches stay bounded over 400 open/edit/save/registry cycles.');
+
+// 世界玩家：背包 / 末影箱 / 状态 / 能力 / 属性，按契约发 apply.entity.player
+{
+  const sent = []; c.oriel.send = (k, v) => { sent.push([k, v]); return true; };
+  const slots = []; for (let i = 0; i < 43; i++) slots.push({ slot: i, stack: i === 0 ? { id: 'minecraft:stick', count: 3, comps: {} } : { empty: true } });
+  const player = { container: { size: 43, slots }, ender: { size: 27, slots: [] }, SelectedItemSlot: 0, Health: 20, AbsorptionAmount: 0, food: { foodLevel: 20, saturation: 5 }, experience: { XpLevel: 3, XpP: 0.5, XpTotal: 20 },
+    playerGameType: 'survival', abilities: { flying: false, mayfly: false, invulnerable: false, mayBuild: true, instabuild: false, walkSpeed: 0.1, flySpeed: 0.05 }, attributes: [{ id: 'minecraft:max_health', base: 20 }], active_effects: [], Tags: [], CustomName: null,
+    schema: { gameModes: ['survival', 'creative', 'adventure', 'spectator'], selectedSlotMax: 8, inventorySize: 43, enderSize: 27, equipmentSlots: [{ slot: 36, equipment: 'feet' }, { slot: 37, equipment: 'legs' }, { slot: 38, equipment: 'chest' }, { slot: 39, equipment: 'head' }, { slot: 40, equipment: 'offhand' }],
+      attributes: [{ id: 'minecraft:max_health', base: 20, min: 1, max: 1024 }], bounds: { Health: { min: 0, max: 20 }, 'food.foodLevel': { min: 0, max: 20 } } } };
+  const w = { kind: 'entity', type: 'minecraft:player', slot: { kind: 'entity', dim: 'minecraft:overworld', player: 'self', token: 't' }, revision: 'r', canUndo: false, snbt: '{}', nbt: {}, player: { self: true, name: 'Rinorsi', uuid: 'u' }, views: { player } };
+  c.weOpen(w);
+  assert.equal(JSON.stringify(c.weTabs().map(t => t.id)), '["pinv","pender","pstat","pabil","pattr"]'); assert.equal(c.weName(), 'Rinorsi（你）');
+  for (const t of c.weTabs()) { c.WE.tab = t.id; c.weRender(); }
+  assert.equal(c.weDirty(), false);
+  c.wpSetSlot('container', 5, { id: 'minecraft:apple', count: 1, comps: {}, removed: {} }); c.wpSetSlot('ender', 2, { id: 'minecraft:diamond', count: 2, comps: {}, removed: {} });
+  c.evSet('player', 'playerGameType', 'creative'); c.evSet('player', 'food', { foodLevel: 10, saturation: 5 }); c.evSet('player', 'SelectedItemSlot', 4);
+  assert.equal(c.weDirty(), true);
+  c.WE.pending = null; c.weApply(); const ap = sent.filter(x => x[0] === 'apply').pop()[1];
+  assert.equal(ap.snbt, undefined, '玩家不提交原始 SNBT'); const pp = ap.entity.player;
+  assert.equal(pp.playerGameType, 'creative'); assert.equal(pp.food.foodLevel, 10); assert.equal(pp.SelectedItemSlot, 4);
+  assert.equal(JSON.stringify(pp.container.slots.map(s => s.slot)), '[5]'); assert.equal(pp.ender.slots[0].stack.id, 'minecraft:diamond'); assert.equal(pp.abilities, undefined);
+  c.weSaved(w); assert.equal(c.weDirty(), false, '保存后草稿清空');
+  c.wpSetSlot('container', 0, { empty: true }); assert.equal(c.weDirty(), true); c.wpSetSlot('container', 0, { id: 'minecraft:stick', count: 3, comps: {} });
+  c.WE.w = null;
+}
+console.log('PASS world player: inventory, ender chest, status, abilities, attributes.');

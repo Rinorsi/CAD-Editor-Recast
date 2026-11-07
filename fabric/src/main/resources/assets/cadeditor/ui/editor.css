@@ -539,13 +539,13 @@ textarea.ed-raw, textarea.ed-snbt, textarea.ed-out { width: 100%; color: var(--t
 /* 小 GUI（比如 1080p 自动缩放 4 → 480×270）：窗口留 8，左栏收成图标条，分页只留当前页的名字 */
 @media (max-width: 540px), (max-height: 290px) {
   .eb .crumb, .k-search span, .k-search .k-kbd { display: none; }
-  .ed-hero { width: 68px; padding: 6px 4px; gap: 4px; align-items: center; }
-  .ed-hero:not(.pop) .ed-stagehead, .ed-hero:not(.pop) .ed-tags, .ed-hero:not(.pop) .ed-stats, .ed-hero:not(.pop) .ed-tiphead, .ed-hero:not(.pop) .k-scrollbox, .ed-hero:not(.pop) .k-togrow, .ed-hero:not(.pop) .k-note { display: none; }
-  .ed-hero { cursor: pointer; }
-  .ed-hero.pop { width: 200px; align-items: stretch; }
-  .ed-hero.pop .ed-name { font-size: 12px; line-height: 16px; }
-  .ed-stage { height: 40px; } .ed-stage .plate { width: 44px; height: 44px; margin: -22px 0 0 -22px; }
-  .ed-stage .k-ico { width: 32px !important; height: 32px !important; }
+  .ew:not(.snug) .ed-hero { width: 68px; padding: 6px 4px; gap: 4px; align-items: center; }
+  .ew:not(.snug) .ed-hero:not(.pop) .ed-stagehead, .ew:not(.snug) .ed-hero:not(.pop) .ed-tags, .ew:not(.snug) .ed-hero:not(.pop) .ed-stats, .ew:not(.snug) .ed-hero:not(.pop) .ed-tiphead, .ew:not(.snug) .ed-hero:not(.pop) .k-scrollbox, .ew:not(.snug) .ed-hero:not(.pop) .k-togrow, .ew:not(.snug) .ed-hero:not(.pop) .k-note { display: none; }
+  .ew:not(.snug) .ed-hero { cursor: pointer; }
+  .ew:not(.snug) .ed-hero.pop { width: 200px; align-items: stretch; }
+  .ew:not(.snug) .ed-hero.pop .ed-name { font-size: 12px; line-height: 16px; }
+  .ew:not(.snug) .ed-stage { height: 40px; } .ew:not(.snug) .ed-stage .plate { width: 44px; height: 44px; margin: -22px 0 0 -22px; }
+  .ew:not(.snug) .ed-stage .k-ico { width: 32px !important; height: 32px !important; }
   .ed-stage.ent { height: 64px; }
   .ed-name { font-size: 8px; line-height: 14px; }
   .ed-tip { display: none; }
@@ -755,9 +755,9 @@ textarea.ed-code-in { min-height: 56px; }
 .ed-stage .k-model { width: 88px; height: 88px; -mc-model-scale: 0.7; -mc-pitch: 14deg; }
 .ed-stage .plate { width: 92px; height: 92px; margin: -46px 0 0 -46px; }
 @media (max-width: 540px), (max-height: 290px) {
-  .ed-stage { height: 52px; }
-  .ed-stage .k-model { width: 52px !important; height: 52px !important; }
-  .ed-stage .plate { width: 52px; height: 52px; margin: -26px 0 0 -26px; }
+  .ew:not(.snug) .ed-stage { height: 52px; }
+  .ew:not(.snug) .ed-stage .k-model { width: 52px !important; height: 52px !important; }
+  .ew:not(.snug) .ed-stage .plate { width: 52px; height: 52px; margin: -26px 0 0 -26px; }
 }
 
 /* 预览折叠头 */

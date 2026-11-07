@@ -28,12 +28,13 @@ function weDirtyText() { if (!WE.w) return false; try { return nbtPrint(nbtParse
 function weDirty() { return weDirtyText() || Object.keys(WE.slots).length > 0 || (typeof weViewsDirty === 'function' && weViewsDirty()) || (typeof evDirty === 'function' && evDirty()); }
 function weName() {
   var w = WE.w;
+  if (w.player) return (w.player.name || '玩家') + (w.player.self ? '（你）' : '');
   if (w.kind === 'block') { var bid = shortId(w.block || w.type); return nameOfItem(bid) || Reg.nameOf2('block', w.block || w.type) || humanId(bid); }
   return Reg.nameOf2('entity_type', w.type) || humanId(shortId(w.type));
 }
 
 function weOpen(world) {
-  WE.w = world; WE.text = nbtPrint(nbtParse(world.snbt), true); WE.slots = {}; WE.err = ''; WE.obj = null; if (typeof weResetEdits === 'function') weResetEdits(); if (typeof weEntReset === 'function') weEntReset();
+  WE.w = world; WE.text = nbtPrint(nbtParse(world.snbt), true); WE.slots = {}; WE.err = ''; WE.obj = null; if (typeof weResetEdits === 'function') weResetEdits(); if (typeof weEntReset === 'function') weEntReset(); if (typeof wpReset === 'function') wpReset();
   var tabs = weTabs(); if (!tabs.some(function (t) { return t.id === WE.tab; })) WE.tab = tabs[0].id;
   weRender();
 }
@@ -44,6 +45,9 @@ function weTabs() {
   if (!noBE && w.kind === 'block' && (w.type === 'minecraft:mob_spawner' || w.type === 'minecraft:trial_spawner')) t.push({ id: 'spawner', label: '刷怪设置', icon: 'paw' });
   if (w.kind === 'block' && (weStateSchema().length || weTypeSchema().length > 1)) t.push({ id: 'state', label: '方块状态', icon: 'sliders' });
   if (noBE) return t;
+  if (w.kind === 'entity' && w.player) {
+    return [{ id: 'pinv', label: '背包', icon: 'backpack' }, { id: 'pender', label: '末影箱', icon: 'chest' }, { id: 'pstat', label: '状态', icon: 'heart' }, { id: 'pabil', label: '能力', icon: 'wind' }, { id: 'pattr', label: '属性与效果', icon: 'sliders' }];
+  }
   if (w.kind === 'entity') {
     if (evGroup('pose')) t.push({ id: 'pose', label: '姿势', icon: 'user' });
     if (evGroup('item_frame')) t.push({ id: 'frame', label: '展示框', icon: 'image' });
@@ -62,9 +66,9 @@ function weRender() {
 }
 function drawWorldTop() {
   var bar = clear($('topbar')), w = WE.w;
-  bar.appendChild(h('span', { class: 'eb-ico' }, [w.kind === 'block' ? itemIcon(shortId(w.block || w.type), 22) : entityIcon(w.type, 22)]));
+  bar.appendChild(h('span', { class: 'eb-ico' }, [w.kind === 'block' ? itemIcon(shortId(w.block || w.type), 22) : w.player ? itemIcon('player_head', 22) : entityIcon(w.type, 22)]));
   bar.appendChild(h('span', { class: 'ttl', text: weName() }));
-  bar.appendChild(h('span', { class: 'crumb', text: w.kind === 'block' ? '方块' : '实体' }));
+  bar.appendChild(h('span', { class: 'crumb', text: w.kind === 'block' ? '方块' : w.player ? '玩家' : '实体' }));
   bar.appendChild(h('div', { class: 'grow' }));
   var un = h('div', { class: 'k-ibtn' + (w.canUndo ? '' : ' dis'), title: '撤销上一次写入游戏的修改' }, [uiIcon('undo', 14)]);
   activate(un, function () { if (WE.w.canUndo) weUndo(); });
@@ -103,7 +107,12 @@ function drawWorldScreen() {
   right.appendChild(tabbar); right.appendChild(body);
   host.appendChild(hero); host.appendChild(right);
   weHero();
-  if (WE.tab === 'pose') evPoseTab(body);
+  if (WE.tab === 'pinv') wpInventoryTab(body);
+  else if (WE.tab === 'pender') wpEnderTab(body);
+  else if (WE.tab === 'pstat') wpStatusTab(body);
+  else if (WE.tab === 'pabil') wpAbilitiesTab(body);
+  else if (WE.tab === 'pattr') wpAttrTab(body);
+  else if (WE.tab === 'pose') evPoseTab(body);
   else if (WE.tab === 'frame') evFrameTab(body);
   else if (WE.tab === 'painting') evPaintingTab(body);
   else if (WE.tab === 'display') evDisplayTab(body);
@@ -127,33 +136,9 @@ function weContainerTab(body) {
   var c = WE.w.container, n = c.size, cols = n <= 5 ? n : n <= 9 ? 3 : 9;
   if (c.unresolved_loot) { body.appendChild(xEmpty('这个容器里的战利品还没有生成（第一次打开时才会生成）。请先在游戏里打开一次，再回来编辑。')); return; }
   body.appendChild(xSec('chest', '里面的物品', n + ' 格'));
-  var grid = h('div', { class: 'k-cgrid' }); grid.setAttribute('style', 'grid-template-columns:repeat(' + cols + ',34px)');
-  function paint(cell, i) {
-    clear(cell);
-    var st = weSlotStack(i);
-    if (st.empty) { cell.setAttribute('title', '空格子 ' + (i + 1)); return; }
-    cell.appendChild(itemIcon(st.id, 26));
-    if ((st.count || 1) > 1) cell.appendChild(h('span', { class: 'cnt', text: String(st.count) }));
-    if (st.comps && Object.keys(st.comps).length) cell.appendChild(h('i', { class: 'mk', title: '这个物品带有自己的组件数据，会原样保留' }));
-    cell.setAttribute('title', nameOfItem(st.id) + ' × ' + (st.count || 1));
-  }
-  function edit(cell, i) {
-    var cur = weSlotStack(i), box = h('div', { class: 'k-pickbox' });
-    function set(st) { if (st.empty && weOrigEmpty(i)) delete WE.slots[i]; else WE.slots[i] = st; paint(cell, i); drawWorldTop(); drawWorldFoot(); }
-    var pick = h('div', { class: 'k-btn' }, cur.empty ? [uiIcon('plus', 12), h('span', { text: '选择物品' })] : [itemIcon(cur.id, 22), h('span', { text: nameOfItem(cur.id) })]);
-    activate(pick, function () { pickItem(cell, function (id) { var o = weSlotStack(i); set({ id: fullId(id), count: o.empty ? 1 : (o.count || 1), comps: {}, removed: {} }); kPopClose(); }, { onStack: function (st) { var s2 = clone(st); delete s2.slot; delete s2.label; set(s2); kPopClose(); } }); });
-    box.appendChild(pick);
-    if (!cur.empty) {
-      var ms = (protoOf(cur.id).max_stack_size || 64), cnt = kNumber(cur.count || 1, { min: 1, max: 99, noSlider: true, step: 1, unit: '个', warnMax: ms, warnWhy: '该物品原版最大堆叠 ' + ms, presets: [{ v: 1, label: '1' }, { v: 16, label: '16' }, { v: 64, label: '64' }], onChange: function (v) { var o = clone(weSlotStack(i)); o.count = v; set(o); } });
-      box.appendChild(fieldRow('数量', cnt.el));
-      box.appendChild(kBtn('清空这一格', function () { set({ empty: true }); kPopClose(); }, { cls: 'dng', icon: 'trash' }));
-    }
-    kPopover(cell, box, { width: 250, maxHeight: 280 });
-  }
-  for (var i = 0; i < n; i++) (function (i) {
-    var cell = h('div', { class: 'slot s34' }); paint(cell, i); cell.addEventListener('click', function () { edit(cell, i); }); grid.appendChild(cell);
-  })(i);
-  body.appendChild(grid);
+  var ix = []; for (var i = 0; i < n; i++) ix.push(i);
+  body.appendChild(weSlotGrid({ indices: ix, cols: cols, stackOf: weSlotStack, titleOf: function (i) { return '格子 ' + (i + 1); },
+    set: function (i, st) { if (st.empty && weOrigEmpty(i)) delete WE.slots[i]; else WE.slots[i] = st; drawWorldTop(); drawWorldFoot(); } }));
 }
 function weOrigEmpty(i) { var s = WE.w.container.slots.filter(function (x) { return x.slot === i; })[0]; return !s || s.stack.empty; }
 
@@ -245,7 +230,7 @@ function weWhere() {
   return (p ? '位置 ' + p.join(' ') : shortId(w.type)) + (dim ? ' · ' + dim : '');
 }
 function weChangeCount() {
-  var n = (weDirtyText() ? 1 : 0) + Object.keys(WE.slots).length;
+  var n = (weDirtyText() ? 1 : 0) + Object.keys(WE.slots).length + (typeof wpSlotsDirty === 'function' ? wpSlotsDirty() : 0);
   if (typeof weViewsDirty === 'function') n += Object.keys(WE.views).length + Object.keys(WE.bstate).length + (WE.btype && WE.btype !== WE.w.block ? 1 : 0);
   if (typeof evDirty === 'function' && evDirty()) n += Object.keys(WE.ent).length + (WE.offers !== null ? 1 : 0);
   return n;
@@ -255,13 +240,15 @@ function weHero() {
   var w = WE.w, isBlock = w.kind === 'block', scrollTop = hero.scrollTop, oldEnt = hero.querySelector('.k-ent'); clear(hero);
   var can3d = typeof ED_MC === 'undefined', view = can3d && UI.heroView === '3d' ? '3d' : '2d';
   var bid = isBlock ? shortId(w.block || w.type) : '';
-  var vis, entView = !isBlock && view === '3d';
+  var isPlayer = !!w.player; if (isPlayer) view = '2d';
+  var vis, entView = !isBlock && !isPlayer && view === '3d';
   if (isBlock) vis = view === '3d' ? h('model', { class: 'k-ico k-model', item: fullId(bid), rotatable: true }) : itemIcon(bid, 48);
+  else if (isPlayer) vis = itemIcon('player_head', 48);
   else vis = entView ? heroEntity(w.type, weObj(), oldEnt) : entityIcon(w.type, 48);
   var open = UI.stageOpen !== false;
   var shead = h('div', { class: 'ed-stagehead' }, [foldArrow(open, 8), h('span', { text: '预览' }), h('div', { class: 'grow' })]);
   shead.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.ed-view')) return; heroFold('.ed-stage', open, function (v) { UI.stageOpen = v; Prefs.set('stageOpen', v); }); });
-  if (can3d && open) {
+  if (can3d && open && !isPlayer) {
     var seg = h('div', { class: 'k-seg ed-view', title: isBlock ? '方块预览：2D 图标 / 3D 模型（会记住你的选择）' : '2D 显示图标 / 3D 显示生物（会记住你的选择）' });
     ['2d', '3d'].forEach(function (v) {
       var b = h('div', { class: 'k-segi' + (view === v ? ' on' : ''), text: v.toUpperCase() });
@@ -278,10 +265,11 @@ function weHero() {
   hero.appendChild(shead);
   if (open) hero.appendChild(h('div', { class: 'ed-stage' + (entView ? ' ent' : '') }, [h('div', { class: 'plate' }), vis]));
   hero.appendChild(h('div', { class: 'ed-name' + (weName().length > 6 ? ' sm' : ''), text: weName() }));
-  hero.appendChild(h('div', { class: 'ed-tags' }, [h('span', { class: 'k-tag', text: isBlock ? '方块' : '实体' }), h('span', { class: 'k-tag dim', text: shortId(w.type) })]));
+  hero.appendChild(h('div', { class: 'ed-tags' }, [h('span', { class: 'k-tag', text: isBlock ? '方块' : isPlayer ? '玩家' : '实体' }), h('span', { class: 'k-tag dim', text: shortId(w.type) })]));
   var stats = h('div', { class: 'ed-stats' });
   function stat(l, v) { stats.appendChild(h('div', { class: 'k-stat' }, [h('span', { class: 'sl', text: l }), h('b', { text: String(v) })])); }
   if (isBlock) weStateSchema().forEach(function (p) { stat(wePropName(p.name), wePropVal(weStateCur(p))); });
+  else if (isPlayer) { var pv = evVal('player'); if (typeof pv.Health === 'number') stat('生命', fmtNum(pv.Health)); if (pv.food && typeof pv.food.foodLevel === 'number') stat('饥饿', pv.food.foodLevel); if (pv.experience) stat('等级', pv.experience.XpLevel); if (pv.playerGameType) stat('模式', WP_MODE[pv.playerGameType] || pv.playerGameType); }
   else if (w.nbt && typeof w.nbt.Health === 'number') stat('生命', fmtNum(w.nbt.Health));
   var sOpen = UI.statsOpen !== false;
   if (stats.children.length) {

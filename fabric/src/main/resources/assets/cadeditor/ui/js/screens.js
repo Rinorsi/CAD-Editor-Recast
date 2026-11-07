@@ -175,7 +175,7 @@ function openMoreTabs(anchor) {
 /* 窗口的内联样式：品类色 + 用户拖出来的窗口 / 左栏尺寸；最大化是一个类 */
 function applyWinStyle() {
   var d = Store.doc(), info = d ? KIND_INFO[kindOfItem(d.id)] : null, s = '--cat:' + (info ? info.color : '#6cc349') + ';';
-  if (UI.winW) s += '--ww:' + UI.winW + 'px;'; if (UI.winH) s += '--wh:' + UI.winH + 'px;'; if (UI.heroW) s += '--hw:' + UI.heroW + 'px;';
+  if (UI.winW) s += '--ww:' + UI.winW + 'px;'; if (UI.winH) s += '--wh:' + UI.winH + 'px;'; if (UI.heroW) s += '--hw:' + Math.min(UI.heroW, Math.max(110, Math.floor(((UI.winW || window.innerWidth) - 20) * 0.45))) + 'px;';
   var w = $('win'); if (!w) return; w.setAttribute('style', s); w.classList.toggle('max', !!UI.maxed);
   scheduleFit();
   if (!UI.dragging) { setTimeout(scheduleFit, 160); setTimeout(scheduleFit, 520); }

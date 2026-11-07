@@ -21,12 +21,13 @@ function evSet(g, k, v) {
   if (!Object.keys(e).length) delete WE.ent[g];
   drawWorldTop(); drawWorldFoot();
 }
-function evDirty() { return !!WE.w && (Object.keys(WE.ent).length > 0 || WE.offers !== null && JSON.stringify(WE.offers) !== JSON.stringify(evOffersOrig())); }
+function evDirty() { return !!WE.w && (Object.keys(WE.ent).length > 0 || (typeof wpSlotsDirty === 'function' && wpSlotsDirty() > 0) || WE.offers !== null && JSON.stringify(WE.offers) !== JSON.stringify(evOffersOrig())); }
 function evOffersOrig() { var t = evGroup('trades'); return t && t.offers ? t.offers : []; }
 function evMsg(msg) {
   var out = {}, any = false;
   Object.keys(WE.ent).forEach(function (g) { out[g] = clone(WE.ent[g]); any = true; });
   if (WE.offers !== null && JSON.stringify(WE.offers) !== JSON.stringify(evOffersOrig())) { out.offers = clone(WE.offers); any = true; }
+  if (typeof wpMsg === 'function') { wpMsg(out); if (out.player) any = true; }
   if (any) msg.entity = out;
 }
 function evRedraw() { weRender(); }
