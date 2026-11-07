@@ -1443,3 +1443,11 @@ textarea.world-snbt { min-height: 56px; }
 /* 外观借用：头部那个按钮名字太长时截断，不挤掉卡片说明 */
 .hd-pick .k-btn { max-width: 170px; min-width: 0; }
 .hd-pick .k-btn > .hd-model { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 左侧属性：不要图标；标签可以被截断，数值永远完整显示 */
+.k-stat { overflow: visible; }
+.k-stat .sl { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k-stat b { flex: none; white-space: nowrap; margin-left: 6px; }
+/* 外观借用：头部控件靠右、按钮窄一点 */
+.k-chead .hd-pick { margin-left: auto; }
+.hd-pick .k-btn { max-width: 130px; }

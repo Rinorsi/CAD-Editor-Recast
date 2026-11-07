@@ -396,10 +396,10 @@ function drawHero() {
   var tags = h('div', { class: 'ed-tags' }, [h('span', { class: 'k-tag', text: info.name }), h('span', { class: 'k-tag dim', text: RARITY_ZH[eff.rarity || 'common'] }), d.count > 1 ? h('span', { class: 'k-tag dim', text: '× ' + d.count }) : null]);
   hero.appendChild(tags);
   var stats = h('div', { class: 'ed-stats' });
-  heroStats(d, kind).forEach(function (s) { stats.appendChild(h('div', { class: 'k-stat' }, [uiIcon(s.icon, 12), s.label, h('b', { text: s.value })])); });
+  heroStats(d, kind).forEach(function (s) { stats.appendChild(h('div', { class: 'k-stat' }, [h('span', { class: 'sl', text: s.label }), h('b', { text: s.value })])); });
   if (typeof eff.max_damage === 'number') {
     var rem = Math.max(0, eff.max_damage - (eff.damage || 0)), ratio = Math.max(0, Math.min(1, rem / eff.max_damage));
-    stats.appendChild(h('div', { class: 'k-stat' }, [uiIcon('hammer', 12), '耐久', h('b', { text: fmtInt(rem) + ' / ' + fmtInt(eff.max_damage) })]));
+    stats.appendChild(h('div', { class: 'k-stat' }, [h('span', { class: 'sl', text: '耐久' }), h('b', { text: fmtInt(rem) + ' / ' + fmtInt(eff.max_damage) })]));
     stats.appendChild(h('div', { class: 'k-meter' + (ratio < 0.15 ? ' bad' : ratio < 0.4 ? ' warn' : '') }, [h('i', { style: 'width:' + (ratio * 100) + '%' })]));
   }
   var sOpen = UI.statsOpen !== false;
