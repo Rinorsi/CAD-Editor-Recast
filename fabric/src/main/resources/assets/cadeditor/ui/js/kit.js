@@ -149,31 +149,61 @@ function pickItem(anchor, onPick, o) {
   var foot = h('div', { class: 'k-pfoot' }, [hint]);
   if (o.reset) foot.appendChild(kBtn(o.reset.label, function () { kPopClose(); o.reset.fn(); }, { icon: 'undo' }));
   var box = h('div', { class: 'k-pickbox' }, [sbox.el, grid, foot]);
-  kPopover(anchor, box, { width: 292, maxHeight: 340 });
-  paint(); q.focus();
+  var pop = kPopover(anchor, box, { width: 292, maxHeight: 340 });
+  paint(); kPopPin(pop, grid); q.focus();
 }
 
-/* 图标列表弹出：entries=[{v,label,sub,icon(el)}] */
+/* 图标列表弹出：entries=[{v,label,sub,icon(el)}]。搜索框固定在顶上，只滚列表。
+   o.manual = { label, parse(text)→值（不合法抛错） }：搜索框兼做手动输入，按回车时没有完全匹配的条目就把输入的值写入 */
 function pickFrom(anchor, entries, onPick, o) {
   o = o || {};
-  var q = h('input', { class: 'k-input', type: 'text', placeholder: o.placeholder || '搜索…', spellcheck: 'false' });
-  var list = h('div', { class: 'k-plist' });
+  var q = h('input', { class: 'k-input', type: 'text', placeholder: o.placeholder || (o.manual ? '搜索，或输入后按回车直接写入' : '搜索…'), spellcheck: 'false' });
+  var list = h('div', { class: 'k-plist' }), err = h('div', { class: 'k-numerr' });
+  function pick(e) { kPopClose(); onPick(e); }
   function paint() {
-    clear(list);
+    clear(list); err.textContent = '';
     var s = q.value.trim().toLowerCase(), n = 0;
+    if (o.manual && s) {
+      var mr = h('div', { class: 'k-prow k-pman' }, [h('div', { class: 'tx' }, [h('div', { class: 'z', text: '回车写入「' + q.value.trim() + '」' }), h('div', { class: 's', text: o.manual.label || '列表里没有的值也可以' })])]);
+      mr.addEventListener('mousedown', function (ev) { ev.preventDefault(); manual(); });
+      list.appendChild(mr);
+    }
     entries.forEach(function (e) {
       if (s && !kMatch(e.label + ' ' + (e.sub || '') + ' ' + e.v, s)) return;
       n++;
       var row = h('div', { class: 'k-prow' }, [e.icon ? e.icon() : null, h('div', { class: 'tx' }, [h('div', { class: 'z', text: e.label }), e.sub ? h('div', { class: 's', text: e.sub }) : null])]);
-      row.addEventListener('mousedown', function (ev) { ev.preventDefault(); kPopClose(); onPick(e); });
+      row.addEventListener('mousedown', function (ev) { ev.preventDefault(); pick(e); });
       list.appendChild(row);
     });
-    if (!n) list.appendChild(h('div', { class: 'k-phint', text: '没有匹配项' }));
+    if (!n && !(o.manual && s)) list.appendChild(h('div', { class: 'k-phint', text: '没有匹配项' }));
   }
-  var sbox = kSearchBox(q, paint);
+  function manual() {
+    var t = q.value.trim(); if (!t) return;
+    var lo = t.toLowerCase(), hit = entries.filter(function (e) { return String(e.v).toLowerCase() === lo || String(e.label).toLowerCase() === lo; })[0];
+    if (hit) { pick(hit); return; }
+    var v; try { v = o.manual.parse(t); } catch (x) { err.textContent = x.message || String(x); return; }
+    kPopClose(); onPick({ v: v, label: t, manual: true });
+  }
+  var top;
+  if (o.manual) {
+    /* 边输边筛；回车 = 写入（完全匹配某一项就选它） */
+    q.addEventListener('input', paint);
+    q.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); if (e.stopPropagation) e.stopPropagation(); manual(); } });
+    top = h('div', { class: 'k-ptop' }, [q, err]);
+  } else top = h('div', { class: 'k-ptop' }, [kSearchBox(q, paint).el]);
   onKey(q, { Escape: function () { kPopClose(); } });
-  kPopover(anchor, h('div', { class: 'k-pickbox' }, [entries.length > 8 ? sbox.el : null, list]), { width: o.width || 260, maxHeight: o.maxHeight || 320 });
-  paint(); if (entries.length > 8) q.focus();
+  var showTop = o.manual || entries.length > 8;
+  var box = kPopover(anchor, h('div', { class: 'k-pickbox' }, [showTop ? top : null, list]), { width: o.width || 260, maxHeight: o.maxHeight || 320 });
+  paint(); kPopPin(box, list); if (showTop) q.focus();
+}
+/* 弹出层里只让列表滚动，搜索框等头部固定在上方（引擎不支持 sticky，按弹出层的最大高度算出列表能占多高） */
+function kPopPin(box, scroller) {
+  var m = /max-height:(\d+)px/.exec(box.getAttribute('style') || ''); if (!m) return;
+  var inner = box.firstChild, other = 0;
+  if (inner && inner.children) for (var i = 0; i < inner.children.length; i++) { var c = inner.children[i]; if (c !== scroller) other += c.getBoundingClientRect().height + 4; }
+  box.style.overflowY = 'hidden';
+  scroller.style.overflowY = 'auto';
+  scroller.style.maxHeight = Math.max(60, +m[1] - other - 16) + 'px';
 }
 
 /* ---------- 基础控件 ---------- */

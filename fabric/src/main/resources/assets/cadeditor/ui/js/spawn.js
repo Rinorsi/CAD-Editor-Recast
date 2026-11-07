@@ -20,49 +20,72 @@ function eggEntityOf(d) {
   var m = Reg.live() ? Reg.itemMeta(d.id) : false;
   return m && m.spawn_egg_entity ? m.spawn_egg_entity : '';
 }
+/* 刷怪蛋页：生物、外观、常用设置、其他数据；装备单独一页。都读写 entity_data，数据和选项来自游戏的 entity_info / entity_schema */
+function eggCur() { var ed = Ctx.get('entity_data'); return isObj(ed) && typeof ed.id === 'string' && ed.id ? ed.id : eggDefaultEntity(); }
+function eggData() { var ed = Ctx.get('entity_data'); return isObj(ed) ? ed : {}; }
+function eggWrite(o) { var id = eggCur(); if (id) o.id = Reg.full(id); Ctx.setSmart('entity_data', o, { label: '刷怪蛋数据' }); }
+/* 开关、选择、装备改完后重画整页：几张卡片互相有关（比如显示手臂会影响装备） */
+function eggRedraw() {
+  var b = $('edbody'); if (b && UI.tab) UI.bodyScroll[UI.tab] = b.scrollTop;
+  try { drawTabBody(); } catch (e) {}
+}
+function eggIo() { return { get: eggData, set: eggWrite, redraw: eggRedraw }; }
+/* 生物对应的刷怪蛋图标（entity_info.spawn_eggs），没有就用通用图标 */
+function eggIconOf(id, size) {
+  var info = id ? Reg.entityInfo(id) : null, eggs = info && info.spawn_eggs;
+  return eggs && eggs.length ? itemIcon(eggs[0], size) : uiIcon('paw', size > 20 ? 32 : 16);
+}
+function eggCard(id, icon, title, desc, comps) {
+  if (UIOpen['card:' + id] === undefined) UIOpen['card:' + id] = false;   // 刷怪蛋页的卡片默认展开
+  return kCard({ id: id, icon: icon, title: title, desc: desc, comps: comps || [], span: 2, eager: true }, Ctx);
+}
+
 CARDS.spawnEgg = function () {
-  if (UIOpen['card:spawnEgg'] === undefined) UIOpen['card:spawnEgg'] = false;   // 这一页只有它，默认展开
-  var card = kCard({ id: 'spawnEgg', icon: 'paw', title: '生成的生物', desc: '点击地面时生成什么，以及它的外观和设置', comps: ['entity_data'], span: 2, eager: true }, Ctx);
-  function cur() { var ed = Ctx.get('entity_data'); return isObj(ed) && typeof ed.id === 'string' && ed.id ? ed.id : eggDefaultEntity(); }
-  function writeData(o) { Ctx.setSmart('entity_data', o, { label: '刷怪蛋数据' }); }
-  function draw() {
-    clear(card.body);
-    var ed = Ctx.get('entity_data'), id = cur(), def = eggDefaultEntity(), over = !!id && !!def && Reg.full(id) !== Reg.full(def);
-    var sel = kRegSelect({ reg: 'entity_type', value: id, title: '选择生物', empty: '（未选择）', onChange: function (x) {
-      var o = isObj(Ctx.get('entity_data')) ? Ctx.get('entity_data') : {};
-      o.id = Reg.full(x); writeData(o); draw();
-    } });
-    card.body.appendChild(xField('paw', '生物', sel.el));
-    if (over) card.body.appendChild(xField('refresh', '默认是' + spEntityName(def), kBtn('恢复默认', function () { Ctx.reset('entity_data'); draw(); }, { icon: 'undo' })));
-    /* 基础属性放在左栏「属性」里（heroStats），这里不重复；信息还没到时只提示一句 */
-    if (id && Reg.entityInfo(id) === null) card.body.appendChild(xEmpty('正在向游戏读取这只生物的信息…'));
-    /* 变种、常用开关、装备：来自游戏的 entity_schema */
-    var rawBox = h('div');
-    var panel = esPanel({ type: id, get: function () { return Ctx.get('entity_data'); }, set: function (o) { if (id) o.id = Reg.full(id); writeData(o); }, changed: drawRaw });
-    card.body.appendChild(panel);
-    card.body.appendChild(rawBox);
-    card.body.appendChild(Valid.badge('entity_data'));
-    /* 其余字段（原始数据）；id 由上面的选择器管，上面控件管的字段不重复显示 */
-    function drawRaw() {
-      clear(rawBox);
-      var owned = esOwnedKeys(id ? Reg.entitySchema(id) : null), cur = isObj(Ctx.get('entity_data')) ? Ctx.get('entity_data') : {};
-      var rest = {}; Object.keys(cur).forEach(function (k) { if (k !== 'id' && !owned[k]) rest[k] = cur[k]; });
-      var sug = kBtn('常用字段', function () {
-        suggestEntityFields(id, function (k) { return owned[k] || Object.prototype.hasOwnProperty.call(rest, k); }, function (k, val) { try { mapEl.addField(k, val); } catch (e) { toast(e.message || String(e), 'warn'); } }, sug);
-      }, { title: '从这只生物的默认数据里挑字段' });
-      var mapEl = worldMap(rest, function (x) {
-        if (Object.prototype.hasOwnProperty.call(x, 'id')) throw new Error('生物请通过上方选择器修改');
-        Object.keys(x).forEach(function (k) { if (owned[k]) throw new Error(k + ' 请在上面的设置里修改'); });
-        var base = isObj(Ctx.get('entity_data')) ? Ctx.get('entity_data') : {}, o = clone(x);
-        Object.keys(base).forEach(function (k) { if (owned[k]) o[k] = base[k]; });
-        if (id) o.id = Reg.full(id); writeData(o); panel.redraw();
-      }, false);
-      rawBox.appendChild(worldSection('其他数据', sug));
-      rawBox.appendChild(mapEl);
-    }
-    drawRaw();
-  }
-  draw();
+  var card = eggCard('spawnEgg', 'paw', '生成的生物', '用这个蛋点击地面时生成的生物', ['entity_data']);
+  var id = eggCur(), def = eggDefaultEntity(), info = id ? Reg.entityInfo(id) : null;
+  var pick = kBtn('更换生物', function () {
+    openRegPick({ reg: 'entity_type', current: id, title: '选择生物', onPick: function (x) { var o = clone(eggData()); o.id = Reg.full(x); Ctx.setSmart('entity_data', o, { label: '刷怪蛋生物' }); eggRedraw(); } });
+  }, { icon: 'grid' });
+  var name = id ? spEntityName(id) : '（未选择）', sub = id ? Reg.full(id) + (def && Reg.full(id) === Reg.full(def) ? ' · 这个蛋本来的生物' : ' · 本来是' + spEntityName(def)) : '';
+  card.body.appendChild(h('div', { class: 'egg-who' }, [h('div', { class: 'egg-ico' }, [eggIconOf(id, 32)]), h('div', { class: 'tx' }, [h('b', { text: name }), h('span', { class: 'k-sub', text: sub })]), pick]));
+  if (id && info === null) card.body.appendChild(xEmpty('正在向游戏读取这只生物的信息…'));
+  card.body.appendChild(Valid.badge('entity_data'));
+  return card;
+};
+CARDS.eggLook = function () {
+  var id = eggCur(), s = id ? Reg.entitySchema(id) : null;
+  if (s && s.available && !(s.variants || []).length) return null;   // 这只生物没有可选的外观，不显示这张卡
+  var card = eggCard('eggLook', 'palette', '外观', '品种、颜色等，左边 3D 预览会跟着变');
+  var ok = esReady(id, card.body); if (ok) card.body.appendChild(esVariantList(ok, eggIo()));
+  return card;
+};
+CARDS.eggFlags = function () {
+  var id = eggCur(), card = eggCard('eggFlags', 'sliders', '常用设置', '名字、生命值、幼年和行为开关');
+  var ok = esReady(id, card.body); if (ok) card.body.appendChild(esFlagList(ok, eggIo()));
+  return card;
+};
+CARDS.eggGear = function () {
+  var id = eggCur(), card = eggCard('eggGear', 'helmet', '装备', '点格子放物品；有物品的格子点开可以改掉落概率');
+  var ok = esReady(id, card.body); if (ok) card.body.appendChild(esGearGrid(ok, eggIo(), id));
+  return card;
+};
+/* 其余字段（原始数据）；id 由「生成的生物」管，上面几张卡管的字段不重复显示 */
+CARDS.eggData = function () {
+  var id = eggCur(), card = eggCard('eggData', 'code', '其他数据', '上面没有的字段，直接按游戏的数据格式添加');
+  var owned = esOwnedKeys(id ? Reg.entitySchema(id) : null), cur = eggData();
+  var rest = {}; Object.keys(cur).forEach(function (k) { if (k !== 'id' && !owned[k]) rest[k] = cur[k]; });
+  var sug = kBtn('常用字段', function () {
+    suggestEntityFields(id, function (k) { return owned[k] || Object.prototype.hasOwnProperty.call(rest, k); }, function (k, val) { try { mapEl.addField(k, val); } catch (e) { toast(e.message || String(e), 'warn'); } }, sug);
+  }, { title: '从这只生物的默认数据里挑字段' });
+  var mapEl = worldMap(rest, function (x) {
+    if (Object.prototype.hasOwnProperty.call(x, 'id')) throw new Error('生物请在「生成的生物」里更换');
+    Object.keys(x).forEach(function (k) { if (owned[k]) throw new Error(k + ' 请在上面的卡片里修改'); });
+    var base = eggData(), o = clone(x);
+    Object.keys(base).forEach(function (k) { if (owned[k]) o[k] = base[k]; });
+    eggWrite(o);
+  }, false);
+  card.body.appendChild(h('div', { class: 'egg-datahd' }, [h('div', { class: 'grow' }), sug]));
+  card.body.appendChild(mapEl);
   return card;
 };
 

@@ -1488,3 +1488,29 @@ textarea.world-snbt { min-height: 56px; }
 .set-list .k-xhead > :last-child:not(.fold-arrow) { flex: none; }
 
 .k-tipwrap { display: flex; flex-direction: column; min-width: 0; }
+
+/* ---------- 弹出选择：搜索框固定在顶上；回车写入手动值 ---------- */
+.k-ptop { flex: none; display: flex; flex-direction: column; gap: 2px; }
+.k-ptop .k-numerr:empty { display: none; }
+.k-prow.k-pman { border-left: 2px solid var(--acc2); background: color-mix(in srgb, var(--acc) 14%, transparent); }
+
+/* ---------- 刷怪蛋：生成的生物 ---------- */
+.egg-who { display: flex; align-items: center; gap: 10px; padding: 6px 2px; }
+.egg-who .egg-ico { flex: none; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: var(--well2); }
+.egg-who .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.egg-who .tx b { color: var(--tx); }
+.egg-who > .k-btn { flex: none; }
+.egg-datahd { display: flex; align-items: center; margin-bottom: 2px; }
+
+/* ---------- 装备格子：左列盔甲，中间生物，右列手持 / 身体 / 鞍 ---------- */
+.es-geargrid { display: flex; align-items: stretch; justify-content: center; gap: 14px; padding: 8px 0 4px; }
+.es-gearcol { display: flex; flex-direction: column; gap: 6px; }
+.es-gear { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 44px; }
+.es-gear .slot.s34 { width: 30px; height: 30px; }
+.es-gear .slot .es-ghost { opacity: 0.35; }
+.es-gearl { color: var(--tx3); line-height: 12px; white-space: nowrap; }
+.es-gearmid { width: 120px; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, color-mix(in srgb, var(--acc) 22%, transparent), rgba(0, 0, 0, 0) 70%); }
+.es-gearent { width: 110px; height: 170px; -mc-yaw: -20deg; -mc-gaze-reach: 80px; -mc-gaze-limit: 30deg 10deg; }
+.es-gearhd { display: flex; align-items: center; gap: 8px; padding: 2px 0 4px; }
+.es-gearhd .tx { display: flex; flex-direction: column; min-width: 0; }
+.es-gearact { display: flex; gap: 6px; justify-content: flex-end; }

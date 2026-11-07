@@ -439,33 +439,43 @@ console.log('PASS world edit: container slots, typed SNBT apply, rejected keeps 
   assert.equal(c.Reg.entitySchema('mod:broken').available, false);
   ['sheep', 'zombie', 'armor_stand'].forEach(k => c.Reg.ingest('registry.entity_schema', { name: 'entity_schema', id: 'minecraft:' + k, entries: [one(k)], done: true }));
 
+  c.realPickFrom = c.pickFrom;
   let data = {}; const panel = type => c.esPanel({ type, get: () => data, set: o => { data = JSON.parse(JSON.stringify(o)); } });
   const row = (el, t) => el.querySelectorAll('.k-xrow').find(r => r.querySelector('.z').textContent === t);
   // 猫：品种 / 项圈 / 幼年 / 没有 AI / 生命值
   let p = panel('minecraft:cat');
-  for (const t of ['品种', '项圈颜色', '叫声', '没有 AI', '幼年', '生命值', '主手']) assert.ok(row(p, t), '有「' + t + '」');
+  for (const t of ['品种', '项圈颜色', '叫声', '没有 AI', '幼年', '生命值']) assert.ok(row(p, t), '有「' + t + '」');
+  const gear = (el, slot) => el.querySelectorAll('.es-slot').find(x => (x.getAttribute('title') || '').indexOf(slot + '：') === 0);
+  assert.ok(gear(p, '主手') && gear(p, '头部'), '装备是格子');
   row(p, '没有 AI').querySelector('.k-toggle').fire('click');
   assert.equal(data.NoAI, 1);
   row(p, '没有 AI').querySelector('.k-toggle').fire('click');
   assert.equal(data.NoAI, undefined, '关回默认就不写');
   row(p, '幼年').querySelector('.k-toggle').fire('click');
   assert.equal(data.Age, -24000, '幼年写游戏给的 babyAge，不写探测样本 -1');
-  let picked; c.pickFrom = (a, entries, fn) => { picked = entries; fn(entries.find(e => e.v === 'minecraft:red')); };
+  let pickedOpt; c.pickFrom = (a, entries, fn, o) => { pickedOpt = o; fn(entries.find(e => e.v === 'minecraft:red')); };
   row(p, '品种').querySelector('.k-sel').fire('click');
   assert.equal(data.variant, 'minecraft:red');
-  assert.ok(picked.some(e => e.label === '手动输入…'), '选择器带手动输入');
+  assert.ok(pickedOpt.manual && pickedOpt.manual.parse('spotted') === 'minecraft:spotted', '搜索框兼做手动输入，短 ID 补 minecraft:');
+  assert.throws(() => pickedOpt.manual.parse('Bad ID'));
+  // 项圈颜色：16 种染料 → 色块；点橙色写回游戏给的数值 1
+  assert.ok(!row(p, '项圈颜色').querySelector('.k-sel'), '颜色不用下拉');
+  row(p, '项圈颜色').querySelector('.k-btn').fire('click');
+  overlays.querySelectorAll('.ed-dye').find(x => /^orange /.test(x.getAttribute('title'))).fire('click');
+  assert.equal(data.CollarColor, 1);
   // 名字：文本组件，清空就删掉
   const nameIn = row(p, '名字').querySelector('input'); nameIn.value = '小黑'; nameIn.fire('input');
   assert.deepEqual(data.CustomName, { text: '小黑' });
   nameIn.value = ''; nameIn.fire('input'); assert.equal(data.CustomName, undefined);
   // 装备：主手放钻石剑
   c.pickItem = (a, fn) => fn('diamond_sword');
-  row(p, '主手').querySelector('.k-btn').fire('click');
+  gear(p, '主手').fire('click');
   assert.deepEqual(data.equipment.mainhand, { id: 'minecraft:diamond_sword', count: 1 });
+  assert.ok(/钻石剑|Diamond Sword/.test(gear(p, '主手').getAttribute('title')), '格子显示放进去的物品');
   // 盔甲架：手持槽需要先显示手臂，选物品时一并写上
   data = {}; p = panel('minecraft:armor_stand');
-  assert.ok(/显示手臂/.test(row(p, '主手').textContent));
-  row(p, '主手').querySelector('.k-btn').fire('click');
+  assert.ok(/显示手臂/.test(gear(p, '主手').getAttribute('title')));
+  gear(p, '主手').fire('click');
   assert.equal(data.ShowArms, 1); assert.equal(data.equipment.mainhand.id, 'minecraft:diamond_sword');
   // 共用整数的变种按 mask 合并（马的毛色与斑纹都在 Variant 里）
   const horse = { id: 'minecraft:horse', available: true, variants: [
@@ -492,10 +502,12 @@ console.log('PASS world edit: container slots, typed SNBT apply, rejected keeps 
   c.Reg.imeta['minecraft:cat_spawn_egg'] = { id: 'minecraft:cat_spawn_egg', spawn_egg_entity: 'minecraft:cat' };
   c.Reg.einfo['minecraft:cat'] = { id: 'minecraft:cat', attributes: {} };
   comps.entity_data = { id: 'minecraft:cat', NoAI: 1, Tag: 'keep' };
-  const egg = c.CARDS.spawnEgg();
-  const mapTitles = egg.body.querySelectorAll('.world-map')[0].querySelectorAll('.z').map(x => x.textContent);
+  const eggD = c.CARDS.eggData(), eggF = c.CARDS.eggFlags();
+  const mapTitles = eggD.body.querySelectorAll('.world-map')[0].querySelectorAll('.z').map(x => x.textContent);
   assert.deepEqual(mapTitles, ['Tag'], 'NoAI 由开关管，不在原始字段里重复');
-  row(egg.body, '静音').querySelector('.k-toggle').fire('click');
+  assert.ok(/猫|Cat/.test(c.CARDS.spawnEgg().body.textContent), '生成的生物：名字和更换按钮');
+  assert.ok(c.CARDS.eggGear().body.querySelector('.es-geargrid'), '装备页是格子');
+  row(eggF.body, '静音').querySelector('.k-toggle').fire('click');
   assert.deepEqual(comps.entity_data, { id: 'minecraft:cat', NoAI: 1, Tag: 'keep', Silent: 1 }, '开关写入并保留其他字段');
 
   // 世界实体页：「属性」页改开关，写回的 SNBT 保留原有类型（Health 仍是 float，UUID 仍是 int 数组）
@@ -517,6 +529,21 @@ console.log('PASS world edit: container slots, typed SNBT apply, rejected keeps 
   assert.ok(c.nbtPrint(c.nbtParse(c.WE.text), false).includes('Health:3.0f'), '数据页的改动保留');
   c.WE.w = null; c.Reg.meta = null; c.Reg.kinds = {}; c.Reg.eschema = {}; c.Reg.imeta = {}; c.Reg.einfo = {};
 }
+  // 弹出选择：搜索框固定在顶上（列表自己滚动）；回车时没有完全匹配就按手动值写入，完全匹配就选那一项
+  {
+    let got; c.realPickFrom(overlays, [{ v: 'minecraft:red', label: 'Red' }, { v: 'minecraft:tabby', label: 'Tabby' }], e => { got = e; }, { manual: { parse: t => 'mod:' + t } });
+    const pop = overlays.querySelectorAll('.k-pop').pop(), inp = pop.querySelector('input'), lst = pop.querySelector('.k-plist');
+    assert.equal(lst.style.overflowY, 'auto'); assert.equal(pop.style.overflowY, 'hidden');
+    inp.value = 'spotted'; inp.fire('input');
+    assert.ok(/回车写入「spotted」/.test(lst.textContent));
+    inp.events.keydown.forEach(fn => fn({ key: 'Enter', preventDefault() {}, stopPropagation() {} }));
+    assert.equal(got.v, 'mod:spotted'); assert.equal(got.manual, true);
+    c.realPickFrom(overlays, [{ v: 'minecraft:red', label: 'Red' }], e => { got = e; }, { manual: { parse: t => 'mod:' + t } });
+    const inp2 = overlays.querySelectorAll('.k-pop').pop().querySelector('input'); inp2.value = 'red';
+    inp2.events.keydown.forEach(fn => fn({ key: 'Enter', preventDefault() {}, stopPropagation() {} }));
+    assert.equal(got.v, 'minecraft:red', '完全匹配就选那一项');
+  }
+  c.pickFrom = c.realPickFrom;
 console.log('PASS entity schema: request/cache, variants with mask merge, flags, baby age, name component, equipment requires, spawn egg raw dedupe, world entity typed write-back.');
 
 // 刷怪蛋 3D 预览的 <entity> 属性：真实实体组件 + 幼年 + 装备，来自 entity_data 与 schema

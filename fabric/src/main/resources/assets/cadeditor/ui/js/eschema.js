@@ -1,5 +1,5 @@
 /* 实体的变种、常用开关和装备：全部来自游戏的 entity_schema（docs/entity-schema-contract.md）。
-   刷怪蛋页和世界实体页共用 esPanel。选项、NBT 路径、默认值、幼年年龄都由游戏给出，这里不写死任何实体数据；
+   刷怪蛋页（分成几张卡片）和世界实体页（esPanel 一页排下来）共用这里的各段。选项、NBT 路径、默认值、幼年年龄都由游戏给出，这里不写死任何实体数据；
    中文只用来给字段起名字，认不出的字段直接显示游戏给的 ID。 */
 
 /* 字段名（界面文字）：认不出的显示游戏给的 ID */
@@ -53,56 +53,32 @@ function esOwnedKeys(s) {
   return k;
 }
 
-/* 手动输入一个不在列表里的值 */
-function esManual(anchor, numeric, onValue) {
-  var inp = kInput('', function () {}, { placeholder: numeric ? '整数' : '完整 ID，如 mymod:spotted' }), err = h('div', { class: 'k-numerr' });
-  var ok = kBtn('确定', function () {
-    var t = inp.value.trim();
-    if (numeric) { if (!/^-?\d+$/.test(t)) { err.textContent = '请输入整数'; return; } onValue(Number(t)); }
-    else { if (!/^[a-z0-9_.-]+:[a-z0-9_./-]+$/.test(t)) { err.textContent = '需要 命名空间:路径 形式的 ID'; return; } onValue(t); }
-    kPopClose();
-  }, { cls: 'pri' });
-  kPopover(anchor, h('div', { class: 'k-pickbox' }, [inp, err, ok]), { width: 240, maxHeight: 160 });
-  inp.focus();
+/* 读不到 schema 时给一句原因；能用就返回 schema */
+function esReady(type, host) {
+  var s = type ? Reg.entitySchema(type) : false;
+  if (!type) { host.appendChild(xEmpty('先选择生物')); return null; }
+  if (s === null) { host.appendChild(xEmpty('正在向游戏读取这只生物能改什么…')); return null; }
+  if (!s) { host.appendChild(xEmpty('没有连接游戏，读不到这只生物的变种和开关。可以在「其他数据」里直接添加字段。')); return null; }
+  if (!s.available) { host.appendChild(xEmpty((s.error || '游戏没能生成这只生物的模板') + '。可以在「其他数据」里直接添加字段。')); return null; }
+  return s;
 }
-
-/* o = { type, get()→当前实体复合数据, set(obj), changed()（重画别处）, template? }
-   返回元素；控件改动立即 set，开关 / 选择类改动后自己重画 */
-function esPanel(o) {
-  var box = h('div', { class: 'es-panel' });
-  function draw() {
-    clear(box);
-    var s = o.type ? Reg.entitySchema(o.type) : false;
-    if (!o.type) { box.appendChild(xEmpty('先选择生物')); return; }
-    if (s === null) { box.appendChild(xEmpty('正在向游戏读取这只生物能改什么…')); return; }
-    if (!s) { box.appendChild(xEmpty('没有连接游戏，读不到这只生物的变种和开关。可以在下面直接添加字段。')); return; }
-    if (!s.available) { box.appendChild(xEmpty((s.error || '游戏没能生成这只生物的模板') + '。可以在下面直接添加字段。')); return; }
-    var tpl = null; try { tpl = s.default_nbt ? parseSnbt(s.default_nbt) : null; } catch (e) {}
-    function edit(fn, redraw) { var obj = clone(isObj(o.get()) ? o.get() : {}); fn(obj); o.set(obj); if (o.changed) o.changed(); if (redraw) draw(); }
-    if ((s.variants || []).length) {
-      box.appendChild(xSec('paw', '外观'));
-      var vl = h('div', { class: 'x-list' });
-      s.variants.forEach(function (v) { vl.appendChild(esVariantRow(v, o, tpl, edit)); });
-      box.appendChild(vl);
-    }
-    var flags = (s.flags || []).filter(function (f) { return f.common; }).sort(function (a, b) {
-      var i = ES_FLAG_ORDER.indexOf(a.key), j = ES_FLAG_ORDER.indexOf(b.key); return (i < 0 ? 99 : i) - (j < 0 ? 99 : j);
-    });
-    if (flags.length) {
-      box.appendChild(xSec('sliders', '常用设置'));
-      var fl = h('div', { class: 'x-list' });
-      flags.forEach(function (f) { var r = esFlagRow(f, o, edit); if (r) fl.appendChild(r); });
-      box.appendChild(fl);
-    }
-    var eq = esEquipment(s, o, edit);
-    if (eq) box.appendChild(eq);
-    (s.warnings || []).forEach(function (w) { box.appendChild(h('div', { class: 'k-sub', text: '游戏提示：' + w })); });
-  }
-  draw();
-  box.redraw = draw;
-  return box;
+/* o = { get()→当前实体复合数据, set(obj), redraw() }：开关 / 选择类改动后调 redraw 重画；输入框、数字框只 set，不打断输入 */
+function esEditor(o) {
+  return function (fn, redraw) { var obj = clone(isObj(o.get()) ? o.get() : {}); fn(obj); o.set(obj); if (redraw && o.redraw) o.redraw(); };
 }
+function esTemplate(s) { try { return s.default_nbt ? parseSnbt(s.default_nbt) : null; } catch (e) { return null; } }
 
+/* 外观：品种、颜色……颜色类（选项正好是 16 种染料）用色块 */
+function esVariantList(s, o) {
+  var list = h('div', { class: 'x-list' }), tpl = esTemplate(s), edit = esEditor(o);
+  (s.variants || []).forEach(function (v) { list.appendChild(esVariantRow(v, o, tpl, edit)); });
+  return list;
+}
+function esIsDye(v) {
+  var d = {}; dyeList().forEach(function (x) { d[x.v] = 1; });
+  var opts = v.options || [];
+  return opts.length === 16 && opts.every(function (x) { return d[String(x.label)]; });
+}
 function esVariantRow(v, o, tpl, edit) {
   var p = v.nbt.path, mask = typeof v.nbt.mask === 'number' ? v.nbt.mask : null;
   var key = esVariantKey(v), title = ES_VARIANT[key] || humanId(key);
@@ -118,28 +94,44 @@ function esVariantRow(v, o, tpl, edit) {
     num.el.classList.add('k-xnum');
     return xRow({ icon: false, title: title, sub: (v.min + off) + ' – ' + (v.max + off), tip: p.join('.'), right: num.el });
   }
+  var curOpt = (v.options || []).filter(function (x) { return x.value === pick(cur); })[0];
+  if (esIsDye(v)) {
+    /* 染料颜色：色块 + 颜色名，点开 16 个色块 */
+    var dye = dyeButton(curOpt ? String(curOpt.label) : 'white', function (name) {
+      var opt = v.options.filter(function (x) { return String(x.label) === name; })[0]; if (opt) write(opt.value);
+    });
+    return xRow({ icon: false, title: title, sub: sub, tip: p.join('.'), right: dye });
+  }
   var entries = (v.options || []).map(function (x) { return { v: x.value, label: esOptLabel(x), sub: String(x.value) }; });
-  var curE = entries.filter(function (e) { return e.v === pick(cur); })[0];
   var numeric = typeof v.default === 'number' || entries.some(function (e) { return typeof e.v === 'number'; });
-  entries.push({ v: '\u0000manual', label: '手动输入…', sub: '列表里没有的值' });
-  var btn = h('div', { class: 'k-btn k-sel' }, [h('span', { text: curE ? curE.label : (cur === undefined ? '（未知）' : String(cur)) }), uiIcon('down', 10)]);
-  activate(btn, function () {
-    pickFrom(btn, entries, function (e) { if (e.v === '\u0000manual') esManual(btn, numeric, write); else write(e.v); }, { width: 250 });
-  });
+  var manual = { label: numeric ? '写入这个整数' : '写入这个 ID（不带命名空间时按 minecraft:）', parse: function (t) {
+    if (numeric) { if (!/^-?\d+$/.test(t)) throw new Error('请输入整数'); return Number(t); }
+    if (!/^([a-z0-9_.-]+:)?[a-z0-9_./-]+$/.test(t)) throw new Error('ID 只能用小写字母、数字和 _ . - /'); return fullId(t);
+  } };
+  var btn = h('div', { class: 'k-btn k-sel' }, [h('span', { text: curOpt ? esOptLabel(curOpt) : (cur === undefined ? '（未知）' : String(cur)) }), uiIcon('down', 10)]);
+  activate(btn, function () { pickFrom(btn, entries, function (e) { write(e.v); }, { width: 250, manual: manual }); });
   return xRow({ icon: false, title: title, sub: sub, tip: p.join('.') + (cur !== undefined ? ' = ' + cur : ''), right: btn });
 }
 
+/* 常用设置：名字、生命值、幼年、开关 */
+function esFlagList(s, o) {
+  var list = h('div', { class: 'x-list' }), edit = esEditor(o);
+  (s.flags || []).filter(function (f) { return f.common; }).sort(function (a, b) {
+    var i = ES_FLAG_ORDER.indexOf(a.key), j = ES_FLAG_ORDER.indexOf(b.key); return (i < 0 ? 99 : i) - (j < 0 ? 99 : j);
+  }).forEach(function (f) { var r = esFlagRow(f, o, edit); if (r) list.appendChild(r); });
+  return list;
+}
 function esFlagRow(f, o, edit) {
   var nm = ES_FLAG[f.key] || [f.key, ''], k = f.key, val = isObj(o.get()) ? o.get()[k] : undefined;
   if (f.id === 'baby' && f.type === 'int' && typeof f.babyAge === 'number') {
     /* 幼年：写游戏给的 babyAge / adultAge，不写探测样本 */
     var isBaby = typeof val === 'number' ? val < 0 : (typeof f.default === 'number' && f.default < 0);
-    return xRow({ icon: false, title: nm[0], sub: nm[1], tip: k, right: kToggle(isBaby, function (on) { edit(function (obj) { obj[k] = on ? f.babyAge : f.adultAge; }); }).el });
+    return xRow({ icon: false, title: nm[0], sub: nm[1], tip: k, right: kToggle(isBaby, function (on) { edit(function (obj) { obj[k] = on ? f.babyAge : f.adultAge; }, true); }).el });
   }
   if (f.type === 'byte-bool') {
     var on = typeof val === 'number' ? val !== 0 : typeof val === 'boolean' ? val : !!f.default;
     return xRow({ icon: false, title: nm[0], sub: nm[1], tip: k, right: kToggle(on, function (x) {
-      edit(function (obj) { if (x === !!f.default && !f.present_by_default) delete obj[k]; else obj[k] = x ? 1 : 0; }, k === 'ShowArms');
+      edit(function (obj) { if (x === !!f.default && !f.present_by_default) delete obj[k]; else obj[k] = x ? 1 : 0; }, true);
     }).el });
   }
   if (f.type === 'float' || f.type === 'int') {
@@ -154,7 +146,7 @@ function esFlagRow(f, o, edit) {
     /* 名字：文本组件；已有的颜色、粗体等格式保留，只改 text */
     var text = typeof val === 'string' ? val : isObj(val) && typeof val.text === 'string' ? val.text : '';
     var locked = isObj(val) && typeof val.text !== 'string';
-    if (locked) return xRow({ icon: false, title: nm[0], sub: '使用了翻译键等复杂格式，请在下面的原始字段里修改', tip: k });
+    if (locked) return xRow({ icon: false, title: nm[0], sub: '使用了翻译键等复杂格式，请在「其他数据」里修改', tip: k });
     var inp = kInput(text, function (x) {
       edit(function (obj) {
         if (!x) { delete obj[k]; return; }
@@ -168,44 +160,73 @@ function esFlagRow(f, o, edit) {
   return null;
 }
 
-/* 装备：每个槽一行，点物品更换；展开后可改掉落概率、清空。需要前置字段的槽（盔甲架手持需要显示手臂）选物品时一并写上 */
-function esEquipment(s, o, edit) {
-  var slots = (s.equipment || []).filter(function (q) { return q.canHold || q.requires; });
-  if (!slots.length) return null;
-  var wrap = h('div');
-  var any = slots.some(function (q) { var st = esGet(o.get(), q.nbtPath); return isObj(st) && st.id; });
-  var xl = xList({
-    items: function () { return slots; }, empty: '',
-    row: function (q) {
-      var meta = ES_SLOT[q.slot] || [humanId(q.slot), 'shield'], st = esGet(o.get(), q.nbtPath), has = isObj(st) && typeof st.id === 'string';
-      var need = q.requires && Object.keys(q.requires).some(function (k) { var v = isObj(o.get()) ? o.get()[k] : undefined; return v !== q.requires[k] && !(v === true && q.requires[k] === 1); });
-      var btn = h('div', { class: 'k-btn' }, has ? [itemIcon(st.id, 16), h('span', { text: nameOfItem(st.id) })] : [uiIcon('plus', 12), h('span', { text: '选择物品' })]);
-      activate(btn, function () {
-        pickItem(btn, function (id) {
-          kPopClose();
-          edit(function (obj) {
-            var cur = esGet(obj, q.nbtPath), next = isObj(cur) && cur.id === fullId(id) ? cur : { id: fullId(id), count: 1 };
-            esSet(obj, q.nbtPath, next);
-            if (q.requires) Object.keys(q.requires).forEach(function (k) { obj[k] = q.requires[k]; });
-          }, true);
-        });
-      });
-      var sub = has ? ((st.count || 1) > 1 ? '× ' + st.count : '') : (need ? '选物品时会一并打开「' + (ES_FLAG.ShowArms[0]) + '」' : '空');
-      return { icon: uiIcon(meta[1], 14), title: meta[0], sub: sub, tip: q.nbtPath.join('.'), right: btn, body: has ? function () {
-        var kids = [];
-        if (q.dropChancePath) {
-          var dc = esGet(o.get(), q.dropChancePath), d0 = typeof q.dropChance === 'number' ? q.dropChance : 0;
-          kids.push(xField('refresh', '掉落概率', numField5(typeof dc === 'number' ? dc : d0, d0, { min: 0, max: 1, step: 0.05, dec: 3 }, function (x) { edit(function (obj) { esSet(obj, q.dropChancePath, x); }); })));
-        }
-        kids.push(xFoot('物品上的附魔等组件在下面原始字段的 ' + q.nbtPath[0] + ' 里改', function () {
-          edit(function (obj) { esDel(obj, q.nbtPath); if (q.dropChancePath) esDel(obj, q.dropChancePath); }, true);
-        }, '清空'));
-        return kids;
-      } : null };
+/* 装备：像背包界面那样的格子。左列盔甲（头、胸、腿、脚），中间是生物，右列主手、副手、身体、鞍。
+   空格子点一下选物品；有物品的点开小窗：更换、掉落概率、清空。需要前置字段的槽（盔甲架手持要显示手臂）选物品时一并写上 */
+var ES_GEAR_COLS = [['head', 'chest', 'legs', 'feet'], ['mainhand', 'offhand', 'body', 'saddle']];
+function esGearGrid(s, o, type) {
+  var edit = esEditor(o), bySlot = {};
+  (s.equipment || []).forEach(function (q) { if (q.canHold || q.requires) bySlot[q.slot] = q; });
+  if (!Object.keys(bySlot).length) return xEmpty('这只生物没有可以放装备的位置');
+  function stackOf(q) { var st = esGet(o.get(), q.nbtPath); return isObj(st) && typeof st.id === 'string' ? st : null; }
+  function needs(q) { return q.requires && Object.keys(q.requires).some(function (k) { var v = isObj(o.get()) ? o.get()[k] : undefined; return v !== q.requires[k] && !(v === true && q.requires[k] === 1); }); }
+  function choose(q, anchor) {
+    pickItem(anchor, function (id) {
+      kPopClose();
+      edit(function (obj) {
+        var cur = esGet(obj, q.nbtPath);
+        esSet(obj, q.nbtPath, isObj(cur) && cur.id === fullId(id) ? cur : { id: fullId(id), count: 1 });
+        if (q.requires) Object.keys(q.requires).forEach(function (k) { obj[k] = q.requires[k]; });
+      }, true);
+    });
+  }
+  function menu(q, cell, st) {
+    var box = h('div', { class: 'k-pickbox es-gearpop' });
+    box.appendChild(h('div', { class: 'es-gearhd' }, [itemIcon(st.id, 22), h('div', { class: 'tx' }, [h('b', { text: nameOfItem(st.id) }), h('span', { class: 'k-sub', text: st.id })])]));
+    if (q.dropChancePath) {
+      var dc = esGet(o.get(), q.dropChancePath), d0 = typeof q.dropChance === 'number' ? q.dropChance : 0;
+      box.appendChild(fieldRow('掉落概率', numField5(typeof dc === 'number' ? dc : d0, d0, { min: 0, max: 1, step: 0.05, dec: 3 }, function (x) { edit(function (obj) { esSet(obj, q.dropChancePath, x); }); })));
     }
-  });
-  wrap.appendChild(xl.el);
-  return worldFold('装备', wrap, any, slots.length + ' 个位置');
+    box.appendChild(h('div', { class: 'es-gearact' }, [
+      kBtn('更换', function () { choose(q, cell); }, { icon: 'refresh' }),
+      kBtn('清空', function () { kPopClose(); edit(function (obj) { esDel(obj, q.nbtPath); if (q.dropChancePath) esDel(obj, q.dropChancePath); }, true); }, { cls: 'dng', icon: 'trash' })
+    ]));
+    box.appendChild(h('div', { class: 'k-sub', text: '附魔等物品组件在「其他数据」的 ' + q.nbtPath[0] + ' 里改' }));
+    kPopover(cell, box, { width: 300, maxHeight: 260 });
+  }
+  function cellOf(slot) {
+    var q = bySlot[slot]; if (!q) return null;
+    var meta = ES_SLOT[slot] || [humanId(slot), 'shield'], st = stackOf(q);
+    var cell = h('div', { class: 'slot s34 es-slot' + (st ? ' on' : '') }, [st ? itemIcon(st.id, 26) : uiIcon(meta[1], 16, 'es-ghost')]);
+    if (st && (st.count || 1) > 1) cell.appendChild(h('span', { class: 'cnt', text: String(st.count) }));
+    cell.setAttribute('title', meta[0] + '：' + (st ? nameOfItem(st.id) : needs(q) ? '空（选物品时会一并打开「显示手臂」）' : '空'));
+    cell.addEventListener('click', function () { if (st) menu(q, cell, st); else choose(q, cell); });
+    return h('div', { class: 'es-gear' }, [cell, h('span', { class: 'es-gearl', text: meta[0] })]);
+  }
+  function col(slots) { var c = h('div', { class: 'es-gearcol' }); slots.forEach(function (k) { var x = cellOf(k); if (x) c.appendChild(x); }); return c; }
+  var mid = h('div', { class: 'es-gearmid' });
+  if (type && typeof ED_MC === 'undefined') {
+    var pa = esPreviewAttrs(type, o.get()), ent = h('entity', { class: 'es-gearent', type: Reg.full(type), 'follow-mouse': '' });
+    Object.keys(pa).forEach(function (k) { ent.setAttribute(k, pa[k]); });
+    mid.appendChild(ent);
+  }
+  return h('div', { class: 'es-geargrid' }, [col(ES_GEAR_COLS[0]), mid, col(ES_GEAR_COLS[1])]);
+}
+
+/* 世界实体页「属性」：外观、常用设置、装备一页排下来 */
+function esPanel(o) {
+  var box = h('div', { class: 'es-panel' });
+  function draw() {
+    clear(box);
+    var s = esReady(o.type, box); if (!s) return;
+    var oo = { get: o.get, set: o.set, redraw: draw };
+    if ((s.variants || []).length) { box.appendChild(xSec('paw', '外观')); box.appendChild(esVariantList(s, oo)); }
+    box.appendChild(xSec('sliders', '常用设置')); box.appendChild(esFlagList(s, oo));
+    box.appendChild(xSec('helmet', '装备')); box.appendChild(esGearGrid(s, oo, o.type));
+    (s.warnings || []).forEach(function (w) { box.appendChild(h('div', { class: 'k-sub', text: '游戏提示：' + w })); });
+  }
+  draw();
+  box.redraw = draw;
+  return box;
 }
 
 /* 刷怪蛋左栏里的 3D 生物：左键拖动旋转（引擎自带），滚轮缩放，右键或中键拖动移动位置。
