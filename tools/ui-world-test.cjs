@@ -30,7 +30,7 @@ const root=new Element('body'),overlays=new Element('div');overlays.id='overlays
 const doc={body:root,activeElement:null,addEventListener(){},createElement(tag){return new Element(tag);},createTextNode(t){const el=new Element('text');el.textContent=t;return el;},getElementById(id){return root.querySelector('#'+id);}};
 const c=vm.createContext({document:doc,window:{innerWidth:760,innerHeight:560},console,setTimeout(){},clearTimeout(){},oriel:{data:{},send(){return true;}}});
 const dir=path.resolve(__dirname,'../fabric/src/main/resources/assets/cadeditor/ui/js');
-for(const f of ['data','core','pinyin-data','search','forms','kit','kit2','nbt','xlist','reg','hostsearch','picker','cards1','cards2','cards3','cards5','world','rules','spawn','screens'])vm.runInContext(fs.readFileSync(path.join(dir,f+'.js'),'utf8'),c);
+for(const f of ['data','core','pinyin-data','search','forms','kit','kit2','nbt','xlist','reg','hostsearch','picker','cards1','cards2','cards3','cards5','world','rules','spawn','screens','worldedit'])vm.runInContext(fs.readFileSync(path.join(dir,f+'.js'),'utf8'),c);
 c.uiIcon=()=>new Element('i');c.itemIcon=()=>new Element('i');c.uiClick=()=>{};c.snd=()=>{};c.toast=()=>{};
 let saved,disabled=0,writes=0;
 c.autoPut=(cid,value)=>{saved=JSON.parse(JSON.stringify(value));writes++;};
@@ -379,3 +379,42 @@ console.log('PASS lazy catalog: handshake, on-demand lookup, host-driven picker.
   c.Reg.meta = null; c.HostTip.supported = null; c.HostTip.views = {}; c.HostTip.last = {};
 }
 console.log('PASS tooltip preview: host lines, fallback.');
+
+// 世界编辑：打开方块实体 world，改格子 / SNBT，按契约发 apply，处理回执
+{
+  const sent = []; c.oriel.send = (k, v) => { sent.push([k, v]); return true; };
+  c.setTimeout = () => 1; c.clearTimeout = () => {};
+  const slots = []; for (let i = 0; i < 27; i++) slots.push({ slot: i, stack: { empty: true } });
+  slots[0] = { slot: 0, stack: { id: 'minecraft:stick', count: 3, comps: { custom_name: 'x' }, removed: {} } };
+  const world = { kind: 'block', type: 'minecraft:chest', block: 'minecraft:chest', block_state: { facing: 'north' }, slot: { kind: 'block', dim: 'minecraft:overworld', x: 1, y: 2, z: 3, token: 'tk' }, revision: 'r1', canUndo: false,
+    snbt: '{id:"minecraft:chest",x:1,y:2,z:3,Items:[{Slot:0b,id:"minecraft:stick",count:3}],lock:5L}', nbt: {}, container: { size: 27, kind: 'minecraft:chest', unresolved_loot: false, slots }, views: {} };
+  c.KIND_INFO = c.KIND_INFO || {}; c.Store.doc = () => null;
+  for (const id of ['win', 'topbar', 'screen', 'footer']) { if (!root.querySelector('#' + id)) { const e = doc.createElement('div'); e.id = id; root.appendChild(e); } }
+  c.weOpen(world);
+  assert.equal(c.weActive(), true); assert.equal(c.weDirty(), false);
+  // 没改就不发
+  c.weApply(); assert.equal(sent.filter(x => x[0] === 'apply').length, 0);
+  // 改数量（保留组件）+ 放新物品
+  c.WE.slots[0] = Object.assign({}, slots[0].stack, { count: 9 });
+  c.WE.slots[5] = { id: 'minecraft:apple', count: 1, comps: {}, removed: {} };
+  assert.equal(c.weDirty(), true);
+  c.weApply();
+  const ap = sent.filter(x => x[0] === 'apply').pop()[1];
+  assert.equal(ap.slot.token, 'tk'); assert.equal(ap.snbt, undefined, '没改文本就不带 snbt');
+  assert.deepEqual(Array.from(ap.container.slots, s => s.slot).sort((a, b) => a - b), [0, 5]);
+  assert.equal(ap.container.slots.find(s => s.slot === 0).stack.comps.custom_name, 'x', '没动的组件原样带回');
+  // 回执：拒绝保留草稿；通过后收到新 world
+  c.weResult({ requestId: ap.requestId, status: 'rejected', code: 'target_changed', reason: '变了' });
+  assert.equal(Object.keys(c.WE.slots).length, 2, '拒绝后草稿还在');
+  // SNBT 文本改动：类型保真地发出（紧凑）
+  c.WE.slots = {}; c.WE.text = c.WE.text.replace('lock: 5L', 'lock: 6L');
+  assert.equal(c.weDirty(), true);
+  c.weApply(); const ap2 = sent.filter(x => x[0] === 'apply').pop()[1];
+  assert.ok(ap2.snbt.includes('lock:6L') && !ap2.snbt.includes('\n'), 'long 保留后缀、紧凑单行');
+  // 打印 / 解析往返
+  assert.equal(c.nbtPrint(c.nbtParse('{a:1b,b:[B;1b,2b],c:"x y",d:2.5f}'), false), '{a:1b,b:[B;1b,2b],c:"x y",d:2.5f}');
+  c.weSaved(Object.assign({}, world, { revision: 'r2', canUndo: true }));
+  assert.equal(c.WE.w.canUndo, true); assert.equal(c.weDirty(), false, '收到新 world 后草稿清空');
+  c.WE.w = null;
+}
+console.log('PASS world edit: container slots, typed SNBT apply, rejected keeps draft.');

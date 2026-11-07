@@ -66,9 +66,12 @@ function boot() {
   OrielEditor = { open: function (st) { loadStack(st); rebuild(); if (typeof Drafts !== 'undefined') Drafts.offer(Store.doc()); } };
   if (typeof Drafts !== 'undefined') Drafts.attach();
   if (typeof oriel !== 'undefined' && oriel.on) oriel.on('data', function (data, key) {
-    if (key === 'result' || (key === undefined && data.result)) receiveEditorResult(data.result);
+    if (key === 'world' || (key === undefined && data.world)) weSaved(data.world || data);
+    else if (key === 'result' || (key === undefined && data.result)) { if (weActive()) weResult(data.result); else receiveEditorResult(data.result); }
     else if (!Store.docs.length && data.stack) { Prefs.init(data); OrielEditor.open(data.stack); }
   });
+  /* 世界编辑模式：宿主给的是 world（已放置的方块实体 / 实体），不是物品栈 */
+  if (typeof oriel !== 'undefined' && oriel.data && oriel.data.world) { weOpen(oriel.data.world); return; }
   var init = typeof oriel !== 'undefined' && oriel.data && oriel.data.stack ? oriel.data.stack :
     (typeof ORIEL_STACK !== 'undefined' ? ORIEL_STACK : (typeof DEMO !== 'undefined' && DEMO.items.length ? DEMO.items[0].stack : null));
   if (init) OrielEditor.open(init); else rebuild();
