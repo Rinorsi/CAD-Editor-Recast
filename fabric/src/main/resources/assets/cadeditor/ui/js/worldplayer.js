@@ -79,8 +79,8 @@ function wpMsg(out) {
 }
 /* 分区标题：和别的页面一样用 xSec，折叠卡片由 foldify 统一生成（见 xlist.js） */
 function wpSec(parent, key, icon, title, hint) { parent.appendChild(xSec(icon, title, hint)); return parent; }
-var WP_EQ = { head: '头盔', chest: '胸甲', legs: '护腿', feet: '靴子', offhand: '副手', body: '身体', saddle: '鞍', mainhand: '主手' };
-var WP_MODE = { survival: '生存', creative: '创造', adventure: '冒险', spectator: '旁观' };
+var WP_EQ = Labels.slotEquip;
+var WP_MODE = Labels.mode;
 
 function wpInventoryTab(body) {
   var sc = wpSchema(), eq = {};

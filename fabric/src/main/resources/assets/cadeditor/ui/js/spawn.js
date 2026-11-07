@@ -3,7 +3,6 @@
    刷怪笼写在 block_entity_data 里（id = 方块实体类型，不是物品 ID）；数值范围对应游戏的 SpawnerData 校验，
    最终以 apply 时宿主的整栈校验为准。 */
 
-function spEntityName(id) { return Reg.nameOf2('entity_type', id) || humanId(shortId(id)); }
 function spNum(v) { return fmtNum(+(+v).toFixed(3)); }
 
 /* ---------- 刷怪蛋 ---------- */
@@ -45,7 +44,7 @@ function eggCard(id, icon, title, desc, comps) {
 CARDS.spawnEgg = function () {
   var card = eggCard('spawnEgg', 'paw', '生成的生物', '用这个蛋点击地面时生成的生物', ['entity_data']);
   var id = eggCur(), def = eggDefaultEntity(), info = id ? Reg.entityInfo(id) : null;
-  var sub = id ? Reg.full(id) + (def && Reg.full(id) === Reg.full(def) ? ' · 这个蛋本来的生物' : ' · 本来是' + spEntityName(def)) : '';
+  var sub = id ? Reg.full(id) + (def && Reg.full(id) === Reg.full(def) ? ' · 这个蛋本来的生物' : ' · 本来是' + entityName(def)) : '';
   card.body.appendChild(esEntityHeader({ id: id, sub: sub, iconFn: function (n) { return eggIconOf(id, n); },
     onPick: function (x) { var o = clone(eggData()); o.id = Reg.full(x); Ctx.setSmart('entity_data', o, { label: '刷怪蛋生物' }); eggRedraw(); },
     onEntityNbt: function (snbt) { var o = vaultEntityObj(snbt); NBT_FORCE.entity_data = true; Ctx.setSmart('entity_data', o, { label: '刷怪蛋生物（来自保险库）' }); eggRedraw(); },
@@ -147,7 +146,7 @@ function spPool(arr, onChange, emptyText) {
       var eid = it.data && it.data.entity && typeof it.data.entity.id === 'string' ? it.data.entity.id : '';
       var wt = kNumber(typeof it.weight === 'number' ? it.weight : 1, { min: 1, max: 1000000, step: 1, noSlider: true, onChange: function (v) { it.weight = v; onChange(); } });
       wt.el.classList.add('k-xnum'); wt.el.addEventListener('click', function (ev) { ev.stopPropagation(); });
-      return { chevron: true, icon: eid ? entityIcon(eid, 14) : uiIcon('paw', 14), title: eid ? spEntityName(eid) : '（未选择生物）', sub: eid || '', tip: eid, right: wt.el, body: function () {
+      return { chevron: true, icon: eid ? entityIcon(eid, 14) : uiIcon('paw', 14), title: eid ? entityName(eid) : '（未选择生物）', sub: eid || '', tip: eid, right: wt.el, body: function () {
         return [
           esEntityHeader({ id: eid, empty: '（未选择）',
             onPick: function (x) { it.data = it.data || {}; it.data.entity = it.data.entity || {}; it.data.entity.id = Reg.full(x); onChange(); xl.draw(); },

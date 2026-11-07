@@ -332,7 +332,7 @@ function syncEnums() {
     var ids = {}; live.forEach(function (e) { ids[e.v] = e; });
     var out = t.orig.filter(function (x) { return ids[t.idOf(x)] || ids[Reg.full(t.idOf(x))]; });
     var have = {}; out.forEach(function (x) { have[t.idOf(x)] = 1; });
-    live.forEach(function (e) { var k = e.v, sk = k.indexOf('minecraft:') === 0 && t.name !== 'consume_effect_type' ? k.substring(10) : k; if (!have[k] && !have[sk]) out.push(t.mk(sk, e.label === e.v ? humanId(shortId(e.v)) : e.label)); });
+    live.forEach(function (e) { var k = e.v, sk = k.indexOf('minecraft:') === 0 && t.name !== 'consume_effect_type' ? k.substring(10) : k; if (!have[k] && !have[sk]) out.push(t.mk(sk, optLabel(e))); });
     t.table.length = 0; out.forEach(function (x) { t.table.push(x); });
   });
 }

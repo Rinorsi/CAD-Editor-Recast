@@ -30,7 +30,7 @@ function weName() {
   var w = WE.w;
   if (w.player) return (w.player.name || '玩家') + (w.player.self ? '（你）' : '');
   if (w.kind === 'block') { var bid = shortId(w.block || w.type); return nameOfItem(bid) || Reg.nameOf2('block', w.block || w.type) || humanId(bid); }
-  return Reg.nameOf2('entity_type', w.type) || humanId(shortId(w.type));
+  return entityName(w.type);
 }
 
 function weOpen(world) {
@@ -188,7 +188,7 @@ function weEntityTab(body) {
     snbtText: function () { var t = WE.text; try { t = nbtPrint(nbtParse(WE.text), false); } catch (e) {} return t; },
     onApplyVault: function (snbt) {
       var o = vaultEntityObj(snbt), cur = weObj();
-      if (o.id && Reg.full(o.id) !== Reg.full(WE.w.type)) { toast('类型不同：这是 ' + spEntityName(o.id) + '，这里是 ' + weName() + '。放置好的生物不能换类型。', 'warn'); return; }
+      if (o.id && Reg.full(o.id) !== Reg.full(WE.w.type)) { toast('类型不同：这是 ' + entityName(o.id) + '，这里是 ' + weName() + '。放置好的生物不能换类型。', 'warn'); return; }
       Object.keys(o).forEach(function (k) { if (k !== 'id') cur[k] = o[k]; });
       WE.obj = cur; wePut(); weRedrawBody();
     } }));
@@ -267,7 +267,7 @@ Reg.on(function () { if (weActive() && ES_WAIT && Reg.live() && !$('modal')) { t
 Reg.on(function (kind, kinds) { if (weActive() && (WE.tab === 'entity' || WE.tab === 'spawner') && (kinds || [kind]).indexOf('entity_schema') >= 0 && !$('modal')) { try { drawWorldScreen(); } catch (e) {} } });
 
 /* ---------- 左栏：和物品页同一套（预览可折叠 + 2D / 3D，名字，标签，属性可折叠） ---------- */
-var WE_DIM = { 'minecraft:overworld': '主世界', 'minecraft:the_nether': '下界', 'minecraft:the_end': '末地' };
+var WE_DIM = Labels.dim;
 function weWhere() {
   var w = WE.w, s = w.slot || {}, dim = s.dim ? (WE_DIM[s.dim] || s.dim) : '';
   if (w.kind === 'block') return '位置 ' + s.x + ' ' + s.y + ' ' + s.z + (dim ? ' · ' + dim : '');

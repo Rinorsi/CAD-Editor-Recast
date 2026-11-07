@@ -30,7 +30,7 @@ function attrIconEl(t) {
   if (v[0] === 'spr') { var sp = h('sprite', { src: 'minecraft:' + v[1] }); sp.setAttribute('style', 'width:18px;height:18px'); return sp; }
   return v[0] === 'eff' ? effectIcon(v[1], 16) : itemIcon(v[1], 16);
 }
-var ATTR_SLOT_ICON = { mainhand: 'sword', offhand: 'shield', hand: 'sword', head: 'helmet', chest: 'chestplate', legs: 'leggings', feet: 'boots', armor: 'chestplate', body: 'paw', saddle: 'cart', any: 'grid' };
+var ATTR_SLOT_ICON = Labels.slotIcon;
 function attrName(t) { var a = ATIDX[shortId(t)]; return a ? a.name : shortId(t); }
 function attrFull(t) { return fullId(String(t)); }
 var AMT_LIMIT = 2048;
@@ -114,7 +114,7 @@ CARDS.attackSpeed = function () {
 };
 
 /* 其它属性（自由添加 / 编辑所有修饰器）：折叠态是预览行，点开编辑，可拖拽排序 */
-var OPMODES = [{ v: 'add_value', label: '加固定值', title: '直接加上这个数' }, { v: 'add_multiplied_base', label: '加比例', title: '按基础值的比例增加，如 +10%' }, { v: 'add_multiplied_total', label: '总乘比例', title: '最后整体乘以 (1+比例)' }];
+var OPMODES = Labels.opLong;
 function modSummary(m) { var add = m.operation === 'add_value'; var v = add ? m.amount : m.amount * 100; return (v >= 0 ? '+' : '') + bigOrNum(+v.toFixed(3)) + (add ? '' : '%'); }
 CARDS.extraAttrs = function (exclude, title) {
   exclude = exclude || [];
@@ -271,7 +271,7 @@ CARDS.tool = function () {
 };
 
 /* ==================== 盔甲 ==================== */
-var EQ_SLOTS = [{ v: 'head', label: '头部', sub: '头盔', icon: function () { return uiIcon('helmet', 20); } }, { v: 'chest', label: '胸部', sub: '胸甲', icon: function () { return uiIcon('chestplate', 20); } }, { v: 'legs', label: '腿部', sub: '护腿', icon: function () { return uiIcon('leggings', 20); } }, { v: 'feet', label: '脚部', sub: '靴子', icon: function () { return uiIcon('boots', 20); } }, { v: 'offhand', label: '副手', sub: '', icon: function () { return uiIcon('shield', 20); } }, { v: 'body', label: '身体', sub: '马铠等', icon: function () { return uiIcon('paw', 20); } }, { v: 'saddle', label: '鞍', sub: '', icon: function () { return uiIcon('cart', 20); } }, { v: 'mainhand', label: '主手', sub: '', icon: function () { return uiIcon('sword', 20); } }];
+var EQ_SLOTS = Labels.slotChoices;
 var EQ_SOUNDS = [{ v: 'minecraft:item.armor.equip_generic', label: '通用' }, { v: 'minecraft:item.armor.equip_leather', label: '皮革' }, { v: 'minecraft:item.armor.equip_chain', label: '锁链' }, { v: 'minecraft:item.armor.equip_iron', label: '铁' }, { v: 'minecraft:item.armor.equip_gold', label: '金' }, { v: 'minecraft:item.armor.equip_diamond', label: '钻石' }, { v: 'minecraft:item.armor.equip_netherite', label: '下界合金' }, { v: 'minecraft:item.armor.equip_turtle', label: '海龟壳' }, { v: 'minecraft:item.armor.equip_elytra', label: '鞘翅' }];
 var EQ_ASSETS = [{ v: 'minecraft:leather', label: '皮革' }, { v: 'minecraft:chainmail', label: '锁链' }, { v: 'minecraft:iron', label: '铁' }, { v: 'minecraft:gold', label: '金' }, { v: 'minecraft:diamond', label: '钻石' }, { v: 'minecraft:netherite', label: '下界合金' }, { v: 'minecraft:copper', label: '铜' }, { v: 'minecraft:turtle_scute', label: '海龟壳' }, { v: 'minecraft:elytra', label: '鞘翅' }];
 CARDS.equip = function () {
@@ -294,7 +294,7 @@ CARDS.equip = function () {
 
 function slotsOfEquip() { var e = Ctx.get('equippable'); return e ? [e.slot, 'armor'] : ['head', 'chest', 'legs', 'feet', 'armor']; }
 function slotKey() { var e = Ctx.get('equippable'); return e ? e.slot : 'chest'; }
-var PIECE_ID = { head: 'helmet', chest: 'chestplate', legs: 'leggings', feet: 'boots' };
+var PIECE_ID = Labels.armorPiece;
 CARDS.armorValue = function () {
   var bar = iconBar('k-armorbar');
   return attrCard({

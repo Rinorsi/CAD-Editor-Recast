@@ -22,7 +22,7 @@ const c = vm.createContext({console, setTimeout:()=>1, clearTimeout(){},
   oriel:{data:{hostAudio:true},send(k,v){sent.push({k,v});},on(k,fn){receipts[k]=fn;}},
   clone:v=>JSON.parse(JSON.stringify(v)), isObj:v=>!!v && typeof v==='object' && !Array.isArray(v),
   fmtNum:String, toast:(...args)=>warnings.push(args) });
-for (const f of ['data.js','forms.js','specs.js']) vm.runInContext(fs.readFileSync(path.join(dir,f),'utf8'),c);
+for (const f of ['data.js','labels.js','forms.js','specs.js']) vm.runInContext(fs.readFileSync(path.join(dir,f),'utf8'),c);
 c.h = element; c.uiIcon = ()=>element('img');
 c.kNumber = (value,o)=>({el:Object.assign(element('div',{class:'test-number'}),{value,change:o.onChange})});
 c.kBtn = (label,fn,o={})=>Object.assign(element('div',{class:'k-btn '+(o.cls||''),text:label}),{click:fn});

@@ -48,6 +48,11 @@ function kSearchBox(input, onSearch) {
   return { el: h('div', { class: 'k-sbox' }, [input, btn]), input: input, go: go };
 }
 function nameOfItem(id) { return Reg.itemName(id) || EDATA.iname[shortId(id)] || humanId(shortId(id)); }
+/* 名字的统一入口：游戏注册表里有名字就用，没有就把 ID 转成可读文字 */
+function nameOf(reg, id) { return Reg.nameOf2(reg, id) || humanId(shortId(id)); }
+function entityName(id) { return nameOf('entity_type', id); }
+/* 选项（{v, label}）的显示名：游戏没给翻译（label 等于 ID）时转成可读文字 */
+function optLabel(e) { return optLabel(e); }
 /* 物品类别：优先用游戏里的真实事实（默认组件 + item_meta），数据没到、或离线时才退回内置表 EDATA.ikind。
    facts：dc = 默认组件（短 ID 键），meta = item_meta_one 的一行。不靠物品名后缀猜（书除外：原版只有这两本）。 */
 function kindFromFacts(id, dc, meta) {

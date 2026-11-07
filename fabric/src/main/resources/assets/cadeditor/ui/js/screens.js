@@ -393,7 +393,7 @@ function heroStats(d, kind) {
   if (kind === 'spawn') {
     /* 刷怪蛋：生成的生物和它的基础属性（entity_info）；生命值按蛋里写的 Health，没写用游戏默认 */
     var et = eggEntityOf(d), info = et ? Reg.entityInfo(et) : false, at = info && info.attributes || {}, ed = isObj(eff.entity_data) ? eff.entity_data : {};
-    if (et) out.push({ icon: 'paw', label: '生物', value: spEntityName(et) });
+    if (et) out.push({ icon: 'paw', label: '生物', value: entityName(et) });
     var hp = typeof ed.Health === 'number' ? ed.Health : at['minecraft:max_health'];
     if (typeof hp === 'number') out.push({ icon: 'shield', label: '生命值', value: fmtNum(+hp.toFixed(2)) });
     if (typeof at['minecraft:movement_speed'] === 'number') out.push({ icon: 'boots', label: '移动速度', value: fmtNum(+at['minecraft:movement_speed'].toFixed(3)) });
@@ -506,7 +506,7 @@ function openTipModal() {
 }
 
 /* ---------- 提示框 ---------- */
-var SLOT_HEAD = { mainhand: '在主手：', offhand: '在副手：', hand: '拿在手上时：', head: '穿在头部：', chest: '穿在身上：', legs: '穿在腿上：', feet: '穿在脚上：', armor: '穿着时：', body: '穿在身体：', saddle: '作为鞍时：', any: '生效时：' };
+var SLOT_HEAD = Labels.slotHead;
 /* 提示框预览：优先显示游戏自己生成的那份（和游戏里一模一样，含模组组件、附魔、属性行）；
    宿主不可用 / 请求太大 / 出错时退回下面页面里手写的近似版。结果到之前先显示上一份（或近似版），到了再换。 */
 function hostTipStack(d) {

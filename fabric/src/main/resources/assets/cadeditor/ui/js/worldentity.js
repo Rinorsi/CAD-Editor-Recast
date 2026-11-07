@@ -214,7 +214,7 @@ function evRideSend(riding, note) {
 function evRidingTab(body) {
   var r = evGroup('riding') || {}, ps = r.passengers || [], vh = r.vehicle;
   body.appendChild(xSec('users', '骑乘关系'));
-  if (vh) body.appendChild(xRow({ icon: entityIcon(vh.type, 22), title: '正骑着：' + (vh.summary || nameOfEntity(vh.type)), sub: shortId(vh.type), right: kBtn('下来', function () { evRideSend({ action: 'dismount' }, '正在让它下来…'); }, { icon: 'down' }) }));
+  if (vh) body.appendChild(xRow({ icon: entityIcon(vh.type, 22), title: '正骑着：' + (vh.summary || entityName(vh.type)), sub: shortId(vh.type), right: kBtn('下来', function () { evRideSend({ action: 'dismount' }, '正在让它下来…'); }, { icon: 'down' }) }));
   else body.appendChild(h('div', { class: 'k-sub', text: '没有骑着别的东西。' }));
   /* 乘客卡片：头部右侧放「添加」和「全部赶下去」，列表在下面，添加表单点「添加」才展开 */
   var addOpen = WE.rideAddOpen === undefined ? !ps.length : !!WE.rideAddOpen, addBox = h('div', { class: 'wp-addbox' });
@@ -224,7 +224,7 @@ function evRidingTab(body) {
   ]);
   body.appendChild(xSec('paw', '乘客', ps.length ? ps.length + ' 个' : '没有', acts));
   function node(p, depth) {
-    body.appendChild(xRow({ icon: entityIcon(p.type, 22), title: (depth ? '↳ ' : '') + (p.summary || nameOfEntity(p.type)), sub: shortId(p.type) + (p.passengers && p.passengers.length ? ' · 背着 ' + p.passengers.length + ' 个' : ''), tip: p.uuid,
+    body.appendChild(xRow({ icon: entityIcon(p.type, 22), title: (depth ? '↳ ' : '') + (p.summary || entityName(p.type)), sub: shortId(p.type) + (p.passengers && p.passengers.length ? ' · 背着 ' + p.passengers.length + ' 个' : ''), tip: p.uuid,
       right: kBtn('赶下去', function () { evRideSend({ action: 'remove', uuid: p.uuid }, '正在让它下来…'); }, { icon: 'close', title: '只解除骑乘，生物不会被删除' }) }));
     (p.passengers || []).forEach(function (c) { node(c, depth + 1); });
   }
@@ -244,4 +244,3 @@ function evRidingTab(body) {
   addBox.style.display = addOpen ? '' : 'none';
   body.appendChild(addBox);
 }
-function nameOfEntity(t) { return Reg.nameOf2('entity_type', t) || humanId(shortId(t)); }

@@ -118,7 +118,7 @@ function vaultEntityObj(snbt) { return parseSnbtUser(snbt); }
 function vaultEntInfo(e) { var s = e.summary || e.entity || {}; return { id: e.entityId || s.id || (e.entity && e.entity.id) || '', s: s }; }
 function vaultEntitySummary(e) {
   var i = vaultEntInfo(e), s = i.s, bits = [];
-  if (i.id) bits.push(Reg.nameOf2('entity_type', i.id) || humanId(shortId(i.id)));
+  if (i.id) bits.push(entityName(i.id));
   if (s.baby) bits.push('幼体');
   if (s.hasCustomName) bits.push('有名字');
   if (s.equipmentCount) bits.push(s.equipmentCount + ' 件装备');

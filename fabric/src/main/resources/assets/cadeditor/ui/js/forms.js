@@ -653,9 +653,9 @@ function wEnchants(c, val, commit, ctx) {
   return box;
 }
 
-var OPS = [{ v: 'add_value', label: '加值', title: 'add_value：直接加上数值' }, { v: 'add_multiplied_base', label: '基础乘', title: 'add_multiplied_base：按基础值的比例相加' }, { v: 'add_multiplied_total', label: '总乘', title: 'add_multiplied_total：在最终值上乘算' }];
+var OPS = Labels.opShort;
 var SLOTS = ['any', 'mainhand', 'offhand', 'hand', 'head', 'chest', 'legs', 'feet', 'armor', 'body', 'saddle'];
-var SLOT_ZH = { any: '任意', mainhand: '主手', offhand: '副手', hand: '双手', head: '头部', chest: '胸部', legs: '腿部', feet: '脚部', armor: '全部盔甲', body: '身体', saddle: '鞍' };
+var SLOT_ZH = Labels.slot;
 function wAttrMods(c, val, commit, ctx) {
   var cur = Array.isArray(val) ? val : [];
   var box = h('div', { class: 'ed-attrs' }), list = h('div', { class: 'ed-list' });
@@ -686,7 +686,7 @@ function wAttrMods(c, val, commit, ctx) {
   return box;
 }
 
-var RARITY = [{ v: 'common', label: '普通', title: '白色名称' }, { v: 'uncommon', label: '优秀', title: '黄色名称' }, { v: 'rare', label: '稀有', title: '青色名称' }, { v: 'epic', label: '史诗', title: '粉紫色名称' }];
+var RARITY = Labels.rarity;
 function wRarity(c, val, commit) { return wSeg(RARITY, val, function (v) { commit(v, {}); }, 'rarity'); }
 
 function wDamage(c, val, commit, ctx) {
@@ -751,7 +751,7 @@ function dyeFieldFor(cid, path) {
 }
 function dyeList() {
   var live = Reg.options('enum:dye_color');
-  if (live) return live.map(function (e) { return { v: shortId(e.v), label: e.label === e.v ? humanId(shortId(e.v)) : e.label, rgb: typeof e.rgb === 'number' ? e.rgb : DYE_RGB[shortId(e.v)] }; });
+  if (live) return live.map(function (e) { return { v: shortId(e.v), label: optLabel(e), rgb: typeof e.rgb === 'number' ? e.rgb : DYE_RGB[shortId(e.v)] }; });
   return Object.keys(DYE_RGB).map(function (k) { return { v: k, label: k, rgb: DYE_RGB[k] }; });
 }
 /* 染料颜色按钮：色块 + 颜色名，点开才出 16 个色块 */

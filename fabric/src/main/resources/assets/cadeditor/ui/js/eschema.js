@@ -3,14 +3,10 @@
    中文只用来给字段起名字，认不出的字段直接显示游戏给的 ID。 */
 
 /* 字段名（界面文字）：认不出的显示游戏给的 ID */
-var ES_VARIANT = { variant: '品种', sound_variant: '叫声', collar: '项圈颜色', color: '羊毛颜色', markings: '斑纹', strength: '力量', size: '大小',
-  profession: '职业', level: '等级', pattern: '图案', base_color: '主体颜色', pattern_color: '图案颜色' };
-var ES_FLAG = { CustomName: ['名字', '头顶显示的名字'], CustomNameVisible: ['总是显示名字', '不用准星对着也显示'], Health: ['生命值', ''],
-  Age: ['幼年', '生成为幼年个体'], IsBaby: ['幼年', '生成为幼年个体'], NoAI: ['没有 AI', '不会自己移动和攻击'], Silent: ['静音', '不发出声音'],
-  Invulnerable: ['无敌', '不受伤害（创造模式玩家除外）'], NoGravity: ['无重力', '不会下落'], Glowing: ['发光轮廓', '隔着方块也能看到轮廓'],
-  PersistenceRequired: ['不会消失', '玩家走远也不会自然消失'], ShowArms: ['显示手臂', '手臂可以拿东西'], LeftHanded: ['左撇子', '主手和副手对调'], CanPickUpLoot: ['会捡东西', '会拾取地上的物品和装备'] };
+var ES_VARIANT = Labels.entVariant;
+var ES_FLAG = Labels.entFlag;
 var ES_FLAG_ORDER = ['CustomName', 'CustomNameVisible', 'Health', 'Age', 'IsBaby', 'ShowArms', 'NoAI', 'PersistenceRequired', 'LeftHanded', 'CanPickUpLoot', 'Silent', 'Invulnerable', 'NoGravity', 'Glowing'];
-var ES_SLOT = { mainhand: ['主手', 'sword'], offhand: ['副手', 'shield'], head: ['头部', 'helmet'], chest: ['胸部', 'chestplate'], legs: ['腿部', 'leggings'], feet: ['脚部', 'boots'], body: ['身体', 'shield'], saddle: ['鞍', 'cart'] };
+var ES_SLOT = Labels.slotGear;
 
 function esGet(o, p) { for (var i = 0; i < p.length; i++) { if (!isObj(o)) return undefined; o = o[p[i]]; } return o; }
 function esSet(o, p, v) { for (var i = 0; i < p.length - 1; i++) { if (!isObj(o[p[i]])) o[p[i]] = {}; o = o[p[i]]; } o[p[p.length - 1]] = v; }
@@ -338,7 +334,7 @@ function esAttrList(s, o) {
   attrs.sort(function (a, b) { var i = ES_ATTR_ORDER.indexOf(shortId(a.id)), j = ES_ATTR_ORDER.indexOf(shortId(b.id)); return (i < 0 ? 99 : i) - (j < 0 ? 99 : j) || (a.id < b.id ? -1 : 1); });
   var main = attrs.filter(function (a) { return ES_ATTR_ORDER.indexOf(shortId(a.id)) >= 0 && ES_ATTR_ORDER.indexOf(shortId(a.id)) < 6; }), rest = attrs.filter(function (a) { return main.indexOf(a) < 0; });
   function row(a) {
-    var isScale = a.id === 'minecraft:scale', nm = Reg.nameOf2('attribute', a.id) || humanId(shortId(a.id));
+    var isScale = a.id === 'minecraft:scale', nm = nameOf('attribute', a.id);
     var step = isScale ? 0.25 : (a.max - a.min > 50 ? 1 : 0.1);
     var num = kNumber(esAttrBase(o.get(), a), { min: a.min, max: a.max, softMax: isScale ? 4 : undefined, step: step, dec: 3, noSlider: !isScale,
       presets: isScale ? [{ v: 0.5, label: '0.5' }, { v: 1, label: '1' }, { v: 2, label: '2' }, { v: 4, label: '4' }] : undefined,
@@ -390,7 +386,7 @@ function esEntityIcon(id, size) {
 }
 function esEntityHeader(o) {
   var id = o.id ? Reg.full(o.id) : '';
-  var name = id ? (Reg.nameOf2('entity_type', id) || humanId(shortId(id))) : (o.empty || '（未选择）');
+  var name = id ? entityName(id) : (o.empty || '（未选择）');
   var kids = [h('div', { class: 'egg-ico' }, [o.iconFn ? o.iconFn(32) : esEntityIcon(id, 32)]), h('div', { class: 'tx' }, [h('b', { text: name }), h('span', { class: 'k-sub', text: o.sub !== undefined ? o.sub : id })])];
   if (o.onPick) kids.push(kBtn('更换生物', function () { openRegPick({ reg: 'entity_type', current: id, title: '选择生物', onEntityNbt: o.onEntityNbt, onPick: o.onPick }); }, { icon: 'grid' }));
   if (o.onApplyVault) kids.push(kBtn('从保险库套用', function () { openVault({ kind: 'entity', pickEntity: function (snbt) { o.onApplyVault(snbt); } }); }, { icon: 'download', title: '把保险库里同类型生物的外观、属性、装备等套上来' }));

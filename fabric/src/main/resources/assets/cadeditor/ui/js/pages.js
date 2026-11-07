@@ -18,7 +18,7 @@ var KIND_INFO = {
   spawner: { name: '刷怪笼', color: '#8f7be0', icon: 'paw' },
   generic: { name: '物品 / 方块', color: '#6cc349', icon: 'cube' },
 };
-var RARITY_ZH = { common: '普通', uncommon: '优秀', rare: '稀有', epic: '史诗' };
+var RARITY_ZH = Labels.rarityZh;
 
 var APPEAR = ['#名称与说明', 'name', 'lore', '#稀有度与显示', 'rarity', 'glint', 'tooltip', 'model'];
 var DURA = ['#耐久', 'maxDamage', 'damage', 'unbreakable', '#修理与保护', 'repair', 'resist', '#堆叠', 'stack'];

@@ -7,7 +7,7 @@ const dir = path.resolve(__dirname, '../fabric/src/main/resources/assets/cadedit
 const sent = [];
 const ctx = vm.createContext({ console, setTimeout: () => 1, clearTimeout() {}, document: { addEventListener() {}, getElementById() { return null; } },
   oriel: { data: {}, on() {}, send(k, v) { sent.push({ k, v }); return true; } } });
-for (const f of ['data.js', 'core.js', 'reg.js', 'nbt.js']) vm.runInContext(fs.readFileSync(path.join(dir, f), 'utf8'), ctx);
+for (const f of ['data.js', 'core.js', 'labels.js', 'reg.js', 'nbt.js']) vm.runInContext(fs.readFileSync(path.join(dir, f), 'utf8'), ctx);
 const run = code => vm.runInContext(code, ctx);
 
 // 1) 没改动：参照原文逐字保留所有类型

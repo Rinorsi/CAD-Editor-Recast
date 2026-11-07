@@ -30,7 +30,7 @@ var SoundPreview = {
 if (typeof oriel !== 'undefined' && oriel.on) oriel.on('data', function (data, key) { if (key === 'sound_preview') SoundPreview.accept(data.sound_preview || data); });
 /* 通用选择器窗口：左边分类，右边搜索 + 列表，可多选（勾选后一次「添加所选」）或单选（音效：点一下试听，选定后确认）。
    数据一律来自 Reg（游戏实时注册表；没有宿主时是内置数据，窗口里会标明）。 */
-var ENCH_TAG_ZH = { curse: '诅咒', treasure: '宝藏', tradeable: '村民交易', non_treasure: '非宝藏', in_enchanting_table: '附魔台', on_random_loot: '随机战利品', on_traded_equipment: '交易装备', on_mob_spawn_equipment: '生物装备', double_trade_price: '交易加价', smelts_loot: '熔炼战利品' };
+var ENCH_TAG_ZH = Labels.enchTag;
 var SOUND_GROUP_ZH = { block: '方块', entity: '实体', item: '物品', ui: '界面', music: '音乐', music_disc: '唱片', ambient: '环境', weather: '天气', event: '事件', particle: '粒子', enchant: '附魔', entity_effect: '效果', intentionally_empty: '空' };
 var EFFECT_CAT_ZH = { beneficial: '正面', harmful: '负面', neutral: '中性' };
 function pathOf(full) { var i = String(full).indexOf(':'); return i < 0 ? full : full.substring(i + 1); }
@@ -330,7 +330,7 @@ function openAttrPicker(o) {   /* o: { exclude:[short ids], onConfirm(fullIds) }
   var live = Reg.options('attribute');
   var src = live || EDATA.attrs.map(function (a) { return { v: 'minecraft:' + a.id, label: a.name, sub: a.desc || a.id }; });
   var present = {}; (o.exclude || []).forEach(function (x) { present[Reg.full(x)] = 1; });
-  var entries = src.map(function (e) { return { full: Reg.full(e.v), name: e.label === e.v ? humanId(shortId(e.v)) : e.label, sub: e.v, icon: function () { return attrIconEl(shortId(e.v)); } }; });
+  var entries = src.map(function (e) { return { full: Reg.full(e.v), name: optLabel(e), sub: e.v, icon: function () { return attrIconEl(shortId(e.v)); } }; });
   var cats = [{ id: 'all', name: '全部', icon: 'grid' }];
   if (entries.some(function (e) { return Reg.isMod(e.full); })) cats.push({ id: 'mod', name: '模组', icon: 'cube', filter: function (e) { return Reg.isMod(e.full); } });
   openPicker({ kind: 'attr', title: '添加属性加成', sub: '勾选后一次添加', icon: 'plus', entries: entries, cats: cats, locked: present, live: !!live, searchHint: '搜索属性名称或 ID', custom: { placeholder: '' }, onConfirm: o.onConfirm });
@@ -343,7 +343,7 @@ function openTagPicker(o) {
   if (tk || ek) {   // 标签 / 条目目录很大：各自问宿主，合并显示；常用快捷项（本地）排最前
     var srcs = [];
     if (tk) srcs.push({ kind: tk, group: 'tag', rowFn: function (r) { var v = '#' + Reg.full(r.id); return { full: v, name: r.name && r.name !== r.id ? r.name : r.id, sub: (r.count !== undefined ? r.count + ' 个成员' : '标签'), group: 'tag' }; } });
-    if (ek) srcs.push({ kind: ek, group: 'entry', rowFn: function (r) { var e = Reg.rowToOpt(o.entryReg, r); return { full: e.v, name: e.label === e.v ? humanId(shortId(e.v)) : e.label, sub: e.v, group: 'entry', icon: o.entryIcon ? function () { return o.entryIcon(e); } : null }; } });
+    if (ek) srcs.push({ kind: ek, group: 'entry', rowFn: function (r) { var e = Reg.rowToOpt(o.entryReg, r); return { full: e.v, name: optLabel(e), sub: e.v, group: 'entry', icon: o.entryIcon ? function () { return o.entryIcon(e); } : null }; } });
     var qk = (o.quick || []).map(function (q) { return { full: q.v, name: q.label, sub: q.sub || q.v, group: 'quick' }; });
     var tcats = [{ id: 'all', name: '全部', icon: 'grid' }];
     if (qk.length) tcats.push({ id: 'quick', name: '常用', icon: 'star' });
@@ -357,7 +357,7 @@ function openTagPicker(o) {
     var out = (o.quick || []).map(function (q) { return { full: q.v, name: q.label, sub: q.sub || q.v, group: 'quick' }; });
     var tags = Reg.options('tags:' + o.tagsReg) || [];
     tags.forEach(function (t) { var v = '#' + t.v; if (quick[v]) return; out.push({ full: v, name: t.v, sub: (t.n !== undefined ? t.n + ' 个成员' : '标签'), group: 'tag' }); });
-    if (o.entryReg && !o.tagsOnly) (Reg.options(o.entryReg) || []).forEach(function (e) { out.push({ full: e.v, name: e.label === e.v ? humanId(shortId(e.v)) : e.label, sub: e.v, group: 'entry', icon: o.entryIcon ? function () { return o.entryIcon(e); } : null }); });
+    if (o.entryReg && !o.tagsOnly) (Reg.options(o.entryReg) || []).forEach(function (e) { out.push({ full: e.v, name: optLabel(e), sub: e.v, group: 'entry', icon: o.entryIcon ? function () { return o.entryIcon(e); } : null }); });
     return out;
   }
   var cats = [{ id: 'all', name: '全部', icon: 'grid' }, { id: 'quick', name: '常用', icon: 'star', filter: function (e) { return e.group === 'quick'; } }, { id: 'tag', name: '标签', icon: 'tag', filter: function (e) { return e.group === 'tag'; } }];
@@ -378,7 +378,7 @@ function openRegPick(o) {   /* o: { reg, tag, current, title, fallback, onPick(i
   if (o.reg === "sound_event") { openSoundPicker({ current: o.current, onConfirm: o.onPick }); return; }   // 和食用/穿戴音效是同一个带试听的音效选择窗
   if (o.reg === "jukebox_song" || o.reg === "instrument") {   // 唱片曲目 / 山羊角：带试听（用它们各自的声音事件）
     var snds = {};
-    var buildS = function () { return (Reg.options(o.reg) || []).map(function (e) { snds[Reg.full(e.v)] = e.sound; return { full: Reg.full(e.v), name: e.label === e.v ? humanId(shortId(e.v)) : e.label, sub: e.v + (e.len ? " · " + Math.round(e.len) + " 秒" : ""), icon: function () { return uiIcon("music", 16); } }; }); };
+    var buildS = function () { return (Reg.options(o.reg) || []).map(function (e) { snds[Reg.full(e.v)] = e.sound; return { full: Reg.full(e.v), name: optLabel(e), sub: e.v + (e.len ? " · " + Math.round(e.len) + " 秒" : ""), icon: function () { return uiIcon("music", 16); } }; }); };
     openPicker({ kind: "regpick-" + o.reg, emptyReg: o.reg, title: o.title || "选择", sub: "", icon: "music", single: true, entriesFn: buildS, cats: [{ id: "all", name: "全部", icon: "grid" }, { id: "mod", name: "模组", icon: "cube", filter: function (en) { return Reg.isMod(en.full); } }], live: Reg.live(), searchHint: "搜索名称或 ID", custom: {}, preview: function () {}, soundOf: function (full) { return snds[full]; }, confirmLabel: "使用这个", onConfirm: function (ids) { o.onPick(ids[0]); } });
     return;
   }
@@ -445,6 +445,9 @@ function refIcon(reg, v, size) {
   if (reg === "mob_effect") return effectIcon(shortId(v), 16);
   return uiIcon(reg === "sound_event" ? "music" : "grid", 16);
 }
+
+/* 图标的统一入口：按注册表种类选图（属性走 attrIconEl，其余走 refIcon） */
+function iconOf(reg, id, size) { return reg === 'attribute' ? attrIconEl(id) : refIcon(reg, id, size); }
 
 /* 列表是空的时候，说明为什么空：还在向游戏要数据、游戏没有这类条目、还是游戏端没有响应（多半是模组 jar 没更新 / 没重启） */
 var EMPTY_T0 = Date.now();
