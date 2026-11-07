@@ -1,0 +1,1 @@
+openDetail({ cid: 'lore' });
