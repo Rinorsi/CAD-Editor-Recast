@@ -55,6 +55,13 @@ function receiveEditorResult(result) {
   if (Store.doc() === d) rebuild();
   toast(unchanged ? '服务器已确认物品修改' : '服务器已确认上次提交；后续修改仍保留在草稿中', 'ok');
 }
+/* 独立保险库：不是编辑某件物品，只开保险库窗口；收起编辑器外壳，关掉窗口就回到原界面 */
+function enterVaultMode() {
+  if (VaultOnly) return;
+  VaultOnly = true; document.body.classList.add('vault-only');
+  try { Store.docs.length = 0; } catch (e) {}
+  openVault({});
+}
 function boot() {
   Store.subscribe(onStoreEvent);
   Prefs.init(typeof oriel !== 'undefined' ? oriel.data : null);
@@ -66,12 +73,15 @@ function boot() {
   OrielEditor = { open: function (st) { loadStack(st); rebuild(); if (typeof Drafts !== 'undefined') Drafts.offer(Store.doc()); } };
   if (typeof Drafts !== 'undefined') Drafts.attach();
   if (typeof oriel !== 'undefined' && oriel.on) oriel.on('data', function (data, key) {
+    if (!VaultOnly && ((key === 'mode' && data === 'vault') || (key === undefined && data && data.mode === 'vault'))) { enterVaultMode(); return; }
     if (key === 'world' || (key === undefined && data.world)) weSaved(data.world || data);
     else if (key === 'result' || (key === undefined && data.result)) { if (weActive()) weResult(data.result); else receiveEditorResult(data.result); }
     else if (!Store.docs.length && data.stack) { Prefs.init(data); OrielEditor.open(data.stack); }
   });
   /* 独立保险库（主菜单 / 暂停菜单的按钮或 V 键）：不是编辑某件物品，只开保险库窗口，关掉窗口就回到原界面 */
-  if (typeof oriel !== 'undefined' && oriel.data && oriel.data.mode === 'vault') { VaultOnly = true; document.body.classList.add('vault-only'); openVault({}); return; }
+  if (typeof oriel !== 'undefined' && oriel.data && oriel.data.mode === 'vault') { enterVaultMode(); return; }
+  /* 页面数据可能比脚本晚到（快捷键打开时）：到了才进保险库模式，不然会停在空的编辑器上 */
+  setTimeout(function () { if (!VaultOnly && typeof oriel !== 'undefined' && oriel.data && oriel.data.mode === 'vault') enterVaultMode(); }, 250);
   /* 世界编辑模式：宿主给的是 world（已放置的方块实体 / 实体），不是物品栈 */
   if (typeof oriel !== 'undefined' && oriel.data && oriel.data.world) { weOpen(oriel.data.world); return; }
   var init = typeof oriel !== 'undefined' && oriel.data && oriel.data.stack ? oriel.data.stack :

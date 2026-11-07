@@ -1543,3 +1543,50 @@ body.vault-only .ew { display: none; }
 /* 和原版背包一致：格子贴在一起，背包和快捷栏之间留一道缝 */
 .k-cgrid.inv { gap: 0; }
 .slot-ghost .o-ico, .slot-ghost { image-rendering: pixelated; }
+
+/* ======================= 物品格：光与质感（照 showcase/shop 的稀有度光池 + 悬停抬起 + 呼吸）=======================
+   有物品的格子（.fl）底下垫一团光池；带稀有度 / 附魔光效的格子用 --tier 着色并有外发光。
+   悬停：抬起 1px、放大、边框点亮；拿起 / 拖动（.sel）：绿色呼吸光；拖动中的幽灵：倾斜加光晕。 */
+.slot { --tier: rgba(255, 236, 190, 0.55); transition: transform var(--m-fast) var(--m-spring), box-shadow var(--m-base) var(--m-out); }
+.slot.fl::before { content: ""; position: absolute; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none;
+  background: radial-gradient(circle at 50% 56%, color-mix(in srgb, var(--tier) 46%, transparent), rgba(0, 0, 0, 0) 78%); }
+.slot.r-uncommon { --tier: #ffff55; } .slot.r-rare { --tier: #55ffff; } .slot.r-epic { --tier: #ff55ff; } .slot.r-ench { --tier: var(--ench); }
+.slot.r-uncommon, .slot.r-rare, .slot.r-epic, .slot.r-ench { box-shadow: 0 0 5px color-mix(in srgb, var(--tier) 42%, transparent); }
+.slot.r-epic, .slot.r-ench { animation: ed-slot-breathe 2.2s ease-in-out infinite; }
+.slot.fl:hover, .slot:hover { transform: translateY(-1px) scale(1.07); box-shadow: 0 3px 5px rgba(0, 0, 0, 0.5), 0 0 7px color-mix(in srgb, var(--acc) 55%, transparent); z-index: 2; }
+.slot:active { transform: translateY(0) scale(0.96); }
+.slot.sel { z-index: 3; animation: ed-slot-pick 1.3s ease-in-out infinite; }
+.slot.sel::before { background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--acc2) 42%, transparent), rgba(0, 0, 0, 0) 78%); }
+.slot .mk { box-shadow: 0 0 3px var(--warn), 0 0 6px color-mix(in srgb, var(--warn) 60%, transparent); }
+.slot .cnt { text-shadow: 1px 1px 0 #1a1a1a, 0 0 3px rgba(0, 0, 0, 0.8); }
+@keyframes ed-slot-breathe { 0%, 100% { box-shadow: 0 0 3px color-mix(in srgb, var(--tier) 30%, transparent); } 50% { box-shadow: 0 0 9px color-mix(in srgb, var(--tier) 72%, transparent); } }
+@keyframes ed-slot-pick { 0%, 100% { box-shadow: 0 0 3px color-mix(in srgb, var(--acc2) 45%, transparent); transform: scale(1.04); } 50% { box-shadow: 0 0 11px var(--acc2); transform: scale(1.1); } }
+.slot-ghost { transform: scale(1.12); border-radius: 3px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--acc2) 40%, transparent), rgba(0, 0, 0, 0) 70%); box-shadow: 0 6px 8px rgba(0, 0, 0, 0.55); }
+/* 提示条：左侧强调色之外再加一圈同色光晕 */
+.k-toast { box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), inset 3px 0 0 var(--info), 0 0 9px color-mix(in srgb, var(--info) 38%, transparent); }
+.k-toast.ok { box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), inset 3px 0 0 var(--acc2), 0 0 9px color-mix(in srgb, var(--acc2) 38%, transparent); }
+.k-toast.error { box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), inset 3px 0 0 var(--bad), 0 0 9px color-mix(in srgb, var(--bad) 38%, transparent); }
+.k-toast.warn { box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), inset 3px 0 0 var(--warn), 0 0 9px color-mix(in srgb, var(--warn) 38%, transparent); }
+[data-theme=light] .slot.fl::before { background: radial-gradient(circle at 50% 56%, color-mix(in srgb, var(--tier) 40%, transparent), rgba(0, 0, 0, 0) 72%); }
+@media (prefers-reduced-motion: reduce) { .slot.r-epic, .slot.r-ench, .slot.sel { animation: none; } }
+/* 格子托盘：像原版容器界面那样，把整片格子放进一个下凹的槽里，顶上有一道高光，四周压暗 */
+.k-cgrid.tray { margin: 8px 0 4px; padding: 7px 6px; background: linear-gradient(rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0.16)); border: 1px solid var(--ln2);
+  box-shadow: inset 0 1px 0 var(--ln), inset 0 0 14px rgba(0, 0, 0, 0.4), 0 1px 0 var(--ln); }
+
+/* 拿起时原格子里的物品淡出（和原版一样，物品在鼠标上），格子本身保留绿色呼吸框 */
+.slot.carried > * { opacity: 0.16; }
+.slot-ghost .cnt { text-shadow: 1px 1px 0 #1a1a1a; }
+
+/* 玩家背包版式：装备列 | 背包 + 快捷栏，同一个下凹槽；快捷栏里手上拿的那格带琥珀色下划线 */
+.wp-inv { display: flex; flex-wrap: nowrap; justify-content: center; align-items: flex-start; gap: 8px; margin: 8px 0 6px; padding: 8px;
+  background: linear-gradient(rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0.16)); border: 1px solid var(--ln2);
+  box-shadow: inset 0 1px 0 var(--ln), inset 0 0 14px rgba(0, 0, 0, 0.4), 0 1px 0 var(--ln); }
+.wp-inv .k-cgrid { margin: 0; padding: 0; }
+.wp-col { display: flex; flex-direction: column; gap: 6px; }
+.wp-sep { height: 1px; background: var(--ln2); box-shadow: 0 1px 0 var(--ln); }
+.wp-vsep { align-self: stretch; width: 1px; background: var(--ln2); box-shadow: 1px 0 0 var(--ln); }
+.slot .es-ghost { opacity: 0.32; }
+.slot.hand::after { height: 2px; bottom: -3px; box-shadow: 0 0 5px var(--warn); }
+.wp-inv .slot.s34 { width: 26px; height: 26px; }
+.ew.narrow .wp-inv { flex-wrap: wrap; }
