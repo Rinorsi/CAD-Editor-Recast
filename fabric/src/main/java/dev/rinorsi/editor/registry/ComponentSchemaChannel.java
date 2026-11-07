@@ -57,8 +57,7 @@ final class ComponentSchemaChannel {
             List<String> ids;
             if (id != null) {
                 id = net.minecraft.resources.Identifier.parse(id).toString(); context.addProperty("id", id); ComponentValidation.type(id); ids = List.of(id);
-            } else ids = BuiltInRegistries.DATA_COMPONENT_TYPE.entrySet().stream().filter(e -> e.getValue().codec() != null)
-                    .map(e -> e.getKey().identifier().toString()).sorted().toList();
+            } else ids = ComponentSchema.persistentIds();
             if (JOBS.size() >= 8) throw new IllegalArgumentException("组件结构索引繁忙，请稍后重试");
             JOBS.add(new Job(name, currentGeneration, context, ids.iterator(), new JsonArray(), world, reply));
         } catch (RuntimeException error) { error(name, currentGeneration, context, error, reply); }

@@ -96,6 +96,7 @@ public final class EntitySchema {
         Set<String> commonKeys=new HashSet<>();for(var f:flags)commonKeys.add(f.getAsJsonObject().get("key").getAsString());
         for(String key:baseline.keySet())if(!commonKeys.contains(key)){JsonObject f=field(key,baseline.get(key),true);f.addProperty("common",false);f.addProperty("advanced",true);flags.add(f);}
         EntitySchemaDetails.describe(e,level,lookup,out);
+        out.add("views",dev.rinorsi.editor.world.EntityWorldSchema.describe(e,level.registryAccess()));
         return out;
     }
     private static <T> void component(Entity e,DataComponentType<T> component,HolderLookup.Provider lookup,Level level,JsonArray out){

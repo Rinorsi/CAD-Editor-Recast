@@ -122,6 +122,7 @@ public final class WorldEditTest {
         Path output = Path.of(args.length == 0 ? "logs/world-edit" : args[0]); Files.createDirectories(output);
         Files.writeString(output.resolve("captured.json"),new GsonBuilder().setPrettyPrinting().create().toJson(captured)); Files.writeString(output.resolve("receipt.json"),receipt.toString());
         System.out.println("PASS WorldEditTest " + checks + " checks; real block/entity factories, loaders, inventories, typed NBT, conflict and transport; live server pending");
+        BlockWorldEditTest.run(access,Path.of("logs/block-edit"));
     }
     private static void check(boolean condition,String message) { if (!condition) throw new AssertionError(message); checks++; }
     private static void reject(String code,Runnable action) { try { action.run(); } catch(EditorSessions.Failure e) { check(code.equals(e.code),"expected "+code+" got "+e.code); return; } throw new AssertionError("expected rejection "+code); }

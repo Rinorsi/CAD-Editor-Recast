@@ -52,6 +52,7 @@ public final class EditorClient implements ClientModInitializer {
 
     @Override public void onInitializeClient() {
         WorldEditorClient.initialize();
+        VaultClient.initialize(() -> screen != null || opening != null || WorldEditorClient.active());
         dev.rinorsi.editor.registry.RegistryBridge.initialize();
         EditorPageController.register();
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> { EditorPrefs.flush(); uiLog.close(); });
@@ -88,7 +89,7 @@ public final class EditorClient implements ClientModInitializer {
 
     private void open() {
         var mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null || screen != null || opening != null || WorldEditorClient.active()) return;
+        if (mc.player == null || mc.level == null || screen != null || opening != null || WorldEditorClient.active() || mc.screen instanceof OrielScreen) return;
         try {
             if (mc.getResourceManager().getResource(Identifier.parse(PAGE)).isEmpty())
                 StackCodec.fail("缺少物品工坊页面 cadeditor:ui/index.html，请检查 Editor jar 是否包含界面资源");

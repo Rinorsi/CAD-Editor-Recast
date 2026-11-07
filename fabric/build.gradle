@@ -201,7 +201,24 @@ tasks.register('vaultTest', JavaExec) {
 }
 tasks.named('check') { dependsOn('vaultTest') }
 
+tasks.register('vaultButtonLayoutTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.client.VaultButtonLayoutTest'
+    workingDir = rootProject.projectDir
+}
+tasks.named('check') { dependsOn('vaultButtonLayoutTest') }
+
 // Entity attributes/effects use the same detached real-game JVM fixtures as the base schema.
+tasks.register('entityWorldEditTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.registry.EntityWorldEditTest'
+    workingDir = rootProject.projectDir
+    jvmArgs '-Djava.awt.headless=true'
+}
+tasks.named('check') { dependsOn('entityWorldEditTest') }
+
 ['entitySchemaDetailsTest': true, 'entitySchemaDetailsServerTest': false].each { taskName, clientSide ->
     tasks.register(taskName, JavaExec) {
         dependsOn codecVerificationClasses

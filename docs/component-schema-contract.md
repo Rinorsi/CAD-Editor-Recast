@@ -1,1129 +1,197 @@
-# Component schema · Minecraft 26.1.2
+# 持久物品组件结构协议（MC 26.1.2 / schema v2）
 
-本合同只证明真实 Codec 的字段结构与独立 JVM 校验。没有完成前端消费、联网权限、真实客户端保存重开或玩法验收；不勾选发布门槛。
+生产数据由当前注册表的持久 Codec 推导；快照只用于审阅和漂移测试，不是线上白名单或范围表。批量请求遍历全部持久组件，包括 MOD。
 
-## 请求与回复
+## 请求与分页
 
-```js
-oriel.send('registry', {name:'component_schema', id:'minecraft:max_stack_size'});
-oriel.send('registry', {name:'component_schema'}); // 全部有持久 Codec 的组件，不限测试范围
-oriel.send('registry', {name:'component_schema:minecraft:food'});
-oriel.send('component_validate', {requestId:'food-1', component:'minecraft:food', value:{nutrition:-1,saturation:'invalid'}});
-```
+沿用 registry_request，name 为 component_schema 获取全集，component_schema:minecraft:food 或 component_schema 配合 id:minecraft:food 获取单项。响应保持 registry 信封的 version/generation/name/offset/total/entries/done，单页最多 24000 字符。每 tick 推导一个未缓存组件，离开世界或 generation 改变清缓存。信封 version 仍为 1；条目 schema_version 为 2。
 
-前两种请求的顶层 key 是字面量 `registry.component_schema`，带 id 时信封同时带 `id`。冒号形式写入字面量 `registry.component_schema:minecraft:food`。不要按点号拆 key。回复沿用 `RegistryPages`：`version:1,generation,name,offset,total,entries,done`；整页最多24000字符，不截断单行。按generation丢弃旧页，按offset合并entries，done才表示完成。请求JSON最多8192字符，name最多247字符。
+## 条目与编辑策略
 
-新增 `component_validate.result` 保留旧 `validate_component.result` 的全部成功/失败字段；旧消息没有改动。输入使用 component、value，或 snbt 字符串 / format:'snbt'，可选requestId原样回传。成功含ok:true、format、normalized、snbt、json、errors:[]、path_precision:'none'。失败含ok:false、error及errors:[{path,code,message}]。path为 `$`、`$.field`、`$[2].field`、或 `$["minecraft:id"]`；最多16条，每条message最多700字符，发生截断带errors_truncated:true。不能精确定位的错误保留在组件根 `$`，不会从英文错误文本猜路径。SNBT解析或语义失败目前只保证组件级定位。最终保存继续走完整Codec、会话与权限校验。
+source 是 vanilla 或 mod:<namespace>，schema_source 为 runtime_codec_structural_adapter。editable 为 structured 或 snbt_only，并带 editable_reason；readonly 预留给不可写能力，本次持久 Codec 集合无需该降级。validator_route:component_validate 对所有形态有效。自由 NBT 无固定表单字段，使用 snbt_only；不透明 MOD Codec 或超出单行预算同样保留 SNBT 入口，不能跳过或删除组件。
 
-每个Document每秒最多20次component_validate，输入8192字符，结果24000字符。无世界、超频或超大小返回ok:false/error；code目前统一request_limit，不能仅凭code区分离开世界和限额。serverSession或非对象消息忽略，与旧本地校验一致。
+label_key 仅当当前 Language 确有 item.component.<namespace>.<path>，或原版的 item.component.<path> 时输出，否则明确为 null。26.1.2 原版语言资源没有逐组件这些键，本快照全部为 null，不能编造翻译键。
 
-## 来源、字段树和未知值
+default_from_prototypes 包括 item_count、distinct_value_count、example_count、universal_default:false；具体样本在 prototype_examples。样本是实际物品原型观察，不构成所有物品通用默认。字段 default 来自 optional Codec 解码空对象；default_absent 表示省略，不等于 0。
 
-生产源是当前世界DataComponentType.codec()，不是本JSON快照。采用有界的真实DFU结构适配器，而非按组件ID手写字段表：读取ListCodec、EitherCodec、UnboundedMapCodec、MapCodec/RecordCodecBuilder和OptionalFieldCodec的实际组合；对optional字段以其MapDecoder解码空map，再用实际子Codec编码来获取默认值；枚举取运行期StringRepresentable枚举实例，再用真实Codec验证序列化名；holder和tag取Codec持有的registry key。
+coverage:full 仅表示导出的字段形状没有未知节点，不代表跨组件约束、玩法、前端消费或发布验收。partial 的 unknown_paths 与 unknown_details 同时列出路径及原因。单组件超出预算时降级为 snbt_only，避免一个 MOD 阻断全集。
 
-数值上下界只在捕获到官方Codec/ExtraCodecs校验器中的两个数字，且端点/相邻边界解码验证成功时导出。字符串长度同样须捕获并核验端点。另做-1/0/1/32768/2147483647/1e30、空/32768字符字符串、空/非空列表、空对象观察。探针只是样本，不能由样本通过推定所有值合法。严格正数但未提取到上下界等情况标unknown:true。
+## 形状
 
-结构深度12、节点160、对象图256的预算；反射不可访问、递归、dispatch、inline holder、outer flatMap/跨字段约束不伪造字段，标unknown:true及reason。导出type可能为int/long/float/double/bool/string/enum/registry/tag/component(text)/list/map/object/union；path、optional必带。fields为object子字段，element为list/map子值，key为map键，alternatives为union分支。min/max只表示已证明的数值界；min_size/max_size是列表长度，min_length/max_length是字符串长度。没有界不代表无限；须看unknown/reason。
+每个节点保留 type，并增加同值 kind。fields 是对象字段数组；element/key 是列表/映射；alternatives 是普通联合或 holder 内联形式。
 
-`default`仅为该optionalField解码空map得到的真实默认值；`default_absent:true`表示缺省无值。`prototype_examples`是按物品ID排序后从所有实际Item.components()观察到的最多3个不同值；`prototype_item_count`统计带该组件的物品，`prototype_examples_complete`表示是否完整列出不同值。这不是通用组件默认值，例子为空不能自己补默认。
+| kind | 真实来源与表示 |
+|---|---|
+| text_component | ComponentSerialization.CODEC；字符串、非空递归文本列表、对象；内容分派 text/translate/score/selector/keybind/nbt，extra 与 Style（含 click_event/hover_event）。flatRestrictedCodec 另带捕获的 max_flat_size。不能压成普通字符串丢掉样式和事件。 |
+| identifier | Identifier.CODEC；item_model/tooltip_style 分别带 catalog:item_model / catalog:tooltip_style，与页面资源目录同名。 |
+| unit | 实际 unit Codec；空对象表示存在，删除整个组件表示关闭。glider/unbreakable 不是布尔值。 |
+| typed_data | TypedEntityData 的真实 typeCodec；必填 id 与自由 NBT 同层。id_registry：block_entity_data 为 minecraft:block_entity_type，entity_data 为 minecraft:entity_type；bees 内嵌值也可导出。 |
+| holder | 实际 RegistryFileCodec；registry、allow_inline 和 alternatives 内的内联记录。instrument 含 sound_event/use_duration/range/description。 |
+| holder_set | 实际 HolderSetCodec；registry 与 #tag / 单 identifier / identifier 列表；运行时校验 holder 同质性和 tag 查询。 |
+| variants | 实际 KeyDispatchCodec 的 discriminator、注册表或真实枚举，以及 variants 内各 discriminator_value 对应分支。包括 consume/death effects、attribute display。 |
+| recursive_ref | Codec 身份递归的 ref_path，指回本条目先前同一 Codec 形状；不无限展开 hidden_effect。真正深度/节点预算仍记 unknown。 |
+| component_patch | DataComponentPatch.CODEC；ID 键对应实时 component_schema，!id 加空对象表示移除；每个值交注册组件 Codec 校验。 |
+| nbt / uuid / resource_path | 官方 Codec 身份适配，保留自由 NBT、实际探测的 UUID 形式、官方路径语法。BlockPos 是长度 3 的整数列表。 |
 
-coverage=full只表示导出的字段结构中没有已知unknown节点，不表示穷尽Codec语义或玩法；partial表示部分节点未知；unknown表示根结构本身无法导出。unknown_paths可能重复（union的不同分支）。UI应保留高级JSON/SNBT和手动ID输入。
+RGB 是显示语义：potion_contents.custom_color 真实字段使用 Codec.INT，format:rgb 不意味着只接受 0..16777215；ExtraCodecs RGB/ARGB 还可接收浮点通道列表。map_id/map_color 验证 int 存储域两端；JsonOps 截断/缩窄会接受域外 JSON 数，不能把存储域解释为严格拒绝规则。
 
-## 执行、远程与失败
+## ranges_for_ui
 
-在客户端主线程每tick处理一个未缓存组件，最多排队8个任务；一次bulk要跨多个tick，完成后再按页投递。缓存按世界对象及registry generation失效；离开世界清缓存及待办，不保证发出已排队请求的取消回执。请求繁忙、未知ID、无持久Codec、单行过大、无世界返回空entries页加error。
+每个条目含数值字段列表；[完整机器汇总与前端差异](component-schema-ui-ranges-26.1.2.json) 按组件 ID 索引。
 
-当前为**本地只读派生**，未实现向远程服务端RPC；在普通远程服使用客户端已同步的registry access。availability:'complete'表示已完成请求组件的推导，并不表示每个字段都已知或服务端资源已同步。此通道目前不会发送availability:'unavailable'；未同步/不可解析的服务端约束只能标unknown或Codec错误，不能把本地结果宣称为远程服务端授权。
+示例：{"id":"minecraft:use_cooldown","ranges_for_ui":[{"path":"$.seconds","min":0,"max":3.4028235E38,"default":null,"min_exclusive":true}]}
 
-## 实际捕获的字段树
+path 使用 $、.field、[]、{value}。min/max/default 的 null 表示没有已证明的界限或通用默认，不能当零。min_exclusive:true 表示严格大于；unit_hint 未从 Codec 获得时不发明。联合/分派可能在同一 path 下有多组值，需结合原节点所在 variants/alternatives 分支。范围是表单提示，提交仍走 component_validate。UNSIGNED_BYTE 的 [0,255] 是解码值域；256→0 的 JSON 缩窄仍以实际回执为准。
 
-以下直接摘自独立JVM真实26.1.2注册表运行生成的 `component-schema-26.1.2.json`，不是手写示例。只摘id/coverage/fields；完整探针和物品原型见快照。
+## 覆盖变化
 
-### max_stack_size
+| 范围 | full | partial | unknown | 总计 |
+|---|---:|---:|---:|---:|
+| 旧快照 | 12 | 32 | 12 | 56 |
+| 同一旧范围更新后 | 52 | 4 | 0 | 56 |
+| 当前全部持久组件 | 101 | 6 | 0 | 107 |
 
-```json
-{
-  "id": "minecraft:max_stack_size",
-  "coverage": "full",
-  "fields": [
-    {
-      "path": "$",
-      "optional": false,
-      "type": "int",
-      "probes": [
-        {
-          "value": -1,
-          "ok": false
-        },
-        {
-          "value": 0,
-          "ok": false
-        },
-        {
-          "value": 1,
-          "ok": true
-        },
-        {
-          "value": 32768,
-          "ok": false
-        },
-        {
-          "value": 2147483647,
-          "ok": false
-        },
-        {
-          "value": 1e+30,
-          "ok": false
-        }
-      ],
-      "min": 1,
-      "max": 99,
-      "constraint_source": "captured_numeric_validator_and_boundary_decode",
-      "fractional_json_accepted": true
-    }
-  ]
-}
-```
+## 全集结构覆盖与剩余未知
 
-### enchantments
-
-```json
-{
-  "id": "minecraft:enchantments",
-  "coverage": "partial",
-  "fields": [
-    {
-      "path": "$",
-      "optional": false,
-      "type": "map",
-      "unknown": true,
-      "reason": "outer_mapping_or_cross_field_constraint",
-      "element": {
-        "path": "${value}",
-        "optional": false,
-        "type": "int",
-        "probes": [
-          {
-            "value": -1,
-            "ok": false
-          },
-          {
-            "value": 0,
-            "ok": false
-          },
-          {
-            "value": 1,
-            "ok": true
-          },
-          {
-            "value": 32768,
-            "ok": false
-          },
-          {
-            "value": 2147483647,
-            "ok": false
-          },
-          {
-            "value": 1e+30,
-            "ok": false
-          }
-        ],
-        "min": 1,
-        "max": 255,
-        "constraint_source": "captured_numeric_validator_and_boundary_decode",
-        "fractional_json_accepted": true
-      },
-      "key": {
-        "path": "${key}",
-        "optional": false,
-        "type": "registry",
-        "registry": "minecraft:enchantment"
-      }
-    }
-  ]
-}
-```
-
-### attribute_modifiers
-
-```json
-{
-  "id": "minecraft:attribute_modifiers",
-  "coverage": "partial",
-  "fields": [
-    {
-      "path": "$",
-      "optional": false,
-      "type": "list",
-      "min_size": 0,
-      "max_size": 2147483647,
-      "element": {
-        "path": "$[]",
-        "optional": false,
-        "type": "object",
-        "fields": [
-          {
-            "path": "$[].type",
-            "optional": false,
-            "type": "registry",
-            "registry": "minecraft:attribute",
-            "unknown": true,
-            "reason": "registry_reference_constraints_checked_by_codec",
-            "name": "type"
-          },
-          {
-            "path": "$[].id",
-            "optional": false,
-            "type": "string",
-            "length_probes": [
-              {
-                "length": 0,
-                "ok": true
-              },
-              {
-                "length": 1,
-                "ok": true
-              },
-              {
-                "length": 32768,
-                "ok": true
-              }
-            ],
-            "unknown": true,
-            "reason": "string_mapping_constraints_not_exported",
-            "name": "id"
-          },
-          {
-            "path": "$[].amount",
-            "optional": false,
-            "type": "double",
-            "probes": [
-              {
-                "value": -1,
-                "ok": true
-              },
-              {
-                "value": 0,
-                "ok": true
-              },
-              {
-                "value": 1,
-                "ok": true
-              },
-              {
-                "value": 32768,
-                "ok": true
-              },
-              {
-                "value": 2147483647,
-                "ok": true
-              },
-              {
-                "value": 1e+30,
-                "ok": true
-              }
-            ],
-            "constraint_source": "primitive_codec_no_explicit_range",
-            "name": "amount"
-          },
-          {
-            "path": "$[].operation",
-            "optional": false,
-            "type": "enum",
-            "values": [
-              "add_multiplied_base",
-              "add_multiplied_total",
-              "add_value"
-            ],
-            "name": "operation"
-          },
-          {
-            "path": "$[].slot",
-            "optional": true,
-            "type": "enum",
-            "values": [
-              "any",
-              "armor",
-              "body",
-              "chest",
-              "feet",
-              "hand",
-              "head",
-              "legs",
-              "mainhand",
-              "offhand",
-              "saddle"
-            ],
-            "name": "slot",
-            "default": "any",
-            "default_source": "optional_field_decode_empty_map"
-          },
-          {
-            "path": "$[].display",
-            "optional": true,
-            "type": "object",
-            "unknown": true,
-            "reason": "unresolved_map_keys_or_dispatch",
-            "name": "display",
-            "default": {
-              "type": "default"
-            },
-            "default_source": "optional_field_decode_empty_map",
-            "fields": [
-              {
-                "path": "$[].display.type",
-                "optional": false,
-                "type": "enum",
-                "values": [
-                  "default",
-                  "hidden",
-                  "override"
-                ],
-                "name": "type"
-              }
-            ]
-          }
-        ]
-      }
-    }
-  ]
-}
-```
-
-### food
-
-```json
-{
-  "id": "minecraft:food",
-  "coverage": "full",
-  "fields": [
-    {
-      "path": "$",
-      "optional": false,
-      "type": "object",
-      "fields": [
-        {
-          "path": "$.nutrition",
-          "optional": false,
-          "type": "int",
-          "probes": [
-            {
-              "value": -1,
-              "ok": false
-            },
-            {
-              "value": 0,
-              "ok": true
-            },
-            {
-              "value": 1,
-              "ok": true
-            },
-            {
-              "value": 32768,
-              "ok": true
-            },
-            {
-              "value": 2147483647,
-              "ok": true
-            },
-            {
-              "value": 1e+30,
-              "ok": true
-            }
-          ],
-          "min": 0,
-          "max": 2147483647,
-          "constraint_source": "captured_numeric_validator_and_boundary_decode",
-          "fractional_json_accepted": true,
-          "name": "nutrition"
-        },
-        {
-          "path": "$.saturation",
-          "optional": false,
-          "type": "float",
-          "probes": [
-            {
-              "value": -1,
-              "ok": true
-            },
-            {
-              "value": 0,
-              "ok": true
-            },
-            {
-              "value": 1,
-              "ok": true
-            },
-            {
-              "value": 32768,
-              "ok": true
-            },
-            {
-              "value": 2147483647,
-              "ok": true
-            },
-            {
-              "value": 1e+30,
-              "ok": true
-            }
-          ],
-          "constraint_source": "primitive_codec_no_explicit_range",
-          "name": "saturation"
-        },
-        {
-          "path": "$.can_always_eat",
-          "optional": true,
-          "type": "bool",
-          "name": "can_always_eat",
-          "default": false,
-          "default_source": "optional_field_decode_empty_map"
-        }
-      ]
-    }
-  ]
-}
-```
-
-### equippable
-
-```json
-{
-  "id": "minecraft:equippable",
-  "coverage": "partial",
-  "fields": [
-    {
-      "path": "$",
-      "optional": false,
-      "type": "object",
-      "fields": [
-        {
-          "path": "$.slot",
-          "optional": false,
-          "type": "enum",
-          "values": [
-            "body",
-            "chest",
-            "feet",
-            "head",
-            "legs",
-            "mainhand",
-            "offhand",
-            "saddle"
-          ],
-          "name": "slot"
-        },
-        {
-          "path": "$.equip_sound",
-          "optional": true,
-          "type": "registry",
-          "registry": "minecraft:sound_event",
-          "unknown": true,
-          "reason": "inline_holder_form_not_exported",
-          "name": "equip_sound",
-          "default": "minecraft:item.armor.equip_generic",
-          "default_source": "optional_field_decode_empty_map"
-        },
-        {
-          "path": "$.asset_id",
-          "optional": true,
-          "type": "registry",
-          "registry": "minecraft:equipment_asset",
-          "unknown": true,
-          "reason": "optional_default_not_resolved",
-          "name": "asset_id"
-        },
-        {
-          "path": "$.camera_overlay",
-          "optional": true,
-          "type": "string",
-          "length_probes": [
-            {
-              "length": 0,
-              "ok": true
-            },
-            {
-              "length": 1,
-              "ok": true
-            },
-            {
-              "length": 32768,
-              "ok": true
-            }
-          ],
-          "unknown": true,
-          "reason": "optional_default_not_resolved",
-          "name": "camera_overlay"
-        },
-        {
-          "path": "$.allowed_entities",
-          "optional": true,
-          "type": "union",
-          "registry": "minecraft:entity_type",
-          "unknown": true,
-          "reason": "optional_default_not_resolved",
-          "name": "allowed_entities",
-          "alternatives": [
-            {
-              "path": "$.allowed_entities",
-              "optional": false,
-              "type": "union",
-              "alternatives": [
-                {
-                  "path": "$.allowed_entities",
-                  "optional": false,
-                  "type": "tag",
-                  "registry": "minecraft:entity_type",
-                  "prefix": "#",
-                  "unknown": true,
-                  "reason": "registry_reference_constraints_checked_by_codec"
-                },
-                {
-                  "path": "$.allowed_entities",
-                  "optional": false,
-                  "type": "union",
-                  "unknown": true,
-                  "reason": "outer_mapping_or_cross_field_constraint",
-                  "alternatives": [
-                    {
-                      "path": "$.allowed_entities",
-                      "optional": false,
-                      "type": "list",
-                      "min_size": 0,
-                      "max_size": 2147483647,
-                      "unknown": true,
-                      "reason": "outer_mapping_or_cross_field_constraint",
-                      "element": {
-                        "path": "$.allowed_entities[]",
-                        "optional": false,
-                        "type": "registry",
-                        "registry": "minecraft:entity_type"
-                      }
-                    },
-                    {
-                      "path": "$.allowed_entities",
-                      "optional": false,
-                      "type": "registry",
-                      "registry": "minecraft:entity_type"
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "path": "$.dispensable",
-          "optional": true,
-          "type": "bool",
-          "name": "dispensable",
-          "default": true,
-          "default_source": "optional_field_decode_empty_map"
-        },
-        {
-          "path": "$.swappable",
-          "optional": true,
-          "type": "bool",
-          "name": "swappable",
-          "default": true,
-          "default_source": "optional_field_decode_empty_map"
-        },
-        {
-          "path": "$.damage_on_hurt",
-          "optional": true,
-          "type": "bool",
-          "name": "damage_on_hurt",
-          "default": true,
-          "default_source": "optional_field_decode_empty_map"
-        },
-        {
-          "path": "$.equip_on_interact",
-          "optional": true,
-          "type": "bool",
-          "name": "equip_on_interact",
-          "default": false,
-          "default_source": "optional_field_decode_empty_map"
-        },
-        {
-          "path": "$.can_be_sheared",
-          "optional": true,
-          "type": "bool",
-          "name": "can_be_sheared",
-          "default": false,
-          "default_source": "optional_field_decode_empty_map"
-        },
-        {
-          "path": "$.shearing_sound",
-          "optional": true,
-          "type": "registry",
-          "registry": "minecraft:sound_event",
-          "unknown": true,
-          "reason": "inline_holder_form_not_exported",
-          "name": "shearing_sound",
-          "default": "minecraft:item.shears.snip",
-          "default_source": "optional_field_decode_empty_map"
-        }
-      ]
-    }
-  ]
-}
-```
-
-### tool
-
-```json
-{
-  "id": "minecraft:tool",
-  "coverage": "partial",
-  "fields": [
-    {
-      "path": "$",
-      "optional": false,
-      "type": "object",
-      "fields": [
-        {
-          "path": "$.rules",
-          "optional": false,
-          "type": "list",
-          "min_size": 0,
-          "max_size": 2147483647,
-          "name": "rules",
-          "element": {
-            "path": "$.rules[]",
-            "optional": false,
-            "type": "object",
-            "fields": [
-              {
-                "path": "$.rules[].blocks",
-                "optional": false,
-                "type": "union",
-                "registry": "minecraft:block",
-                "unknown": true,
-                "reason": "holder_set_lookup_and_homogeneous_list_constraints",
-                "name": "blocks",
-                "alternatives": [
-                  {
-                    "path": "$.rules[].blocks",
-                    "optional": false,
-                    "type": "union",
-                    "alternatives": [
-                      {
-                        "path": "$.rules[].blocks",
-                        "optional": false,
-                        "type": "tag",
-                        "registry": "minecraft:block",
-                        "prefix": "#",
-                        "unknown": true,
-                        "reason": "registry_reference_constraints_checked_by_codec"
-                      },
-                      {
-                        "path": "$.rules[].blocks",
-                        "optional": false,
-                        "type": "union",
-                        "unknown": true,
-                        "reason": "outer_mapping_or_cross_field_constraint",
-                        "alternatives": [
-                          {
-                            "path": "$.rules[].blocks",
-                            "optional": false,
-                            "type": "list",
-                            "min_size": 0,
-                            "max_size": 2147483647,
-                            "unknown": true,
-                            "reason": "outer_mapping_or_cross_field_constraint",
-                            "element": {
-                              "path": "$.rules[].blocks[]",
-                              "optional": false,
-                              "type": "registry",
-                              "registry": "minecraft:block"
-                            }
-                          },
-                          {
-                            "path": "$.rules[].blocks",
-                            "optional": false,
-                            "type": "registry",
-                            "registry": "minecraft:block"
-                          }
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              },
-              {
-                "path": "$.rules[].speed",
-                "optional": true,
-                "type": "float",
-                "probes": [
-                  {
-                    "value": -1,
-                    "ok": false
-                  },
-                  {
-                    "value": 0,
-                    "ok": false
-                  },
-                  {
-                    "value": 1,
-                    "ok": true
-                  },
-                  {
-                    "value": 32768,
-                    "ok": true
-                  },
-                  {
-                    "value": 2147483647,
-                    "ok": true
-                  },
-                  {
-                    "value": 1e+30,
-                    "ok": true
-                  }
-                ],
-                "unknown": true,
-                "reason": "optional_default_not_resolved",
-                "name": "speed"
-              },
-              {
-                "path": "$.rules[].correct_for_drops",
-                "optional": true,
-                "type": "bool",
-                "name": "correct_for_drops",
-                "unknown": true,
-                "reason": "optional_default_not_resolved"
-              }
-            ]
-          }
-        },
-        {
-          "path": "$.default_mining_speed",
-          "optional": true,
-          "type": "float",
-          "probes": [
-            {
-              "value": -1,
-              "ok": true
-            },
-            {
-              "value": 0,
-              "ok": true
-            },
-            {
-              "value": 1,
-              "ok": true
-            },
-            {
-              "value": 32768,
-              "ok": true
-            },
-            {
-              "value": 2147483647,
-              "ok": true
-            },
-            {
-              "value": 1e+30,
-              "ok": true
-            }
-          ],
-          "constraint_source": "primitive_codec_no_explicit_range",
-          "name": "default_mining_speed",
-          "default": 1.0,
-          "default_source": "optional_field_decode_empty_map"
-        },
-        {
-          "path": "$.damage_per_block",
-          "optional": true,
-          "type": "int",
-          "probes": [
-            {
-              "value": -1,
-              "ok": false
-            },
-            {
-              "value": 0,
-              "ok": true
-            },
-            {
-              "value": 1,
-              "ok": true
-            },
-            {
-              "value": 32768,
-              "ok": true
-            },
-            {
-              "value": 2147483647,
-              "ok": true
-            },
-            {
-              "value": 1e+30,
-              "ok": true
-            }
-          ],
-          "min": 0,
-          "max": 2147483647,
-          "constraint_source": "captured_numeric_validator_and_boundary_decode",
-          "fractional_json_accepted": true,
-          "name": "damage_per_block",
-          "default": 1,
-          "default_source": "optional_field_decode_empty_map"
-        },
-        {
-          "path": "$.can_destroy_blocks_in_creative",
-          "optional": true,
-          "type": "bool",
-          "name": "can_destroy_blocks_in_creative",
-          "default": true,
-          "default_source": "optional_field_decode_empty_map"
-        }
-      ]
-    }
-  ]
-}
-```
-
-### container_loot
-
-```json
-{
-  "id": "minecraft:container_loot",
-  "coverage": "partial",
-  "fields": [
-    {
-      "path": "$",
-      "optional": false,
-      "type": "object",
-      "fields": [
-        {
-          "path": "$.loot_table",
-          "optional": false,
-          "type": "registry",
-          "registry": "minecraft:loot_table",
-          "unknown": true,
-          "reason": "registry_reference_constraints_checked_by_codec",
-          "name": "loot_table"
-        },
-        {
-          "path": "$.seed",
-          "optional": true,
-          "type": "long",
-          "probes": [
-            {
-              "value": -1,
-              "ok": true
-            },
-            {
-              "value": 0,
-              "ok": true
-            },
-            {
-              "value": 1,
-              "ok": true
-            },
-            {
-              "value": 32768,
-              "ok": true
-            },
-            {
-              "value": 2147483647,
-              "ok": true
-            },
-            {
-              "value": 1e+30,
-              "ok": true
-            }
-          ],
-          "constraint_source": "primitive_codec_no_explicit_range",
-          "fractional_json_accepted": true,
-          "name": "seed",
-          "default": 0,
-          "default_source": "optional_field_decode_empty_map"
-        }
-      ]
-    }
-  ]
-}
-```
-
-### written_book_content
-
-```json
-{
-  "id": "minecraft:written_book_content",
-  "coverage": "partial",
-  "fields": [
-    {
-      "path": "$",
-      "optional": false,
-      "type": "object",
-      "fields": [
-        {
-          "path": "$.title",
-          "optional": false,
-          "type": "union",
-          "name": "title",
-          "alternatives": [
-            {
-              "path": "$.title",
-              "optional": false,
-              "type": "object",
-              "fields": [
-                {
-                  "path": "$.title.raw",
-                  "optional": false,
-                  "type": "string",
-                  "length_probes": [
-                    {
-                      "length": 0,
-                      "ok": true
-                    },
-                    {
-                      "length": 1,
-                      "ok": true
-                    },
-                    {
-                      "length": 32768,
-                      "ok": false
-                    }
-                  ],
-                  "min_length": 0,
-                  "max_length": 32,
-                  "constraint_source": "captured_string_length_validator_and_boundary_decode",
-                  "name": "raw"
-                },
-                {
-                  "path": "$.title.filtered",
-                  "optional": true,
-                  "type": "string",
-                  "length_probes": [
-                    {
-                      "length": 0,
-                      "ok": true
-                    },
-                    {
-                      "length": 1,
-                      "ok": true
-                    },
-                    {
-                      "length": 32768,
-                      "ok": false
-                    }
-                  ],
-                  "min_length": 0,
-                  "max_length": 32,
-                  "constraint_source": "captured_string_length_validator_and_boundary_decode",
-                  "name": "filtered",
-                  "unknown": true,
-                  "reason": "optional_default_not_resolved"
-                }
-              ]
-            },
-            {
-              "path": "$.title",
-              "optional": false,
-              "type": "string",
-              "length_probes": [
-                {
-                  "length": 0,
-                  "ok": true
-                },
-                {
-                  "length": 1,
-                  "ok": true
-                },
-                {
-                  "length": 32768,
-                  "ok": false
-                }
-              ],
-              "min_length": 0,
-              "max_length": 32,
-              "constraint_source": "captured_string_length_validator_and_boundary_decode"
-            }
-          ]
-        },
-        {
-          "path": "$.author",
-          "optional": false,
-          "type": "string",
-          "name": "author"
-        },
-        {
-          "path": "$.generation",
-          "optional": true,
-          "type": "int",
-          "probes": [
-            {
-              "value": -1,
-              "ok": false
-            },
-            {
-              "value": 0,
-              "ok": true
-            },
-            {
-              "value": 1,
-              "ok": true
-            },
-            {
-              "value": 32768,
-              "ok": false
-            },
-            {
-              "value": 2147483647,
-              "ok": false
-            },
-            {
-              "value": 1e+30,
-              "ok": false
-            }
-          ],
-          "min": 0,
-          "max": 3,
-          "constraint_source": "captured_numeric_validator_and_boundary_decode",
-          "fractional_json_accepted": true,
-          "name": "generation",
-          "default": 0,
-          "default_source": "optional_field_decode_empty_map"
-        },
-        {
-          "path": "$.pages",
-          "optional": true,
-          "type": "list",
-          "min_size": 0,
-          "max_size": 2147483647,
-          "name": "pages",
-          "default": [],
-          "default_source": "optional_field_decode_empty_map",
-          "element": {
-            "path": "$.pages[]",
-            "optional": false,
-            "type": "component(text)",
-            "unknown": true,
-            "reason": "recursive_text_dispatch_requires_component_codec"
-          }
-        },
-        {
-          "path": "$.resolved",
-          "optional": true,
-          "type": "bool",
-          "name": "resolved",
-          "default": false,
-          "default_source": "optional_field_decode_empty_map"
-        }
-      ]
-    }
-  ]
-}
-```
-
-## 实际字段校验回执
-
-```json
-{
-  "requestId": "schema-path-test",
-  "component": "minecraft:food",
-  "ok": false,
-  "error": "Not a number: \"invalid\"; Value must be non-negative: -1",
-  "errors": [
-    {
-      "path": "$.nutrition",
-      "code": "codec",
-      "message": "Value must be non-negative: -1"
-    },
-    {
-      "path": "$.saturation",
-      "code": "codec",
-      "message": "Not a number: \"invalid\""
-    }
-  ],
-  "path_precision": "field"
-}
-```
-
-## 覆盖清单
-
-| 组件 | 结构覆盖 | unknown路径（去重） |
+| 组件 | 结构 | unknown 路径与原因 |
 |---|---|---|
-| minecraft:attribute_modifiers | partial | $[].type, $[].id, $[].display |
-| minecraft:banner_patterns | partial | $[].pattern |
+| minecraft:attack_range | full | — |
+| minecraft:attribute_modifiers | full | — |
+| minecraft:axolotl/variant | full | — |
+| minecraft:banner_patterns | full | — |
 | minecraft:base_color | full | — |
-| minecraft:block_entity_data | unknown | $ |
-| minecraft:blocks_attacks | partial | $.damage_reductions[].horizontal_blocking_angle, $.damage_reductions[].type, $.bypassed_by, $.block_sound, $.disabled_sound |
-| minecraft:bucket_entity_data | partial | $ |
-| minecraft:bundle_contents | partial | $[], $[].id, $[].components |
-| minecraft:can_break | partial | $, $[].blocks, $[].state{value}, $[].nbt, $[].components, $.blocks, $.state{value}, $.nbt, $.components |
-| minecraft:can_place_on | partial | $, $[].blocks, $[].state{value}, $[].nbt, $[].components, $.blocks, $.state{value}, $.nbt, $.components |
-| minecraft:consumable | partial | $.sound, $.on_consume_effects[], $.on_consume_effects[].type |
-| minecraft:container | partial | $[].item, $[].item.id, $[].item.components |
-| minecraft:container_loot | partial | $.loot_table |
-| minecraft:custom_data | partial | $ |
-| minecraft:custom_model_data | partial | $.colors[] |
-| minecraft:custom_name | unknown | $ |
+| minecraft:bees | full | — |
+| minecraft:block_entity_data | full | — |
+| minecraft:block_state | full | — |
+| minecraft:blocks_attacks | full | — |
+| minecraft:break_sound | full | — |
+| minecraft:bucket_entity_data | full | — |
+| minecraft:bundle_contents | full | — |
+| minecraft:can_break | partial | $: outer_mapping_or_cross_field_constraint; $[].state{value}: string_mapping_constraints_not_exported; $[].nbt: string_mapping_constraints_not_exported; $[].components: unsupported_codec_wrapper; $.state{value}: string_mapping_constraints_not_exported; $.nbt: string_mapping_constraints_not_exported; $.components: unsupported_codec_wrapper |
+| minecraft:can_place_on | partial | $: outer_mapping_or_cross_field_constraint; $[].state{value}: string_mapping_constraints_not_exported; $[].nbt: string_mapping_constraints_not_exported; $[].components: unsupported_codec_wrapper; $.state{value}: string_mapping_constraints_not_exported; $.nbt: string_mapping_constraints_not_exported; $.components: unsupported_codec_wrapper |
+| minecraft:cat/collar | full | — |
+| minecraft:cat/sound_variant | full | — |
+| minecraft:cat/variant | full | — |
+| minecraft:charged_projectiles | full | — |
+| minecraft:chicken/sound_variant | full | — |
+| minecraft:chicken/variant | full | — |
+| minecraft:consumable | full | — |
+| minecraft:container | full | — |
+| minecraft:container_loot | full | — |
+| minecraft:cow/sound_variant | full | — |
+| minecraft:cow/variant | full | — |
+| minecraft:custom_data | full | — |
+| minecraft:custom_model_data | full | — |
+| minecraft:custom_name | full | — |
 | minecraft:damage | full | — |
-| minecraft:damage_resistant | partial | $.types |
-| minecraft:death_protection | partial | $.death_effects[], $.death_effects[].type |
-| minecraft:dyed_color | partial | $ |
+| minecraft:damage_resistant | full | — |
+| minecraft:damage_type | full | — |
+| minecraft:death_protection | full | — |
+| minecraft:debug_stick_state | full | — |
+| minecraft:dye | full | — |
+| minecraft:dyed_color | full | — |
 | minecraft:enchantable | full | — |
 | minecraft:enchantment_glint_override | full | — |
-| minecraft:enchantments | partial | $ |
-| minecraft:entity_data | unknown | $ |
-| minecraft:equippable | partial | $.equip_sound, $.asset_id, $.camera_overlay, $.allowed_entities, $.shearing_sound |
+| minecraft:enchantments | full | — |
+| minecraft:entity_data | full | — |
+| minecraft:equippable | full | — |
 | minecraft:firework_explosion | full | — |
-| minecraft:fireworks | partial | $.flight_duration |
+| minecraft:fireworks | full | — |
 | minecraft:food | full | — |
-| minecraft:glider | unknown | $ |
-| minecraft:instrument | unknown | $ |
-| minecraft:item_model | unknown | $ |
-| minecraft:item_name | unknown | $ |
+| minecraft:fox/variant | full | — |
+| minecraft:frog/variant | full | — |
+| minecraft:glider | full | — |
+| minecraft:horse/variant | full | — |
+| minecraft:instrument | full | — |
+| minecraft:intangible_projectile | full | — |
+| minecraft:item_model | full | — |
+| minecraft:item_name | full | — |
 | minecraft:jukebox_playable | full | — |
-| minecraft:lodestone_tracker | partial | $.target.dimension, $.target.pos |
-| minecraft:lore | unknown | $ |
-| minecraft:map_color | unknown | $ |
-| minecraft:map_decorations | partial | ${value}.type |
-| minecraft:map_id | unknown | $ |
+| minecraft:kinetic_weapon | full | — |
+| minecraft:llama/variant | full | — |
+| minecraft:lock | partial | $.count: outer_mapping_or_cross_field_constraint; $.components: unsupported_codec_wrapper |
+| minecraft:lodestone_tracker | full | — |
+| minecraft:lore | full | — |
+| minecraft:map_color | full | — |
+| minecraft:map_decorations | full | — |
+| minecraft:map_id | full | — |
 | minecraft:max_damage | full | — |
 | minecraft:max_stack_size | full | — |
-| minecraft:potion_contents | partial | $.potion, $.custom_effects[], $.custom_effects[].id, $ |
-| minecraft:profile | partial | $, $.id, $.properties, $.properties[].signature, $.texture, $.cape, $.elytra |
+| minecraft:minimum_attack_charge | full | — |
+| minecraft:mooshroom/variant | full | — |
+| minecraft:note_block_sound | full | — |
+| minecraft:ominous_bottle_amplifier | full | — |
+| minecraft:painting/variant | full | — |
+| minecraft:parrot/variant | full | — |
+| minecraft:piercing_weapon | full | — |
+| minecraft:pig/sound_variant | full | — |
+| minecraft:pig/variant | full | — |
+| minecraft:pot_decorations | full | — |
+| minecraft:potion_contents | full | — |
+| minecraft:potion_duration_scale | full | — |
+| minecraft:profile | partial | $.properties: outer_mapping_or_cross_field_constraint |
+| minecraft:provides_banner_patterns | full | — |
+| minecraft:provides_trim_material | partial | $.asset_name: string_mapping_constraints_not_exported; $.override_armor_assets{value}: string_mapping_constraints_not_exported |
+| minecraft:rabbit/variant | full | — |
 | minecraft:rarity | full | — |
+| minecraft:recipes | full | — |
 | minecraft:repair_cost | full | — |
-| minecraft:repairable | partial | $.items |
-| minecraft:stored_enchantments | partial | $ |
-| minecraft:suspicious_stew_effects | partial | $[].id |
-| minecraft:tool | partial | $.rules[].blocks, $.rules[].speed, $.rules[].correct_for_drops |
-| minecraft:tooltip_display | partial | $.hidden_components[] |
-| minecraft:tooltip_style | unknown | $ |
-| minecraft:trim | partial | $.material, $.pattern |
-| minecraft:unbreakable | unknown | $ |
-| minecraft:use_cooldown | partial | $.seconds, $.cooldown_group |
-| minecraft:use_remainder | partial | $.id, $.components, $ |
+| minecraft:repairable | full | — |
+| minecraft:salmon/size | full | — |
+| minecraft:sheep/color | full | — |
+| minecraft:shulker/color | full | — |
+| minecraft:stored_enchantments | full | — |
+| minecraft:suspicious_stew_effects | full | — |
+| minecraft:swing_animation | full | — |
+| minecraft:tool | full | — |
+| minecraft:tooltip_display | full | — |
+| minecraft:tooltip_style | full | — |
+| minecraft:trim | partial | $.material.asset_name: string_mapping_constraints_not_exported; $.material.override_armor_assets{value}: string_mapping_constraints_not_exported |
+| minecraft:tropical_fish/base_color | full | — |
+| minecraft:tropical_fish/pattern | full | — |
+| minecraft:tropical_fish/pattern_color | full | — |
+| minecraft:unbreakable | full | — |
+| minecraft:use_cooldown | full | — |
+| minecraft:use_effects | full | — |
+| minecraft:use_remainder | full | — |
+| minecraft:villager/variant | full | — |
 | minecraft:weapon | full | — |
-| minecraft:writable_book_content | partial | $.pages[].filtered |
-| minecraft:written_book_content | partial | $.title.filtered, $.pages[] |
+| minecraft:wolf/collar | full | — |
+| minecraft:wolf/sound_variant | full | — |
+| minecraft:wolf/variant | full | — |
+| minecraft:writable_book_content | full | — |
+| minecraft:written_book_content | full | — |
+| minecraft:zombie_nautilus/variant | full | — |
 
-## 与当前手写约束的实测差异
+## 与当前手写表的差异
 
-| 字段 | 前端表/校验 | 真实Codec探针 |
+读取并对照 ui/js/data.js 的 schema 和 core.js validateValue；仅记录观察，不修改前端。
+
+| 组件与字段 | 手写范围 | 实际 Codec / 新元数据 |
 |---|---|---|
-| minecraft:tool $.rules[0].speed | data.js numeric schema has no min; core.validateValue allows 0 | 拒绝：Value must be positive: 0.0 |
-| minecraft:use_cooldown $.seconds | data.js numeric schema has no min; core.validateValue allows 0 | 拒绝：Value must be positive: 0.0 |
-| minecraft:written_book_content $.title | data.js title string has no max length; core.validateValue allows 33 chars | 拒绝：Failed to parse either. First: Not a JSON object: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; Second: String "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" is too long: 33, expected range [0-32] |
-| minecraft:max_stack_size $ | core.validateValue rejects fractional values for t:int | 接受，规范化为 1 |
-| minecraft:fireworks $.flight_duration | data.js int min:0/max:255; core rejects 256 | 接受，规范化为 {} |
-| minecraft:container $ | data.js list max:256; core rejects 257 entries (including duplicate slots) | 拒绝：List is too long: 257, expected range [0-256] |
+| minecraft:blocks_attacks $.block_delay_seconds | {"min": 0, "max": null} | {"min": 0.0, "max": 3.4028235e+38, "min_exclusive": null} |
+| minecraft:blocks_attacks $.disable_cooldown_scale | {"min": 0, "max": null} | {"min": 0.0, "max": 3.4028235e+38, "min_exclusive": null} |
+| minecraft:blocks_attacks $.damage_reductions[].horizontal_blocking_angle | {"min": null, "max": null} | {"min": 0, "max": 3.4028235e+38, "min_exclusive": true} |
+| minecraft:blocks_attacks $.item_damage.threshold | {"min": 0, "max": null} | {"min": 0.0, "max": 3.4028235e+38, "min_exclusive": null} |
+| minecraft:consumable $.consume_seconds | {"min": 0, "max": null} | {"min": 0.0, "max": 3.4028235e+38, "min_exclusive": null} |
+| minecraft:consumable $.on_consume_effects[].diameter | {"min": null, "max": null} | {"min": 0, "max": 3.4028235e+38, "min_exclusive": true} |
+| minecraft:death_protection $.death_effects[].diameter | {"min": null, "max": null} | {"min": 0, "max": 3.4028235e+38, "min_exclusive": true} |
+| minecraft:potion_duration_scale $ | {"min": 0, "max": null} | {"min": 0.0, "max": 3.4028235e+38, "min_exclusive": null} |
+| minecraft:tool $.rules[].speed | {"min": null, "max": null} | {"min": 0, "max": 3.4028235e+38, "min_exclusive": true} |
+| minecraft:use_cooldown $.seconds | {"min": null, "max": null} | {"min": 0, "max": 3.4028235e+38, "min_exclusive": true} |
+| minecraft:weapon $.disable_blocking_for_seconds | {"min": 0, "max": null} | {"min": 0.0, "max": 3.4028235e+38, "min_exclusive": null} |
+| minecraft:max_stack_size $ | "core.js rejects fractional int JSON" | "Codec accepts 1.5 and normalizes to 1" |
+| minecraft:fireworks $.flight_duration | "data.js [0,255]; core.js rejects 256" | "UNSIGNED_BYTE value domain [0,255], JSON 256 decodes to 0" |
+| minecraft:written_book_content $.title | "data.js/core.js no string max-length enforcement" | "Codec string form length [0,32], rejects 33 chars" |
 
-container的257项上限与前端一致，保留为对照项，不能报告成差异。fireworks.flight_duration是BYTE Codec，256被数值缩窄为0并按默认值省略；这不是建议UI放宽到任意数字。JsonOps的整数小数截断同理，服务端最终Codec仍是权威。严格正数、字符串长度、列表界限的测试值记录在logs/backend-g/schema-path-errors.json。
+container 的 256 项限制与前端一致，不列作差异。整数 JSON 小数截断和 BYTE 缩窄是实际 Codec 行为，不建议前端取消整数控件。
 
-## 测试与快照漂移
+## 验证与限制
 
-`powershell -File tools/registry/component-schema-test.ps1` 使用已导出的runtime-classpath.json运行javac和独立JVM，不启动Gradle/游戏。真实VanillaRegistries.createLookup()含动态注册表，并初始化物品默认组件。测试覆盖56组件、真实物品原型解码、Codec边界、optional默认值、逐字段/嵌套列表路径、旧回执兼容、SNBT降级，以及整份实时推导对快照的漂移比较。
+pwsh -NoProfile -File tools/registry/component-schema-test.ps1 使用已导出的 runtime-classpath.json，先 javac、再独立 JVM，不启动游戏。真实 VanillaRegistries lookup 初始化物品原型；测试遍历全部 107 持久组件，覆盖分页、真实范围/默认、原型往返、字段/dispatch 错误路径、旧校验回执兼容及整份快照漂移。只有显式 -UpdateSnapshot 才写快照，同时更新 ranges_for_ui 机器汇总；普通测试也检查该汇总是否漂移。
 
-快照更新须显式加 `-UpdateSnapshot`，审核差异后纳入版本控制；测试不读取快照作为生产数据。对比先序列化再解析实际JSON，避免Gson内存Float和解析后小数表示造成虚假漂移；真正差异输出logs/backend-g/schema-drift-actual.json。快照只覆盖固定56组件，bulk生产接口仍覆盖所有持久Codec。
+测试末尾在独立 JVM 的真实 DATA_COMPONENT_TYPE 注册 schema_test:strength 与 schema_test:opaque，证明 bulk 包含 MOD、source:mod:schema_test、真实范围2..9/默认4、未知翻译为null、opaque走snbt_only，以及实际Codec拒绝越界。证据：logs/backend-g/schema-mod-evidence.json。仅在自己的测试 JVM 暂开 registry frozen 标记并绑定新 holder，随后恢复；不触碰运行中的游戏。
 
-运行中的Minecraft/runClient保留，本轮不执行Gradle、不重启游戏。真实客户端页面收发/保存和专服验证待做。
+日志：logs/backend-g/schema-compile.log、schema-test.log、schema-drift-gate.log、schema-gradle-gate.log；静态审阅为 schema-review.log。范围对照机器文件由本轮快照生成。
 
-
-## 2026-11-07 最终构建补验
-
-此前的“未跑 Gradle / 等用户关游戏”记录是历史状态。最终门禁已将 componentSchemaTest、entitySchemaTest/entitySchemaServerTest、tooltipTest、worldEditTest 接入正式 check，并运行完整 build。完整输出在 logs/final-gate/gradle-build.log；5个 node UI 测试分别在 node-{world,contract,compact,nbt,search}.log。无关的 Oriel-UI 实例不阻塞 Editor，也不修改或终止它们。真实客户端通道补验使用 tools/final-gate/launch.ps1，新复制世界、正常 runClient、实际猫刷怪蛋页面；最新状态以 logs/final-gate/client-receipt.json 为准。该探针仅证明本机真实页面的 schema/tooltip 请求链，不能代替远程服、多人冲突或完整世界目标 apply 验收。
+本轮未启动、关闭或重载用户 Minecraft；真实客户端通道、资源包语言切换、第三方 MOD 整合包与专服运行待验证。full 是 Codec 形状覆盖，COVERAGE 发布勾选保持不变。

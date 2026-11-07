@@ -55,7 +55,7 @@ public final class WorldEditorClient {
             if (kind.equals("block")) {
                 if (pos != null) for (var entry : pos.entrySet()) target.add(entry.getKey(), entry.getValue());
                 else {
-                    if (!(mc.hitResult instanceof BlockHitResult hit) || hit.getType() == HitResult.Type.MISS) throw new IllegalArgumentException("请将准星对准已放置的方块实体");
+                    if (!(mc.hitResult instanceof BlockHitResult hit) || hit.getType() == HitResult.Type.MISS) throw new IllegalArgumentException("请将准星对准已放置的方块");
                     var p = hit.getBlockPos(); target.addProperty("x",p.getX()); target.addProperty("y",p.getY()); target.addProperty("z",p.getZ());
                 }
             } else {

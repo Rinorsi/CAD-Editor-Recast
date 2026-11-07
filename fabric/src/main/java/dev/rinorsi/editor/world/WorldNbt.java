@@ -29,7 +29,7 @@ public final class WorldNbt {
     }
     public static String revision(CompoundTag tag) {
         try {
-            var digest = MessageDigest.getInstance("SHA-256"); canonical(tag, digest);
+            var digest = MessageDigest.getInstance("SHA-256"); canonical(EntityVolatile.stable(BlockVolatile.stable(tag)), digest);
             return java.util.HexFormat.of().formatHex(digest.digest());
         } catch (java.security.NoSuchAlgorithmException e) { throw new AssertionError(e); }
     }

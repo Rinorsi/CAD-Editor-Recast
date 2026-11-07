@@ -1,6 +1,10 @@
-# 已放置方块实体与世界实体编辑协议（26.1.2）
+# 已放置方块与世界实体编辑协议（26.1.2）
 
 实现入口：world/WorldEditor、WorldTarget、WorldNbt、WorldEditSessions、WorldWire；客户端 WorldEditorClient。2026-11-07。
+
+实体侧增量见 [world-entity-contract.md](world-entity-contract.md)：动态字段稳定 revision、盔甲架姿态/装备、服务端交易、乘客操作、展示框/画/三种展示实体的规范化 views 与写入；该文覆盖本文早期的实体动态变化冲突限制，附真实专用服采集。
+
+方块侧增量协议见 [world-block-edit.md](world-block-edit.md)：`apply.block_state`、命令块模式 `block_type`、`updateNeighbors`、`views` 规范化写入、`block_state_schema`、包含方块状态的 revision/undo，以及经原版字节码确认的 volatile 字段合并。真实工厂捕获见 [world-block-samples.json](world-block-samples.json)。这些能力已替代本文早期版本中的“状态只读/任意动态变化冲突”限制；真实客户端状态变更/邻居同步仍待专项验收。
 
 ## 入口及页面数据
 
@@ -46,13 +50,16 @@ world 字段：
 |type|方块实体/实体注册表 ID；实体页面用它读取 entity_info / entity_schema，后端不复制该 schema|
 |snbt|权威完整保存 compound。byte/short/long/float/double、B/I/L数组保留类型|
 |nbt|用于只读展示的 JSON 投影；**不可将其 stringify 后当作 SNBT 写回**|
-|revision|完整保存 NBT 的类型保真 SHA-256；compound 键排序，列表顺序和数值类型有意义|
+|revision|稳定 NBT 的类型保真 SHA-256；方块还包含真实方块ID/状态。compound键排序；列表顺序/数值类型有意义；仅审计过的volatile路径排除|
 |slot|服务端规范化目标，含随机 token；实体同时含 uuid 与 id|
 |comps / component_snbt|方块 collectComponents 的实时 Codec 视图及权威类型旁路；只读 helper，不直接作为世界 apply 输入|
 |container|运行时 Container 的 size / slots；另支持讲台书和营火实际 items 列表。空格明确为 stack:{empty:true}，非空与物品编辑 StackCodec.snapshot 格式一致|
 |views|实际保存字段绑定：存在时导出 LootTable/LootTableSeed、lock/Lock、front_text/back_text、patterns、bees/Bees、Command/auto/conditionMet/powered，值为 {value,snbt}；不存在不杜撰。旗帜/蜂巢等也可能在 comps 中|
+|views.sign/banner/beehive/lectern/jukebox/decorated_pot/chiseled_bookshelf/command_block/skull/furnace/brewing_stand/campfire|规范化 {value,snbt,schema}；增量apply.views同名分组，字段/限制见world-block-edit.md|
+|block_state_schema / has_block_entity|真实属性定义及当前/默认值；无BE普通方块只支持状态编辑|
+|block_type_schema|仅命令块：实时注册的命令块模式方块ID|
 |views.spawner_info|现有 SpawnerData.entries，带两种刷怪笼的真实默认值和 Codec 信息|
-|views.command_mode|原版命令块 mode；block_state 含 conditional 等状态。此版本不允许修改方块状态|
+|views.command_mode|原版命令块 mode；使用 apply.block_type 选择实时注册表中的命令块模式；block_state 可修改 conditional 等真实属性|
 |equipment|生物实际 EquipmentSlot 枚举，每项 {slot,stack}；装备编辑使用完整 SNBT（可由 entity_schema 给路径）|
 |displayed_item|物品展示框中的实际 ItemStack 快照|
 |canUndo|仅表示会话内有一份前像，撤销仍须通过 revision 与权限检查|
@@ -81,7 +88,7 @@ world 字段：
 
 全部校验和快照大小检查通过后，在服务器单线程加载现实目标；方块 setChanged + sendBlockUpdated + 比较器通知；实体通过原版 load 更新同步数据，设备同步仍走原版追踪。不 remove/replace 实体，不插入副本。实际写入抛异常时尝试恢复前像并记录回滚失败；这不是外部模组回调副作用的通用事务。
 
-身份/移动字段锁定：方块 id/x/y/z/keepPacked；实体 id/UUID/Pos/Motion/Rotation/Dimension/Passengers/RootVehicle/Leash/leash/PortalCooldown/悬挂定位与睡眠定位字段。不提供 moveTo，不编辑玩家，禁止换方块实体类型。命令块 mode/conditional 属于 BlockState，当前只读；command/auto 可走 NBT（仍需原版管理员权限）。
+身份/移动字段锁定：方块 id/x/y/z/keepPacked；实体字段以实体增量协议为准。不编辑玩家，禁止换方块实体类型。命令块 conditional/facing 使用 block_state；模式由同一 BE 类型的 block_type 操作切换；command/auto 可走规范化视图或 NBT，仍需原版管理员权限。
 
 ## 权限、保护和冲突
 
@@ -91,7 +98,7 @@ world 字段：
 - 修改标牌文本且结果包含可执行命令时，同样需要 canUseGameMasterBlocks；不能用普通创造权限写入可执行命令标牌。
 - 第三方领地插件若仅在交互/破坏事件拦截、未集成上述原版检查，尚未提供兼容适配；不得宣称适配了所有保护插件。
 - 每个玩家只保留一个世界会话；连接绑定，无编辑时长硬超时。打开/写入间隔至少 500ms，关闭不受限。
-- 修改前，客户端基线必须同时匹配会话保存的 NBT 和目标当前 NBT；token 必须匹配。任意外部变化都拒绝，不自动重基线、不覆盖。炉子燃烧、刷怪笼计时、实体运动/AI都可能触发冲突；当前没有忽略动态字段或合并编辑策略。
+- 修改前，客户端基线必须同时匹配会话和当前目标的稳定 revision，token 必须匹配。方块 ID/状态及非动态 NBT 保持严格；经目标版本真实类证明的 volatile 路径排除并以 CURRENT 三方合并，详见方块/实体增量协议。物品烧成、蜂离巢等有意义变化仍冲突，不自动覆盖。
 - 逐次成功写入审计包含玩家 UUID、op、目标、前后 revision；拒绝包含 requestId/code/reason，前缀 [CAD-Editor-World]。不将完整自定义数据写入审计行。
 
 ## 限制与错误
@@ -113,6 +120,8 @@ rejected 沿用 {status:"rejected",requestId,code,reason}。
 |target_changed|revision 已过期，草稿保留|
 |session_lost|缓存/token/目标不匹配，须重新打开|
 |invalid_nbt|SNBT/原版加载校验/被忽略编辑字段/未改格变化|
+|invalid_block_state|未知属性、非法值/组合、非法命令模式类型或环境使目标状态失效|
+|sign_waxed|蜡封标牌改文字但未在同笔解蜡|
 |slot_invalid|容器槽位或数量/物品类型限制|
 |unsupported_target|工厂/容器适配不可用，或战利品未展开|
 |undo_unavailable|当前会话没有可撤销前像|
@@ -139,14 +148,15 @@ JVM覆盖：21种方块工厂/真实加载保存、容器实际格数及多格�
 |营火|实际items helper、完整SNBT/槽位路径；新物品须符合实时营火配方|JVM加载保存；替换后烹饪进度由完整SNBT控制，未做自动重置专用表单|
 |标牌、悬挂标牌|front/back文本helper、SNBT编辑；命令文本追加管理员要求|JVM真实SignText Codec文本编辑往返|
 |旗帜|patterns/组件helper、SNBT编辑|JVM实际旗帜图案组件往返|
-|命令方块|部分：command/auto等NBT可编辑，mode/conditional只读，不能替换BlockState|JVM加载保存；执行/调度行为待实机|
+|命令方块|command/auto等规范化字段、block_state.conditional/facing、block_type模式|JVM实际Codec/模式副本NBT保真；执行/调度待实机|
 |刷怪笼|默认/字段helper、SNBT编辑及SpawnerData验证|JVM修改Delay往返|
 |试炼刷怪笼|默认/配置helper、SNBT编辑及SpawnerData验证|JVM修改required_player_range往返；动态激活状态可能持续造成revision冲突|
 |蜂巢|bees组件/保存字段helper、SNBT编辑|JVM含实际Occupant的保存加载|
 |猪与其他生物|类型ID、设备helper、完整SNBT临时实体验证，variant路径由entity_schema提供|JVM猪实际variant、盔甲架装备及改名往返；其他生物未逐种验收|
 |物品展示框|displayed_item helper、SNBT验证及写入路径|JVM含附魔物品的展示框改名，物品数据保持|
 |画|通用实体路径及entity_schema，禁止变更悬挂定位字段|未做本轮画实体工厂/实机专项测试，标为partial|
-|普通非方块实体方块、玩家、未加载/跨维度/远距离目标|不支持/明确拒绝|守卫单测，实际ServerPlayer集成测试待运行|
+|普通已放置方块|支持状态/schema/revision/undo；无方块实体时不提供NBT编辑|真实属性遍历；实际setBlock待运行|
+|玩家、空气、未加载/跨维度/远距离目标|明确拒绝|守卫单测，实际ServerPlayer集成测试待运行|
 
 当前不能宣称“世界编辑已实机通过”或“1.0验收完成”。前端接入、真实ServerPlayer/ServerLevel权限保护、网络与同步、多人冲突均须后续实机门禁。
 

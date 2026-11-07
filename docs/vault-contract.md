@@ -14,7 +14,29 @@
 
 失败：{version:1,requestId,op,ok:false,error,reason}。reason最长512字符，可显示；不要按reason文本分支。首次异步加载文件未完成返回NOT_READY，稍后重试。
 
-主菜单：通道不要求世界即可list/get/update/delete/restore/duplicate/import/export/tags/stats。无法解析组件时标记compatibilityUnknown:true，不会误报incompatible。save/give需要世界；save使用当前世界注册表严格验证，否则UNAVAILABLE。现有物品编辑器入口仍需玩家/世界，本改动没有新增主菜单启动按钮。
+主菜单：通道不要求世界即可list/get/update/delete/restore/duplicate/import/export/tags/stats。无法解析组件时标记compatibilityUnknown:true，不会误报incompatible。save/give需要世界；save使用当前世界注册表严格验证，否则UNAVAILABLE。物品编辑器入口仍需玩家/世界；独立保险库入口见下节。
+
+## Opening modes / 打开模式
+
+`VaultClient` 打开同一页面 `cadeditor:ui/index.html`，使用 Oriel 0.11 公共 `OrielScreen` / `DocumentDriver` 接口。页面初始 `oriel.data` 的完整键为：
+
+```json
+{
+  "mode": "vault",
+  "world": null,
+  "stack": null,
+  "prefs": {},
+  "hostPrefs": true
+}
+```
+
+`prefs` 是 `EditorPrefs.read()` 返回的当前设置（上例空对象仅示意），不是物品/世界快照。页面应按 `mode === 'vault'` 显示独立保险库，不创建物品草稿，不要求 slot/baseline，不默认选择方块编辑。此模式不注册 apply/undo 服务端编辑消息；本机通道仍由 `RegistryBridge.attach` 接入。没有世界的注册表工具应保留其既有 UNAVAILABLE 行为。后续无需世界的工具可复用此页面模式。物品 I / `/cade` 和世界 O / `/cadeditor block|entity` 的数据与权限保持原样。
+
+入口：默认 **V**（控制设置中“打开保险库 / Open Vault”，`key.cadeditor.vault`），主菜单及暂停菜单的 **保险库 / Vault** 小按钮，或世界内客户端命令 **`/cadeditor vault`**。V 在正常游戏 tick 与主菜单/暂停菜单 Screen 键盘事件中读取同一 KeyMapping；改键同步生效。聊天、文本输入、控制改键、已有 Oriel 页面不抢键；Ctrl/Alt/Shift+V 不作为菜单快捷键。26.1.2 Fabric API 将旧 `KeyBindingHelper` / `Screens.getButtons` 命名为 `KeyMappingHelper` / `Screens.getWidgets`。
+
+按钮按 GUI 像素布局，优先右上角，每次绘制前检查所有可见原版/模组控件，保留4像素间距及底部文字区；拥挤到无空位时隐藏按钮，保留快捷键入口，不挪动其他控件。Esc 或页面请求关闭通过 `VaultScreen.onClose()` 返回原 Screen（主菜单、暂停菜单或正常游戏），关闭本地通道，不发送物品/世界编辑 close 请求。
+
+`world:null` 表示没有世界编辑目标，即使玩家在世界内从暂停菜单打开也如此；实际世界是否存在仍由宿主判断。因此主菜单中 save / give 返回 **UNAVAILABLE**；世界中 save 可严格验证，give 还要求创造模式、连接和安全空槽位，详见下文。
 
 ## 条目与类型保真
 
@@ -118,5 +140,7 @@ WRITE_FAILED在成功回执的storageError中，不表示内存修改撤回。
 
 最初检测到用户Minecraft，等待其自行退出后才取得Gradle锁运行门禁。未停止用户进程，未操作鼠标键盘。结果：javac+VaultTest **167项通过**；Gradle vaultTest+build通过；发布jar的独立隐藏客户端通过19次消息往返（全部操作、分段上传、JS精度往返、latest-wins、后台落盘、零page errors）。日志logs/vault/gradle-build.log、logs/vault/client-gate.log，客户端日志daily/2026-11-07/vault/client.log。
 
-仍未验证：生存give拒绝实机分支、远程原版服务器give到账、主菜单启动UI、嵌套字段UI拖放、实机超频限流/切换文档取消。编辑器wire到原版嵌套ItemStack的格式转换由前端接入。
+2026-11-07 主菜单宿主路径追加验证：`tools/vault-menu/run.ps1 -UseReleaseJar` 使用独立隐藏客户端、不加载世界，实际点击 TitleScreen 按钮打开同一页面，确认 mode/world/stack 数据；完成12次真实 Document 消息（全部本机操作，save/give 的 UNAVAILABLE），关闭返回原主菜单，改键B生效且旧V失效。收据 [vault-menu-client-captured.json](vault-menu-client-captured.json)；完整输出 `daily/2026-11-07/vault-menu/client.log`，门禁摘要 `logs/vault-menu/client-release-gate.log`。实际TitleScreen覆盖4种分辨率×4种GUI scale，并在每种布局的首选按钮位置追加模组按钮验证动态避让。另有97项纯JVM布局检查（主菜单/暂停菜单、连续模组按钮与无空位隐藏）。运行方法见 [tools/vault-menu/README.md](../tools/vault-menu/README.md)。此探针验证宿主和通道，不替代页面独立保险库内容的前端验收。
+
+仍未验证：真实世界内暂停菜单点击和 `/cadeditor vault` 命令、生存give拒绝实机分支、远程原版服务器give到账、嵌套字段UI拖放、实机超频限流/切换文档取消。编辑器wire到原版嵌套ItemStack的格式转换由前端接入。
 

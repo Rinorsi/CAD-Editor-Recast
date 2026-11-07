@@ -10,6 +10,7 @@
 /daily/
 /.backend-b/
 /.world-edit/
+/.world-entity/
 /.search-tooltip-api.tmp
 /.search/
 fabric/versions/*/logs/
@@ -24,3 +25,4 @@ fabric/versions/*/run/
 # 脚本生成的状态报告（长期副本在工作区 planning/）
 /docs/STATUS*.md
 /docs/audit-registry.md
+/.block-edit/

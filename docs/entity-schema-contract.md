@@ -1,5 +1,7 @@
 # entity_schema：实体变种、属性、效果、装备与原始数据
 
+2026-11-07 增量：entries[0].views 复用世界实体编辑的 pose/item_frame/painting/display/trades/riding schema；既有字段保持。确切字段、真实 loader 探针、服务端限制和捕获见 [world-entity-contract.md](world-entity-contract.md)。不要把 world.views 中的 schema 当作写入值。
+
 版本：Minecraft 26.1.2 / Java 25。所有选择项来自本次运行的实体、注册表、组件 Codec 或官方 setter/常量。下面的采集来自真正的原版工厂与 NBT loader，不是手写实体选项表；尚未启动新的真实游戏客户端验证消息投递。
 
 ## 请求与响应

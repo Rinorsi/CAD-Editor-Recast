@@ -1,0 +1,2302 @@
+{
+  "capture_metadata": {
+    "mode": "pure-jvm-real-factories-and-codecs-not-live-ticks",
+    "command_block_types": [
+      "minecraft:command_block",
+      "minecraft:repeating_command_block",
+      "minecraft:chain_command_block"
+    ]
+  },
+  "minecraft:chest": {
+    "block_state_schema": [
+      {
+        "name": "facing",
+        "type": "enum",
+        "values": [
+          "north",
+          "south",
+          "west",
+          "east"
+        ],
+        "default": "north",
+        "current": "north"
+      },
+      {
+        "name": "type",
+        "type": "enum",
+        "values": [
+          "single",
+          "left",
+          "right"
+        ],
+        "default": "single",
+        "current": "single"
+      },
+      {
+        "name": "waterlogged",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      }
+    ],
+    "allowed_edits": [
+      {
+        "facing": "north",
+        "type": "single",
+        "waterlogged": "false"
+      },
+      {
+        "facing": "south",
+        "type": "single",
+        "waterlogged": "false"
+      },
+      {
+        "facing": "west",
+        "type": "single",
+        "waterlogged": "false"
+      },
+      {
+        "facing": "east",
+        "type": "single",
+        "waterlogged": "false"
+      },
+      {
+        "facing": "north",
+        "type": "single",
+        "waterlogged": "false"
+      },
+      {
+        "facing": "north",
+        "type": "left",
+        "waterlogged": "false"
+      },
+      {
+        "facing": "north",
+        "type": "right",
+        "waterlogged": "false"
+      },
+      {
+        "facing": "north",
+        "type": "single",
+        "waterlogged": "true"
+      },
+      {
+        "facing": "north",
+        "type": "single",
+        "waterlogged": "false"
+      }
+    ]
+  },
+  "minecraft:furnace": {
+    "snbt": "{Items:[],RecipesUsed:{},components:{},cooking_time_spent:0s,cooking_total_time:0s,id:\"minecraft:furnace\",lit_time_remaining:0s,lit_total_time:0s,x:0,y:0,z:0}",
+    "views": {
+      "furnace": {
+        "value": {
+          "cooking_time_spent": 0,
+          "cooking_total_time": 0,
+          "lit_time_remaining": 0,
+          "lit_total_time": 0
+        },
+        "snbt": "{cooking_time_spent:0s,cooking_total_time:0s,lit_time_remaining:0s,lit_total_time:0s}",
+        "schema": {
+          "fields": {
+            "cooking_time_spent": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Short",
+              "nullable": false,
+              "min": -32768,
+              "max": 32767,
+              "bounds": "NBT short storage; vanilla loader validates semantics"
+            },
+            "cooking_total_time": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Short",
+              "nullable": false,
+              "min": -32768,
+              "max": 32767,
+              "bounds": "NBT short storage; vanilla loader validates semantics"
+            },
+            "lit_time_remaining": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Short",
+              "nullable": false,
+              "min": -32768,
+              "max": 32767,
+              "bounds": "NBT short storage; vanilla loader validates semantics"
+            },
+            "lit_total_time": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Short",
+              "nullable": false,
+              "min": -32768,
+              "max": 32767,
+              "bounds": "NBT short storage; vanilla loader validates semantics"
+            }
+          }
+        }
+      }
+    },
+    "block_state_schema": [
+      {
+        "name": "facing",
+        "type": "enum",
+        "values": [
+          "north",
+          "south",
+          "west",
+          "east"
+        ],
+        "default": "north",
+        "current": "north"
+      },
+      {
+        "name": "lit",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      }
+    ]
+  },
+  "minecraft:oak_door": {
+    "block_state_schema": [
+      {
+        "name": "facing",
+        "type": "enum",
+        "values": [
+          "north",
+          "south",
+          "west",
+          "east"
+        ],
+        "default": "north",
+        "current": "north"
+      },
+      {
+        "name": "half",
+        "type": "enum",
+        "values": [
+          "upper",
+          "lower"
+        ],
+        "default": "lower",
+        "current": "lower"
+      },
+      {
+        "name": "hinge",
+        "type": "enum",
+        "values": [
+          "left",
+          "right"
+        ],
+        "default": "left",
+        "current": "left"
+      },
+      {
+        "name": "open",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      },
+      {
+        "name": "powered",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      }
+    ],
+    "allowed_edits": [
+      {
+        "facing": "north",
+        "half": "lower",
+        "hinge": "left",
+        "open": "false",
+        "powered": "false"
+      },
+      {
+        "facing": "south",
+        "half": "lower",
+        "hinge": "left",
+        "open": "false",
+        "powered": "false"
+      },
+      {
+        "facing": "west",
+        "half": "lower",
+        "hinge": "left",
+        "open": "false",
+        "powered": "false"
+      },
+      {
+        "facing": "east",
+        "half": "lower",
+        "hinge": "left",
+        "open": "false",
+        "powered": "false"
+      },
+      {
+        "facing": "north",
+        "half": "upper",
+        "hinge": "left",
+        "open": "false",
+        "powered": "false"
+      },
+      {
+        "facing": "north",
+        "half": "lower",
+        "hinge": "left",
+        "open": "false",
+        "powered": "false"
+      },
+      {
+        "facing": "north",
+        "half": "lower",
+        "hinge": "left",
+        "open": "false",
+        "powered": "false"
+      },
+      {
+        "facing": "north",
+        "half": "lower",
+        "hinge": "right",
+        "open": "false",
+        "powered": "false"
+      },
+      {
+        "facing": "north",
+        "half": "lower",
+        "hinge": "left",
+        "open": "true",
+        "powered": "false"
+      },
+      {
+        "facing": "north",
+        "half": "lower",
+        "hinge": "left",
+        "open": "false",
+        "powered": "false"
+      },
+      {
+        "facing": "north",
+        "half": "lower",
+        "hinge": "left",
+        "open": "false",
+        "powered": "true"
+      },
+      {
+        "facing": "north",
+        "half": "lower",
+        "hinge": "left",
+        "open": "false",
+        "powered": "false"
+      }
+    ]
+  },
+  "minecraft:stone_slab": {
+    "block_state_schema": [
+      {
+        "name": "type",
+        "type": "enum",
+        "values": [
+          "top",
+          "bottom",
+          "double"
+        ],
+        "default": "bottom",
+        "current": "bottom"
+      },
+      {
+        "name": "waterlogged",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      }
+    ],
+    "allowed_edits": [
+      {
+        "type": "top",
+        "waterlogged": "false"
+      },
+      {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      {
+        "type": "double",
+        "waterlogged": "false"
+      },
+      {
+        "type": "bottom",
+        "waterlogged": "true"
+      },
+      {
+        "type": "bottom",
+        "waterlogged": "false"
+      }
+    ]
+  },
+  "minecraft:oak_stairs": {
+    "block_state_schema": [
+      {
+        "name": "facing",
+        "type": "enum",
+        "values": [
+          "north",
+          "south",
+          "west",
+          "east"
+        ],
+        "default": "north",
+        "current": "north"
+      },
+      {
+        "name": "half",
+        "type": "enum",
+        "values": [
+          "top",
+          "bottom"
+        ],
+        "default": "bottom",
+        "current": "bottom"
+      },
+      {
+        "name": "shape",
+        "type": "enum",
+        "values": [
+          "straight",
+          "inner_left",
+          "inner_right",
+          "outer_left",
+          "outer_right"
+        ],
+        "default": "straight",
+        "current": "straight"
+      },
+      {
+        "name": "waterlogged",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      }
+    ],
+    "allowed_edits": [
+      {
+        "facing": "north",
+        "half": "bottom",
+        "shape": "straight",
+        "waterlogged": "false"
+      },
+      {
+        "facing": "south",
+        "half": "bottom",
+        "shape": "straight",
+        "waterlogged": "false"
+      },
+      {
+        "facing": "west",
+        "half": "bottom",
+        "shape": "straight",
+        "waterlogged": "false"
+      },
+      {
+        "facing": "east",
+        "half": "bottom",
+        "shape": "straight",
+        "waterlogged": "false"
+      },
+      {
+        "facing": "north",
+        "half": "top",
+        "shape": "straight",
+        "waterlogged": "false"
+      },
+      {
+        "facing": "north",
+        "half": "bottom",
+        "shape": "straight",
+        "waterlogged": "false"
+      },
+      {
+        "facing": "north",
+        "half": "bottom",
+        "shape": "straight",
+        "waterlogged": "false"
+      },
+      {
+        "facing": "north",
+        "half": "bottom",
+        "shape": "inner_left",
+        "waterlogged": "false"
+      },
+      {
+        "facing": "north",
+        "half": "bottom",
+        "shape": "inner_right",
+        "waterlogged": "false"
+      },
+      {
+        "facing": "north",
+        "half": "bottom",
+        "shape": "outer_left",
+        "waterlogged": "false"
+      },
+      {
+        "facing": "north",
+        "half": "bottom",
+        "shape": "outer_right",
+        "waterlogged": "false"
+      },
+      {
+        "facing": "north",
+        "half": "bottom",
+        "shape": "straight",
+        "waterlogged": "true"
+      },
+      {
+        "facing": "north",
+        "half": "bottom",
+        "shape": "straight",
+        "waterlogged": "false"
+      }
+    ]
+  },
+  "minecraft:repeater": {
+    "block_state_schema": [
+      {
+        "name": "delay",
+        "type": "int",
+        "values": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "default": "1",
+        "current": "1"
+      },
+      {
+        "name": "facing",
+        "type": "enum",
+        "values": [
+          "north",
+          "south",
+          "west",
+          "east"
+        ],
+        "default": "north",
+        "current": "north"
+      },
+      {
+        "name": "locked",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      },
+      {
+        "name": "powered",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      }
+    ],
+    "allowed_edits": [
+      {
+        "delay": "1",
+        "facing": "north",
+        "locked": "false",
+        "powered": "false"
+      },
+      {
+        "delay": "2",
+        "facing": "north",
+        "locked": "false",
+        "powered": "false"
+      },
+      {
+        "delay": "3",
+        "facing": "north",
+        "locked": "false",
+        "powered": "false"
+      },
+      {
+        "delay": "4",
+        "facing": "north",
+        "locked": "false",
+        "powered": "false"
+      },
+      {
+        "delay": "1",
+        "facing": "north",
+        "locked": "false",
+        "powered": "false"
+      },
+      {
+        "delay": "1",
+        "facing": "south",
+        "locked": "false",
+        "powered": "false"
+      },
+      {
+        "delay": "1",
+        "facing": "west",
+        "locked": "false",
+        "powered": "false"
+      },
+      {
+        "delay": "1",
+        "facing": "east",
+        "locked": "false",
+        "powered": "false"
+      },
+      {
+        "delay": "1",
+        "facing": "north",
+        "locked": "true",
+        "powered": "false"
+      },
+      {
+        "delay": "1",
+        "facing": "north",
+        "locked": "false",
+        "powered": "false"
+      },
+      {
+        "delay": "1",
+        "facing": "north",
+        "locked": "false",
+        "powered": "true"
+      },
+      {
+        "delay": "1",
+        "facing": "north",
+        "locked": "false",
+        "powered": "false"
+      }
+    ]
+  },
+  "minecraft:command_block": {
+    "snbt": "{Command:\"\",SuccessCount:0,TrackOutput:1b,UpdateLastExecution:1b,auto:0b,components:{},conditionMet:0b,id:\"minecraft:command_block\",powered:0b,x:0,y:0,z:0}",
+    "views": {
+      "command_block": {
+        "value": {
+          "Command": "",
+          "TrackOutput": true,
+          "auto": false,
+          "powered": false
+        },
+        "snbt": "{Command:\"\",TrackOutput:1b,auto:0b,powered:0b}",
+        "schema": {
+          "fields": {
+            "Command": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "String",
+              "nullable": false
+            },
+            "TrackOutput": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Bool",
+              "nullable": false
+            },
+            "auto": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Bool",
+              "nullable": false
+            },
+            "powered": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Bool",
+              "nullable": false
+            }
+          }
+        }
+      }
+    },
+    "block_state_schema": [
+      {
+        "name": "conditional",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      },
+      {
+        "name": "facing",
+        "type": "enum",
+        "values": [
+          "north",
+          "east",
+          "south",
+          "west",
+          "up",
+          "down"
+        ],
+        "default": "north",
+        "current": "north"
+      }
+    ]
+  },
+  "minecraft:redstone_wire": {
+    "block_state_schema": [
+      {
+        "name": "east",
+        "type": "enum",
+        "values": [
+          "up",
+          "side",
+          "none"
+        ],
+        "default": "none",
+        "current": "none"
+      },
+      {
+        "name": "north",
+        "type": "enum",
+        "values": [
+          "up",
+          "side",
+          "none"
+        ],
+        "default": "none",
+        "current": "none"
+      },
+      {
+        "name": "power",
+        "type": "int",
+        "values": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "10",
+          "11",
+          "12",
+          "13",
+          "14",
+          "15"
+        ],
+        "default": "0",
+        "current": "0"
+      },
+      {
+        "name": "south",
+        "type": "enum",
+        "values": [
+          "up",
+          "side",
+          "none"
+        ],
+        "default": "none",
+        "current": "none"
+      },
+      {
+        "name": "west",
+        "type": "enum",
+        "values": [
+          "up",
+          "side",
+          "none"
+        ],
+        "default": "none",
+        "current": "none"
+      }
+    ],
+    "allowed_edits": [
+      {
+        "east": "up",
+        "north": "none",
+        "power": "0",
+        "south": "none",
+        "west": "none"
+      },
+      {
+        "east": "side",
+        "north": "none",
+        "power": "0",
+        "south": "none",
+        "west": "none"
+      },
+      {
+        "east": "none",
+        "north": "none",
+        "power": "0",
+        "south": "none",
+        "west": "none"
+      },
+      {
+        "east": "none",
+        "north": "up",
+        "power": "0",
+        "south": "none",
+        "west": "none"
+      },
+      {
+        "east": "none",
+        "north": "side",
+        "power": "0",
+        "south": "none",
+        "west": "none"
+      },
+      {
+        "east": "none",
+        "north": "none",
+        "power": "0",
+        "south": "none",
+        "west": "none"
+      },
+      {
+        "east": "none",
+        "north": "none",
+        "power": "0",
+        "south": "none",
+        "west": "none"
+      },
+      {
+        "east": "none",
+        "north": "none",
+        "power": "1",
+        "south": "none",
+        "west": "none"
+      },
+      {
+        "east": "none",
+        "north": "none",
+        "power": "2",
+        "south": "none",
+        "west": "none"
+      },
+      {
+        "east": "none",
+        "north": "none",
+        "power": "3",
+        "south": "none",
+        "west": "none"
+      },
+      {
+        "east": "none",
+        "north": "none",
+        "power": "4",
+        "south": "none",
+        "west": "none"
+      },
+      {
+        "east": "none",
+        "north": "none",
+        "power": "5",
+        "south": "none",
+        "west": "none"
+      },
+      {
+        "east": "none",
+        "north": "none",
+        "power": "6",
+        "south": "none",
+        "west": "none"
+      },
+      {
+        "east": "none",
+        "north": "none",
+        "power": "7",
+        "south": "none",
+        "west": "none"
+      },
+      {
+        "east": "none",
+        "north": "none",
+        "power": "8",
+        "south": "none",
+        "west": "none"
+      },
+      {
+        "east": "none",
+        "north": "none",
+        "power": "9",
+        "south": "none",
+        "west": "none"
+      },
+      {
+        "east": "none",
+        "north": "none",
+        "power": "10",
+        "south": "none",
+        "west": "none"
+      },
+      {
+        "east": "none",
+        "north": "none",
+        "power": "11",
+        "south": "none",
+        "west": "none"
+      },
+      {
+        "east": "none",
+        "north": "none",
+        "power": "12",
+        "south": "none",
+        "west": "none"
+      },
+      {
+        "east": "none",
+        "north": "none",
+        "power": "13",
+        "south": "none",
+        "west": "none"
+      },
+      {
+        "east": "none",
+        "north": "none",
+        "power": "14",
+        "south": "none",
+        "west": "none"
+      },
+      {
+        "east": "none",
+        "north": "none",
+        "power": "15",
+        "south": "none",
+        "west": "none"
+      },
+      {
+        "east": "none",
+        "north": "none",
+        "power": "0",
+        "south": "up",
+        "west": "none"
+      },
+      {
+        "east": "none",
+        "north": "none",
+        "power": "0",
+        "south": "side",
+        "west": "none"
+      },
+      {
+        "east": "none",
+        "north": "none",
+        "power": "0",
+        "south": "none",
+        "west": "none"
+      },
+      {
+        "east": "none",
+        "north": "none",
+        "power": "0",
+        "south": "none",
+        "west": "up"
+      },
+      {
+        "east": "none",
+        "north": "none",
+        "power": "0",
+        "south": "none",
+        "west": "side"
+      },
+      {
+        "east": "none",
+        "north": "none",
+        "power": "0",
+        "south": "none",
+        "west": "none"
+      }
+    ]
+  },
+  "minecraft:oak_sign": {
+    "snbt": "{back_text:{color:\"black\",has_glowing_text:0b,messages:[\"\",\"\",\"\",\"\"]},components:{},front_text:{color:\"black\",has_glowing_text:0b,messages:[\"\",\"\",\"\",\"\"]},id:\"minecraft:sign\",is_waxed:0b,x:0,y:0,z:0}",
+    "views": {
+      "sign": {
+        "value": {
+          "front_text": {
+            "messages": [
+              "",
+              "",
+              "",
+              ""
+            ],
+            "color": "black",
+            "has_glowing_text": false
+          },
+          "back_text": {
+            "messages": [
+              "",
+              "",
+              "",
+              ""
+            ],
+            "color": "black",
+            "has_glowing_text": false
+          },
+          "is_waxed": false
+        },
+        "snbt": "{back_text:{color:\"black\",has_glowing_text:0b,messages:[\"\",\"\",\"\",\"\"]},front_text:{color:\"black\",has_glowing_text:0b,messages:[\"\",\"\",\"\",\"\"]},is_waxed:0b}",
+        "schema": {
+          "fields": {
+            "front_text": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "RecordCodec[UnitDecoder[net.minecraft.world.level.block.entity.SignText$$Lambda/0x0000000014bcbd60@6cc1aeaf] * Field[messages: ListCodec[RecursiveCodec[Component]][comapFlatMapped]] * OptionalFieldCodec[filtered_messages: ListCodec[RecursiveCodec[Component]][comapFlatMapped]] * Field[color: net.minecraft.util.StringRepresentable$EnumCodec@6e4c5d88][mapResult OrElse[black]] * Field[has_glowing_text: Bool][mapResult OrElse[false]]]",
+              "nullable": false,
+              "messages_length": 4,
+              "colors": [
+                "white",
+                "orange",
+                "magenta",
+                "light_blue",
+                "yellow",
+                "lime",
+                "pink",
+                "gray",
+                "light_gray",
+                "cyan",
+                "purple",
+                "blue",
+                "brown",
+                "green",
+                "red",
+                "black"
+              ]
+            },
+            "back_text": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "RecordCodec[UnitDecoder[net.minecraft.world.level.block.entity.SignText$$Lambda/0x0000000014bcbd60@6cc1aeaf] * Field[messages: ListCodec[RecursiveCodec[Component]][comapFlatMapped]] * OptionalFieldCodec[filtered_messages: ListCodec[RecursiveCodec[Component]][comapFlatMapped]] * Field[color: net.minecraft.util.StringRepresentable$EnumCodec@6e4c5d88][mapResult OrElse[black]] * Field[has_glowing_text: Bool][mapResult OrElse[false]]]",
+              "nullable": false,
+              "messages_length": 4,
+              "colors": [
+                "white",
+                "orange",
+                "magenta",
+                "light_blue",
+                "yellow",
+                "lime",
+                "pink",
+                "gray",
+                "light_gray",
+                "cyan",
+                "purple",
+                "blue",
+                "brown",
+                "green",
+                "red",
+                "black"
+              ]
+            },
+            "is_waxed": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Bool",
+              "nullable": false
+            }
+          }
+        }
+      }
+    },
+    "block_state_schema": [
+      {
+        "name": "rotation",
+        "type": "int",
+        "values": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "10",
+          "11",
+          "12",
+          "13",
+          "14",
+          "15"
+        ],
+        "default": "8",
+        "current": "8"
+      },
+      {
+        "name": "waterlogged",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      }
+    ]
+  },
+  "minecraft:oak_sign/edited": {
+    "request_views": {
+      "sign": {
+        "front_text": {
+          "messages": [
+            "修改",
+            "",
+            "",
+            ""
+          ]
+        },
+        "is_waxed": false
+      }
+    },
+    "result_snbt": "{back_text:{color:\"black\",has_glowing_text:0b,messages:[\"\",\"\",\"\",\"\"]},components:{},front_text:{color:\"black\",has_glowing_text:0b,messages:[\"修改\",\"\",\"\",\"\"]},id:\"minecraft:sign\",is_waxed:0b,x:0,y:0,z:0}"
+  },
+  "minecraft:oak_hanging_sign": {
+    "snbt": "{back_text:{color:\"black\",has_glowing_text:0b,messages:[\"\",\"\",\"\",\"\"]},components:{},front_text:{color:\"black\",has_glowing_text:0b,messages:[\"\",\"\",\"\",\"\"]},id:\"minecraft:hanging_sign\",is_waxed:0b,x:0,y:0,z:0}",
+    "views": {
+      "sign": {
+        "value": {
+          "front_text": {
+            "messages": [
+              "",
+              "",
+              "",
+              ""
+            ],
+            "color": "black",
+            "has_glowing_text": false
+          },
+          "back_text": {
+            "messages": [
+              "",
+              "",
+              "",
+              ""
+            ],
+            "color": "black",
+            "has_glowing_text": false
+          },
+          "is_waxed": false
+        },
+        "snbt": "{back_text:{color:\"black\",has_glowing_text:0b,messages:[\"\",\"\",\"\",\"\"]},front_text:{color:\"black\",has_glowing_text:0b,messages:[\"\",\"\",\"\",\"\"]},is_waxed:0b}",
+        "schema": {
+          "fields": {
+            "front_text": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "RecordCodec[UnitDecoder[net.minecraft.world.level.block.entity.SignText$$Lambda/0x0000000014bcbd60@6cc1aeaf] * Field[messages: ListCodec[RecursiveCodec[Component]][comapFlatMapped]] * OptionalFieldCodec[filtered_messages: ListCodec[RecursiveCodec[Component]][comapFlatMapped]] * Field[color: net.minecraft.util.StringRepresentable$EnumCodec@6e4c5d88][mapResult OrElse[black]] * Field[has_glowing_text: Bool][mapResult OrElse[false]]]",
+              "nullable": false,
+              "messages_length": 4,
+              "colors": [
+                "white",
+                "orange",
+                "magenta",
+                "light_blue",
+                "yellow",
+                "lime",
+                "pink",
+                "gray",
+                "light_gray",
+                "cyan",
+                "purple",
+                "blue",
+                "brown",
+                "green",
+                "red",
+                "black"
+              ]
+            },
+            "back_text": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "RecordCodec[UnitDecoder[net.minecraft.world.level.block.entity.SignText$$Lambda/0x0000000014bcbd60@6cc1aeaf] * Field[messages: ListCodec[RecursiveCodec[Component]][comapFlatMapped]] * OptionalFieldCodec[filtered_messages: ListCodec[RecursiveCodec[Component]][comapFlatMapped]] * Field[color: net.minecraft.util.StringRepresentable$EnumCodec@6e4c5d88][mapResult OrElse[black]] * Field[has_glowing_text: Bool][mapResult OrElse[false]]]",
+              "nullable": false,
+              "messages_length": 4,
+              "colors": [
+                "white",
+                "orange",
+                "magenta",
+                "light_blue",
+                "yellow",
+                "lime",
+                "pink",
+                "gray",
+                "light_gray",
+                "cyan",
+                "purple",
+                "blue",
+                "brown",
+                "green",
+                "red",
+                "black"
+              ]
+            },
+            "is_waxed": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Bool",
+              "nullable": false
+            }
+          }
+        }
+      }
+    },
+    "block_state_schema": [
+      {
+        "name": "attached",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      },
+      {
+        "name": "rotation",
+        "type": "int",
+        "values": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "10",
+          "11",
+          "12",
+          "13",
+          "14",
+          "15"
+        ],
+        "default": "8",
+        "current": "8"
+      },
+      {
+        "name": "waterlogged",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      }
+    ]
+  },
+  "minecraft:oak_hanging_sign/edited": {
+    "request_views": {
+      "sign": {
+        "front_text": {
+          "messages": [
+            "修改",
+            "",
+            "",
+            ""
+          ]
+        },
+        "is_waxed": false
+      }
+    },
+    "result_snbt": "{back_text:{color:\"black\",has_glowing_text:0b,messages:[\"\",\"\",\"\",\"\"]},components:{},front_text:{color:\"black\",has_glowing_text:0b,messages:[\"修改\",\"\",\"\",\"\"]},id:\"minecraft:hanging_sign\",is_waxed:0b,x:0,y:0,z:0}"
+  },
+  "minecraft:white_banner/edited": {
+    "request_views": {
+      "banner": {
+        "patterns": [
+          {
+            "pattern": "minecraft:guster",
+            "color": "red"
+          }
+        ]
+      }
+    },
+    "result_views": {
+      "banner": {
+        "value": {
+          "patterns": [
+            {
+              "pattern": "minecraft:guster",
+              "color": "red"
+            }
+          ]
+        },
+        "snbt": "{patterns:[{color:\"red\",pattern:\"minecraft:guster\"}]}",
+        "schema": {
+          "fields": {
+            "patterns": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "ListCodec[RecordCodec[UnitDecoder[net.minecraft.world.level.block.entity.BannerPatternLayers$Layer$$Lambda/0x00000000147c3b00@23938bf7] * Field[pattern: RegistryFileCodec[ResourceKey[minecraft:root / minecraft:banner_pattern] RecordCodec[UnitDecoder[net.minecraft.world.level.block.entity.BannerPattern$$Lambda/0x00000000147c2d70@2d6d0cf6] * Field[asset_id: String[comapFlatMapped]] * Field[translation_key: String]]]] * Field[color: net.minecraft.util.StringRepresentable$EnumCodec@6e4c5d88]]][xmapped]",
+              "nullable": false
+            }
+          },
+          "base_color": "white"
+        }
+      }
+    },
+    "result_snbt": "{components:{},id:\"minecraft:banner\",patterns:[{color:\"red\",pattern:\"minecraft:guster\"}],x:0,y:0,z:0}"
+  },
+  "minecraft:white_banner": {
+    "snbt": "{components:{},id:\"minecraft:banner\",x:0,y:0,z:0}",
+    "views": {
+      "banner": {
+        "value": {
+          "patterns": []
+        },
+        "snbt": "{patterns:[]}",
+        "schema": {
+          "fields": {
+            "patterns": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "ListCodec[RecordCodec[UnitDecoder[net.minecraft.world.level.block.entity.BannerPatternLayers$Layer$$Lambda/0x00000000147c3b00@23938bf7] * Field[pattern: RegistryFileCodec[ResourceKey[minecraft:root / minecraft:banner_pattern] RecordCodec[UnitDecoder[net.minecraft.world.level.block.entity.BannerPattern$$Lambda/0x00000000147c2d70@2d6d0cf6] * Field[asset_id: String[comapFlatMapped]] * Field[translation_key: String]]]] * Field[color: net.minecraft.util.StringRepresentable$EnumCodec@6e4c5d88]]][xmapped]",
+              "nullable": false
+            }
+          },
+          "base_color": "white"
+        }
+      }
+    },
+    "block_state_schema": [
+      {
+        "name": "rotation",
+        "type": "int",
+        "values": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "10",
+          "11",
+          "12",
+          "13",
+          "14",
+          "15"
+        ],
+        "default": "8",
+        "current": "8"
+      }
+    ]
+  },
+  "minecraft:beehive": {
+    "snbt": "{bees:[{entity_data:{id:\"minecraft:bee\"},min_ticks_in_hive:600,ticks_in_hive:0}],components:{},id:\"minecraft:beehive\",x:0,y:0,z:0}",
+    "views": {
+      "beehive": {
+        "value": {
+          "bees": [
+            {
+              "entity_data": {
+                "id": "minecraft:bee"
+              },
+              "ticks_in_hive": 0,
+              "min_ticks_in_hive": 600
+            }
+          ]
+        },
+        "snbt": "{bees:[{entity_data:{id:\"minecraft:bee\"},min_ticks_in_hive:600,ticks_in_hive:0}]}",
+        "schema": {
+          "fields": {
+            "bees": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "ListCodec[RecordCodec[UnitDecoder[net.minecraft.world.level.block.entity.BeehiveBlockEntity$Occupant$$Lambda/0x00000000147c98c8@6ff185a3] * Field[entity_data: net.minecraft.world.item.component.TypedEntityData$1@320d98f5] * Field[ticks_in_hive: Int] * Field[min_ticks_in_hive: Int]]]",
+              "nullable": false,
+              "vanilla_max_occupants": 3
+            }
+          }
+        }
+      }
+    },
+    "block_state_schema": [
+      {
+        "name": "facing",
+        "type": "enum",
+        "values": [
+          "north",
+          "south",
+          "west",
+          "east"
+        ],
+        "default": "north",
+        "current": "north"
+      },
+      {
+        "name": "honey_level",
+        "type": "int",
+        "values": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+        ],
+        "default": "0",
+        "current": "0"
+      }
+    ]
+  },
+  "minecraft:bee_nest": {
+    "snbt": "{bees:[{entity_data:{id:\"minecraft:bee\"},min_ticks_in_hive:600,ticks_in_hive:0}],components:{},id:\"minecraft:beehive\",x:0,y:0,z:0}",
+    "views": {
+      "beehive": {
+        "value": {
+          "bees": [
+            {
+              "entity_data": {
+                "id": "minecraft:bee"
+              },
+              "ticks_in_hive": 0,
+              "min_ticks_in_hive": 600
+            }
+          ]
+        },
+        "snbt": "{bees:[{entity_data:{id:\"minecraft:bee\"},min_ticks_in_hive:600,ticks_in_hive:0}]}",
+        "schema": {
+          "fields": {
+            "bees": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "ListCodec[RecordCodec[UnitDecoder[net.minecraft.world.level.block.entity.BeehiveBlockEntity$Occupant$$Lambda/0x00000000147c98c8@6ff185a3] * Field[entity_data: net.minecraft.world.item.component.TypedEntityData$1@320d98f5] * Field[ticks_in_hive: Int] * Field[min_ticks_in_hive: Int]]]",
+              "nullable": false,
+              "vanilla_max_occupants": 3
+            }
+          }
+        }
+      }
+    },
+    "block_state_schema": [
+      {
+        "name": "facing",
+        "type": "enum",
+        "values": [
+          "north",
+          "south",
+          "west",
+          "east"
+        ],
+        "default": "north",
+        "current": "north"
+      },
+      {
+        "name": "honey_level",
+        "type": "int",
+        "values": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+        ],
+        "default": "0",
+        "current": "0"
+      }
+    ]
+  },
+  "minecraft:lectern/edited": {
+    "request_views": {
+      "lectern": {
+        "Book": {
+          "id": "minecraft:written_book",
+          "count": 1
+        }
+      }
+    },
+    "result_views": {
+      "lectern": {
+        "value": {
+          "Book": {
+            "id": "minecraft:written_book",
+            "count": 1
+          },
+          "Page": -1
+        },
+        "snbt": "{Book:{count:1,id:\"minecraft:written_book\"},Page:-1}",
+        "schema": {
+          "fields": {
+            "Book": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "RecursiveCodec[net.minecraft.world.item.ItemStack$$Lambda/0x0000000014479d30@3fd9e01c]",
+              "nullable": true
+            },
+            "Page": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Int",
+              "nullable": false,
+              "min": -2147483648,
+              "max": 2147483647
+            }
+          }
+        }
+      }
+    },
+    "result_snbt": "{Book:{count:1,id:\"minecraft:written_book\"},Page:-1,components:{},id:\"minecraft:lectern\",x:0,y:0,z:0}"
+  },
+  "minecraft:lectern": {
+    "snbt": "{components:{},id:\"minecraft:lectern\",x:0,y:0,z:0}",
+    "views": {
+      "lectern": {
+        "value": {},
+        "snbt": "{}",
+        "schema": {
+          "fields": {
+            "Book": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "RecursiveCodec[net.minecraft.world.item.ItemStack$$Lambda/0x0000000014479d30@3fd9e01c]",
+              "nullable": true
+            },
+            "Page": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Int",
+              "nullable": false,
+              "min": -2147483648,
+              "max": 2147483647
+            }
+          }
+        }
+      }
+    },
+    "block_state_schema": [
+      {
+        "name": "facing",
+        "type": "enum",
+        "values": [
+          "north",
+          "south",
+          "west",
+          "east"
+        ],
+        "default": "north",
+        "current": "north"
+      },
+      {
+        "name": "has_book",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      },
+      {
+        "name": "powered",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      }
+    ]
+  },
+  "minecraft:jukebox/edited": {
+    "request_views": {
+      "jukebox": {
+        "RecordItem": {
+          "id": "minecraft:music_disc_13",
+          "count": 1
+        }
+      }
+    },
+    "result_views": {
+      "jukebox": {
+        "value": {
+          "RecordItem": {
+            "id": "minecraft:music_disc_13",
+            "count": 1
+          }
+        },
+        "snbt": "{RecordItem:{count:1,id:\"minecraft:music_disc_13\"}}",
+        "schema": {
+          "fields": {
+            "RecordItem": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "RecursiveCodec[net.minecraft.world.item.ItemStack$$Lambda/0x0000000014479d30@3fd9e01c]",
+              "nullable": true
+            }
+          }
+        }
+      }
+    },
+    "result_snbt": "{RecordItem:{count:1,id:\"minecraft:music_disc_13\"},components:{},id:\"minecraft:jukebox\",x:0,y:0,z:0}"
+  },
+  "minecraft:jukebox": {
+    "snbt": "{components:{},id:\"minecraft:jukebox\",x:0,y:0,z:0}",
+    "views": {
+      "jukebox": {
+        "value": {},
+        "snbt": "{}",
+        "schema": {
+          "fields": {
+            "RecordItem": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "RecursiveCodec[net.minecraft.world.item.ItemStack$$Lambda/0x0000000014479d30@3fd9e01c]",
+              "nullable": true
+            }
+          }
+        }
+      }
+    },
+    "block_state_schema": [
+      {
+        "name": "has_record",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      }
+    ]
+  },
+  "minecraft:decorated_pot/edited": {
+    "request_views": {
+      "decorated_pot": {
+        "sherds": [
+          "minecraft:angler_pottery_sherd",
+          "minecraft:brick",
+          "minecraft:brick",
+          "minecraft:brick"
+        ]
+      }
+    },
+    "result_views": {
+      "decorated_pot": {
+        "value": {
+          "sherds": [
+            "minecraft:angler_pottery_sherd",
+            "minecraft:brick",
+            "minecraft:brick",
+            "minecraft:brick"
+          ]
+        },
+        "snbt": "{sherds:[\"minecraft:angler_pottery_sherd\",\"minecraft:brick\",\"minecraft:brick\",\"minecraft:brick\"]}",
+        "schema": {
+          "fields": {
+            "sherds": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "ListCodec[String[comapFlatMapped][comapFlatMapped][mapResult WithLifecycle[net.minecraft.core.Registry$$Lambda/0x000000001429dcd0@73e3831e net.minecraft.core.Registry$$Lambda/0x000000001429dcd0@73e3831e]][flatComapMapped]][xmapped]",
+              "nullable": false
+            }
+          }
+        }
+      }
+    },
+    "result_snbt": "{components:{},id:\"minecraft:decorated_pot\",sherds:[\"minecraft:angler_pottery_sherd\",\"minecraft:brick\",\"minecraft:brick\",\"minecraft:brick\"],x:0,y:0,z:0}"
+  },
+  "minecraft:decorated_pot": {
+    "snbt": "{components:{},id:\"minecraft:decorated_pot\",x:0,y:0,z:0}",
+    "views": {
+      "decorated_pot": {
+        "value": {
+          "sherds": [
+            "minecraft:brick",
+            "minecraft:brick",
+            "minecraft:brick",
+            "minecraft:brick"
+          ]
+        },
+        "snbt": "{sherds:[\"minecraft:brick\",\"minecraft:brick\",\"minecraft:brick\",\"minecraft:brick\"]}",
+        "schema": {
+          "fields": {
+            "sherds": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "ListCodec[String[comapFlatMapped][comapFlatMapped][mapResult WithLifecycle[net.minecraft.core.Registry$$Lambda/0x000000001429dcd0@73e3831e net.minecraft.core.Registry$$Lambda/0x000000001429dcd0@73e3831e]][flatComapMapped]][xmapped]",
+              "nullable": false
+            }
+          }
+        }
+      }
+    },
+    "block_state_schema": [
+      {
+        "name": "cracked",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      },
+      {
+        "name": "facing",
+        "type": "enum",
+        "values": [
+          "north",
+          "south",
+          "west",
+          "east"
+        ],
+        "default": "north",
+        "current": "north"
+      },
+      {
+        "name": "waterlogged",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      }
+    ]
+  },
+  "minecraft:chiseled_bookshelf": {
+    "snbt": "{Items:[],components:{},id:\"minecraft:chiseled_bookshelf\",last_interacted_slot:-1,x:0,y:0,z:0}",
+    "views": {
+      "chiseled_bookshelf": {
+        "value": {
+          "last_interacted_slot": -1
+        },
+        "snbt": "{last_interacted_slot:-1}",
+        "schema": {
+          "fields": {
+            "last_interacted_slot": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Int",
+              "nullable": false,
+              "min": -1,
+              "max": 5,
+              "bounds": "runtime container slots or vanilla no-interaction sentinel"
+            }
+          },
+          "items_write_path": "container.slots"
+        }
+      }
+    },
+    "block_state_schema": [
+      {
+        "name": "facing",
+        "type": "enum",
+        "values": [
+          "north",
+          "south",
+          "west",
+          "east"
+        ],
+        "default": "north",
+        "current": "north"
+      },
+      {
+        "name": "slot_0_occupied",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      },
+      {
+        "name": "slot_1_occupied",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      },
+      {
+        "name": "slot_2_occupied",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      },
+      {
+        "name": "slot_3_occupied",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      },
+      {
+        "name": "slot_4_occupied",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      },
+      {
+        "name": "slot_5_occupied",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      }
+    ]
+  },
+  "minecraft:command_block/edited": {
+    "request_views": {
+      "command_block": {
+        "Command": "say block-test",
+        "TrackOutput": false,
+        "auto": true,
+        "powered": true
+      }
+    },
+    "result_views": {
+      "command_block": {
+        "value": {
+          "Command": "say block-test",
+          "TrackOutput": false,
+          "auto": true,
+          "powered": true
+        },
+        "snbt": "{Command:\"say block-test\",TrackOutput:0b,auto:1b,powered:1b}",
+        "schema": {
+          "fields": {
+            "Command": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "String",
+              "nullable": false
+            },
+            "TrackOutput": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Bool",
+              "nullable": false
+            },
+            "auto": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Bool",
+              "nullable": false
+            },
+            "powered": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Bool",
+              "nullable": false
+            }
+          }
+        }
+      }
+    },
+    "result_snbt": "{Command:\"say block-test\",SuccessCount:0,TrackOutput:0b,UpdateLastExecution:1b,auto:1b,components:{},conditionMet:0b,id:\"minecraft:command_block\",powered:1b,x:0,y:0,z:0}"
+  },
+  "minecraft:furnace/volatile_merge": {
+    "opened_snbt": "{Items:[],RecipesUsed:{},components:{},cooking_time_spent:0s,cooking_total_time:0s,id:\"minecraft:furnace\",lit_time_remaining:0s,lit_total_time:0s,x:0,y:0,z:0}",
+    "current_snbt": "{Items:[],RecipesUsed:{},components:{},cooking_time_spent:12s,cooking_total_time:0s,id:\"minecraft:furnace\",lit_time_remaining:100s,lit_total_time:0s,x:0,y:0,z:0}",
+    "merged_snbt": "{CustomName:\"编辑名称\",Items:[],RecipesUsed:{},components:{},cooking_time_spent:12s,cooking_total_time:0s,id:\"minecraft:furnace\",lit_time_remaining:100s,lit_total_time:0s,x:0,y:0,z:0}"
+  },
+  "minecraft:smoker": {
+    "snbt": "{Items:[],RecipesUsed:{},components:{},cooking_time_spent:0s,cooking_total_time:0s,id:\"minecraft:smoker\",lit_time_remaining:0s,lit_total_time:0s,x:0,y:0,z:0}",
+    "views": {
+      "furnace": {
+        "value": {
+          "cooking_time_spent": 0,
+          "cooking_total_time": 0,
+          "lit_time_remaining": 0,
+          "lit_total_time": 0
+        },
+        "snbt": "{cooking_time_spent:0s,cooking_total_time:0s,lit_time_remaining:0s,lit_total_time:0s}",
+        "schema": {
+          "fields": {
+            "cooking_time_spent": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Short",
+              "nullable": false,
+              "min": -32768,
+              "max": 32767,
+              "bounds": "NBT short storage; vanilla loader validates semantics"
+            },
+            "cooking_total_time": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Short",
+              "nullable": false,
+              "min": -32768,
+              "max": 32767,
+              "bounds": "NBT short storage; vanilla loader validates semantics"
+            },
+            "lit_time_remaining": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Short",
+              "nullable": false,
+              "min": -32768,
+              "max": 32767,
+              "bounds": "NBT short storage; vanilla loader validates semantics"
+            },
+            "lit_total_time": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Short",
+              "nullable": false,
+              "min": -32768,
+              "max": 32767,
+              "bounds": "NBT short storage; vanilla loader validates semantics"
+            }
+          }
+        }
+      }
+    },
+    "block_state_schema": [
+      {
+        "name": "facing",
+        "type": "enum",
+        "values": [
+          "north",
+          "south",
+          "west",
+          "east"
+        ],
+        "default": "north",
+        "current": "north"
+      },
+      {
+        "name": "lit",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      }
+    ]
+  },
+  "minecraft:smoker/volatile_merge": {
+    "opened_snbt": "{Items:[],RecipesUsed:{},components:{},cooking_time_spent:0s,cooking_total_time:0s,id:\"minecraft:smoker\",lit_time_remaining:0s,lit_total_time:0s,x:0,y:0,z:0}",
+    "current_snbt": "{Items:[],RecipesUsed:{},components:{},cooking_time_spent:12s,cooking_total_time:0s,id:\"minecraft:smoker\",lit_time_remaining:100s,lit_total_time:0s,x:0,y:0,z:0}",
+    "merged_snbt": "{CustomName:\"编辑名称\",Items:[],RecipesUsed:{},components:{},cooking_time_spent:12s,cooking_total_time:0s,id:\"minecraft:smoker\",lit_time_remaining:100s,lit_total_time:0s,x:0,y:0,z:0}"
+  },
+  "minecraft:blast_furnace": {
+    "snbt": "{Items:[],RecipesUsed:{},components:{},cooking_time_spent:0s,cooking_total_time:0s,id:\"minecraft:blast_furnace\",lit_time_remaining:0s,lit_total_time:0s,x:0,y:0,z:0}",
+    "views": {
+      "furnace": {
+        "value": {
+          "cooking_time_spent": 0,
+          "cooking_total_time": 0,
+          "lit_time_remaining": 0,
+          "lit_total_time": 0
+        },
+        "snbt": "{cooking_time_spent:0s,cooking_total_time:0s,lit_time_remaining:0s,lit_total_time:0s}",
+        "schema": {
+          "fields": {
+            "cooking_time_spent": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Short",
+              "nullable": false,
+              "min": -32768,
+              "max": 32767,
+              "bounds": "NBT short storage; vanilla loader validates semantics"
+            },
+            "cooking_total_time": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Short",
+              "nullable": false,
+              "min": -32768,
+              "max": 32767,
+              "bounds": "NBT short storage; vanilla loader validates semantics"
+            },
+            "lit_time_remaining": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Short",
+              "nullable": false,
+              "min": -32768,
+              "max": 32767,
+              "bounds": "NBT short storage; vanilla loader validates semantics"
+            },
+            "lit_total_time": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Short",
+              "nullable": false,
+              "min": -32768,
+              "max": 32767,
+              "bounds": "NBT short storage; vanilla loader validates semantics"
+            }
+          }
+        }
+      }
+    },
+    "block_state_schema": [
+      {
+        "name": "facing",
+        "type": "enum",
+        "values": [
+          "north",
+          "south",
+          "west",
+          "east"
+        ],
+        "default": "north",
+        "current": "north"
+      },
+      {
+        "name": "lit",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      }
+    ]
+  },
+  "minecraft:blast_furnace/volatile_merge": {
+    "opened_snbt": "{Items:[],RecipesUsed:{},components:{},cooking_time_spent:0s,cooking_total_time:0s,id:\"minecraft:blast_furnace\",lit_time_remaining:0s,lit_total_time:0s,x:0,y:0,z:0}",
+    "current_snbt": "{Items:[],RecipesUsed:{},components:{},cooking_time_spent:12s,cooking_total_time:0s,id:\"minecraft:blast_furnace\",lit_time_remaining:100s,lit_total_time:0s,x:0,y:0,z:0}",
+    "merged_snbt": "{CustomName:\"编辑名称\",Items:[],RecipesUsed:{},components:{},cooking_time_spent:12s,cooking_total_time:0s,id:\"minecraft:blast_furnace\",lit_time_remaining:100s,lit_total_time:0s,x:0,y:0,z:0}"
+  },
+  "minecraft:brewing_stand": {
+    "snbt": "{BrewTime:0s,Fuel:0b,Items:[],components:{},id:\"minecraft:brewing_stand\",x:0,y:0,z:0}",
+    "views": {
+      "brewing_stand": {
+        "value": {
+          "BrewTime": 0,
+          "Fuel": 0
+        },
+        "snbt": "{BrewTime:0s,Fuel:0b}",
+        "schema": {
+          "fields": {
+            "BrewTime": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Short",
+              "nullable": false,
+              "min": -32768,
+              "max": 32767,
+              "bounds": "NBT short storage; vanilla loader validates semantics"
+            },
+            "Fuel": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "Byte",
+              "nullable": false,
+              "min": -128,
+              "max": 127
+            }
+          }
+        }
+      }
+    },
+    "block_state_schema": [
+      {
+        "name": "has_bottle_0",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      },
+      {
+        "name": "has_bottle_1",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      },
+      {
+        "name": "has_bottle_2",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      }
+    ]
+  },
+  "minecraft:campfire": {
+    "snbt": "{CookingTimes:[I;0,0,0,0],CookingTotalTimes:[I;0,0,0,0],Items:[],components:{},id:\"minecraft:campfire\",x:0,y:0,z:0}",
+    "views": {
+      "campfire": {
+        "value": {
+          "CookingTimes": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "CookingTotalTimes": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "snbt": "{CookingTimes:[I;0,0,0,0],CookingTotalTimes:[I;0,0,0,0]}",
+        "schema": {
+          "fields": {
+            "CookingTimes": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "IntStream",
+              "nullable": false,
+              "length": 4
+            },
+            "CookingTotalTimes": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "IntStream",
+              "nullable": false,
+              "length": 4
+            }
+          }
+        }
+      }
+    },
+    "block_state_schema": [
+      {
+        "name": "facing",
+        "type": "enum",
+        "values": [
+          "north",
+          "south",
+          "west",
+          "east"
+        ],
+        "default": "north",
+        "current": "north"
+      },
+      {
+        "name": "lit",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "true",
+        "current": "true"
+      },
+      {
+        "name": "signal_fire",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      },
+      {
+        "name": "waterlogged",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      }
+    ]
+  },
+  "minecraft:player_head/edited": {
+    "request_views": {
+      "skull": {
+        "minecraft:profile": {
+          "name": "Rinorsi"
+        },
+        "minecraft:custom_name": "测试头颅"
+      }
+    },
+    "result_views": {
+      "skull": {
+        "value": {
+          "minecraft:profile": {
+            "name": "Rinorsi"
+          },
+          "minecraft:custom_name": "测试头颅"
+        },
+        "snbt": "{\"minecraft:custom_name\":\"测试头颅\",\"minecraft:profile\":{name:\"Rinorsi\"}}",
+        "schema": {
+          "fields": {
+            "minecraft:profile": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "net.minecraft.util.EncoderCache$2@301b8765",
+              "nullable": true,
+              "saved_path": "profile"
+            },
+            "minecraft:custom_name": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "net.minecraft.util.EncoderCache$2@4d2b4e4f",
+              "nullable": true,
+              "saved_path": "custom_name"
+            }
+          }
+        }
+      }
+    },
+    "result_snbt": "{components:{},custom_name:\"测试头颅\",id:\"minecraft:skull\",profile:{name:\"Rinorsi\"},x:0,y:0,z:0}"
+  },
+  "minecraft:player_head": {
+    "snbt": "{components:{},id:\"minecraft:skull\",x:0,y:0,z:0}",
+    "views": {
+      "skull": {
+        "value": {},
+        "snbt": "{}",
+        "schema": {
+          "fields": {
+            "minecraft:profile": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "net.minecraft.util.EncoderCache$2@301b8765",
+              "nullable": true,
+              "saved_path": "profile"
+            },
+            "minecraft:custom_name": {
+              "authority": "vanilla_codec_and_loadWithComponents",
+              "codec": "net.minecraft.util.EncoderCache$2@4d2b4e4f",
+              "nullable": true,
+              "saved_path": "custom_name"
+            }
+          }
+        }
+      }
+    },
+    "block_state_schema": [
+      {
+        "name": "powered",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "false",
+        "current": "false"
+      },
+      {
+        "name": "rotation",
+        "type": "int",
+        "values": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "10",
+          "11",
+          "12",
+          "13",
+          "14",
+          "15"
+        ],
+        "default": "0",
+        "current": "0"
+      }
+    ]
+  },
+  "minecraft:end_gateway": {
+    "snbt": "{Age:0L,components:{},id:\"minecraft:end_gateway\",x:0,y:0,z:0}",
+    "views": {
+      "unsupported": {
+        "supported": false,
+        "reason": "仅完整 SNBT；尚无安全的专用字段编辑器"
+      }
+    },
+    "block_state_schema": []
+  },
+  "minecraft:structure_block": {
+    "snbt": "{author:\"\",components:{},id:\"minecraft:structure_block\",ignoreEntities:1b,integrity:1.0f,metadata:\"\",mirror:\"NONE\",mode:\"LOAD\",name:\"\",posX:0,posY:1,posZ:0,powered:0b,rotation:\"NONE\",seed:0L,showair:0b,showboundingbox:1b,sizeX:0,sizeY:0,sizeZ:0,strict:0b,x:0,y:0,z:0}",
+    "views": {
+      "unsupported": {
+        "supported": false,
+        "reason": "仅完整 SNBT；尚无安全的专用字段编辑器"
+      }
+    },
+    "block_state_schema": [
+      {
+        "name": "mode",
+        "type": "enum",
+        "values": [
+          "save",
+          "load",
+          "corner",
+          "data"
+        ],
+        "default": "load",
+        "current": "load"
+      }
+    ]
+  },
+  "minecraft:hopper": {
+    "snbt": "{Items:[],TransferCooldown:-1,components:{},id:\"minecraft:hopper\",x:0,y:0,z:0}",
+    "block_state_schema": [
+      {
+        "name": "enabled",
+        "type": "boolean",
+        "values": [
+          "true",
+          "false"
+        ],
+        "default": "true",
+        "current": "true"
+      },
+      {
+        "name": "facing",
+        "type": "enum",
+        "values": [
+          "down",
+          "north",
+          "south",
+          "west",
+          "east"
+        ],
+        "default": "down",
+        "current": "down"
+      }
+    ]
+  },
+  "minecraft:spawner": {
+    "snbt": "{Delay:20s,MaxNearbyEntities:6s,MaxSpawnDelay:800s,MinSpawnDelay:200s,RequiredPlayerRange:16s,SpawnCount:4s,SpawnPotentials:[],SpawnRange:4s,components:{},id:\"minecraft:mob_spawner\",x:0,y:0,z:0}",
+    "block_state_schema": []
+  },
+  "minecraft:beacon": {
+    "snbt": "{Levels:0,components:{},id:\"minecraft:beacon\",x:0,y:0,z:0}",
+    "block_state_schema": []
+  }
+}

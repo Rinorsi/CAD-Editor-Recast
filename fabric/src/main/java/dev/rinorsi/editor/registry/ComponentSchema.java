@@ -16,7 +16,7 @@ import net.minecraft.util.StringRepresentable;
  * Reflection is intentionally bounded and version-sensitive: unsupported wrappers remain unknown.
  * Every node retains its actual codec for diagnostics; schema metadata never authorizes a save. */
 public final class ComponentSchema {
-    public static final int VERSION = 1;
+    public static final int VERSION = 2;
     private static final int MAX_DEPTH = 12, MAX_NODES = 160;
     private ComponentSchema() {}
 
@@ -27,14 +27,14 @@ public final class ComponentSchema {
         Node element, key;
         final List<Node> alternatives = new ArrayList<>();
         Node(Codec<?> codec, String path) { this.codec = codec; json.addProperty("path", path); json.addProperty("optional", false); }
-        void type(String type) { json.addProperty("type", type); }
+        void type(String type) { json.addProperty("type", type); json.addProperty("kind", type); }
         void unknown(String reason) { json.addProperty("unknown", true); json.addProperty("reason", reason); }
         public JsonObject toJson() {
             JsonObject out = json.deepCopy();
             if (!fields.isEmpty()) { var array = new JsonArray(); fields.values().forEach(n -> array.add(n.toJson())); out.add("fields", array); }
             if (element != null) out.add("element", element.toJson());
             if (key != null) out.add("key", key.toJson());
-            if (!alternatives.isEmpty()) { var array = new JsonArray(); alternatives.forEach(n -> array.add(n.toJson())); out.add("alternatives", array); }
+            if (!alternatives.isEmpty()) { var array = new JsonArray(); alternatives.forEach(n -> array.add(n.toJson())); out.add(json.has("type") && json.get("type").getAsString().equals("variants") ? "variants" : "alternatives", array); }
             return out;
         }
     }
@@ -44,7 +44,19 @@ public final class ComponentSchema {
         Identifier id = Identifier.parse(raw);
         var codec = ComponentValidation.type(id.toString()).codec();
         var inspector = new Inspector(access);
-        Node root = inspector.inspect(codec, "$", 0, identitySet());
+        Node root;
+        try { root = inspector.inspect(codec, "$", 0, identitySet()); }
+        catch (RuntimeException error) { root = new Node(codec, "$"); root.type("object"); root.unknown("codec_inspection_failed:" + error.getClass().getSimpleName()); }
+        if (codec == net.minecraft.core.component.DataComponents.ITEM_MODEL.codec() || codec == net.minecraft.core.component.DataComponents.TOOLTIP_STYLE.codec()) {
+            root.type("identifier"); root.json.remove("unknown"); root.json.remove("reason"); root.json.addProperty("catalog", id.getPath());
+        }
+        if (codec == net.minecraft.core.component.DataComponents.MAP_ID.codec() || codec == net.minecraft.core.component.DataComponents.MAP_COLOR.codec()) {
+            root.json.remove("unknown"); root.json.remove("reason"); root.type("int");
+            root.json.addProperty("min", Integer.MIN_VALUE); root.json.addProperty("max", Integer.MAX_VALUE);
+            root.json.addProperty("constraint_source", "int_storage_domain_boundary_probed_json_narrowing_allowed");
+            root.json.addProperty("storage_boundary_probes_ok", safeParse(codec, new JsonPrimitive(Integer.MIN_VALUE), inspector.ops) && safeParse(codec, new JsonPrimitive(Integer.MAX_VALUE), inspector.ops));
+        }
+        if (codec == net.minecraft.core.component.DataComponents.POTION_CONTENTS.codec()) annotateColor(root);
         // Observation matrix, not inferred limits: absence of a counterexample proves no new bound.
         var inputProbes = new JsonArray();
         JsonElement[] candidates = {new JsonPrimitive(-1), new JsonPrimitive(0), new JsonPrimitive(1), new JsonPrimitive(32768),
@@ -56,12 +68,25 @@ public final class ComponentSchema {
         }
         JsonObject entry = new JsonObject(); entry.addProperty("id", id.toString());
         entry.addProperty("schema_version", VERSION);
-        entry.addProperty("source", "runtime_codec_structural_adapter");
+        entry.addProperty("source", id.getNamespace().equals("minecraft") ? "vanilla" : "mod:" + id.getNamespace());
+        entry.addProperty("schema_source", "runtime_codec_structural_adapter");
+        String label = "item.component." + id.getPath();
+        String scopedLabel = "item.component." + id.getNamespace() + "." + id.getPath();
+        var language = net.minecraft.locale.Language.getInstance();
+        entry.add("label_key", language.has(scopedLabel) ? new JsonPrimitive(scopedLabel)
+                : id.getNamespace().equals("minecraft") && language.has(label) ? new JsonPrimitive(label) : JsonNull.INSTANCE);
         entry.addProperty("coverage_scope", "exported_field_structure_not_gameplay_or_exhaustive_semantics");
         entry.add("fields", array(root.toJson()));
         JsonArray unknown = new JsonArray(); countUnknown(root, unknown);
         entry.addProperty("coverage", unknown.isEmpty() ? "full" : root.json.get("unknown") != null && root.fields.isEmpty() && root.element == null && root.alternatives.isEmpty() ? "unknown" : "partial");
         entry.add("unknown_paths", unknown);
+        JsonArray reasons = new JsonArray(); unknownReasons(root, reasons); entry.add("unknown_details", reasons);
+        boolean opaque = root.json.has("unknown") && root.fields.isEmpty() && root.element == null && root.alternatives.isEmpty();
+        boolean freeNbt = root.json.get("kind").getAsString().equals("nbt");
+        entry.addProperty("editable", opaque || freeNbt ? "snbt_only" : "structured");
+        entry.addProperty("editable_reason", opaque ? "opaque_codec_use_component_validate" : freeNbt ? "free_nbt_has_no_fixed_form_fields" : "derived_shape_with_whole_codec_validation");
+        entry.addProperty("validator_route", "component_validate");
+        JsonArray ranges = new JsonArray(); numericFields(root, ranges); entry.add("ranges_for_ui", ranges);
         entry.add("input_probes", inputProbes);
         // Prototype samples are evidence, never a declaration of a universal component default.
         JsonArray prototypes = new JsonArray(); Set<String> values = new HashSet<>(); int[] total = {0};
@@ -79,7 +104,48 @@ public final class ComponentSchema {
         });
         entry.add("prototype_examples", prototypes); entry.addProperty("prototype_item_count", total[0]);
         entry.addProperty("prototype_examples_complete", values.size() == prototypes.size());
+        JsonObject summary = new JsonObject(); summary.addProperty("item_count", total[0]);
+        summary.addProperty("distinct_value_count", values.size()); summary.addProperty("example_count", prototypes.size());
+        summary.addProperty("universal_default", false); entry.add("default_from_prototypes", summary);
+        if (entry.toString().length() > 22_000) {
+            root = new Node(codec, "$"); root.type("object"); root.unknown("schema_wire_budget_exceeded");
+            entry.add("fields", array(root.toJson())); entry.addProperty("coverage", "unknown");
+            JsonArray paths = new JsonArray(); countUnknown(root, paths); entry.add("unknown_paths", paths);
+            JsonArray details = new JsonArray(); unknownReasons(root, details); entry.add("unknown_details", details);
+            entry.add("ranges_for_ui", new JsonArray()); entry.addProperty("editable", "snbt_only");
+            entry.addProperty("editable_reason", "schema_wire_budget_exceeded_use_component_validate");
+        }
         return new Derived(id.toString(), root, entry);
+    }
+    private static void annotateColor(Node root) {
+        Node color = root.fields.get("custom_color");
+        if (color != null) {
+            color.json.addProperty("format", "rgb");
+            color.json.addProperty("shape_notes", "PotionContents custom_color is Codec.INT; RGB display hint is not a 24-bit validation bound");
+        }
+        root.alternatives.forEach(ComponentSchema::annotateColor);
+    }
+    public static List<String> persistentIds() {
+        return BuiltInRegistries.DATA_COMPONENT_TYPE.entrySet().stream().filter(e -> e.getValue().codec() != null)
+                .map(e -> e.getKey().identifier().toString()).sorted().toList();
+    }
+    private static void numericFields(Node n, JsonArray out) {
+        if (n.json.has("type") && List.of("int", "long", "float", "double").contains(n.json.get("type").getAsString())) {
+            JsonObject row = new JsonObject(); row.add("path", n.json.get("path"));
+            for (String key : List.of("min", "max", "default")) row.add(key, n.json.has(key) ? n.json.get(key) : JsonNull.INSTANCE);
+            if (n.json.has("min_exclusive")) row.add("min_exclusive", n.json.get("min_exclusive"));
+            out.add(row);
+        }
+        n.fields.values().forEach(c -> numericFields(c, out));
+        if (n.element != null) numericFields(n.element, out);
+        n.alternatives.forEach(c -> numericFields(c, out));
+    }
+    private static void unknownReasons(Node n, JsonArray out) {
+        if (n.json.has("unknown")) { JsonObject row = new JsonObject(); row.add("path", n.json.get("path")); row.add("reason", n.json.get("reason")); out.add(row); }
+        n.fields.values().forEach(c -> unknownReasons(c, out));
+        if (n.element != null) unknownReasons(n.element, out);
+        if (n.key != null) unknownReasons(n.key, out);
+        n.alternatives.forEach(c -> unknownReasons(c, out));
     }
     private static void countUnknown(Node node, JsonArray out) {
         if (node.json.has("unknown")) out.add(node.json.get("path"));
@@ -93,21 +159,77 @@ public final class ComponentSchema {
     private static final class Inspector {
         final DynamicOps<JsonElement> ops;
         int nodes;
+        final Map<Object, String> firstPaths = new IdentityHashMap<>();
         Inspector(RegistryAccess access) { ops = access.createSerializationContext(JsonOps.INSTANCE); }
 
         Node inspect(Codec<?> outer, String path, int depth, Set<Object> ancestors) {
             Node n = new Node(outer, path);
-            if (depth > MAX_DEPTH || ++nodes > MAX_NODES || ancestors.contains(outer)) { n.type("object"); n.unknown("recursive_or_budget_limited_codec"); return n; }
+            if (ancestors.contains(outer)) { n.type("recursive_ref"); n.json.addProperty("ref_path", firstPaths.get(outer)); return n; }
+            if (depth > MAX_DEPTH || ++nodes > MAX_NODES) { n.type("object"); n.unknown("schema_depth_or_node_budget"); return n; }
+            firstPaths.putIfAbsent(outer, path);
             var next = identitySet(); next.addAll(ancestors); next.add(outer);
             Object base = unwrap(outer);
-            // Text is a recursive dispatch language; pretending it is a plain string loses styles/events.
-            if (graph(outer, 6).stream().anyMatch(v -> v == net.minecraft.network.chat.ComponentSerialization.CODEC) || containsClass(outer, "net.minecraft.network.chat.ComponentSerialization", 5)) {
-                n.type("component(text)"); n.unknown("recursive_text_dispatch_requires_component_codec"); return n;
+            if (base.getClass().getName().equals("net.minecraft.world.item.component.TypedEntityData$1") && member(base, "val$typeCodec") instanceof Codec<?> typeCodec) {
+                n.type("typed_data"); n.json.addProperty("id_registry", registry(typeCodec));
+                n.json.addProperty("id_field", "id"); n.json.addProperty("additional_fields", "free_nbt");
+                Node id = inspect(typeCodec, path + ".id", depth + 1, next); id.json.addProperty("name", "id"); n.fields.put("id", id);
+                n.json.addProperty("shape_notes", "TypedEntityData.codec: required id plus remaining CompoundTag fields; original id stripped from free data"); return n;
             }
-            if (base instanceof net.minecraft.resources.HolderSetCodec<?> && member(base, "registryAwareCodec") instanceof Codec<?> holderForms) {
-                n.type("union"); n.json.addProperty("registry", registry(base));
-                n.alternatives.add(inspect(holderForms, path, depth + 1, next));
-                n.unknown("holder_set_lookup_and_homogeneous_list_constraints"); return n;
+            if (outer == net.minecraft.core.component.DataComponentPatch.CODEC) {
+                n.type("component_patch"); n.json.addProperty("registry", "minecraft:data_component_type");
+                n.json.addProperty("value_schema_route", "component_schema:<component-id>");
+                n.json.addProperty("shape_notes", "Object keyed by persistent component id; !id removes a component using an empty object; values use each registered component Codec"); return n;
+            }
+            if (outer == net.minecraft.core.BlockPos.CODEC) {
+                n.type("list"); n.json.addProperty("min_size", 3); n.json.addProperty("max_size", 3);
+                n.element = inspect(Codec.INT, path + "[]", depth + 1, next); n.json.addProperty("format", "block_position_xyz"); return n;
+            }
+            if (outer == net.minecraft.core.UUIDUtil.CODEC || outer == net.minecraft.core.UUIDUtil.AUTHLIB_CODEC || outer == net.minecraft.core.UUIDUtil.LENIENT_CODEC || outer == net.minecraft.core.UUIDUtil.STRING_CODEC) {
+                n.type("uuid"); JsonArray shapes = new JsonArray();
+                if (safeParse(outer, new JsonPrimitive("00000000-0000-0000-0000-000000000001"), ops)) shapes.add("uuid_string");
+                if (safeParse(outer, JsonParser.parseString("[0,0,0,1]"), ops)) shapes.add("four_int_array");
+                n.json.add("shapes", shapes); return n;
+            }
+            if (outer == net.minecraft.world.item.component.CustomData.CODEC || outer == net.minecraft.nbt.CompoundTag.CODEC) {
+                n.type("nbt"); n.json.addProperty("additional_fields", "free_nbt"); return n;
+            }
+            // Match this node, not descendants: a list containing text remains a list.
+            if (outer == net.minecraft.network.chat.ComponentSerialization.CODEC || base == unwrap(net.minecraft.network.chat.ComponentSerialization.CODEC) || base.getClass().getName().equals("net.minecraft.network.chat.ComponentSerialization$1")) {
+                n.type("text_component");
+                n.json.add("shapes", strings(List.of("string", "nonempty_list_of_text_components", "object")));
+                if (member(base, "val$maxFlatSize") instanceof Number size) n.json.addProperty("max_flat_size", size);
+                n.json.addProperty("shape_notes", "ComponentSerialization.CODEC: recursive contents dispatch (text/translate/score/selector/keybind/nbt), extra siblings and Style including click_event/hover_event; validate via component_validate");
+                return n;
+            }
+            if (outer == net.minecraft.util.ExtraCodecs.RESOURCE_PATH_CODEC) {
+                n.type("resource_path"); n.json.addProperty("constraint_notes", "ExtraCodecs.RESOURCE_PATH_CODEC validates the Identifier path grammar"); return n;
+            }
+            if (outer == Identifier.CODEC || base == Identifier.CODEC) {
+                String registry = registry(outer);
+                boolean tag = containsClass(outer, "net.minecraft.tags.TagKey", 7);
+                n.type(registry == null ? "identifier" : tag ? "tag" : "registry");
+                if (tag) n.json.addProperty("prefix", safeParse(outer, new JsonPrimitive("#minecraft:schema_probe"), ops) ? "#" : "");
+                if (registry != null) n.json.addProperty("registry", registry);
+                return n;
+            }
+            if (base instanceof net.minecraft.resources.HolderSetCodec<?>) {
+                n.type("holder_set"); n.json.addProperty("registry", registry(base));
+                n.json.add("shapes", strings(List.of("#tag", "identifier", "list_of_identifiers")));
+                n.json.addProperty("constraint_notes", "RegistryOps lookup; homogeneous holders; runtime tag membership"); return n;
+            }
+            if (base instanceof net.minecraft.resources.RegistryFileCodec<?> && member(base, "elementCodec") instanceof Codec<?> inline) {
+                n.type("holder"); n.json.addProperty("registry", registry(base));
+                n.json.addProperty("allow_inline", Boolean.TRUE.equals(member(base, "allowInline")));
+                if (Boolean.TRUE.equals(member(base, "allowInline"))) n.alternatives.add(inspect(inline, path, depth + 1, next));
+                return n;
+            }
+            if (outer == net.minecraft.util.ExtraCodecs.RGB_COLOR_CODEC || outer == net.minecraft.util.ExtraCodecs.ARGB_COLOR_CODEC || base == net.minecraft.util.ExtraCodecs.RGB_COLOR_CODEC || base == net.minecraft.util.ExtraCodecs.ARGB_COLOR_CODEC) {
+                n.type("int"); numeric(n, Codec.INT, "int");
+                n.json.addProperty("format", outer == net.minecraft.util.ExtraCodecs.RGB_COLOR_CODEC || base == net.minecraft.util.ExtraCodecs.RGB_COLOR_CODEC ? "rgb" : "argb");
+                n.json.addProperty("shape_notes", "ExtraCodecs also accepts a float channel list"); return n;
+            }
+            if (safeParse(outer, new JsonObject(), ops) && outer.toString().startsWith("Unit")) {
+                n.type("unit"); n.json.addProperty("presence_flag", true); return n;
             }
             if (base instanceof ListCodec<?> list) {
                 n.type("list"); n.json.addProperty("min_size", list.minSize()); n.json.addProperty("max_size", list.maxSize());
@@ -124,6 +246,7 @@ public final class ComponentSchema {
                 transformed(n, outer, base); return n;
             }
             if (base instanceof MapCodec.MapCodecCodec<?> map) {
+                if (map.codec() instanceof KeyDispatchCodec<?, ?> dispatch && dispatch(n, dispatch, path, depth, next)) return n;
                 n.type("object");
                 var definitions = new LinkedHashMap<String, FieldInfo>();
                 collectFields(map.codec(), null, definitions, identitySet(), 0);
@@ -155,7 +278,7 @@ public final class ComponentSchema {
                         boolean tag = containsClass(outer, "net.minecraft.tags.TagKey", 7);
                         n.type(tag ? "tag" : "registry"); n.json.addProperty("registry", registry);
                         if (tag) n.json.addProperty("prefix", safeParse(outer, new JsonPrimitive("#minecraft:schema_probe"), ops) ? "#" : "");
-                        n.unknown("registry_reference_constraints_checked_by_codec");
+                        n.json.addProperty("validation", "registry_reference_checked_by_component_validate");
                     } else if (base != outer && !stringLength(n, outer)) n.unknown("string_mapping_constraints_not_exported");
                 } else if (outer != base) transformed(n, outer, base);
                 return n;
@@ -172,6 +295,34 @@ public final class ComponentSchema {
             n.type("object"); n.unknown("unsupported_codec_wrapper");
             return n;
         }
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        private boolean dispatch(Node n, KeyDispatchCodec<?, ?> dispatch, String path, int depth, Set<Object> ancestors) {
+            Object keyCodec = member(dispatch, "keyCodec");
+            String registryId = registry(keyCodec);
+            if (!(keyCodec instanceof MapCodec<?> key) || !(member(dispatch, "decoder") instanceof java.util.function.Function decoder)) return false;
+            var keys = key.keys(JsonOps.INSTANCE).distinct().toList();
+            if (keys.size() != 1 || !keys.getFirst().isJsonPrimitive()) return false;
+            String discriminator = keys.getFirst().getAsString();
+            var options = new TreeMap<String, Object>();
+            var registry = registryId == null ? null : BuiltInRegistries.REGISTRY.getValue(Identifier.parse(registryId));
+            if (registry != null) registry.entrySet().forEach(e -> options.put(e.getKey().identifier().toString(), e.getValue()));
+            else for (Object value : graph(keyCodec, 9)) if (value.getClass().isArray() && value.getClass().getComponentType().isEnum()) {
+                for (Object option : (Object[]) value) if (option instanceof StringRepresentable named) options.put(named.getSerializedName(), option);
+            }
+            if (options.isEmpty()) return false;
+            n.type("variants"); n.json.addProperty("discriminator", discriminator);
+            if (registryId != null) n.json.addProperty("registry", registryId);
+            for (var option : options.entrySet()) {
+                try {
+                    DataResult<?> result = (DataResult<?>) decoder.apply(option.getValue());
+                    if (result.result().orElse(null) instanceof MapCodec<?> branch) {
+                        Node variant = inspect(branch.codec(), path, depth + 1, ancestors);
+                        variant.json.addProperty("discriminator_value", option.getKey()); n.alternatives.add(variant);
+                    } else n.unknown("dispatch_variant_decoder_not_mapcodec");
+                } catch (RuntimeException error) { n.unknown("dispatch_variant_decoder_failed"); }
+            }
+            return !n.alternatives.isEmpty();
+        }
         private void transformed(Node n, Codec<?> outer, Object base) {
             // xmap can hide cross-field or post-list validation. Keep that limitation explicit.
             if (outer != base && hasFlatMapping(outer)) n.unknown("outer_mapping_or_cross_field_constraint");
@@ -183,7 +334,14 @@ public final class ComponentSchema {
             }
             n.json.add("probes", probes);
             Number[] range = rangeCapture(codec);
-            if (range != null && verifyRange(codec, range, ops)) {
+            if (codec == net.minecraft.util.ExtraCodecs.UNSIGNED_BYTE) {
+                n.json.addProperty("min", 0); n.json.addProperty("max", 255);
+                n.json.addProperty("constraint_source", "official_unsigned_byte_value_domain_json_narrowing_allowed");
+                n.json.addProperty("json_narrowing_allowed", true);
+            } else if (codec == net.minecraft.util.ExtraCodecs.POSITIVE_FLOAT) {
+                n.json.addProperty("min", 0); n.json.addProperty("min_exclusive", true); n.json.addProperty("max", Float.MAX_VALUE);
+                n.json.addProperty("constraint_source", "official_positive_float_boundary_decode");
+            } else if (range != null && verifyRange(codec, range, ops)) {
                 n.json.addProperty("min", range[0]); n.json.addProperty("max", range[1]);
                 n.json.addProperty("constraint_source", "captured_numeric_validator_and_boundary_decode");
             } else if (unwrap(codec) == codec) {
@@ -213,6 +371,9 @@ public final class ComponentSchema {
         private record FieldInfo(Codec<?> codec, boolean optional, boolean optionalUnknown, JsonElement defaultValue) {}
         private void collectFields(Object current, MapDecoder<?> context, Map<String, FieldInfo> out, Set<Object> seen, int depth) {
             if (current == null || depth > 64 || !seen.add(current)) return;
+            if (member(current, "wrapped") instanceof java.util.function.Supplier<?> supplier) {
+                collectFields(supplier.get(), context, out, seen, depth + 1); return;
+            }
             String name = current.getClass().getName();
             if (current instanceof MapDecoder<?> map && !(current instanceof OptionalFieldCodec<?>)) context = map;
             if (current instanceof OptionalFieldCodec<?> || name.equals("com.mojang.serialization.codecs.FieldDecoder")) {
@@ -220,9 +381,10 @@ public final class ComponentSchema {
                 if (key instanceof String field && element instanceof Codec<?> codec) {
                     boolean optional = current instanceof OptionalFieldCodec<?>;
                     JsonElement def = null; boolean unresolved = optional;
-                    if (optional && context != null) {
+                    if (optional) {
+                        MapDecoder<?> defaultContext = context == null ? (MapDecoder<?>) current : context;
                         try {
-                            var value = context.decode(ops, JsonOps.INSTANCE.getMap(new JsonObject()).getOrThrow()).result();
+                            var value = defaultContext.decode(ops, JsonOps.INSTANCE.getMap(new JsonObject()).getOrThrow()).result();
                             if (value.isPresent()) {
                                 unresolved = false;
                                 Object unwrapped = value.get();
@@ -230,6 +392,12 @@ public final class ComponentSchema {
                                 if (unwrapped != null) def = encode(codec, unwrapped, ops);
                             }
                         } catch (RuntimeException ignored) { /* no reliable default */ }
+                        if (unresolved) {
+                            try {
+                                Object absent = ((MapDecoder<?>) current).decode(ops, JsonOps.INSTANCE.getMap(new JsonObject()).getOrThrow()).getOrThrow();
+                                if (absent instanceof Optional<?> opt && opt.isEmpty()) unresolved = false;
+                            } catch (RuntimeException ignored) { /* retain unknown default */ }
+                        }
                     }
                     out.putIfAbsent(field, new FieldInfo(codec, optional, unresolved, def));
                 }
@@ -256,6 +424,12 @@ public final class ComponentSchema {
         catch (RuntimeException e) { addError(errors, path, "codec_exception", e.toString()); return; }
         if (result.isSuccess()) return;
         int before = errors.size();
+        if (node.json.has("discriminator") && input.isJsonObject()) {
+            JsonElement selected = input.getAsJsonObject().get(node.json.get("discriminator").getAsString());
+            for (Node variant : node.alternatives) if (selected != null && selected.equals(variant.json.get("discriminator_value"))) {
+                diagnose(variant, input, path, ops, errors, depth + 1); break;
+            }
+        }
         if (input.isJsonObject() && !node.fields.isEmpty()) for (var entry : node.fields.entrySet()) {
             var child = entry.getValue(); var value = input.getAsJsonObject().get(entry.getKey());
             if (value != null) diagnose(child, value, propertyPath(path, entry.getKey()), ops, errors, depth + 1);
@@ -297,6 +471,8 @@ public final class ComponentSchema {
     private static Object unwrap(Object codec) {
         var seen = identitySet(); Object value = codec;
         while (seen.add(value)) {
+            if (value == Identifier.CODEC || value == net.minecraft.util.ExtraCodecs.RGB_COLOR_CODEC || value == net.minecraft.util.ExtraCodecs.ARGB_COLOR_CODEC) return value;
+            if (member(value, "wrapped") instanceof java.util.function.Supplier<?> supplier && supplier.get() instanceof Codec<?> wrapped) { value = wrapped; continue; }
             if (value instanceof ListCodec<?> || value instanceof UnboundedMapCodec<?, ?> || value instanceof EitherCodec<?, ?> || value instanceof MapCodec.MapCodecCodec<?>) return value;
             var fields = members(value);
             Object next = fields.get("val$codec");
@@ -327,7 +503,20 @@ public final class ComponentSchema {
         }
     }
     private static boolean containsClass(Object codec, String prefix, int depth) { return graph(codec, depth).stream().anyMatch(o -> o.getClass().getName().startsWith(prefix)); }
-    private static boolean hasFlatMapping(Object codec) { return graph(codec, 5).stream().anyMatch(o -> o.getClass().getName().equals("com.mojang.serialization.Decoder$1")); }
+    private static boolean hasFlatMapping(Object codec) {
+        var seen = identitySet(); Object value = codec;
+        while (value != null && seen.add(value)) {
+            if (value instanceof ListCodec<?> || value instanceof UnboundedMapCodec<?, ?> || value instanceof EitherCodec<?, ?> || value instanceof MapCodec.MapCodecCodec<?>) return false;
+            if (value.getClass().getName().equals("com.mojang.serialization.Decoder$1")) return true;
+            var fields = members(value);
+            Object next = fields.get("val$codec");
+            if (next == null) next = fields.get("val$normal");
+            if (next == null) next = fields.get("val$decoder");
+            if (next == null) next = fields.get("this$0");
+            value = next instanceof Codec<?> || next instanceof Decoder<?> ? next : null;
+        }
+        return false;
+    }
     private static String registry(Object codec) {
         for (Object value : graph(codec, 12)) {
             if (value instanceof net.minecraft.core.Registry<?> registry) return registry.key().identifier().toString();
