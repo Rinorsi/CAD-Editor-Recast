@@ -277,9 +277,10 @@ function lazyHook(stub) {
     if (!real) return;
     if (stub.el.parentNode) stub.el.parentNode.replaceChild(real.el, stub.el);
     if (UI.page) for (var i = 0; i < UI.page.cards.length; i++) if (UI.page.cards[i] === stub) UI.page.cards[i] = real;
-    real.el.classList.add('opening'); setTimeout(function () { real.el.classList.remove('opening'); }, 260);
     try { real.update(); } catch (e) {}
     decorate(); if (typeof paintProblems === 'function') paintProblems();
+    /* 第一次展开：真正的卡片是现建的，直接是展开状态，所以要补上和以后展开时同一个滑入动画（uiSlide） */
+    if (real.body) uiSlide(real.body, true);
   }
   stub.onHead = function () { if (!stub.lazy) return false; expand(); return true; };
   var oc = stub.setCollapsed;
