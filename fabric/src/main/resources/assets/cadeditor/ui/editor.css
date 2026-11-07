@@ -1474,3 +1474,8 @@ textarea.world-snbt { min-height: 56px; }
 /* 折叠箭头旋转过渡：收起 = 向右，展开 = 向下 */
 .fold-arrow { flex: none; display: flex; align-items: center; justify-content: center; transition: transform 180ms ease-out; }
 .fold-arrow.closed { transform: rotate(-90deg); }
+
+/* 「更多」菜单：紧凑的单行项 */
+.k-moretabs { gap: 0; }
+.k-mt { height: 22px; padding: 0 8px; }
+.k-mt .z { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

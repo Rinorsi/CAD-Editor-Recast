@@ -158,13 +158,15 @@ function hiddenUniTabs(kind) {
 }
 /* 「更多 ▾」：列出还没打开的通用分页 */
 function openMoreTabs(anchor) {
+  if (KPop.el && KPop.owner === anchor) { kPopClose(); return; }   // 再点一次「更多」收起，而不是重新展开
   var kind = kindOfItem(Store.doc().id), list = hiddenUniTabs(kind), box = h('div', { class: 'k-moretabs' });
   list.forEach(function (t) {
-    var row = h('div', { class: 'k-mt' }, [uiIcon(t.icon, 16), h('div', { class: 'tx' }, [h('div', { class: 'z', text: t.label }), h('div', { class: 's', text: t.desc })])]);
+    /* 一行一项：图标 + 名称；说明放在悬停提示里，菜单保持紧凑 */
+    var row = h('div', { class: 'k-mt', title: t.desc || '' }, [uiIcon(t.icon, 14), h('span', { class: 'z', text: t.label })]);
     activate(row, function () { kPopClose(); UI.bodyScroll[UI.tab] = $('edbody').scrollTop; UI.uni[t.id] = 1; UI.tab = t.id; drawTabbar(); drawTabBody(); });
     box.appendChild(row);
   });
-  kPopover(anchor, box, { width: 300, maxHeight: 360 });
+  kPopover(anchor, box, { width: 190, maxHeight: 300 });
 }
 
 /* 窗口的内联样式：品类色 + 用户拖出来的窗口 / 左栏尺寸；最大化是一个类 */
