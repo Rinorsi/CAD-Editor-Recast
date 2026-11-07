@@ -20,6 +20,11 @@ function uiSlide(el, open, done) {
 }
 /* 与「其它属性加成」「使用结束时的效果」同款的行组件（k-xrow / k-xhead / k-xbody x2），放置与数据的子页都用它，保证和其他子页同一个质感。
    xRow：图标盒 + 标题/副标题 + 右侧控件 + 展开箭头；展开后是缩进的字段区（每行 图标+标签 | 控件）。 */
+/* 折叠箭头：永远是一个“向下”的图标，靠旋转表示状态（收起 = 向右，展开 = 向下），状态切换才能走 CSS 过渡动画。
+   换状态时对已有的箭头调用 foldArrowSet；新画出来的箭头用 foldArrowFrom 先放在旧状态、下一帧再转到新状态。 */
+function foldArrow(open, size) { return h('span', { class: 'fold-arrow' + (open ? '' : ' closed') }, [uiIcon('down', size || 10)]); }
+function foldArrowSet(a, open) { if (a && a.classList) a.classList.toggle('closed', !open); }
+function foldArrowFrom(a, wasOpen, nowOpen) { if (!a) return; foldArrowSet(a, wasOpen); if (a.getBoundingClientRect) a.getBoundingClientRect(); foldArrowSet(a, nowOpen); }
 var XOPEN_LOG = null;   /* 本次点击重画时新画出来的「已展开行」，用来补上滑入动画 */
 function xRow(o) {
   var open = !!o.open, kids = [];
@@ -27,7 +32,7 @@ function xRow(o) {
   if (o.icon !== false) kids.push(h('div', { class: 'ic' }, [o.icon || uiIcon('cube', 14)]));
   kids.push(h('div', { class: 'tx', title: o.tip || '' }, [h('div', { class: 'z', text: o.title }), o.sub ? h('div', { class: 's', text: o.sub }) : null]));
   if (o.right) kids.push(o.right);
-  if (o.body || o.chevron) kids.push(uiIcon(open ? 'up' : 'down', 10));
+  if (o.body || o.chevron) kids.push(foldArrow(open, 10));
   var head = h('div', { class: 'k-xhead' }, kids);
   var row = h('div', { class: 'k-xrow k-srow' + (open ? ' open' : '') }, [head]);
   if (open && XOPEN_LOG) XOPEN_LOG.push(row);
@@ -37,11 +42,12 @@ function xRow(o) {
     var cur = row.querySelector('.k-xbody');
     if (row.classList.contains('open') && cur != null) {
       row._busy = true;
+      foldArrowSet(row.querySelector('.fold-arrow'), false);
       uiSlide(cur, false, function () { row._busy = false; o.onHead(); });
       return;
     }
     XOPEN_LOG = [];
-    try { o.onHead(); } finally { var made = XOPEN_LOG; XOPEN_LOG = null; made.forEach(function (r) { var b = r.querySelector('.k-xbody'); if (b != null) uiSlide(b, true); }); }
+    try { o.onHead(); } finally { var made = XOPEN_LOG; XOPEN_LOG = null; made.forEach(function (r) { var b = r.querySelector('.k-xbody'); if (b != null) uiSlide(b, true); foldArrowFrom(r.querySelector('.fold-arrow'), false, true); }); }
   });
   if (open && o.body) row.appendChild(h('div', { class: 'k-xbody x2' }, o.body()));
   return row;

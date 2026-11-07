@@ -384,7 +384,7 @@ function drawHero() {
   else { vis = itemIcon(heroItemId(d), 48); if (vis.tagName && vis.tagName.toLowerCase() === 'item') { vis.setAttribute('components', stackCompsSnbt(d)); vis.setAttribute('count', String(d.count)); } }
   /* 预览头：可折叠（折叠后不再渲染 3D 模型），右边是 2D / 3D 切换 */
   var open = UI.stageOpen !== false;
-  var shead = h('div', { class: 'ed-stagehead' }, [uiIcon(open ? 'down' : 'forward', 8), h('span', { text: '预览' }), h('div', { class: 'grow' })]);
+  var shead = h('div', { class: 'ed-stagehead' }, [foldArrow(open, 8), h('span', { text: '预览' }), h('div', { class: 'grow' })]);
   shead.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.ed-view')) return; heroFold('.ed-stage', open, function (v) { UI.stageOpen = v; Prefs.set('stageOpen', v); }); });
   if (can3d && open) {
     var seg = h('div', { class: 'k-seg ed-view', title: '物品预览：2D 图标 / 3D 模型（会记住你的选择）' });
@@ -410,12 +410,12 @@ function drawHero() {
     stats.appendChild(h('div', { class: 'k-meter' + (ratio < 0.15 ? ' bad' : ratio < 0.4 ? ' warn' : '') }, [h('i', { style: 'width:' + (ratio * 100) + '%' })]));
   }
   var sOpen = UI.statsOpen !== false;
-  var sh = h('div', { class: 'ed-stagehead' }, [uiIcon(sOpen ? 'down' : 'forward', 8), h('span', { text: '属性' }), h('div', { class: 'grow' })]);
+  var sh = h('div', { class: 'ed-stagehead' }, [foldArrow(sOpen, 8), h('span', { text: '属性' }), h('div', { class: 'grow' })]);
   sh.addEventListener('click', function () { heroFold('.ed-stats', sOpen, function (v) { UI.statsOpen = v; Prefs.set('statsOpen', v); }); });
   hero.appendChild(sh);
   if (sOpen) hero.appendChild(stats);
   /* 提示框预览：可折叠、限高、内部滚动，放得下几十条附魔 */
-  var tipHead = h('div', { class: 'ed-tiphead' }, [uiIcon(UI.tipOpen ? 'down' : 'forward', 10), h('span', { text: '提示框预览' }), h('div', { class: 'grow' })]);
+  var tipHead = h('div', { class: 'ed-tiphead' }, [foldArrow(!!UI.tipOpen, 10), h('span', { text: '提示框预览' }), h('div', { class: 'grow' })]);
   var dbg = h('div', { class: 'k-mini' + (UI.tipAdv ? ' on' : ''), title: '调试信息（F3+H）：显示物品 ID 和耐久' }, [uiIcon('bug', 11)]); dbg.addEventListener('click', function (e) { e.stopPropagation(); UI.tipAdv = !UI.tipAdv; drawHero(); });
   var big = h('div', { class: 'k-mini', title: '放大查看（近似预览，游戏内以原版绘制为准）' }, [uiIcon('maximize', 11)]); big.addEventListener('click', function (e) { e.stopPropagation(); openTipModal(); });
   tipHead.appendChild(dbg); tipHead.appendChild(big);
@@ -432,10 +432,10 @@ function drawHero() {
 function heroFold(sel, isOpen, apply) {
   var hero = $('hero'), el = hero && hero.querySelector(sel);
   /* 预览区里的 3D 模型 / 图标会跟着容器高度被压扁，滑动期间先把内容淡掉（folding），只让空的底板收放 */
-  if (isOpen && el) { el.classList.add('folding'); uiSlide(el, false, function () { apply(false); drawHero(); }); return; }
+  if (isOpen && el) { el.classList.add('folding'); foldArrowSet(el.previousSibling && el.previousSibling.querySelector && el.previousSibling.querySelector('.fold-arrow'), false); uiSlide(el, false, function () { apply(false); drawHero(); }); return; }
   apply(true); drawHero();
   var h2 = $('hero'), e2 = h2 && h2.querySelector(sel);
-  if (e2) { e2.classList.add('folding'); uiSlide(e2, true, function () { e2.classList.remove('folding'); }); }
+  if (e2) { e2.classList.add('folding'); uiSlide(e2, true, function () { e2.classList.remove('folding'); }); var hd = e2.previousSibling; foldArrowFrom(hd && hd.querySelector && hd.querySelector('.fold-arrow'), false, true); }
 }
 /* 提示框预览占满左栏下方剩余的空间：放得下就完整显示，放不下才在框内滚动 */
 function fitTip() {

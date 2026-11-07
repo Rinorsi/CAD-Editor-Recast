@@ -1470,3 +1470,7 @@ textarea.world-snbt { min-height: 56px; }
 /* 左栏预览区收放时内容先淡出，避免 3D 模型被压扁 */
 .ed-stage > * { transition: opacity 90ms ease-out; }
 .ed-stage.folding > * { opacity: 0; }
+
+/* 折叠箭头旋转过渡：收起 = 向右，展开 = 向下 */
+.fold-arrow { flex: none; display: flex; align-items: center; justify-content: center; transition: transform 180ms ease-out; }
+.fold-arrow.closed { transform: rotate(-90deg); }
