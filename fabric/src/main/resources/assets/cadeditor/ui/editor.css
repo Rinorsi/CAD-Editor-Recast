@@ -1449,6 +1449,7 @@ textarea.world-snbt { min-height: 56px; }
 .egg-who .egg-ico { flex: none; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: var(--well2); }
 .egg-who .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .egg-who .tx b { color: var(--tx); }
+.egg-who .tx .k-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .egg-who > .k-btn { flex: none; }
 .egg-datahd { display: flex; align-items: center; margin-bottom: 2px; }
 
