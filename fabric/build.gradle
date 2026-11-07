@@ -84,7 +84,10 @@ tasks.register('isolateEditorClient') {
 }
 tasks.named('runClient') { dependsOn('isolateEditorClient') }
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
-processResources { filesMatching('fabric.mod.json') { expand(version: project.version) } }
+processResources {
+    inputs.property('version', project.version)
+    filesMatching('fabric.mod.json') { expand(version: project.version) }
+}
 tasks.named('jar') { from(rootProject.file('NOTICE')) }
 // UI integration stays gated on the current Oriel review. No browser fixtures enter the jar.
 if (providers.gradleProperty('editorUiApproved').orNull == 'true') {
