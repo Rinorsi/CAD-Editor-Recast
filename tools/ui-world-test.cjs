@@ -331,7 +331,7 @@ console.log('PASS picker uses host search with local fallback.');
   assert.equal(c.Reg.lazyKind('item'), 'items'); assert.equal(c.Reg.lazyKind('block'), 'blocks'); assert.equal(c.Reg.lazyKind('sound_event'), 'sounds'); assert.equal(c.Reg.lazyKind('tags:item'), 'tags:item'); assert.equal(c.Reg.lazyKind('enchantment'), null);
   // 3) 大目录不会触发整张表的请求；名字走批量 lookup
   assert.equal(Array.from(c.Reg.options('item')).length, 0);
-  assert.equal(sent.filter(x => x[0] === 'registry').length, 0, '不请求整张物品表');
+  assert.equal(sent.filter(x => x[0] === 'registry' && x[1].name !== 'component_schema').length, 0, '不请求整张物品表');
   assert.equal(c.Reg.itemName('minecraft:diamond_sword'), null);
   c.Reg.itemName('minecraft:stick'); runTimers();
   const look = sent.filter(x => x[0] === 'search').pop();
@@ -716,3 +716,17 @@ console.log('PASS tooltip bundle grid.');
   assert.equal(c.EDATA.comps.length, n0 + 2, '重复到达不重复登记');
 }
 console.log('PASS live-only (mod) components are registered and editable.');
+
+// 数值范围以游戏真实 Codec 为准：component_schema 的 ranges_for_ui 覆盖内置表
+{
+  const sec = () => c.CIDX.use_cooldown.schema.f.filter(f => f.k === 'seconds')[0].s;
+  c.Reg.ingest('registry.component_schema', { name: 'component_schema', generation: 1, offset: 0, total: 1, done: true, entries: [
+    { id: 'minecraft:use_cooldown', ranges_for_ui: [{ path: '$.seconds', min: 0, max: 3.4028235e38, default: null, min_exclusive: true }] },
+    { id: 'minecraft:nope', ranges_for_ui: [{ path: '$', min: 1, max: 2 }] }] });
+  assert.equal(sec().min, 0); assert.equal(sec().minEx, true); assert.equal(sec().max, undefined, '超过 float 的上限视为不限');
+  const out = []; c.validateValue(sec(), 0, '$.seconds', out, 'use_cooldown'); assert.ok(out.some(p => /必须大于/.test(p.msg)), '0 不被接受');
+  const ok = []; c.validateValue(sec(), 0.5, '$.seconds', ok, 'use_cooldown'); assert.equal(ok.length, 0);
+  assert.ok(c.Reg.kinds.component_schema === undefined, '不把整张结构表存进内存');
+  assert.equal(JSON.stringify(c.liveRangeTokens('$.damage_reductions[].horizontal_blocking_angle')), JSON.stringify(['damage_reductions', '[]', 'horizontal_blocking_angle']));
+}
+console.log('PASS live component ranges override hand-written ones.');

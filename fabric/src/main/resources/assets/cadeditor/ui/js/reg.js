@@ -10,7 +10,7 @@ var Reg = {
     if (key === 'validate_component.result') { if (typeof Valid !== 'undefined') Valid.receive(val); return; }
     if (typeof key !== 'string' || key.indexOf('registry.') !== 0) return;
     if (key === 'registry.client_features') { if (val && val.accepted) this.features = val.accepted; if (val && val.lazy) this.setLazy(val.lazy); this.fire(); return; }
-    if (key === 'registry.meta') { this.meta = val; this.cache = {}; this.eschema = {}; this.esAsk = {}; if (val && val.lazy) this.setLazy(val.lazy); this.fire(); return; }
+    if (key === 'registry.meta') { this.meta = val; this.cache = {}; this.eschema = {}; this.esAsk = {}; if (val && val.lazy) this.setLazy(val.lazy); this.askSchema(); this.fire(); return; }
     if (!val || typeof val !== 'object') return;
     if (key === 'registry.relation') { this.ingestRel(val); return; }
     var kind = key.substring(9), k = this.kinds[kind];
@@ -20,6 +20,7 @@ var Reg = {
     if (kind === 'item_meta_one' || kind === 'item_meta') { this.ingestIM(kind, val); return; }
     if (kind === 'entity_base_attributes') { this.ingestEB(val); return; }
     if (kind === 'entity_info' || kind.indexOf('entity_info:') === 0) { this.ingestEI(val); return; }
+    if (kind === 'component_schema' || kind.indexOf('component_schema:') === 0) { if (typeof applyLiveRanges === 'function') applyLiveRanges(val.entries); return; }
     if (kind === 'entity_schema' || kind.indexOf('entity_schema:') === 0) { this.ingestES(val); return; }
     if (kind.indexOf('tag:') === 0) { this.ingestTag(kind, val); return; }
     if (!k || k.gen !== val.generation) { k = this.kinds[kind] = { gen: val.generation, entries: [], total: val.total || 0, done: false, name: val.name }; delete this.cache[kind]; }
@@ -245,6 +246,8 @@ var Reg = {
   /* 取任意注册表（含模组自己的）：页面发请求，宿主回 registry.<name> */
   request: function (name) { if (typeof oriel !== 'undefined' && oriel.send && this.meta) oriel.send('registry', { name: name }); },
   live: function () { return !!this.meta; },
+  /* 组件的数值范围以游戏真实 Codec 为准（component_schema 的 ranges_for_ui），到了就覆盖内置表；没有宿主时用内置范围 */
+  askSchema: function () { if (this.csAsk || typeof oriel === 'undefined' || !oriel.send) return; this.csAsk = 1; try { oriel.send('registry', { name: 'component_schema' }); } catch (e) {} },
   has: function (kind) { if (this.lazy[kind] !== undefined) return true; var k = this.kinds[kind]; return !!(k && k.entries.length); },
   list: function (kind) { var k = this.kinds[kind]; return k ? k.entries.filter(Boolean) : null; },
   full: function (id) { id = String(id || ''); return id.indexOf(':') < 0 ? 'minecraft:' + id : id; },

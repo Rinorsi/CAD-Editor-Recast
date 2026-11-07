@@ -158,7 +158,7 @@ function wNum(sc, val, commit, ctx) {
     return isNaN(n) ? NaN : n;
   }
   function mark(n) {
-    var bad = n === undefined ? false : (isNaN(n) || (isInt && !Number.isInteger(n)) || (sc.min !== undefined && n < sc.min) || (sc.max !== undefined && n > sc.max));
+    var bad = n === undefined ? false : (isNaN(n) || (isInt && !Number.isInteger(n)) || (sc.min !== undefined && n < sc.min) || (sc.minEx && sc.min !== undefined && n <= sc.min) || (sc.max !== undefined && n > sc.max));
     wrap.classList.toggle('bad', bad);
   }
   function nudge(dir, big) {

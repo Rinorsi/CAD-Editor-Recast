@@ -378,6 +378,46 @@ function buildCommand(d, modeId, sel) {
   return m.tpl(sel || '@s', stackString(d), d.count);
 }
 
+/* ---------- 游戏真实的数值范围 ----------
+   component_schema 每个组件带 ranges_for_ui:[{path,min,max,default,min_exclusive}]；path 用 $ / .字段 / [] / {值}。
+   null 是“没有已证明的界限”，不是 0。比 float 上限还大的 max 视为不限（滑块不要拉到 3e38）。命中内置 schema 的数值节点就覆盖 min / max。 */
+function liveRangeNodes(sc, toks, i, out) {
+  if (!sc) return;
+  if (i >= toks.length) { if (sc.t === 'int' || sc.t === 'num') out.push(sc); else if (sc.t === 'union') sc.a.forEach(function (a) { liveRangeNodes(a, toks, i, out); }); return; }
+  var t = toks[i];
+  if (sc.t === 'union') { sc.a.forEach(function (a) { liveRangeNodes(a, toks, i, out); }); return; }
+  if (sc.t === 'dunion') { Object.keys(sc.br).forEach(function (k) { liveRangeNodes(sc.br[k], toks, i, out); }); return; }
+  if (t === '[]') { if (sc.t === 'arr' && sc.i) liveRangeNodes(sc.i, toks, i + 1, out); return; }
+  if (t === '{value}') { if (sc.t === 'map' && sc.v) liveRangeNodes(sc.v, toks, i + 1, out); return; }
+  if (sc.t === 'obj') sc.f.forEach(function (f) { if (f.k === t) liveRangeNodes(f.s, toks, i + 1, out); });
+}
+function liveRangeTokens(path) {
+  var toks = [], p = String(path || '$'), j = 0;
+  if (p.charAt(0) === '$') p = p.substring(1);
+  while (j < p.length) {
+    var ch = p.charAt(j);
+    if (ch === '.') { var e = j + 1; while (e < p.length && p.charAt(e) !== '.' && p.charAt(e) !== '[' && p.charAt(e) !== '{') e++; toks.push(p.substring(j + 1, e)); j = e; }
+    else if (p.substring(j, j + 2) === '[]') { toks.push('[]'); j += 2; }
+    else if (p.substring(j, j + 7) === '{value}') { toks.push('{value}'); j += 7; }
+    else j++;
+  }
+  return toks;
+}
+function applyLiveRanges(entries) {
+  (entries || []).forEach(function (e) {
+    if (!e || !e.id || !Array.isArray(e.ranges_for_ui)) return;
+    var c = CIDX[shortId(e.id)]; if (!c || c.live || !c.schema) return;
+    e.ranges_for_ui.forEach(function (r) {
+      var nodes = []; liveRangeNodes(c.schema, liveRangeTokens(r.path), 0, nodes);
+      nodes.forEach(function (n) {
+        if (typeof r.min === 'number') { n.min = r.min; if (r.min_exclusive) n.minEx = true; else delete n.minEx; }
+        if (typeof r.max === 'number') { if (r.max < 3e38) n.max = r.max; else delete n.max; }
+        n.live = true;
+      });
+    });
+  });
+}
+
 /* ---------- 校验 ---------- */
 function validateValue(sc, v, path, out, cid) {
   if (!sc) return;
@@ -389,6 +429,7 @@ function validateValue(sc, v, path, out, cid) {
       if (typeof v !== 'number' || isNaN(v)) { add('error', '需要数字'); break; }
       if (sc.t === 'int' && !Number.isInteger(v)) add('error', '需要整数');
       if (sc.min !== undefined && v < sc.min) add('error', '不能小于 ' + sc.min);
+      else if (sc.minEx && v <= sc.min) add('error', '必须大于 ' + sc.min);
       if (sc.max !== undefined && v > sc.max) add('error', '不能大于 ' + sc.max);
       break;
     case 'str':
