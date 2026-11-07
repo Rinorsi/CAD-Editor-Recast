@@ -140,9 +140,21 @@ var Reg = {
   ingestIM: function (kind, v) {
     var ents = v.entries || [];
     ents.forEach(function (e) { Reg.imeta[e.id] = e; });
+    this.eggMap = null;
     if (kind === 'item_meta_one' && v.id && !ents.length) this.imeta[this.full(v.id)] = false;
     if (kind === 'item_meta' && v.done) this.imAll = true;
     this.fire(kind);
+  },
+  /* 实体 → 它的刷怪蛋物品（来自 item_meta.spawn_egg_entity，含模组蛋）；全表只请求一次，没到 / 没有蛋 = null */
+  eggMap: null, eggAsk: false,
+  eggFor: function (entity) {
+    if (!this.live()) return null;
+    if (!this.eggMap) {
+      if (!this.eggAsk) { this.eggAsk = true; this.request('item_meta'); }
+      var m = {}, k, e; for (k in this.imeta) { e = this.imeta[k]; if (e && e.spawn_egg_entity && !m[this.full(e.spawn_egg_entity)]) m[this.full(e.spawn_egg_entity)] = e.id; }
+      this.eggMap = m;
+    }
+    return this.eggMap[this.full(entity)] || null;
   },
   itemMeta: function (full) {
     if (!this.live()) return false;

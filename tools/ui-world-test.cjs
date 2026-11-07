@@ -576,3 +576,16 @@ console.log('PASS spawn egg 3D preview attributes.');
   c.Reg.meta = null; c.UI.entView = null;
 }
 console.log('PASS spawn egg 3D viewer: reuse, wheel zoom, pan start, reset on type change.');
+
+// 生物的图：来自 item_meta.spawn_egg_entity 的刷怪蛋（含模组），没有蛋用爪印
+{
+  const sent = []; c.oriel.send = (k, v) => { sent.push([k, v]); return true; };
+  c.Reg.meta = {}; c.Reg.imeta = {}; c.Reg.eggMap = null; c.Reg.eggAsk = false;
+  assert.equal(c.Reg.eggFor('minecraft:pig'), null, '数据没到前没有');
+  assert.ok(sent.some(x => x[0] === 'registry' && x[1].name === 'item_meta'), '只请求一次全表');
+  c.Reg.eggFor('minecraft:cow'); assert.equal(sent.filter(x => x[0] === 'registry' && x[1].name === 'item_meta').length, 1);
+  c.Reg.ingest('registry.item_meta', { generation: 1, offset: 0, total: 2, done: true, entries: [{ id: 'minecraft:pig_spawn_egg', spawn_egg_entity: 'minecraft:pig' }, { id: 'mymod:wolf_egg', spawn_egg_entity: 'mymod:wolf' }, { id: 'minecraft:stick' }] });
+  assert.equal(c.Reg.eggFor('minecraft:pig'), 'minecraft:pig_spawn_egg'); assert.equal(c.Reg.eggFor('mymod:wolf'), 'mymod:wolf_egg'); assert.equal(c.Reg.eggFor('minecraft:arrow'), null);
+  c.Reg.meta = null; c.Reg.imeta = {}; c.Reg.eggMap = null;
+}
+console.log('PASS entity icons from spawn eggs.');

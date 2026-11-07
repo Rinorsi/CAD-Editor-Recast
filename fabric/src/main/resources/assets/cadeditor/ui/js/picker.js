@@ -68,6 +68,7 @@ function openPicker(o) {
   var list = h('div', { class: 'addlist' }), cats = h('div', { class: 'addcats' }), foot = h('div', { class: 'k-mf' });
   var info = h('span', { class: 'k-sub' }), confirm;
   var LZ = !!(o.lazy || o.lazySources);   /* 大目录：页面里没有整张表，列表完全来自宿主搜索 */
+  if (LZ) { var unsubLz = Reg.on(function (kind, kinds) { if (!$('modal')) { unsubLz(); return; } if ((kinds || []).indexOf('item_meta') >= 0) paint(); }); }
   if (LZ) o.entries = o.entries || [];
   if (o.entriesFn && !LZ) { o.entries = o.entriesFn(); var unsub = Reg.on(function () { if (!$('modal')) { unsub(); return; } o.entries = o.entriesFn(); byFull = null; paintCats(); paint(); }); }
   var search = h('input', { class: 'k-input', type: 'text', placeholder: (o.searchHint || '搜索名称或 ID') + (o.custom && !o.custom.hash ? '；也可直接输入 模组id:名字' : ''), spellcheck: 'false' });
@@ -426,8 +427,14 @@ function liveTrimIcon(reg, v, size) {
   }
   return null;
 }
+/* 生物的图：用它的刷怪蛋图标（模组生物也行）；没有蛋的（箭、火球、船……）用爪印 */
+function entityIcon(typeId, size) {
+  var egg = Reg.eggFor(typeId);
+  return egg ? itemIcon(Reg.isMod(egg) ? egg : shortId(egg), size || 16) : uiIcon('paw', size || 16);
+}
 function refIcon(reg, v, size) {
   size = size || 16;
+  if (reg === 'entity_type') return entityIcon(v, size);
   if (reg === 'trim_material' || reg === 'trim_pattern') { var lt = liveTrimIcon(reg, v, size); if (lt) return lt; }
   if (reg === 'trim_material' && typeof TRIM_ICON !== 'undefined' && TRIM_ICON[shortId(v)] && !Reg.isMod(Reg.full(v))) return itemIcon(TRIM_ICON[shortId(v)], size);
   if (reg === 'trim_pattern' && typeof EDATA !== 'undefined' && EDATA.ipt && EDATA.ipt[shortId(v) + '_armor_trim_smithing_template'] !== undefined && !Reg.isMod(Reg.full(v))) return itemIcon(shortId(v) + '_armor_trim_smithing_template', size);

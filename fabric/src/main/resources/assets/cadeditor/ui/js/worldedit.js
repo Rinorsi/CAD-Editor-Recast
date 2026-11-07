@@ -51,7 +51,7 @@ function weRender() {
 }
 function drawWorldTop() {
   var bar = clear($('topbar')), w = WE.w;
-  bar.appendChild(h('span', { class: 'eb-ico' }, [w.kind === 'block' ? itemIcon(shortId(w.block || w.type), 22) : uiIcon('paw', 22)]));
+  bar.appendChild(h('span', { class: 'eb-ico' }, [w.kind === 'block' ? itemIcon(shortId(w.block || w.type), 22) : entityIcon(w.type, 22)]));
   bar.appendChild(h('span', { class: 'ttl', text: weName() }));
   bar.appendChild(h('span', { class: 'crumb', text: w.kind === 'block' ? '方块' : '实体' }));
   bar.appendChild(h('div', { class: 'grow' }));

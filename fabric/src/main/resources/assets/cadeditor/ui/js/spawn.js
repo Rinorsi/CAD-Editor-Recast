@@ -130,7 +130,7 @@ function spPool(arr, onChange, emptyText) {
       var eid = it.data && it.data.entity && typeof it.data.entity.id === 'string' ? it.data.entity.id : '';
       var wt = kNumber(typeof it.weight === 'number' ? it.weight : 1, { min: 1, max: 1000000, step: 1, noSlider: true, onChange: function (v) { it.weight = v; onChange(); } });
       wt.el.classList.add('k-xnum'); wt.el.addEventListener('click', function (ev) { ev.stopPropagation(); });
-      return { chevron: true, icon: uiIcon('paw', 14), title: eid ? spEntityName(eid) : '（未选择生物）', sub: eid || '', tip: eid, right: wt.el, body: function () {
+      return { chevron: true, icon: eid ? entityIcon(eid, 14) : uiIcon('paw', 14), title: eid ? spEntityName(eid) : '（未选择生物）', sub: eid || '', tip: eid, right: wt.el, body: function () {
         return [
           xField('paw', '生物', kRegSelect({ reg: 'entity_type', value: eid, title: '选择生物', empty: '（未选择）', onChange: function (x) { it.data = it.data || {}; it.data.entity = it.data.entity || {}; it.data.entity.id = Reg.full(x); onChange(); xl.draw(); } }).el),
           xFoot('右上角的数字是权重：越大越容易被选中', function () { arr.splice(i, 1); onChange(); xl.select(-1); })
