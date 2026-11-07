@@ -97,7 +97,7 @@ function drawWorldFoot() {
 function drawWorldScreen() {
   var host = clear($('screen')), w = WE.w;
   applyWinStyle();
-  var hero = h('aside', { class: 'ed-hero', id: 'hero' });
+  var hero = h('aside', { class: 'ed-hero' + (UI.heroPop ? ' pop' : ''), id: 'hero' }); heroPopBind(hero);
   var right = h('section', { class: 'ed-right' }), tabbar = h('div', { class: 'ed-tabs', id: 'tabbar' }), body = h('div', { class: 'ed-body', id: 'edbody' });
   weTabs().forEach(function (t) {
     var el = h('div', { class: 'ed-tab' + (WE.tab === t.id ? ' on' : '') }, [uiIcon(t.icon, 14), h('span', { text: t.label })]);
@@ -105,7 +105,7 @@ function drawWorldScreen() {
     tabbar.appendChild(el);
   });
   right.appendChild(tabbar); right.appendChild(body);
-  host.appendChild(hero); host.appendChild(right);
+  host.appendChild(hero); host.appendChild(makeSplit()); host.appendChild(right); ensureResize();
   weHero();
   weTabBody(body);
 }
@@ -213,11 +213,15 @@ function weSend(op, msg, note) {
   clearTimeout(WE.timer);
   WE.timer = setTimeout(function () { if (WE.pending === msg.requestId) { WE.pending = null; toast('10 秒没有收到回执，结果未知；请关闭后重新打开核对', 'error'); } }, 12000);
 }
-var WE_CODE = { target_changed: '目标在你编辑期间被改动了（炉子燃烧、刷怪笼计时、生物移动都会触发），没有覆盖。请关闭后重新按 I 打开再改。', session_lost: '编辑会话已失效，请关闭后重新打开。', not_allowed: '没有权限。', out_of_reach: '离得太远了，走近一点。', chunk_unloaded: '所在区块没有加载。', protected_area: '这里受保护，不能修改。', invalid_nbt: '数据没有通过游戏的校验。', slot_invalid: '这个格子放不下这个物品。', unsupported_target: '这个目标暂时不能这样编辑。', rate_limited: '操作太快了，稍等一下。', payload_too_large: '数据太大。' };
+var WE_CODE = { target_changed: '你改的内容和游戏在你编辑期间的改动撞在了同一个字段上，没有覆盖。没动过的字段（计时、进度、位置……）不会造成冲突；请重新打开，在最新数据上再改一次。', session_lost: '编辑会话已失效，请关闭后重新打开。', not_allowed: '没有权限。', out_of_reach: '离得太远了，走近一点。', chunk_unloaded: '所在区块没有加载。', protected_area: '这里受保护，不能修改。', invalid_nbt: '数据没有通过游戏的校验。', slot_invalid: '这个格子放不下这个物品。', unsupported_target: '这个目标暂时不能这样编辑。', rate_limited: '操作太快了，稍等一下。', payload_too_large: '数据太大。' };
 function weResult(r) {
   if (!r || r.requestId !== WE.pending) return;
   clearTimeout(WE.timer); WE.pending = null;
-  if (r.status !== 'saved') { var hint = WE_CODE[r.code]; WE.err = r.reason || r.code || '失败'; toast((r.reason || r.code || '修改没有成功') + (hint ? String.fromCharCode(10) + hint : ''), 'error'); drawWorldFoot(); return; }
+  if (r.status !== 'saved') {
+    var hint = WE_CODE[r.code]; WE.err = r.reason || r.code || '失败';
+    var cf = Array.isArray(r.conflicts) && r.conflicts.length ? String.fromCharCode(10) + '冲突的字段：' + r.conflicts.slice(0, 6).map(function (c) { return (c.path || []).join('.'); }).join('；') + (r.conflicts.length > 6 ? ' 等 ' + r.conflicts.length + ' 处' : '') : '';
+    toast((r.reason || r.code || '修改没有成功') + (hint ? String.fromCharCode(10) + hint : '') + cf, 'error'); drawWorldFoot(); return;
+  }
   toast('游戏已确认修改', 'ok');
 }
 function weSaved(world) {

@@ -1588,5 +1588,13 @@ body.vault-only .ew { display: none; }
 .wp-vsep { align-self: stretch; width: 1px; background: var(--ln2); box-shadow: 1px 0 0 var(--ln); }
 .slot .es-ghost { opacity: 0.32; }
 .slot.hand::after { height: 2px; bottom: -3px; box-shadow: 0 0 5px var(--warn); }
-.wp-inv .slot.s34 { width: 26px; height: 26px; }
-.ew.narrow .wp-inv { flex-wrap: wrap; }
+.wp-inv .k-cgrid:not(.fluid) .slot.s34 { width: 26px; height: 26px; }
+.wp-inv .k-cgrid.fluid .slot.s34 { width: auto; height: auto; aspect-ratio: 1; }
+.wp-col { flex: 1 1 auto; min-width: 0; max-width: 272px; }
+.x-sec.wp-fold { cursor: pointer; } .x-sec.wp-fold:hover .x-st { color: var(--acc2); }
+.wp-fold .fold-arrow { color: var(--tx3); }
+
+/* 窄窗口的左栏：3D 生物 / 玩家要有足够高度（舞台里的生物按 300% 铺满再居中，太矮就看不见了）；顶栏让出位置给标题 */
+.ew.narrow .ed-stage.ent { height: 96px; }
+.ew.narrow .ed-hero:not(.pop) .ed-name { white-space: normal; text-align: center; overflow-wrap: anywhere; }
+.ew.narrow .k-apply span { display: none; }

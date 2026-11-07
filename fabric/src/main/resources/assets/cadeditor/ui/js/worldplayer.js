@@ -32,8 +32,8 @@ function weSlotPop(cell, cur, set) {
   kPopover(cell, box, { width: 250, maxHeight: 280 });
 }
 function weSlotGrid(cfg) {
-  var grid = h('div', { class: 'k-cgrid' + (cfg.bare ? '' : ' tray') + (cfg.tight ? ' inv' : '') }), cells = {};
-  grid.setAttribute('style', 'grid-template-columns:repeat(' + cfg.cols + ',' + (cfg.col || 26) + 'px)');
+  var grid = h('div', { class: 'k-cgrid' + (cfg.bare ? '' : ' tray') + (cfg.tight ? ' inv' : '') + (cfg.fluid ? ' fluid' : '') }), cells = {};
+  grid.setAttribute('style', 'grid-template-columns:repeat(' + cfg.cols + ',' + (cfg.fluid ? '1fr' : (cfg.col || 26) + 'px') + ')');
   function paint(cell, i) {
     weSlotPaint(cell, cfg.stackOf(i), cfg.titleOf ? cfg.titleOf(i) : '格子 ' + (i + 1));
     var g = cfg.ghostOf && cfg.ghostOf(i), s = cfg.stackOf(i);
@@ -77,6 +77,18 @@ function wpMsg(out) {
     out.player[k] = { slots: ids.map(function (i) { return { slot: Number(i), stack: clone(WE.pslots[k][i]) }; }) };
   });
 }
+/* 可折叠的分区：标题行 + 小箭头，点一下收起 / 展开（和别的页面一样），状态记在 UIOpen 里，重画页面后保持 */
+function wpSec(parent, key, icon, title, hint) {
+  var open = UIOpen[key] !== false, arrow = foldArrow(open, 10);
+  var head = h('div', { class: 'x-sec wp-fold', role: 'button', title: '折叠 / 展开' }, [arrow, icon ? uiIcon(icon, 14) : null, h('span', { class: 'x-st', text: title }), hint ? h('small', { text: hint }) : null, h('div', { class: 'grow' })]);
+  var body = h('div', { class: 'wp-fold-body' }); body.style.display = open ? '' : 'none';
+  activate(head, function () {
+    open = !open; UIOpen[key] = open; foldArrowSet(arrow, open);
+    if (open) { body.style.display = ''; uiSlide(body, true); } else uiSlide(body, false, function () { body.style.display = 'none'; });
+  });
+  parent.appendChild(h('div', { class: 'wp-foldbox' }, [head, body]));
+  return body;
+}
 var WP_EQ = { head: '头盔', chest: '胸甲', legs: '护腿', feet: '靴子', offhand: '副手', body: '身体', saddle: '鞍', mainhand: '主手' };
 var WP_MODE = { survival: '生存', creative: '创造', adventure: '冒险', spectator: '旁观' };
 
@@ -84,13 +96,13 @@ function wpInventoryTab(body) {
   var sc = wpSchema(), eq = {};
   (sc.equipmentSlots || []).forEach(function (e) { eq[e.equipment] = e.slot; });
   var total = (wpV('container') || {}).size || sc.inventorySize || 0;
-  body.appendChild(xSec('backpack', '背包', total + ' 格'));
-  body.appendChild(weDndHint());
+  var secInv = wpSec(body, 'wp:inv', 'backpack', '背包与装备', total + ' 格');
+  secInv.appendChild(weDndHint());
   var which = 'container', GEAR = ['head', 'chest', 'legs', 'feet', 'offhand', 'body', 'saddle'];
   var sel = typeof wpG('SelectedItemSlot') === 'number' ? wpG('SelectedItemSlot') : 0;
   var gearOf = {}; GEAR.forEach(function (k) { if (eq[k] !== undefined) gearOf[eq[k]] = k; });
-  function mk(indices, cols) {
-    return weSlotGrid({ tight: true, bare: true, col: 28, indices: indices, cols: cols, stackOf: function (i) { return wpContainerStack(which, i); }, set: function (i, st) { wpSetSlot(which, i, st); },
+  function mk(indices, cols, fluid) {
+    return weSlotGrid({ tight: true, bare: true, col: 28, fluid: !!fluid, indices: indices, cols: cols, stackOf: function (i) { return wpContainerStack(which, i); }, set: function (i, st) { wpSetSlot(which, i, st); },
       ghostOf: function (i) { return gearOf[i] ? (ES_SLOT[gearOf[i]] || [0, 'shield'])[1] : null; },
       clsOf: function (i) { return i === sel && i < 9 ? 'hand' : ''; },
       titleOf: function (i) { return gearOf[i] ? (WP_EQ[gearOf[i]] || gearOf[i]) : (i < 9 ? '快捷栏 ' + (i + 1) + (i === sel ? '（手上拿的）' : '') : '背包 ' + (i - 8)); } });
@@ -104,24 +116,25 @@ function wpInventoryTab(body) {
   gcols.forEach(function (r) { if (gix(r[1]) !== null) g2 = true; });
   gcols.forEach(function (r) { var a = gix(r[0]), b = gix(r[1]); if (a !== null || b !== null) { gear.push(a); if (g2) gear.push(b); } if (a !== null) gcount++; if (b !== null) gcount++; });
   /* 和原版背包一个版式：左边一列装备，右边上面三行背包、下面一行快捷栏（带手上拿的那格），整片放进同一个下凹的槽里 */
-  var right = h('div', { class: 'wp-col' }, [mk(main, 9), h('div', { class: 'wp-sep' }), mk(hot, 9)]);
+  var right = h('div', { class: 'wp-col' }, [mk(main, 9, true), h('div', { class: 'wp-sep' }), mk(hot, 9, true)]);
   var inv = h('div', { class: 'wp-inv' }, gcount ? [mk(gear, g2 ? 2 : 1), h('div', { class: 'wp-vsep' }), right] : [right]);
-  body.appendChild(inv);
+  secInv.appendChild(inv);
   /* 兜底：游戏给了 total 个格子，凡是上面没画出来的（名字不认识的装备位、将来新增的位置）都列在这里，保证一格不少 */
   var shown = {};
   main.concat(hot).forEach(function (n) { shown[n] = 1; });
   GEAR.forEach(function (k) { if (eq[k] !== undefined) shown[eq[k]] = 1; });
   var rest = []; for (i = 0; i < total; i++) if (!shown[i]) rest.push(i);
-  if (rest.length) { body.appendChild(h('div', { class: 'k-sub', text: '其他格子（' + rest.length + '）' })); body.appendChild(mk(rest, Math.min(9, rest.length))); }
+  if (rest.length) { var secRest = wpSec(body, 'wp:rest', 'list', '其他格子', rest.length + ' 格'); secRest.appendChild(mk(rest, Math.min(9, rest.length))); }
   var smax = sc.selectedSlotMax !== undefined ? sc.selectedSlotMax : 8;
   var seg = []; for (i = 0; i <= smax; i++) seg.push({ v: i, label: String(i + 1) });
-  body.appendChild(xRow({ icon: false, title: '手上拿的格子', sub: '快捷栏第几格', right: kSeg(seg, typeof wpG('SelectedItemSlot') === 'number' ? wpG('SelectedItemSlot') : 0, function (v) { evSet('player', 'SelectedItemSlot', v); }).el }));
+  var secHand = wpSec(body, 'wp:hand', 'sword', '手上拿的格子', '快捷栏第几格');
+  secHand.appendChild(xRow({ icon: false, title: '手上拿的格子', sub: '快捷栏第几格', right: kSeg(seg, typeof wpG('SelectedItemSlot') === 'number' ? wpG('SelectedItemSlot') : 0, function (v) { evSet('player', 'SelectedItemSlot', v); }).el }));
 }
 function wpEnderTab(body) {
   var n = (wpV('ender') || {}).size || 27, ix = []; for (var i = 0; i < n; i++) ix.push(i);
-  body.appendChild(xSec('chest', '末影箱', n + ' 格'));
-  body.appendChild(weDndHint());
-  body.appendChild(weSlotGrid({ tight: true, indices: ix, cols: 9, stackOf: function (i) { return wpContainerStack('ender', i); }, set: function (i, st) { wpSetSlot('ender', i, st); } }));
+  var secEnd = wpSec(body, 'wp:ender', 'chest', '末影箱', n + ' 格');
+  secEnd.appendChild(weDndHint());
+  secEnd.appendChild(weSlotGrid({ tight: true, indices: ix, cols: 9, stackOf: function (i) { return wpContainerStack('ender', i); }, set: function (i, st) { wpSetSlot('ender', i, st); } }));
 }
 function wpNum(label, path, key, obj, o) {
   o = o || {}; var b = wpBound(path), cur = obj ? obj[key] : wpG(key);
@@ -131,29 +144,29 @@ function wpNum(label, path, key, obj, o) {
 }
 function wpSection(k) { var v = wpG(k); return v && typeof v === 'object' ? clone(v) : {}; }
 function wpStatusTab(body) {
-  var sc = wpSchema();
-  body.appendChild(xSec('heart', '生命与饥饿'));
-  body.appendChild(wpNum('生命', 'Health', 'Health', null, { step: 1, dec: 1, on: function (v) { evSet('player', 'Health', v); } }));
-  body.appendChild(wpNum('伤害吸收', 'AbsorptionAmount', 'AbsorptionAmount', null, { step: 1, dec: 1, on: function (v) { evSet('player', 'AbsorptionAmount', v); } }));
+  var sc = wpSchema(), cur = body;
+  cur = wpSec(body, 'wp:st:生命与饥饿', 'heart', '生命与饥饿');
+  cur.appendChild(wpNum('生命', 'Health', 'Health', null, { step: 1, dec: 1, on: function (v) { evSet('player', 'Health', v); } }));
+  cur.appendChild(wpNum('伤害吸收', 'AbsorptionAmount', 'AbsorptionAmount', null, { step: 1, dec: 1, on: function (v) { evSet('player', 'AbsorptionAmount', v); } }));
   var fd = wpSection('food');
-  body.appendChild(wpNum('饥饿值', 'food.foodLevel', 'foodLevel', fd, { on: function (v) { var f = wpSection('food'); f.foodLevel = v; evSet('player', 'food', f); } }));
-  body.appendChild(wpNum('饱和度', 'food.saturation', 'saturation', fd, { step: 0.5, dec: 1, sub: '不能超过饥饿值', on: function (v) { var f = wpSection('food'); f.saturation = v; evSet('player', 'food', f); } }));
-  body.appendChild(xSec('xp', '经验'));
+  cur.appendChild(wpNum('饥饿值', 'food.foodLevel', 'foodLevel', fd, { on: function (v) { var f = wpSection('food'); f.foodLevel = v; evSet('player', 'food', f); } }));
+  cur.appendChild(wpNum('饱和度', 'food.saturation', 'saturation', fd, { step: 0.5, dec: 1, sub: '不能超过饥饿值', on: function (v) { var f = wpSection('food'); f.saturation = v; evSet('player', 'food', f); } }));
+  cur = wpSec(body, 'wp:st:经验', 'xp', '经验');
   var xp = wpSection('experience');
-  body.appendChild(wpNum('等级', 'experience.XpLevel', 'XpLevel', xp, { on: function (v) { var e = wpSection('experience'); e.XpLevel = v; evSet('player', 'experience', e); } }));
-  body.appendChild(wpNum('当前等级进度', 'experience.XpP', 'XpP', xp, { step: 0.05, dec: 3, sub: '0 ~ 1，满了就升级', on: function (v) { var e = wpSection('experience'); e.XpP = v; evSet('player', 'experience', e); } }));
-  body.appendChild(wpNum('经验总量', 'experience.XpTotal', 'XpTotal', xp, { on: function (v) { var e = wpSection('experience'); e.XpTotal = v; evSet('player', 'experience', e); } }));
+  cur.appendChild(wpNum('等级', 'experience.XpLevel', 'XpLevel', xp, { on: function (v) { var e = wpSection('experience'); e.XpLevel = v; evSet('player', 'experience', e); } }));
+  cur.appendChild(wpNum('当前等级进度', 'experience.XpP', 'XpP', xp, { step: 0.05, dec: 3, sub: '0 ~ 1，满了就升级', on: function (v) { var e = wpSection('experience'); e.XpP = v; evSet('player', 'experience', e); } }));
+  cur.appendChild(wpNum('经验总量', 'experience.XpTotal', 'XpTotal', xp, { on: function (v) { var e = wpSection('experience'); e.XpTotal = v; evSet('player', 'experience', e); } }));
   var modes = sc.gameModes || ['survival', 'creative', 'adventure', 'spectator'];
-  body.appendChild(xSec('gamepad', '游戏模式'));
-  body.appendChild(h('div', { class: 'k-row' }, [kSeg(modes.map(function (m) { return { v: m, label: WP_MODE[m] || m }; }), wpG('playerGameType') || 'survival', function (v) { evSet('player', 'playerGameType', v); }).el]));
-  body.appendChild(h('div', { class: 'k-sub', text: '换模式会同时换成该模式的飞行 / 无敌 / 建造能力，除非你在「能力」页里同时指定。' }));
-  body.appendChild(xSec('tag', '名字与标签'));
+  cur = wpSec(body, 'wp:st:游戏模式', 'gamepad', '游戏模式');
+  cur.appendChild(h('div', { class: 'k-row' }, [kSeg(modes.map(function (m) { return { v: m, label: WP_MODE[m] || m }; }), wpG('playerGameType') || 'survival', function (v) { evSet('player', 'playerGameType', v); }).el]));
+  cur.appendChild(h('div', { class: 'k-sub', text: '换模式会同时换成该模式的飞行 / 无敌 / 建造能力，除非你在「能力」页里同时指定。' }));
+  cur = wpSec(body, 'wp:st:名字与标签', 'tag', '名字与标签');
   var cn = wpG('CustomName'), cin = kInput(msgText(cn), function () {}, { placeholder: '自定义名称（可空）' }); cin.classList.add('we-in');
   cin.addEventListener('change', function () { evSet('player', 'CustomName', cin.value ? textMsg(cin.value) : null); });
-  body.appendChild(xRow({ icon: false, title: '自定义名称', right: cin }));
+  cur.appendChild(xRow({ icon: false, title: '自定义名称', right: cin }));
   var tags = wpG('Tags') || [], tin = kInput(tags.join('，'), function () {}, { placeholder: '标签，用逗号隔开' }); tin.classList.add('we-in');
   tin.addEventListener('change', function () { evSet('player', 'Tags', tin.value.split(/[,，\s]+/).filter(function (x) { return x; })); });
-  body.appendChild(xRow({ icon: false, title: '标签', sub: '给 /tag 和选择器用的标签', right: tin }));
+  cur.appendChild(xRow({ icon: false, title: '标签', sub: '给 /tag 和选择器用的标签', right: tin }));
 }
 function wpAbilitiesTab(body) {
   var ab = wpSection('abilities'), sc = wpSchema(), smax = sc.speedMax || 1;
@@ -194,7 +207,7 @@ function wpAttrTab(body) {
    所有用 weSlotGrid / 装备格子 的页面共用这一套，同一个标签页里的格子之间都能互相搬。 */
 var WE_DND = { cells: [], carry: null, ghost: null, last: null, timer: null, bound: false };
 function weDndReset() { WE_DND.cells = []; WE_DND.carry = null; weDndGhost(null); clearTimeout(WE_DND.timer); WE_DND.last = null; }
-function weDndHint() { return h('div', { class: 'k-sub', text: '单击编辑 · 双击拿起，再点另一格放下 · 也可按住拖动对换' }); }
+function weDndHint() { return h('div', { class: 'k-sub', text: '单击编辑 · 双击拿起再点别格放下 · 可拖动对换' }); }
 function weDndStack(ref) { var st = ref.get(); return st && !st.empty && st.id ? st : null; }
 function weDndGhost(st, x, y) {
   var g = WE_DND.ghost;

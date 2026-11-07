@@ -175,16 +175,28 @@ function openMoreTabs(anchor) {
 /* 窗口的内联样式：品类色 + 用户拖出来的窗口 / 左栏尺寸；最大化是一个类 */
 function applyWinStyle() {
   var d = Store.doc(), info = d ? KIND_INFO[kindOfItem(d.id)] : null, s = '--cat:' + (info ? info.color : '#6cc349') + ';';
-  if (UI.winW) s += '--ww:' + UI.winW + 'px;'; if (UI.winH) s += '--wh:' + UI.winH + 'px;'; if (UI.heroW) s += '--hw:' + Math.min(UI.heroW, Math.max(110, Math.floor(((UI.winW || window.innerWidth) - 20) * 0.45))) + 'px;';
+  var vw = window.innerWidth || 0, vh = window.innerHeight || 0, ww = UI.winW && vw ? Math.min(UI.winW, vw - 20) : UI.winW, wh = UI.winH && vh ? Math.min(UI.winH, vh - 20) : UI.winH;
+  if (ww) s += '--ww:' + ww + 'px;'; if (wh) s += '--wh:' + wh + 'px;'; if (UI.heroW) s += '--hw:' + Math.min(UI.heroW, Math.max(110, Math.floor(((ww || vw) - 20) * 0.45))) + 'px;';
   var w = $('win'); if (!w) return; w.setAttribute('style', s); w.classList.toggle('max', !!UI.maxed);
   scheduleFit();
   if (!UI.dragging) { setTimeout(scheduleFit, 160); setTimeout(scheduleFit, 520); }
 }
 /* 拖动时每帧都重排很贵：量尺寸的适配（顶栏收纳、提示框高度）合并成限频执行 */
-var fitT = null, rsT = null;
+var fitT = null, rsT = null, lastVp = typeof window !== 'undefined' ? window.innerWidth + 'x' + window.innerHeight + '@' + (window.devicePixelRatio || 1) : '';
+/* 视口真的变了就重算窗口样式并整页重画：布局档位、左栏、网格都按新尺寸来。弹窗开着或正在拖动时只重新量，不动页面 */
+function refreshForViewport() {
+  var vp = window.innerWidth + 'x' + window.innerHeight + '@' + (window.devicePixelRatio || 1);
+  if (vp === lastVp) { scheduleFit(); return; }
+  lastVp = vp;
+  applyWinStyle();
+  if (UI.dragging || (document.querySelector && document.querySelector('.k-modal, .k-pop'))) { scheduleFit(); return; }
+  UI.heroPop = false;
+  try { if (typeof WE !== 'undefined' && WE.w) weRender(); else if (Store.doc()) drawEdit(); } catch (e) { dbg('视口变化重绘失败：' + (e && e.message || e)); }
+  scheduleFit();
+}
 function scheduleFit() { if (fitT) return; fitT = setTimeout(function () { fitT = null; var wn = $('win'); if (wn) { var ww = wn.getBoundingClientRect().width; if (ww > 100) { wn.classList.toggle('narrow', ww < 420); wn.classList.toggle('snug', ww >= 420 && ww < 680); } } fitTopbar(); fitTip(); }, UI.dragging ? 110 : 0); }
 /* 窗口几何有 280ms 的过渡：resize 触发时量到的是动画中间值，所以立即量一次之后，过渡结束再量一次，否则模式会停在旧的一档 */
-if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', function () { var wn = $('win'); if (wn) { wn.classList.add('rs'); clearTimeout(rsT); rsT = setTimeout(function () { var w2 = $('win'); if (w2) w2.classList.remove('rs'); scheduleFit(); }, 700); } fitT = null; scheduleFit(); setTimeout(scheduleFit, 120); setTimeout(scheduleFit, 400); setTimeout(scheduleFit, 800); });
+if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', function () { var wn = $('win'); if (wn) { wn.classList.add('rs'); clearTimeout(rsT); rsT = setTimeout(function () { var w2 = $('win'); if (w2) w2.classList.remove('rs'); refreshForViewport(); }, 700); } fitT = null; scheduleFit(); setTimeout(scheduleFit, 120); setTimeout(scheduleFit, 400); setTimeout(scheduleFit, 800); });
 function clampN(v, a, b) { return Math.max(a, Math.min(b, v)); }
 /* 调试开关（高级 → 设置）：打开后关键操作会弹提示，并写进游戏日志 latest.log（前缀 [CAD-Editor-Recast]） */
 function dbg(msg) {
@@ -211,20 +223,34 @@ function startResize(e) {
   var r = $('win').getBoundingClientRect(), x0 = e.clientX, y0 = e.clientY, w0 = r.width, h0 = r.height;
   dragTrack(e, function (ev) { UI.winW = clampN(Math.round(w0 + 2 * (ev.clientX - x0)), Math.min(340, window.innerWidth - 20), window.innerWidth - 20); UI.winH = clampN(Math.round(h0 + 2 * (ev.clientY - y0)), Math.min(220, window.innerHeight - 20), window.innerHeight - 20); applyWinStyle(); }, function () { Prefs.setSoon('winW', UI.winW); Prefs.setSoon('winH', UI.winH); });
 }
-function drawEdit() {
-  var host = clear($('screen')), d = Store.doc(), kind = kindOfItem(d.id), info = KIND_INFO[kind];
-  var tabs = tabsOfKind(kind);
-  if (!tabs.some(function (t) { return t.id === UI.tab; })) UI.tab = tabs[0].id;
-  applyWinStyle();
-  var hero = h('aside', { class: 'ed-hero' + (UI.heroPop ? ' pop' : ''), id: 'hero', title: '' });
+/* 窗口把手：世界页（方块 / 实体 / 玩家）和物品页共用。#win 是同一个元素，缩放角只建一次 */
+function heroPopBind(hero) {
   /* 紧凑模式（窗口窄 / GUI 缩放大）下左栏收成一条，被隐藏的属性、标签、提示框预览不丢：点一下这条栏就展开，再点收回 */
   hero.addEventListener('click', function (e) {
     var wn = $('win'), compact = (wn && wn.classList.contains('narrow')) || window.innerWidth <= 540 || window.innerHeight <= 290;
     if (!compact || (e.target.closest && e.target.closest('.k-btn, .k-mini, .k-seg, .ed-stagehead, .ed-tiphead, input, textarea'))) return;
     UI.heroPop = !UI.heroPop; hero.classList.toggle('pop', UI.heroPop);
   });
+}
+function makeSplit() {
   var split = h('div', { class: 'ed-split', title: '拖动调整左栏宽度（双击恢复）' });
   split.addEventListener('mousedown', startSplit); split.addEventListener('dblclick', function () { UI.heroW = 0; applyWinStyle(); Prefs.set('heroWidth', 0); });
+  return split;
+}
+function ensureResize() {
+  var wn = $('win'); if (!wn || $('edresize')) return;
+  var rz = h('div', { class: 'ed-resize', id: 'edresize', title: '拖动调整窗口大小（双击恢复）' });
+  rz.addEventListener('mousedown', startResize); rz.addEventListener('dblclick', function () { UI.winW = 0; UI.winH = 0; applyWinStyle(); Prefs.set('winW', 0); Prefs.set('winH', 0); });
+  wn.appendChild(rz);
+}
+function drawEdit() {
+  var host = clear($('screen')), d = Store.doc(), kind = kindOfItem(d.id), info = KIND_INFO[kind];
+  var tabs = tabsOfKind(kind);
+  if (!tabs.some(function (t) { return t.id === UI.tab; })) UI.tab = tabs[0].id;
+  applyWinStyle();
+  var hero = h('aside', { class: 'ed-hero' + (UI.heroPop ? ' pop' : ''), id: 'hero', title: '' });
+  heroPopBind(hero);
+  var split = makeSplit();
   var right = h('section', { class: 'ed-right' });
   var tabbar = h('div', { class: 'ed-tabs', id: 'tabbar' });
   tabbar.addEventListener('wheel', tabsWheel);
@@ -232,7 +258,7 @@ function drawEdit() {
   var body = h('div', { class: 'ed-body', id: 'edbody' });
   right.appendChild(tabbar); right.appendChild(tools); right.appendChild(body);
   host.appendChild(hero); host.appendChild(split); host.appendChild(right);
-  if (!$('edresize')) { var rz = h('div', { class: 'ed-resize', id: 'edresize', title: '拖动调整窗口大小（双击恢复）' }); rz.addEventListener('mousedown', startResize); rz.addEventListener('dblclick', function () { UI.winW = 0; UI.winH = 0; applyWinStyle(); Prefs.set('winW', 0); Prefs.set('winH', 0); }); $('win').appendChild(rz); }
+  ensureResize();
   drawHero(); drawTabbar(); drawTabBody();
 }
 function drawTabbar() {
