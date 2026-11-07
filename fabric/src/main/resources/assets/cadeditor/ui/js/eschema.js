@@ -238,9 +238,12 @@ function heroEntity(type, data, old) {
   }
   return el;
 }
+/* 实体按自己的盒子裁剪。盒子做成预览框的 3 倍大（CSS 里 300%），缩放除以 3 抵消；移动只挪这个大盒子，
+   盒子边缘始终在框外，裁剪只发生在预览框的边上，不会把腿之类的切掉一截 */
+var ES_BOX = 3;
 function esEntPaint(el) {
   var w = UI.entView || { s: 1, x: 0, y: 0 };
-  el.setAttribute('style', '-mc-model-scale:' + (+w.s.toFixed(3)) + ';left:' + Math.round(w.x) + 'px;top:' + Math.round(w.y) + 'px');
+  el.setAttribute('style', '-mc-model-scale:' + (+(w.s / ES_BOX).toFixed(4)) + ';margin-left:' + Math.round(w.x) + 'px;margin-top:' + Math.round(w.y) + 'px');
 }
 document.addEventListener('mousemove', function (e) {
   if (!ES_PAN) return;

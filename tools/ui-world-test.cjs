@@ -537,7 +537,7 @@ console.log('PASS spawn egg 3D preview attributes.');
   let el = c.heroEntity('minecraft:cat', { Age: -24000 }, null);
   assert.equal(el.getAttribute('baby'), '');
   el.events.wheel.forEach(fn => fn({ deltaY: -24, preventDefault() {}, stopPropagation() {} }));
-  assert.ok(c.UI.entView.s > 1 && /-mc-model-scale:1\.15/.test(el.getAttribute('style')), el.getAttribute('style'));
+  assert.ok(c.UI.entView.s > 1 && /-mc-model-scale:0\.383/.test(el.getAttribute('style')), el.getAttribute('style'));
   el.events.mousedown.forEach(fn => fn({ button: 2, clientX: 10, clientY: 10, preventDefault() {} }));
   doc.events = doc.events || {};
   const again = c.heroEntity('minecraft:cat', {}, el);
