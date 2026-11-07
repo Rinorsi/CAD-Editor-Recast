@@ -867,3 +867,21 @@ console.log('PASS soak: caches stay bounded over 400 open/edit/save/registry cyc
   c.WE.w = null;
 }
 console.log('PASS world player: inventory, ender chest, status, abilities, attributes.');
+
+// 玩家背包：游戏给多少格就画多少格（含装备 7 位、名字不认识的位置兜底）
+{
+  const mkw = eqSlots => {
+    const slots = []; for (let i = 0; i < 43; i++) slots.push({ slot: i, stack: { empty: true } });
+    return { kind: 'entity', type: 'minecraft:player', slot: { kind: 'entity', dim: 'minecraft:overworld', player: 'self', token: 't' }, revision: 'r', canUndo: false, snbt: '{}', nbt: {}, player: { self: true, name: 'P', uuid: 'u' },
+      views: { player: { container: { size: 43, slots }, ender: { size: 27, slots: [] }, SelectedItemSlot: 0, Health: 20, schema: { equipmentSlots: eqSlots, selectedSlotMax: 8, inventorySize: 43 } } } };
+  };
+  const names = ['feet', 'legs', 'chest', 'head', 'offhand', 'body', 'saddle'];
+  const full = names.map((n, i) => ({ slot: 36 + i, equipment: n }));
+  for (const eq of [full, full.slice(0, 5), []]) {
+    c.weOpen(mkw(eq)); c.WE.tab = 'pinv'; c.weRender();
+    const cells = c.$('screen').querySelectorAll('.slot').filter(x => !(x.className || '').includes('blank'));
+    assert.equal(cells.length, 43, '背包页要画满 43 格，实际 ' + cells.length + '（装备位 ' + eq.length + '）');
+  }
+  c.WE.w = null;
+}
+console.log('PASS player inventory shows every slot.');

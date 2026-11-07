@@ -92,6 +92,12 @@ function wpInventoryTab(body) {
   for (i = 0; i < 9 && i < total; i++) hot.push(i);
   body.appendChild(h('div', { class: 'k-sub', text: '背包' })); body.appendChild(mk(main, 9));
   body.appendChild(h('div', { class: 'k-sub', text: '快捷栏' })); body.appendChild(mk(hot, 9));
+  /* 兜底：游戏给了 total 个格子，凡是上面没画出来的（名字不认识的装备位、将来新增的位置）都列在这里，保证一格不少 */
+  var shown = {}, GEAR = ['head', 'chest', 'legs', 'feet', 'offhand', 'body', 'saddle'];
+  main.concat(hot).forEach(function (n) { shown[n] = 1; });
+  GEAR.forEach(function (k) { if (eq[k] !== undefined) shown[eq[k]] = 1; });
+  var rest = []; for (i = 0; i < total; i++) if (!shown[i]) rest.push(i);
+  if (rest.length) { body.appendChild(h('div', { class: 'k-sub', text: '其他格子（' + rest.length + '）' })); body.appendChild(mk(rest, Math.min(9, rest.length))); }
   var smax = sc.selectedSlotMax !== undefined ? sc.selectedSlotMax : 8;
   var seg = []; for (i = 0; i <= smax; i++) seg.push({ v: i, label: String(i + 1) });
   body.appendChild(xRow({ icon: false, title: '手上拿的格子', sub: '快捷栏第几格', right: kSeg(seg, typeof wpG('SelectedItemSlot') === 'number' ? wpG('SelectedItemSlot') : 0, function (v) { evSet('player', 'SelectedItemSlot', v); }).el }));
