@@ -692,3 +692,11 @@ console.log('PASS entity attributes, scale, tags.');
   c.Store.docs.length = 0;
 }
 console.log('PASS undo history is bounded by size and by steps.');
+
+// 提示框预览：收纳袋内容按图格画
+{
+  const box = c.h('div', { class: 'ed-tip' });
+  c.paintHostTip(box, { ok: true, lines: [[{ text: '收纳袋', color: '#FFFFFF' }]], extra: [{ type: 'bundle', count: 2, selectedIndex: -1, items: [{ id: 'minecraft:diamond', count: 3, name: 'Diamond' }, { id: 'minecraft:apple', count: 2, name: 'Apple' }], truncated: false }] });
+  const cells = box.querySelectorAll('.slot'); assert.equal(cells.length, 2, '两格内容'); assert.ok(cells[0].querySelector('.cnt').textContent === '3');
+}
+console.log('PASS tooltip bundle grid.');

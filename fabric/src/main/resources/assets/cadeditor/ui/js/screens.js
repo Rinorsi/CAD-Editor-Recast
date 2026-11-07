@@ -493,6 +493,18 @@ function paintHostTip(box, r) {
     });
     box.appendChild(el);
   });
+  /* 收纳袋的内容：游戏的提示框是图格，这里按图格画（物品图标 + 数量） */
+  (r.extra || []).forEach(function (x) {
+    if (x.type !== 'bundle' || !x.items || !x.items.length) return;
+    var grid = h('div', { class: 'k-cgrid tip-bundle' }); grid.setAttribute('style', 'grid-template-columns:repeat(' + Math.min(8, x.items.length) + ',24px)');
+    x.items.forEach(function (it, i) {
+      var cell = h('div', { class: 'slot s34' + (i === x.selectedIndex ? ' on' : ''), title: (it.name || it.id) + ' × ' + (it.count || 1) }, [itemIcon(it.id, 18)]);
+      if ((it.count || 1) > 1) cell.appendChild(h('span', { class: 'cnt', text: String(it.count) }));
+      grid.appendChild(cell);
+    });
+    box.appendChild(grid);
+    if (x.truncated) box.appendChild(h('div', { class: 'tl', style: 'color:#888', text: '……还有更多' }));
+  });
 }
 function buildTooltip(d, adv, view) {
   view = view || 'item-preview';
