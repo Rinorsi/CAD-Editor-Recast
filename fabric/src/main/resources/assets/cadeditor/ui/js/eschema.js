@@ -207,3 +207,47 @@ function esEquipment(s, o, edit) {
   wrap.appendChild(xl.el);
   return worldFold('装备', wrap, any, slots.length + ' 个位置');
 }
+
+/* 刷怪蛋左栏里的 3D 生物：左键拖动旋转（引擎自带），滚轮缩放，右键或中键拖动移动位置。
+   同一只生物重画时沿用原来的元素，转过的角度不丢；换了生物或点「恢复默认视角」才回到默认 */
+var ES_PAN = null;
+function heroEntity(type, data, old) {
+  var full = Reg.full(type), v = UI.entView;
+  if (!v || v.type !== full) v = UI.entView = { type: full, s: 1, x: 0, y: 0 };
+  var el = old && old.getAttribute('type') === full ? old : h('entity', { class: 'k-ent', type: full, rotatable: true, title: '左键拖动旋转 · 滚轮缩放 · 右键拖动移动位置' });
+  var pa = esPreviewAttrs(full, data);
+  ['baby', 'components'].concat(Object.keys(ES_SLOT)).forEach(function (k) {
+    if (pa[k] === undefined) { if (el.getAttribute(k) !== null) el.removeAttribute(k); }
+    else if (el.getAttribute(k) !== pa[k]) el.setAttribute(k, pa[k]);
+  });
+  esEntPaint(el);
+  if (!el._esBound) {
+    el._esBound = true;
+    el.addEventListener('wheel', function (e) {
+      e.preventDefault(); if (e.stopPropagation) e.stopPropagation();
+      var w = UI.entView; if (!w) return;
+      w.s = Math.max(0.4, Math.min(6, w.s * (e.deltaY < 0 ? 1.15 : 1 / 1.15)));
+      esEntPaint(el);
+    });
+    el.addEventListener('mousedown', function (e) {
+      if (e.button !== 1 && e.button !== 2) return;
+      e.preventDefault(); var w = UI.entView; if (!w) return;
+      ES_PAN = { el: el, x0: e.clientX, y0: e.clientY, x: w.x, y: w.y };
+    });
+    el.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  }
+  return el;
+}
+function esEntPaint(el) {
+  var w = UI.entView || { s: 1, x: 0, y: 0 };
+  el.setAttribute('style', '-mc-model-scale:' + (+w.s.toFixed(3)) + ';left:' + Math.round(w.x) + 'px;top:' + Math.round(w.y) + 'px');
+}
+document.addEventListener('mousemove', function (e) {
+  if (!ES_PAN) return;
+  if (e.buttons !== undefined && !(e.buttons & 6)) { ES_PAN = null; return; }
+  var w = UI.entView; if (!w) { ES_PAN = null; return; }
+  w.x = Math.max(-120, Math.min(120, ES_PAN.x + e.clientX - ES_PAN.x0));
+  w.y = Math.max(-90, Math.min(90, ES_PAN.y + e.clientY - ES_PAN.y0));
+  esEntPaint(ES_PAN.el);
+});
+document.addEventListener('mouseup', function (e) { if (ES_PAN && (e.button === 1 || e.button === 2)) ES_PAN = null; });

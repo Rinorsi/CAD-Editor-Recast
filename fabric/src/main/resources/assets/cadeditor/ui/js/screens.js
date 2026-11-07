@@ -386,17 +386,12 @@ function heroStats(d, kind) {
   return out;
 }
 function drawHero() {
-  var hero = $('hero'); if (!hero) return; var scrollTop = hero.scrollTop; clear(hero);
+  var hero = $('hero'); if (!hero) return; var scrollTop = hero.scrollTop, oldEnt = hero.querySelector('.k-ent'); clear(hero);
   var d = Store.doc(), kind = kindOfItem(d.id), info = KIND_INFO[kind], eff = effectiveComps(d);
   var ench = (eff.enchantments && Object.keys(eff.enchantments).length) || (eff.stored_enchantments && Object.keys(eff.stored_enchantments).length) || eff.enchantment_glint_override === true;
   var can3d = typeof ED_MC === 'undefined', view = can3d && UI.heroView === '3d' ? '3d' : '2d';
-  var vis;
-  if (view === '3d' && kind === 'spawn' && eggEntityOf(d)) {
-    /* 刷怪蛋：3D 显示生成的生物（品种、幼年、装备跟着右边的设置变），不是蛋本身 */
-    var et = eggEntityOf(d), pa = esPreviewAttrs(et, eff.entity_data);
-    vis = h('entity', { class: 'k-ent', type: Reg.full(et), rotatable: true });
-    Object.keys(pa).forEach(function (k) { vis.setAttribute(k, pa[k]); });
-  }
+  var vis, entView = view === '3d' && kind === 'spawn' && !!eggEntityOf(d);
+  if (entView) vis = heroEntity(eggEntityOf(d), eff.entity_data, oldEnt);
   else if (view === '3d') { vis = h('model', { class: 'k-ico k-model', item: fullId(heroItemId(d)), rotatable: true }); vis.setAttribute('components', stackCompsSnbt(d)); vis.setAttribute('count', String(d.count)); }
   else { vis = itemIcon(heroItemId(d), 48); if (vis.tagName && vis.tagName.toLowerCase() === 'item') { vis.setAttribute('components', stackCompsSnbt(d)); vis.setAttribute('count', String(d.count)); } }
   /* 预览头：可折叠（折叠后不再渲染 3D 模型），右边是 2D / 3D 切换 */
@@ -412,8 +407,13 @@ function drawHero() {
     });
     shead.appendChild(seg);
   }
+  if (entView && open) {
+    var rv = h('div', { class: 'k-mini ed-view', title: '恢复默认视角（角度、缩放、位置）' }, [uiIcon('undo', 11)]);
+    rv.addEventListener('click', function (e) { e.stopPropagation(); UI.entView = null; var o = $('hero') && $('hero').querySelector('.k-ent'); if (o) o.remove(); drawHero(); });
+    shead.appendChild(rv);
+  }
   hero.appendChild(shead);
-  if (open) hero.appendChild(h('div', { class: 'ed-stage' + (ench ? ' glint' : '') + (vis.tagName && vis.tagName.toLowerCase() === 'entity' ? ' ent' : '') }, [h('div', { class: 'plate' }), vis]));
+  if (open) hero.appendChild(h('div', { class: 'ed-stage' + (ench ? ' glint' : '') + (entView ? ' ent' : '') }, [h('div', { class: 'plate' }), vis]));
   var nm = h('div', { class: 'ed-name' + (displayName(d).length > 6 ? ' sm' : '') }); var r = nameRuns(d);
   renderRuns(nm, r.base, r.runs, { color: rarityHex(d), italic: eff.custom_name !== undefined });
   hero.appendChild(nm);

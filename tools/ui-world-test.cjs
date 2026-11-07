@@ -530,3 +530,22 @@ console.log('PASS entity schema: request/cache, variants with mask merge, flags,
   c.Reg.meta = null; c.Reg.eschema = {};
 }
 console.log('PASS spawn egg 3D preview attributes.');
+
+// 刷怪蛋 3D 生物：同一只生物重画沿用元素；滚轮缩放、右键拖动移动；换生物回到默认
+{
+  c.Reg.meta = {}; c.UI.entView = null;
+  let el = c.heroEntity('minecraft:cat', { Age: -24000 }, null);
+  assert.equal(el.getAttribute('baby'), '');
+  el.events.wheel.forEach(fn => fn({ deltaY: -24, preventDefault() {}, stopPropagation() {} }));
+  assert.ok(c.UI.entView.s > 1 && /-mc-model-scale:1\.15/.test(el.getAttribute('style')), el.getAttribute('style'));
+  el.events.mousedown.forEach(fn => fn({ button: 2, clientX: 10, clientY: 10, preventDefault() {} }));
+  doc.events = doc.events || {};
+  const again = c.heroEntity('minecraft:cat', {}, el);
+  assert.equal(again, el, '同一只生物沿用元素（转过的角度不丢）');
+  assert.equal(again.getAttribute('baby'), null, '取消幼年后去掉属性');
+  assert.ok(c.UI.entView.s > 1, '缩放在重画后保留');
+  const dog = c.heroEntity('minecraft:wolf', {}, el);
+  assert.notEqual(dog, el); assert.equal(c.UI.entView.s, 1, '换生物回到默认视角');
+  c.Reg.meta = null; c.UI.entView = null;
+}
+console.log('PASS spawn egg 3D viewer: reuse, wheel zoom, pan start, reset on type change.');

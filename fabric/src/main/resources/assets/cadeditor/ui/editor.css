@@ -99,8 +99,8 @@ html, body { margin: 0; height: 100%; }
 .ed-stage { position: relative; flex: none; height: 76px; display: flex; align-items: center; justify-content: center; }
 .ed-stage .plate { position: absolute; left: 50%; top: 50%; width: 84px; height: 84px; margin: -42px 0 0 -42px; background: radial-gradient(circle, color-mix(in srgb, var(--cat) 52%, transparent), rgba(0, 0, 0, 0) 68%); }
 .ed-stage .k-ico { position: relative; image-rendering: pixelated; }
-.ed-stage.ent { height: 112px; }
-.ed-stage .k-ent { position: relative; width: 84px; height: 104px; -mc-yaw: -24deg; -mc-pitch: 8deg; }
+.ed-stage.ent { height: 120px; overflow: hidden; }
+.ed-stage .k-ent { position: relative; width: 100%; height: 100%; -mc-entity-focus: center; -mc-yaw: -24deg; -mc-pitch: 8deg; }
 .ed-stage .k-model { position: relative; width: 64px; height: 64px; -mc-pitch: 14deg; animation: ed-turn 8s linear infinite; }
 @keyframes ed-turn { from { -mc-yaw: 0deg; } to { -mc-yaw: 360deg; } }
 .ed-view { align-self: center; }
@@ -546,7 +546,7 @@ textarea.ed-raw, textarea.ed-snbt, textarea.ed-out { width: 100%; color: var(--t
   .ed-hero.pop .ed-name { font-size: 12px; line-height: 16px; }
   .ed-stage { height: 40px; } .ed-stage .plate { width: 44px; height: 44px; margin: -22px 0 0 -22px; }
   .ed-stage .k-ico { width: 32px !important; height: 32px !important; }
-  .ed-stage.ent { height: 64px; } .ed-stage .k-ent { width: 48px; height: 60px; }
+  .ed-stage.ent { height: 64px; }
   .ed-name { font-size: 8px; line-height: 14px; }
   .ed-tip { display: none; }
   .ed-tabs .ed-tab:not(.on) span { display: none; }
