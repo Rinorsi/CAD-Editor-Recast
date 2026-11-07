@@ -177,7 +177,13 @@ function esGearGrid(s, o, type) {
         esSet(obj, q.nbtPath, isObj(cur) && cur.id === fullId(id) ? cur : { id: fullId(id), count: 1 });
         if (q.requires) Object.keys(q.requires).forEach(function (k) { obj[k] = q.requires[k]; });
       }, true);
-    });
+    }, { onStack: function (st) {
+      kPopClose();
+      edit(function (obj) {
+        esSet(obj, q.nbtPath, vaultNested(st));
+        if (q.requires) Object.keys(q.requires).forEach(function (k) { obj[k] = q.requires[k]; });
+      }, true);
+    } });
   }
   function menu(q, cell, st) {
     var box = h('div', { class: 'k-pickbox es-gearpop' });

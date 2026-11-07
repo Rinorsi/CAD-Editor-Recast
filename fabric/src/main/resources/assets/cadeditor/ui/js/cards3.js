@@ -184,7 +184,7 @@ CARDS.remainder = function () {
     clear(holder);
     var cur = Ctx.get('use_remainder');
     var btn = h('div', { class: 'k-btn' }, cur ? [itemIcon(cur.id, 20), h('span', { text: nameOfItem(cur.id) }), uiIcon('down', 10)] : [uiIcon('plus', 12), h('span', { text: '选择剩下的物品' })]);
-    activate(btn, function () { pickItem(btn, function (id) { var o = Ctx.get('use_remainder') || { count: 1 }; o.id = fullId(id); if (!o.count) o.count = 1; put(o); draw(); }); });
+    activate(btn, function () { pickItem(btn, function (id) { var o = Ctx.get('use_remainder') || { count: 1 }; o.id = fullId(id); if (!o.count) o.count = 1; put(o); draw(); }, { onStack: function (st) { NBT_FORCE.use_remainder = true; put(vaultNested(st)); draw(); } }); });
     holder.appendChild(btn);
     if (cur) {
       var cnt = kNumber(cur.count || 1, { min: 1, max: 99, noSlider: true, step: 1, unit: '个', onChange: function (n) { var o = Ctx.get('use_remainder'); o.count = n; put(o); } });
@@ -264,7 +264,7 @@ CARDS.container = function () {
     var cur = stackAt(i);
     var box = h('div', { class: 'k-pickbox' });
     var btn = h('div', { class: 'k-btn' }, cur ? [itemIcon(cur.item.id, 22), h('span', { text: nameOfItem(cur.item.id) })] : [uiIcon('plus', 12), h('span', { text: '选择物品' })]);
-    activate(btn, function () { pickItem(anchor, function (id) { var l = list(), e = stackAt(i); if (e) { e.item.id = fullId(id); l = l.map(function (x) { return x.slot === i ? e : x; }); } else l.push({ slot: i, item: { id: 'minecraft:' + id, count: 1 } }); save(l); draw(); }); });
+    activate(btn, function () { pickItem(anchor, function (id) { var l = list(), e = stackAt(i); if (e) { e.item.id = fullId(id); l = l.map(function (x) { return x.slot === i ? e : x; }); } else l.push({ slot: i, item: { id: 'minecraft:' + id, count: 1 } }); save(l); draw(); }, { onStack: function (st) { var l = list(), item = vaultNested(st); NBT_FORCE.container = true; if (stackAt(i)) l = l.map(function (x) { return x.slot === i ? { slot: i, item: item } : x; }); else l.push({ slot: i, item: item }); save(l); kPopClose(); draw(); } }); });
     box.appendChild(btn);
     if (cur) {
       var ms = protoOf(cur.item.id).max_stack_size || 64;
@@ -307,7 +307,7 @@ CARDS.bundle = function () {
       row.appendChild(c);
     });
     var add = h('div', { class: 'slot s34 addslot', title: '放入物品' }, [uiIcon('plus', 14)]);
-    activate(add, function () { pickItem(add, function (id) { var l = list(); l.push({ id: fullId(id), count: 1 }); save(l); draw(); }); });
+    activate(add, function () { pickItem(add, function (id) { var l = list(); l.push({ id: fullId(id), count: 1 }); save(l); draw(); }, { onStack: function (st) { var l = list(); l.push(vaultNested(st)); NBT_FORCE.bundle_contents = true; save(l); draw(); } }); });
     row.appendChild(add);
     var cap = bundleCapacity(), w = list().reduce(function (s, st) { return s + stackWeight(st); }, 0) / cap;
     bar.firstChild.style.width = Math.min(100, w * 100) + '%'; bar.className = 'k-meter' + (w > 1 ? ' bad' : w > 0.85 ? ' warn' : '');

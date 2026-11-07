@@ -147,6 +147,7 @@ function pickItem(anchor, onPick, o) {
   var sbox = kSearchBox(q, paint);
   onKey(q, { Escape: function () { kPopClose(); } });
   var foot = h('div', { class: 'k-pfoot' }, [hint]);
+  if (o.onStack) foot.appendChild(kBtn('保险库', function () { kPopClose(); openVault({ pick: function (stack, entry) { o.onStack(stack, entry); } }); }, { icon: 'chest', title: '从保险库取一件（带着它的全部自定义组件）' }));
   if (o.reset) foot.appendChild(kBtn(o.reset.label, function () { kPopClose(); o.reset.fn(); }, { icon: 'undo' }));
   var box = h('div', { class: 'k-pickbox' }, [sbox.el, grid, foot]);
   var pop = kPopover(anchor, box, { width: 292, maxHeight: 340 });

@@ -1519,3 +1519,14 @@ textarea.world-snbt { min-height: 56px; }
 /* 装备卡片不折叠 */
 .k-card.es-open .k-chev, .k-card.es-open .k-reset { display: none; }
 .k-card.es-open .k-chead { cursor: default; }
+
+/* 保险库窗口 */
+.vt-top { display: flex; margin-bottom: 6px; }
+.vt-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.vt-tags { margin-bottom: 6px; }
+.vt-list { max-height: 330px; overflow-y: auto; }
+.vt-warn .k-note.bad { color: var(--bad); }
+
+.vt-top { width: 100%; }
+.vt-top .k-sbox { flex: 1; width: 100%; }
+.vt-top .k-sbox > .k-input { flex: 1; min-width: 60px; }

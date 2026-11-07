@@ -3,6 +3,8 @@
    （apply 的 component_formats），并以宿主给的 component_snbt 为类型参照合并，保住 1b、5L、2.5f、[B;1b] 等类型。 */
 
 /* 自由 NBT 组件：值里的任意字段类型都要保真，被编辑过就一律用 SNBT 提交，并向游戏校验 */
+/* 从保险库放进来的嵌套物品（容器 / 束袋 / use_remainder …）：整个组件改用 SNBT 提交，才能保住里面的类型。保存成功后清空 */
+var NBT_FORCE = {};
 var NBT_RAW = { block_entity_data: 1, entity_data: 1, bucket_entity_data: 1, custom_data: 1, charged_projectiles: 1, lock: 1 };
 
 /* ---------- 解析：节点 { k:'num'|'str'|'bool'|'list'|'arr'|'obj' } ---------- */
@@ -117,7 +119,7 @@ function nbtNote(text) {
     else if (n.k === 'obj') n.keys.forEach(function (k) { walk(n.map[k]); });
   })(root);
 }
-function nbtSeenClear() { NBT_SEEN = {}; NBT_SEEN_N = 0; }
+function nbtSeenClear() { NBT_SEEN = {}; NBT_SEEN_N = 0; NBT_FORCE = {}; }
 /* 值已经被改过（与旧参照对不上）时，看用户是不是手输过一个带类型的同值节点 */
 function nbtPickRef(v, ref) {
   if (!NBT_SEEN_N || v === null || v === undefined || typeof v === 'string' || typeof v === 'boolean') return ref;
@@ -187,7 +189,7 @@ function nbtApplyFormats(d) {
     var v = d.comps[cid], ref = d.snbt && d.snbt[cid];
     out[cid] = clone(v);
     if (JSON.stringify(v) === JSON.stringify(base[cid])) return;
-    if (!(NBT_RAW[cid] || (ref && nbtHasTyped(ref)))) return;
+    if (!(NBT_RAW[cid] || NBT_FORCE[cid] || (ref && nbtHasTyped(ref)))) return;
     try { out[cid] = nbtMerge(v, ref ? nbtParse(ref) : null); formats[cid] = 'snbt'; any = true; } catch (e) { out[cid] = clone(v); }
   });
   return { comps: out, formats: any ? formats : null };

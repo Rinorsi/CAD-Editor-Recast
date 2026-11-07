@@ -30,7 +30,7 @@ const root=new Element('body'),overlays=new Element('div');overlays.id='overlays
 const doc={body:root,activeElement:null,addEventListener(){},createElement(tag){return new Element(tag);},createTextNode(t){const el=new Element('text');el.textContent=t;return el;},getElementById(id){return root.querySelector('#'+id);}};
 const c=vm.createContext({document:doc,window:{innerWidth:760,innerHeight:560},console,setTimeout(){},clearTimeout(){},oriel:{data:{},send(){return true;}}});
 const dir=path.resolve(__dirname,'../fabric/src/main/resources/assets/cadeditor/ui/js');
-for(const f of ['data','core','pinyin-data','search','forms','kit','kit2','nbt','xlist','reg','hostsearch','picker','cards1','cards2','cards3','cards5','world','rules','spawn','eschema','screens','worldedit'])vm.runInContext(fs.readFileSync(path.join(dir,f+'.js'),'utf8'),c);
+for(const f of ['data','core','pinyin-data','search','forms','kit','kit2','nbt','xlist','reg','hostsearch','picker','cards1','cards2','cards3','cards5','world','rules','spawn','eschema','screens','worldedit','vault'])vm.runInContext(fs.readFileSync(path.join(dir,f+'.js'),'utf8'),c);
 c.uiIcon=()=>new Element('i');c.itemIcon=()=>new Element('i');c.uiClick=()=>{};c.snd=()=>{};c.toast=()=>{};
 let saved,disabled=0,writes=0;
 c.autoPut=(cid,value)=>{saved=JSON.parse(JSON.stringify(value));writes++;};
@@ -589,3 +589,57 @@ console.log('PASS spawn egg 3D viewer: reuse, wheel zoom, pan start, reset on ty
   c.Reg.meta = null; c.Reg.imeta = {}; c.Reg.eggMap = null;
 }
 console.log('PASS entity icons from spawn eggs.');
+
+// 保险库：协议往返、分段上传、get 超限走 export、嵌套栈转换、窗口列表
+{
+  const sent = []; c.oriel.send = (k, v) => { sent.push([k, v]); return true; };
+  let timers = []; c.setTimeout = (fn) => { timers.push(fn); return timers.length; }; c.clearTimeout = () => {};
+  const last = op => sent.filter(x => x[0] === 'vault' && x[1].op === op).pop()[1];
+  const reply = (req, extra) => c.Reg.ingest('vault.result', Object.assign({ version: 1, requestId: req.requestId, op: req.op, ok: true }, extra));
+  c.Reg.meta = {};
+  // 保存小栈：一条消息；重复回执
+  let got; c.Vault.save({ id: 'minecraft:stick', count: 1, comps: {}, removed: {} }, { name: '棍', tags: ['a'], note: '' }, r => got = r);
+  const s1 = last('save'); assert.equal(s1.name, '棍'); assert.equal(s1.note, undefined, '空字段不发'); reply(s1, { entry: { id: 'x', name: '棍' }, duplicate: true, persisted: false });
+  assert.equal(got.duplicate, true); assert.equal(c.Vault.st.persisted, false);
+  // 保存大栈：先分段上传，再带 uploadToken 保存；分段不切开代理对
+  const big = { id: 'minecraft:stick', count: 1, comps: { custom_data: { s: '𠮷'.repeat(4000) } }, removed: {} };
+  got = null; c.Vault.save(big, { name: '大' }, r => got = r);
+  let up = last('upload'); assert.ok(up.text.length <= 2800);
+  const parts = [];
+  for (let i = 0; i < 20 && !got; i++) { up = sent.filter(x => x[0] === 'vault' && x[1].op === 'upload').pop()[1]; if (parts.length && parts[parts.length - 1] === up.requestId) break; parts.push(up.requestId); reply(up, { token: 'T', chars: up.text.length, expires: 1 }); const nx = sent[sent.length - 1][1]; if (nx.op === 'save') { assert.equal(nx.uploadToken, 'T'); reply(nx, { entry: { id: 'y', name: '大' } }); } }
+  assert.ok(got && got.ok, '大栈走分段上传后保存成功');
+  const uploaded = sent.filter(x => x[0] === 'vault' && x[1].op === 'upload').map(x => x[1].text).join('');
+  assert.equal(JSON.parse(uploaded).comps.custom_data.s, '𠮷'.repeat(4000), '分段拼回去与原文一致');
+  // get 超限 → 按 export 分页拼
+  got = null; c.Vault.take('id1', r => got = r);
+  reply(last('get'), { ok: false, error: 'RESPONSE_LIMIT', reason: 'x' });
+  const ex1 = last('export'); assert.deepEqual(Array.from(ex1.ids), ['id1']); reply(ex1, { text: '{"version":1,"entries":[{"id":"id1","stack":{"id":"minecraft:ap', offset: 0, nextOffset: 50, done: false, revision: 3 });
+  const ex2 = last('export'); assert.equal(ex2.offset, 50); reply(ex2, { text: 'ple","count":1,"comps":{},"removed":{}}}]}', offset: 50, nextOffset: 90, done: true, revision: 3 });
+  assert.ok(got.ok && got.stack.id === 'minecraft:apple', 'export 分页拼回完整栈');
+  // 嵌套转换：comps → components（完整 ID），removed → !ID，带类型的值登记
+  const nested = c.vaultNested({ id: 'minecraft:stick', count: 2, comps: { custom_data: { n: 5 }, enchantments: { sharpness: 3 } }, removed: { lore: {} }, component_snbt: { custom_data: '{n:5L}' } });
+  assert.equal(nested.count, 2); assert.equal(nested.components['minecraft:custom_data'].n, 5); assert.ok(nested.components['!minecraft:lore']);
+  assert.equal(c.nbtMerge({ n: 5 }, null), '{n:5L}', '带类型的值被登记，提交时按 long 输出'); c.nbtSeenClear();
+  // 窗口：列表显示条目，行里有“给我”
+  overlays.textContent = ''; for (const id of ['win', 'topbar', 'screen', 'footer']) if (!root.querySelector('#' + id)) { const e = doc.createElement('div'); e.id = id; root.appendChild(e); }
+  c.Store.docs = c.Store.docs || [];
+  c.openVault();
+  const lr = last('list'); reply(lr, { entries: [{ id: 'e1', name: '火焰剑', tags: ['武器'], note: '', item: { id: 'minecraft:diamond_sword', count: 1 }, summary: { enchantCount: 2, hasCustomName: true } }], total: 1, offset: 0, nextOffset: 1, done: true, persisted: true });
+  assert.ok(overlays.textContent.includes('火焰剑') && overlays.textContent.includes('附魔 2'), '列表显示名称与摘要');
+  const btns = overlays.querySelectorAll('.k-btn').map(b => b.textContent); assert.ok(btns.includes('给我') && btns.includes('导入…') && btns.includes('导出全部'));
+  c.Reg.meta = null; c.Vault.wait = {};
+}
+console.log('PASS vault: protocol, upload, export fallback, nested conversion, window.');
+
+// 保险库取出放进容器：整个组件改用 SNBT，里面的 long 类型保住
+{
+  c.nbtSeenClear();
+  const item = c.vaultNested({ id: 'minecraft:stick', count: 1, comps: { custom_data: { n: 5 } }, removed: {}, component_snbt: { custom_data: '{n:5L}' } });
+  c.NBT_FORCE.container = true;
+  const d = { base: JSON.stringify({ comps: {} }), comps: { container: [{ slot: 0, item }] }, snbt: {} };
+  const out = c.nbtApplyFormats(d);
+  assert.equal(out.formats.container, 'snbt'); assert.ok(String(out.comps.container).includes('n:5L'), '嵌套物品组件里的 long 保住');
+  assert.ok(String(out.comps.container).includes('"minecraft:custom_data"'), '组件键是完整 ID');
+  c.nbtSeenClear(); assert.equal(Object.keys(c.NBT_FORCE).length, 0, '保存成功后清空');
+}
+console.log('PASS vault take-out into container keeps typed values.');

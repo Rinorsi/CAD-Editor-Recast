@@ -122,7 +122,7 @@ function weContainerTab(body) {
     var cur = weSlotStack(i), box = h('div', { class: 'k-pickbox' });
     function set(st) { if (st.empty && weOrigEmpty(i)) delete WE.slots[i]; else WE.slots[i] = st; paint(cell, i); drawWorldTop(); drawWorldFoot(); }
     var pick = h('div', { class: 'k-btn' }, cur.empty ? [uiIcon('plus', 12), h('span', { text: '选择物品' })] : [itemIcon(cur.id, 22), h('span', { text: nameOfItem(cur.id) })]);
-    activate(pick, function () { pickItem(cell, function (id) { var o = weSlotStack(i); set({ id: fullId(id), count: o.empty ? 1 : (o.count || 1), comps: {}, removed: {} }); kPopClose(); }); });
+    activate(pick, function () { pickItem(cell, function (id) { var o = weSlotStack(i); set({ id: fullId(id), count: o.empty ? 1 : (o.count || 1), comps: {}, removed: {} }); kPopClose(); }, { onStack: function (st) { var s2 = clone(st); delete s2.slot; delete s2.label; set(s2); kPopClose(); } }); });
     box.appendChild(pick);
     if (!cur.empty) {
       var cnt = kNumber(cur.count || 1, { min: 1, max: 99, noSlider: true, step: 1, unit: '个', onChange: function (v) { var o = clone(weSlotStack(i)); o.count = v; set(o); } });

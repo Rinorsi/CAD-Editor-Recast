@@ -89,8 +89,9 @@ function drawTopbar() {
   var un = h('div', { class: 'k-ibtn' + (Store.canUndo() ? '' : ' dis'), title: '撤销 Ctrl+Z' }, [uiIcon('undo', 14)]); activate(un, function () { Store.undo(); });
   var re = h('div', { class: 'k-ibtn' + (Store.canRedo() ? '' : ' dis'), title: '重做 Ctrl+Y' }, [uiIcon('redo', 14)]); activate(re, function () { Store.redo(); });
   var hi = h('div', { class: 'k-ibtn', title: '修改历史' }, [uiIcon('clock', 14)]); activate(hi, function () { openAdvanced('hist'); });
+  var vb = h('div', { class: 'k-ibtn', title: '保险库：存入改好的物品，之后取出放进槽位' }, [uiIcon('chest', 14)]); activate(vb, function () { openVault(); });
   var fold = [];
-  bar.appendChild(un); bar.appendChild(re); bar.appendChild(hi);
+  bar.appendChild(un); bar.appendChild(re); bar.appendChild(hi); bar.appendChild(vb);
   var sr = h('div', { class: 'k-search', title: '命令面板 Ctrl+K' }, [uiIcon('search', 12), h('span', { text: '搜索 / 命令' }), h('span', { class: 'k-kbd', text: 'Ctrl K' })]); activate(sr, openPalette);
   var ad = h('div', { class: 'k-ibtn', title: '高级：原始组件、SNBT、命令' }, [uiIcon('code', 14)]); activate(ad, function () { openAdvanced(); });
   var th = h('div', { class: 'k-ibtn', title: '设置' }, [uiIcon('sliders', 14)]); activate(th, openSettings);
