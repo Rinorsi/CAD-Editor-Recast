@@ -1,0 +1,940 @@
+# 页签 pinv
+## topbar
+div
+  span.eb-ico
+    item.k-ico [style="height:16px;width:16px"]
+  span.ttl "Rinorsi（你）"
+  span.crumb "玩家"
+  div.grow
+  div.dis.k-ibtn [title="撤销上一次写入游戏的修改"]
+    img.o-ico [src="oriel:textures/icons/undo.png" style="height:16px;width:16px"]
+  div.k-ibtn [title="保险库：把物品存起来，或取出放进槽位"]
+    img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+  div.k-ibtn [title="设置"]
+    img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+  div.dim.k-apply.k-btn.pri [title="还没有修改"]
+    img.o-ico [src="oriel:textures/icons/play.png" style="height:16px;width:16px"]
+    span "应用修改"
+  div.k-ibtn [title="全屏"]
+    img.o-ico [src="oriel:textures/icons/maximize.png" style="height:16px;width:16px"]
+  div.k-ibtn [title="关闭"]
+    img.o-ico [src="oriel:textures/icons/close.png" style="height:16px;width:16px"]
+## screen
+div
+  aside.ed-hero
+    div.ed-stagehead
+      span.fold-arrow
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      span "预览"
+      div.grow
+      div.ed-view.k-seg [title="2D 显示图标 / 3D 显示生物（会记住你的选择）"]
+        div.k-segi.on "2D"
+        div.k-segi "3D"
+    div.ed-stage
+      div.plate
+      item.k-ico [style="height:48px;width:48px"]
+    div.ed-name.sm "Rinorsi（你）"
+    div.ed-tags
+      span.k-tag "玩家"
+      span.dim.k-tag "player"
+    div.ed-stagehead
+      span.fold-arrow
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      span "属性"
+      div.grow
+    div.ed-stats
+      div.k-stat
+        span.sl "生命"
+        b "20"
+      div.k-stat
+        span.sl "饥饿"
+        b "20"
+      div.k-stat
+        span.sl "等级"
+        b "3"
+      div.k-stat
+        span.sl "模式"
+        b "生存"
+  div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
+  section.ed-right
+    div.ed-tabs
+      div.ed-tab.on
+        img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
+        span "背包"
+      div.ed-tab
+        img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+        span "末影箱"
+      div.ed-tab
+        img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
+        span "状态"
+      div.ed-tab
+        img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
+        span "能力"
+      div.ed-tab
+        img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+        span "属性与效果"
+    div.ed-tools
+      span.ed-tools-t "背包"
+      div.grow
+      div.k-mini [title="折叠 / 展开本页全部卡片"]
+        img.o-ico [src="oriel:textures/icons/layers.png" style="height:16px;width:16px"]
+    div.ed-body
+      div.k-list
+        div.k-card.w-card [data-card="w:pinv:背包与装备"]
+          div.k-chead
+            div.k-cico
+              img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
+            div.k-ctx
+              div.k-ctitle
+                "背包与装备"
+                span.k-badge [title="这一项和物品原版默认值不同"] "自定义"
+              div.k-cdesc "43 格"
+            div.k-csum
+            div.k-cval
+            div.k-reset [title="放弃这里的修改，使用物品原本的值"] "恢复默认"
+            span.k-swph
+            div.k-chev [title="折叠 / 展开"]
+              img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+          div.k-cbody
+            div.k-sub "单击编辑 · 双击拿起，点别格放下"
+            div.wp-inv
+              div.inv.k-cgrid [style="grid-template-columns:repeat(2,28px)"]
+                div.fl.s34.slot [title="铁头盔 × 1（头盔）"]
+                  item.k-ico [style="height:16px;width:16px"]
+                div.s34.slot [title="副手"]
+                  img.es-ghost.o-ico [src="oriel:textures/icons/shield.png" style="height:16px;width:16px"]
+                div.s34.slot [title="胸甲"]
+                  img.es-ghost.o-ico [src="oriel:textures/icons/chestplate.png" style="height:16px;width:16px"]
+                div.s34.slot [title="身体"]
+                  img.es-ghost.o-ico [src="oriel:textures/icons/shield.png" style="height:16px;width:16px"]
+                div.s34.slot [title="护腿"]
+                  img.es-ghost.o-ico [src="oriel:textures/icons/leggings.png" style="height:16px;width:16px"]
+                div.s34.slot [title="鞍"]
+                  img.es-ghost.o-ico [src="oriel:textures/icons/cart.png" style="height:16px;width:16px"]
+                div.s34.slot [title="靴子"]
+                  img.es-ghost.o-ico [src="oriel:textures/icons/boots.png" style="height:16px;width:16px"]
+                div.blank.s34.slot [style="visibility:hidden"]
+              div.wp-vsep
+              div.wp-col
+                div.fluid.inv.k-cgrid [style="grid-template-columns:repeat(9,1fr)"]
+                  div.s34.slot [title="背包 1"]
+                  div.s34.slot [title="背包 2"]
+                  div.s34.slot [title="背包 3"]
+                  div.fl.s34.slot [title="苹果 × 64（背包 4）"]
+                    item.k-ico [style="height:16px;width:16px"]
+                    span.cnt "64"
+                  div.s34.slot [title="背包 5"]
+                  div.s34.slot [title="背包 6"]
+                  div.s34.slot [title="背包 7"]
+                  div.s34.slot [title="背包 8"]
+                  div.s34.slot [title="背包 9"]
+                  div.s34.slot [title="背包 10"]
+                  div.s34.slot [title="背包 11"]
+                  div.s34.slot [title="背包 12"]
+                  div.s34.slot [title="背包 13"]
+                  div.s34.slot [title="背包 14"]
+                  div.s34.slot [title="背包 15"]
+                  div.s34.slot [title="背包 16"]
+                  div.s34.slot [title="背包 17"]
+                  div.s34.slot [title="背包 18"]
+                  div.s34.slot [title="背包 19"]
+                  div.s34.slot [title="背包 20"]
+                  div.s34.slot [title="背包 21"]
+                  div.s34.slot [title="背包 22"]
+                  div.s34.slot [title="背包 23"]
+                  div.s34.slot [title="背包 24"]
+                  div.s34.slot [title="背包 25"]
+                  div.s34.slot [title="背包 26"]
+                  div.s34.slot [title="背包 27"]
+                div.wp-sep
+                div.fluid.inv.k-cgrid [style="grid-template-columns:repeat(9,1fr)"]
+                  div.fl.hand.r-ench.s34.slot [title="钻石剑 × 1（快捷栏 1（手上拿的））"]
+                    item.k-ico [style="height:16px;width:16px"]
+                    i.mk [title="这个物品带有自己的组件数据，会原样保留"]
+                  div.s34.slot [title="快捷栏 2"]
+                  div.s34.slot [title="快捷栏 3"]
+                  div.s34.slot [title="快捷栏 4"]
+                  div.s34.slot [title="快捷栏 5"]
+                  div.s34.slot [title="快捷栏 6"]
+                  div.s34.slot [title="快捷栏 7"]
+                  div.s34.slot [title="快捷栏 8"]
+                  div.s34.slot [title="快捷栏 9"]
+          div.k-div
+      div.k-list
+        div.k-card.w-card [data-card="w:pinv:手上拿的格子"]
+          div.k-chead
+            div.k-cico
+              img.o-ico [src="oriel:textures/icons/sword.png" style="height:16px;width:16px"]
+            div.k-ctx
+              div.k-ctitle
+                "手上拿的格子"
+                span.k-badge [title="这一项和物品原版默认值不同"] "自定义"
+              div.k-cdesc "快捷栏第几格"
+            div.k-csum
+            div.k-cval
+            div.k-reset [title="放弃这里的修改，使用物品原本的值"] "恢复默认"
+            span.k-swph
+            div.k-chev [title="折叠 / 展开"]
+              img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+          div.k-cbody
+            div.k-row
+              div.k-seg
+                div.k-segi.on
+                  "1"
+                div.k-segi
+                  "2"
+                div.k-segi
+                  "3"
+                div.k-segi
+                  "4"
+                div.k-segi
+                  "5"
+                div.k-segi
+                  "6"
+                div.k-segi
+                  "7"
+                div.k-segi
+                  "8"
+                div.k-segi
+                  "9"
+          div.k-div
+## footer
+div
+  span.it
+    i.dot
+    "没有未应用的修改"
+  div.grow
+  span.it [title="这个目标在世界里的位置"] "player · 主世界"
+## overlays
+div
+
+# 页签 pender
+## topbar
+div
+  span.eb-ico
+    item.k-ico [style="height:16px;width:16px"]
+  span.ttl "Rinorsi（你）"
+  span.crumb "玩家"
+  div.grow
+  div.dis.k-ibtn [title="撤销上一次写入游戏的修改"]
+    img.o-ico [src="oriel:textures/icons/undo.png" style="height:16px;width:16px"]
+  div.k-ibtn [title="保险库：把物品存起来，或取出放进槽位"]
+    img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+  div.k-ibtn [title="设置"]
+    img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+  div.dim.k-apply.k-btn.pri [title="还没有修改"]
+    img.o-ico [src="oriel:textures/icons/play.png" style="height:16px;width:16px"]
+    span "应用修改"
+  div.k-ibtn [title="全屏"]
+    img.o-ico [src="oriel:textures/icons/maximize.png" style="height:16px;width:16px"]
+  div.k-ibtn [title="关闭"]
+    img.o-ico [src="oriel:textures/icons/close.png" style="height:16px;width:16px"]
+## screen
+div
+  aside.ed-hero
+    div.ed-stagehead
+      span.fold-arrow
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      span "预览"
+      div.grow
+      div.ed-view.k-seg [title="2D 显示图标 / 3D 显示生物（会记住你的选择）"]
+        div.k-segi.on "2D"
+        div.k-segi "3D"
+    div.ed-stage
+      div.plate
+      item.k-ico [style="height:48px;width:48px"]
+    div.ed-name.sm "Rinorsi（你）"
+    div.ed-tags
+      span.k-tag "玩家"
+      span.dim.k-tag "player"
+    div.ed-stagehead
+      span.fold-arrow
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      span "属性"
+      div.grow
+    div.ed-stats
+      div.k-stat
+        span.sl "生命"
+        b "20"
+      div.k-stat
+        span.sl "饥饿"
+        b "20"
+      div.k-stat
+        span.sl "等级"
+        b "3"
+      div.k-stat
+        span.sl "模式"
+        b "生存"
+  div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
+  section.ed-right
+    div.ed-tabs
+      div.ed-tab
+        img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
+        span "背包"
+      div.ed-tab.on
+        img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+        span "末影箱"
+      div.ed-tab
+        img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
+        span "状态"
+      div.ed-tab
+        img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
+        span "能力"
+      div.ed-tab
+        img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+        span "属性与效果"
+    div.ed-tools [style="display:none"]
+      span.ed-tools-t "末影箱"
+      div.grow
+      div.k-mini [title="折叠 / 展开本页全部卡片"]
+        img.o-ico [src="oriel:textures/icons/layers.png" style="height:16px;width:16px"]
+    div.ed-body
+      div.k-list
+        div.k-card.w-card [data-card="w:pender:末影箱"]
+          div.k-chead
+            div.k-cico
+              img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+            div.k-ctx
+              div.k-ctitle
+                "末影箱"
+                span.k-badge [title="这一项和物品原版默认值不同"] "自定义"
+              div.k-cdesc "27 格"
+            div.k-csum
+            div.k-cval
+            div.k-reset [title="放弃这里的修改，使用物品原本的值"] "恢复默认"
+            span.k-swph
+            div.k-chev [title="折叠 / 展开"]
+              img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+          div.k-cbody
+            div.k-sub "单击编辑 · 双击拿起，点别格放下"
+            div.inv.k-cgrid.tray [style="grid-template-columns:repeat(9,26px)"]
+              div.s34.slot [title="格子 1"]
+              div.s34.slot [title="格子 2"]
+              div.s34.slot [title="格子 3"]
+              div.s34.slot [title="格子 4"]
+              div.s34.slot [title="格子 5"]
+              div.s34.slot [title="格子 6"]
+              div.s34.slot [title="格子 7"]
+              div.s34.slot [title="格子 8"]
+              div.s34.slot [title="格子 9"]
+              div.s34.slot [title="格子 10"]
+              div.s34.slot [title="格子 11"]
+              div.s34.slot [title="格子 12"]
+              div.s34.slot [title="格子 13"]
+              div.s34.slot [title="格子 14"]
+              div.s34.slot [title="格子 15"]
+              div.s34.slot [title="格子 16"]
+              div.s34.slot [title="格子 17"]
+              div.s34.slot [title="格子 18"]
+              div.s34.slot [title="格子 19"]
+              div.s34.slot [title="格子 20"]
+              div.s34.slot [title="格子 21"]
+              div.s34.slot [title="格子 22"]
+              div.s34.slot [title="格子 23"]
+              div.s34.slot [title="格子 24"]
+              div.s34.slot [title="格子 25"]
+              div.s34.slot [title="格子 26"]
+              div.s34.slot [title="格子 27"]
+          div.k-div
+## footer
+div
+  span.it
+    i.dot
+    "没有未应用的修改"
+  div.grow
+  span.it [title="这个目标在世界里的位置"] "player · 主世界"
+## overlays
+div
+
+# 页签 pstat
+## topbar
+div
+  span.eb-ico
+    item.k-ico [style="height:16px;width:16px"]
+  span.ttl "Rinorsi（你）"
+  span.crumb "玩家"
+  div.grow
+  div.dis.k-ibtn [title="撤销上一次写入游戏的修改"]
+    img.o-ico [src="oriel:textures/icons/undo.png" style="height:16px;width:16px"]
+  div.k-ibtn [title="保险库：把物品存起来，或取出放进槽位"]
+    img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+  div.k-ibtn [title="设置"]
+    img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+  div.dim.k-apply.k-btn.pri [title="还没有修改"]
+    img.o-ico [src="oriel:textures/icons/play.png" style="height:16px;width:16px"]
+    span "应用修改"
+  div.k-ibtn [title="全屏"]
+    img.o-ico [src="oriel:textures/icons/maximize.png" style="height:16px;width:16px"]
+  div.k-ibtn [title="关闭"]
+    img.o-ico [src="oriel:textures/icons/close.png" style="height:16px;width:16px"]
+## screen
+div
+  aside.ed-hero
+    div.ed-stagehead
+      span.fold-arrow
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      span "预览"
+      div.grow
+      div.ed-view.k-seg [title="2D 显示图标 / 3D 显示生物（会记住你的选择）"]
+        div.k-segi.on "2D"
+        div.k-segi "3D"
+    div.ed-stage
+      div.plate
+      item.k-ico [style="height:48px;width:48px"]
+    div.ed-name.sm "Rinorsi（你）"
+    div.ed-tags
+      span.k-tag "玩家"
+      span.dim.k-tag "player"
+    div.ed-stagehead
+      span.fold-arrow
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      span "属性"
+      div.grow
+    div.ed-stats
+      div.k-stat
+        span.sl "生命"
+        b "20"
+      div.k-stat
+        span.sl "饥饿"
+        b "20"
+      div.k-stat
+        span.sl "等级"
+        b "3"
+      div.k-stat
+        span.sl "模式"
+        b "生存"
+  div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
+  section.ed-right
+    div.ed-tabs
+      div.ed-tab
+        img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
+        span "背包"
+      div.ed-tab
+        img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+        span "末影箱"
+      div.ed-tab.on
+        img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
+        span "状态"
+      div.ed-tab
+        img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
+        span "能力"
+      div.ed-tab
+        img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+        span "属性与效果"
+    div.ed-tools
+      span.ed-tools-t "状态"
+      div.grow
+      div.k-mini [title="折叠 / 展开本页全部卡片"]
+        img.o-ico [src="oriel:textures/icons/layers.png" style="height:16px;width:16px"]
+    div.ed-body
+      div.k-list
+        div.k-card.w-card [data-card="w:pstat:生命与饥饿"]
+          div.k-chead
+            div.k-cico
+              img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
+            div.k-ctx
+              div.k-ctitle
+                "生命与饥饿"
+                span.k-badge [title="这一项和物品原版默认值不同"] "自定义"
+            div.k-csum
+            div.k-cval
+            div.k-reset [title="放弃这里的修改，使用物品原本的值"] "恢复默认"
+            span.k-swph
+            div.k-chev [title="折叠 / 展开"]
+              img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+          div.k-cbody
+            div.k-srow.k-xrow
+              div.k-xhead
+                div.tx
+                  div.z "生命"
+                  div.s "范围 0 ~ 20"
+                div.k-num.k-xnum
+                  div.k-numrow
+                    div.k-stepper
+                      div.k-step [title="减少（按住 Shift 一次 ×10）"] "−"
+                      input.k-input.k-numin [type="text" value="20"]
+                      div.k-step [title="增加（按住 Shift 一次 ×10）"] "+"
+                      span.k-big [style="display:none"]
+                  div.k-numerr [style="display:none"]
+                  div.k-numwarn [style="display:none"]
+            div.k-srow.k-xrow
+              div.k-xhead
+                div.tx
+                  div.z "伤害吸收"
+                div.k-num.k-xnum
+                  div.k-numrow
+                    div.k-stepper
+                      div.k-step [title="减少（按住 Shift 一次 ×10）"] "−"
+                      input.k-input.k-numin [type="text" value="0"]
+                      div.k-step [title="增加（按住 Shift 一次 ×10）"] "+"
+                      span.k-big [style="display:none"]
+                  div.k-numerr [style="display:none"]
+                  div.k-numwarn [style="display:none"]
+            div.k-srow.k-xrow
+              div.k-xhead
+                div.tx
+                  div.z "饥饿值"
+                  div.s "范围 0 ~ 20"
+                div.k-num.k-xnum
+                  div.k-numrow
+                    div.k-stepper
+                      div.k-step [title="减少（按住 Shift 一次 ×10）"] "−"
+                      input.k-input.k-numin [type="text" value="20"]
+                      div.k-step [title="增加（按住 Shift 一次 ×10）"] "+"
+                      span.k-big [style="display:none"]
+                  div.k-numerr [style="display:none"]
+                  div.k-numwarn [style="display:none"]
+            div.k-srow.k-xrow
+              div.k-xhead
+                div.tx
+                  div.z "饱和度"
+                  div.s "不能超过饥饿值"
+                div.k-num.k-xnum
+                  div.k-numrow
+                    div.k-stepper
+                      div.k-step [title="减少（按住 Shift 一次 ×10）"] "−"
+                      input.k-input.k-numin [type="text" value="5"]
+                      div.k-step [title="增加（按住 Shift 一次 ×10）"] "+"
+                      span.k-big [style="display:none"]
+                  div.k-numerr [style="display:none"]
+                  div.k-numwarn [style="display:none"]
+          div.k-div
+      div.k-list
+        div.k-card.w-card [data-card="w:pstat:经验"]
+          div.k-chead
+            div.k-cico
+              img.o-ico [src="oriel:textures/icons/xp.png" style="height:16px;width:16px"]
+            div.k-ctx
+              div.k-ctitle
+                "经验"
+                span.k-badge [title="这一项和物品原版默认值不同"] "自定义"
+            div.k-csum
+            div.k-cval
+            div.k-reset [title="放弃这里的修改，使用物品原本的值"] "恢复默认"
+            span.k-swph
+            div.k-chev [title="折叠 / 展开"]
+              img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+          div.k-cbody
+            div.k-srow.k-xrow
+              div.k-xhead
+                div.tx
+                  div.z "等级"
+                div.k-num.k-xnum
+                  div.k-numrow
+                    div.k-stepper
+                      div.k-step [title="减少（按住 Shift 一次 ×10）"] "−"
+                      input.k-input.k-numin [type="text" value="3"]
+                      div.k-step [title="增加（按住 Shift 一次 ×10）"] "+"
+                      span.k-big [style="display:none"]
+                  div.k-numerr [style="display:none"]
+                  div.k-numwarn [style="display:none"]
+            div.k-srow.k-xrow
+              div.k-xhead
+                div.tx
+                  div.z "当前等级进度"
+                  div.s "0 ~ 1，满了就升级"
+                div.k-num.k-xnum
+                  div.k-numrow
+                    div.k-stepper
+                      div.k-step [title="减少（按住 Shift 一次 ×10）"] "−"
+                      input.k-input.k-numin [type="text" value="0.5"]
+                      div.k-step [title="增加（按住 Shift 一次 ×10）"] "+"
+                      span.k-big [style="display:none"]
+                  div.k-numerr [style="display:none"]
+                  div.k-numwarn [style="display:none"]
+            div.k-srow.k-xrow
+              div.k-xhead
+                div.tx
+                  div.z "经验总量"
+                div.k-num.k-xnum
+                  div.k-numrow
+                    div.k-stepper
+                      div.k-step [title="减少（按住 Shift 一次 ×10）"] "−"
+                      input.k-input.k-numin [type="text" value="20"]
+                      div.k-step [title="增加（按住 Shift 一次 ×10）"] "+"
+                      span.k-big [style="display:none"]
+                  div.k-numerr [style="display:none"]
+                  div.k-numwarn [style="display:none"]
+          div.k-div
+      div.k-list
+        div.k-card.w-card [data-card="w:pstat:游戏模式"]
+          div.k-chead
+            div.k-cico
+              img.o-ico [src="oriel:textures/icons/gamepad.png" style="height:16px;width:16px"]
+            div.k-ctx
+              div.k-ctitle
+                "游戏模式"
+                span.k-badge [title="这一项和物品原版默认值不同"] "自定义"
+            div.k-csum
+            div.k-cval
+            div.k-reset [title="放弃这里的修改，使用物品原本的值"] "恢复默认"
+            span.k-swph
+            div.k-chev [title="折叠 / 展开"]
+              img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+          div.k-cbody
+            div.k-row
+              div.k-seg
+                div.k-segi.on
+                  "生存"
+                div.k-segi
+                  "创造"
+                div.k-segi
+                  "冒险"
+                div.k-segi
+                  "旁观"
+            div.k-sub "换模式会同时换成该模式的飞行 / 无敌 / 建造能力，除非你在「能力」页里同时指定。"
+          div.k-div
+      div.k-list
+        div.k-card.w-card [data-card="w:pstat:名字与标签"]
+          div.k-chead
+            div.k-cico
+              img.o-ico [src="oriel:textures/icons/tag.png" style="height:16px;width:16px"]
+            div.k-ctx
+              div.k-ctitle
+                "名字与标签"
+                span.k-badge [title="这一项和物品原版默认值不同"] "自定义"
+            div.k-csum
+            div.k-cval
+            div.k-reset [title="放弃这里的修改，使用物品原本的值"] "恢复默认"
+            span.k-swph
+            div.k-chev [title="折叠 / 展开"]
+              img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+          div.k-cbody
+            div.k-srow.k-xrow
+              div.k-xhead
+                div.tx
+                  div.z "自定义名称"
+                input.k-input.we-in [placeholder="自定义名称（可空）" type="text"]
+            div.k-srow.k-xrow
+              div.k-xhead
+                div.tx
+                  div.z "标签"
+                  div.s "给 /tag 和选择器用的标签"
+                input.k-input.we-in [placeholder="标签，用逗号隔开" type="text"]
+          div.k-div
+## footer
+div
+  span.it
+    i.dot
+    "没有未应用的修改"
+  div.grow
+  span.it [title="这个目标在世界里的位置"] "player · 主世界"
+## overlays
+div
+
+# 页签 pabil
+## topbar
+div
+  span.eb-ico
+    item.k-ico [style="height:16px;width:16px"]
+  span.ttl "Rinorsi（你）"
+  span.crumb "玩家"
+  div.grow
+  div.dis.k-ibtn [title="撤销上一次写入游戏的修改"]
+    img.o-ico [src="oriel:textures/icons/undo.png" style="height:16px;width:16px"]
+  div.k-ibtn [title="保险库：把物品存起来，或取出放进槽位"]
+    img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+  div.k-ibtn [title="设置"]
+    img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+  div.dim.k-apply.k-btn.pri [title="还没有修改"]
+    img.o-ico [src="oriel:textures/icons/play.png" style="height:16px;width:16px"]
+    span "应用修改"
+  div.k-ibtn [title="全屏"]
+    img.o-ico [src="oriel:textures/icons/maximize.png" style="height:16px;width:16px"]
+  div.k-ibtn [title="关闭"]
+    img.o-ico [src="oriel:textures/icons/close.png" style="height:16px;width:16px"]
+## screen
+div
+  aside.ed-hero
+    div.ed-stagehead
+      span.fold-arrow
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      span "预览"
+      div.grow
+      div.ed-view.k-seg [title="2D 显示图标 / 3D 显示生物（会记住你的选择）"]
+        div.k-segi.on "2D"
+        div.k-segi "3D"
+    div.ed-stage
+      div.plate
+      item.k-ico [style="height:48px;width:48px"]
+    div.ed-name.sm "Rinorsi（你）"
+    div.ed-tags
+      span.k-tag "玩家"
+      span.dim.k-tag "player"
+    div.ed-stagehead
+      span.fold-arrow
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      span "属性"
+      div.grow
+    div.ed-stats
+      div.k-stat
+        span.sl "生命"
+        b "20"
+      div.k-stat
+        span.sl "饥饿"
+        b "20"
+      div.k-stat
+        span.sl "等级"
+        b "3"
+      div.k-stat
+        span.sl "模式"
+        b "生存"
+  div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
+  section.ed-right
+    div.ed-tabs
+      div.ed-tab
+        img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
+        span "背包"
+      div.ed-tab
+        img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+        span "末影箱"
+      div.ed-tab
+        img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
+        span "状态"
+      div.ed-tab.on
+        img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
+        span "能力"
+      div.ed-tab
+        img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+        span "属性与效果"
+    div.ed-tools [style="display:none"]
+      span.ed-tools-t "能力"
+      div.grow
+      div.k-mini [title="折叠 / 展开本页全部卡片"]
+        img.o-ico [src="oriel:textures/icons/layers.png" style="height:16px;width:16px"]
+    div.ed-body
+      div.k-list
+        div.k-card.w-card [data-card="w:pabil:能力"]
+          div.k-chead
+            div.k-cico
+              img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
+            div.k-ctx
+              div.k-ctitle
+                "能力"
+                span.k-badge [title="这一项和物品原版默认值不同"] "自定义"
+            div.k-csum
+            div.k-cval
+            div.k-reset [title="放弃这里的修改，使用物品原本的值"] "恢复默认"
+            span.k-swph
+            div.k-chev [title="折叠 / 展开"]
+              img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+          div.k-cbody
+            div.k-srow.k-xrow
+              div.k-xhead
+                div.tx
+                  div.z "允许飞行"
+                  div.s "双击空格起飞"
+                div.k-toggle [role="switch"]
+                  i
+            div.k-srow.k-xrow
+              div.k-xhead
+                div.tx
+                  div.z "正在飞行"
+                div.k-toggle [role="switch"]
+                  i
+            div.k-srow.k-xrow
+              div.k-xhead
+                div.tx
+                  div.z "无敌"
+                  div.s "不受伤害"
+                div.k-toggle [role="switch"]
+                  i
+            div.k-srow.k-xrow
+              div.k-xhead
+                div.tx
+                  div.z "可以放置 / 破坏方块"
+                div.k-toggle.on [role="switch"]
+                  i
+            div.k-srow.k-xrow
+              div.k-xhead
+                div.tx
+                  div.z "创造模式的瞬间破坏"
+                div.k-toggle [role="switch"]
+                  i
+            div.k-srow.k-xrow
+              div.k-xhead
+                div.tx
+                  div.z "行走速度"
+                  div.s "默认 0.1 · 最大 1"
+                div.k-num.k-xnum
+                  div.k-numrow
+                    div.k-stepper
+                      div.k-step [title="减少（按住 Shift 一次 ×10）"] "−"
+                      input.k-input.k-numin [type="text" value="0.1"]
+                      div.k-step [title="增加（按住 Shift 一次 ×10）"] "+"
+                      span.k-big [style="display:none"]
+                  div.k-numerr [style="display:none"]
+                  div.k-numwarn [style="display:none"]
+            div.k-srow.k-xrow
+              div.k-xhead
+                div.tx
+                  div.z "飞行速度"
+                  div.s "默认 0.05 · 最大 1"
+                div.k-num.k-xnum
+                  div.k-numrow
+                    div.k-stepper
+                      div.k-step [title="减少（按住 Shift 一次 ×10）"] "−"
+                      input.k-input.k-numin [type="text" value="0.05"]
+                      div.k-step [title="增加（按住 Shift 一次 ×10）"] "+"
+                      span.k-big [style="display:none"]
+                  div.k-numerr [style="display:none"]
+                  div.k-numwarn [style="display:none"]
+          div.k-div
+## footer
+div
+  span.it
+    i.dot
+    "没有未应用的修改"
+  div.grow
+  span.it [title="这个目标在世界里的位置"] "player · 主世界"
+## overlays
+div
+
+# 页签 pattr
+## topbar
+div
+  span.eb-ico
+    item.k-ico [style="height:16px;width:16px"]
+  span.ttl "Rinorsi（你）"
+  span.crumb "玩家"
+  div.grow
+  div.dis.k-ibtn [title="撤销上一次写入游戏的修改"]
+    img.o-ico [src="oriel:textures/icons/undo.png" style="height:16px;width:16px"]
+  div.k-ibtn [title="保险库：把物品存起来，或取出放进槽位"]
+    img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+  div.k-ibtn [title="设置"]
+    img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+  div.dim.k-apply.k-btn.pri [title="还没有修改"]
+    img.o-ico [src="oriel:textures/icons/play.png" style="height:16px;width:16px"]
+    span "应用修改"
+  div.k-ibtn [title="全屏"]
+    img.o-ico [src="oriel:textures/icons/maximize.png" style="height:16px;width:16px"]
+  div.k-ibtn [title="关闭"]
+    img.o-ico [src="oriel:textures/icons/close.png" style="height:16px;width:16px"]
+## screen
+div
+  aside.ed-hero
+    div.ed-stagehead
+      span.fold-arrow
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      span "预览"
+      div.grow
+      div.ed-view.k-seg [title="2D 显示图标 / 3D 显示生物（会记住你的选择）"]
+        div.k-segi.on "2D"
+        div.k-segi "3D"
+    div.ed-stage
+      div.plate
+      item.k-ico [style="height:48px;width:48px"]
+    div.ed-name.sm "Rinorsi（你）"
+    div.ed-tags
+      span.k-tag "玩家"
+      span.dim.k-tag "player"
+    div.ed-stagehead
+      span.fold-arrow
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      span "属性"
+      div.grow
+    div.ed-stats
+      div.k-stat
+        span.sl "生命"
+        b "20"
+      div.k-stat
+        span.sl "饥饿"
+        b "20"
+      div.k-stat
+        span.sl "等级"
+        b "3"
+      div.k-stat
+        span.sl "模式"
+        b "生存"
+  div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
+  section.ed-right
+    div.ed-tabs
+      div.ed-tab
+        img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
+        span "背包"
+      div.ed-tab
+        img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+        span "末影箱"
+      div.ed-tab
+        img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
+        span "状态"
+      div.ed-tab
+        img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
+        span "能力"
+      div.ed-tab.on
+        img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+        span "属性与效果"
+    div.ed-tools
+      span.ed-tools-t "属性与效果"
+      div.grow
+      div.k-mini [title="折叠 / 展开本页全部卡片"]
+        img.o-ico [src="oriel:textures/icons/layers.png" style="height:16px;width:16px"]
+    div.ed-body
+      div.k-list
+        div.k-card.w-card [data-card="w:pattr:属性"]
+          div.k-chead
+            div.k-cico
+              img.o-ico [src="oriel:textures/icons/sword.png" style="height:16px;width:16px"]
+            div.k-ctx
+              div.k-ctitle
+                "属性"
+                span.k-badge [title="这一项和物品原版默认值不同"] "自定义"
+              div.k-cdesc "改的是基础值，装备带来的修饰符保持不变"
+            div.k-csum
+            div.k-cval
+            div.k-reset [title="放弃这里的修改，使用物品原本的值"] "恢复默认"
+            span.k-swph
+            div.k-chev [title="折叠 / 展开"]
+              img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+          div.k-cbody
+            div.k-srow.k-xrow
+              div.k-xhead
+                div.ic
+                  sprite [src="minecraft:hud/heart/full" style="width:18px;height:18px"]
+                div.tx [title="minecraft:max_health"]
+                  div.z "最大生命值"
+                  div.s "默认 20 · 范围 1 ~ 1024"
+                div.k-num.k-xnum
+                  div.k-numrow
+                    div.k-stepper
+                      div.k-step [title="减少（按住 Shift 一次 ×10）"] "−"
+                      input.k-input.k-numin [type="text" value="20"]
+                      div.k-step [title="增加（按住 Shift 一次 ×10）"] "+"
+                      span.k-big [style="display:none"]
+                  div.k-numerr [style="display:none"]
+                  div.k-numwarn [style="display:none"]
+          div.k-div
+      div.k-list
+        div.k-card.w-card [data-card="w:pattr:状态效果"]
+          div.k-chead
+            div.k-cico
+              img.o-ico [src="oriel:textures/icons/flask.png" style="height:16px;width:16px"]
+            div.k-ctx
+              div.k-ctitle
+                "状态效果"
+                span.k-badge [title="这一项和物品原版默认值不同"] "自定义"
+            div.k-csum
+            div.k-cval
+            div.k-reset [title="放弃这里的修改，使用物品原本的值"] "恢复默认"
+            span.k-swph
+            div.k-chev [title="折叠 / 展开"]
+              img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+          div.k-cbody
+            div.k-effects
+              div.k-scrollbox.tall
+                div.k-sortlist
+                  div.k-empty "没有效果"
+              div.k-add
+                img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
+                "添加状态效果"
+          div.k-div
+## footer
+div
+  span.it
+    i.dot
+    "没有未应用的修改"
+  div.grow
+  span.it [title="这个目标在世界里的位置"] "player · 主世界"
+## overlays
+div

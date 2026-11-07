@@ -1,0 +1,10 @@
+div
+  div.k-toast.ok
+    img.o-ico [src="oriel:textures/icons/check.png" style="height:16px;width:16px"]
+    "提示 ok"
+  div.k-toast.warn
+    img.o-ico [src="oriel:textures/icons/warning.png" style="height:16px;width:16px"]
+    "提示 warn"
+  div.error.k-toast
+    img.o-ico [src="oriel:textures/icons/warning.png" style="height:16px;width:16px"]
+    "提示 error"

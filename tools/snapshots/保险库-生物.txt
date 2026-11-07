@@ -1,0 +1,72 @@
+## overlays
+div
+  div.k-mask
+    div.k-modal.vtwin.wide
+      div.k-mh
+        b "保险库"
+        span.k-sub "存在这台电脑上，所有存档和服务器通用"
+        div.grow
+        div.k-mini "×"
+      div.k-mb
+        div.vt-top
+          div.k-sbox
+            input.k-input [placeholder="搜索名称、标签、物品（支持拼音）" type="text"]
+            div.k-btn.k-sbtn [title="搜索（也可以按回车）"]
+              img.o-ico [src="oriel:textures/icons/search.png" style="height:16px;width:16px"]
+              span "搜索"
+        div.vt-bar
+          div.k-seg
+            div.k-segi
+              img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
+              "物品"
+            div.k-segi.on
+              img.o-ico [src="oriel:textures/icons/paw.png" style="height:16px;width:16px"]
+              "生物"
+          div.k-seg
+            div.k-segi.on
+              "最近"
+            div.k-segi
+              "名称"
+            div.k-segi
+              "类型"
+          div.k-btn.pri [style="display:none"]
+            img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
+            span "存入当前物品"
+          div.grow
+          span.k-sub.vt-stat
+        div.k-chips.vt-tags
+        div.vt-warn
+        div
+        div.vt-list
+          div.x-list
+            div.k-sortlist
+              div.k-srow.k-xrow
+                div.k-xhead
+                  div.ic
+                    img.o-ico [src="oriel:textures/icons/paw.png" style="height:16px;width:16px"]
+                  div.tx
+                    div.z "小黑猫"
+                    div.s "Cat"
+                    div.vt-meta
+                      span.k-tag [title="带类型的实体数据，取出时整段使用"] "SNBT"
+                      span.dim.k-tag "宠物"
+                  div.x-rt
+                  span.closed.fold-arrow
+                    img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+          div
+        div.k-btn [style="display:none"]
+          img.o-ico [src="oriel:textures/icons/down.png" style="height:16px;width:16px"]
+          span "显示更多"
+      div.k-mf
+        div.k-btn
+          img.o-ico [src="oriel:textures/icons/upload.png" style="height:16px;width:16px"]
+          span "导入…"
+        div.k-btn
+          img.o-ico [src="oriel:textures/icons/download.png" style="height:16px;width:16px"]
+          span "导出全部"
+        div.grow
+        div.k-btn.pri
+          span "完成"
+      div.k-medge-r [title="拖动调整宽度"]
+      div.k-medge-b [title="拖动调整高度"]
+      div.k-mresize [title="拖动调整大小"]

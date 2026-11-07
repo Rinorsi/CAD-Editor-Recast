@@ -1,0 +1,226 @@
+# 页签 view
+## topbar
+div
+  span.eb-ico
+    item.k-ico [style="height:16px;width:16px"]
+  span.ttl "熔炉"
+  span.crumb "方块"
+  div.grow
+  div.dis.k-ibtn [title="撤销上一次写入游戏的修改"]
+    img.o-ico [src="oriel:textures/icons/undo.png" style="height:16px;width:16px"]
+  div.k-ibtn [title="保险库：把物品存起来，或取出放进槽位"]
+    img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+  div.k-ibtn [title="设置"]
+    img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+  div.dim.k-apply.k-btn.pri [title="还没有修改"]
+    img.o-ico [src="oriel:textures/icons/play.png" style="height:16px;width:16px"]
+    span "应用修改"
+  div.k-ibtn [title="全屏"]
+    img.o-ico [src="oriel:textures/icons/maximize.png" style="height:16px;width:16px"]
+  div.k-ibtn [title="关闭"]
+    img.o-ico [src="oriel:textures/icons/close.png" style="height:16px;width:16px"]
+## screen
+div
+  aside.ed-hero
+    div.ed-stagehead
+      span.fold-arrow
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      span "预览"
+      div.grow
+      div.ed-view.k-seg [title="方块预览：2D 图标 / 3D 模型（会记住你的选择）"]
+        div.k-segi.on "2D"
+        div.k-segi "3D"
+    div.ed-stage
+      div.plate
+      item.k-ico [style="height:48px;width:48px"]
+    div.ed-name "熔炉"
+    div.ed-tags
+      span.k-tag "方块"
+      span.dim.k-tag "furnace"
+  div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
+  section.ed-right
+    div.ed-tabs
+      div.ed-tab.on
+        img.o-ico [src="oriel:textures/icons/furnace.png" style="height:16px;width:16px"]
+        span "熔炉进度"
+      div.ed-tab
+        img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
+        span "数据"
+    div.ed-tools [style="display:none"]
+      span.ed-tools-t "熔炉进度"
+      div.grow
+      div.k-mini [title="折叠 / 展开本页全部卡片"]
+        img.o-ico [src="oriel:textures/icons/layers.png" style="height:16px;width:16px"]
+    div.ed-body
+      div.k-list
+        div.k-card.w-card [data-card="w:view:进度"]
+          div.k-chead
+            div.k-cico
+              img.o-ico [src="oriel:textures/icons/furnace.png" style="height:16px;width:16px"]
+            div.k-ctx
+              div.k-ctitle
+                "进度"
+                span.k-badge [title="这一项和物品原版默认值不同"] "自定义"
+              div.k-cdesc "单位：游戏刻（20 刻 = 1 秒）"
+            div.k-csum
+            div.k-cval
+            div.k-reset [title="放弃这里的修改，使用物品原本的值"] "恢复默认"
+            span.k-swph
+            div.k-chev [title="折叠 / 展开"]
+              img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+          div.k-cbody
+            div.k-srow.k-xrow
+              div.k-xhead
+                div.tx
+                  div.z "已烧了多久"
+                  div.s "范围 -32768 ~ 32767"
+                div.k-num.k-xnum
+                  div.k-numrow
+                    div.k-stepper
+                      div.k-step [title="减少（按住 Shift 一次 ×10）"] "−"
+                      input.k-input.k-numin [type="text" value="0"]
+                      div.k-step [title="增加（按住 Shift 一次 ×10）"] "+"
+                      span.u "刻"
+                      span.k-big [style="display:none"]
+                  div.k-numerr [style="display:none"]
+                  div.k-numwarn [style="display:none"]
+            div.k-srow.k-xrow
+              div.k-xhead
+                div.tx
+                  div.z "这一件要烧多久"
+                div.k-num.k-xnum
+                  div.k-numrow
+                    div.k-stepper
+                      div.k-step [title="减少（按住 Shift 一次 ×10）"] "−"
+                      input.k-input.k-numin [type="text" value="0"]
+                      div.k-step [title="增加（按住 Shift 一次 ×10）"] "+"
+                      span.u "刻"
+                      span.k-big [style="display:none"]
+                  div.k-numerr [style="display:none"]
+                  div.k-numwarn [style="display:none"]
+            div.k-srow.k-xrow
+              div.k-xhead
+                div.tx
+                  div.z "燃料还能烧"
+                div.k-num.k-xnum
+                  div.k-numrow
+                    div.k-stepper
+                      div.k-step [title="减少（按住 Shift 一次 ×10）"] "−"
+                      input.k-input.k-numin [type="text" value="0"]
+                      div.k-step [title="增加（按住 Shift 一次 ×10）"] "+"
+                      span.u "刻"
+                      span.k-big [style="display:none"]
+                  div.k-numerr [style="display:none"]
+                  div.k-numwarn [style="display:none"]
+            div.k-srow.k-xrow
+              div.k-xhead
+                div.tx
+                  div.z "这块燃料一共能烧"
+                div.k-num.k-xnum
+                  div.k-numrow
+                    div.k-stepper
+                      div.k-step [title="减少（按住 Shift 一次 ×10）"] "−"
+                      input.k-input.k-numin [type="text" value="0"]
+                      div.k-step [title="增加（按住 Shift 一次 ×10）"] "+"
+                      span.u "刻"
+                      span.k-big [style="display:none"]
+                  div.k-numerr [style="display:none"]
+                  div.k-numwarn [style="display:none"]
+            div.k-sub "游戏运行时会自己推进这些数；你没改的项，保存时以当时的实际进度为准。"
+          div.k-div
+## footer
+div
+  span.it
+    i.dot
+    "没有未应用的修改"
+  div.grow
+  span.it [title="这个目标在世界里的位置"] "位置 1 2 3 · 主世界"
+## overlays
+div
+
+# 页签 data
+## topbar
+div
+  span.eb-ico
+    item.k-ico [style="height:16px;width:16px"]
+  span.ttl "熔炉"
+  span.crumb "方块"
+  div.grow
+  div.dis.k-ibtn [title="撤销上一次写入游戏的修改"]
+    img.o-ico [src="oriel:textures/icons/undo.png" style="height:16px;width:16px"]
+  div.k-ibtn [title="保险库：把物品存起来，或取出放进槽位"]
+    img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+  div.k-ibtn [title="设置"]
+    img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+  div.dim.k-apply.k-btn.pri [title="还没有修改"]
+    img.o-ico [src="oriel:textures/icons/play.png" style="height:16px;width:16px"]
+    span "应用修改"
+  div.k-ibtn [title="全屏"]
+    img.o-ico [src="oriel:textures/icons/maximize.png" style="height:16px;width:16px"]
+  div.k-ibtn [title="关闭"]
+    img.o-ico [src="oriel:textures/icons/close.png" style="height:16px;width:16px"]
+## screen
+div
+  aside.ed-hero
+    div.ed-stagehead
+      span.fold-arrow
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      span "预览"
+      div.grow
+      div.ed-view.k-seg [title="方块预览：2D 图标 / 3D 模型（会记住你的选择）"]
+        div.k-segi.on "2D"
+        div.k-segi "3D"
+    div.ed-stage
+      div.plate
+      item.k-ico [style="height:48px;width:48px"]
+    div.ed-name "熔炉"
+    div.ed-tags
+      span.k-tag "方块"
+      span.dim.k-tag "furnace"
+  div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
+  section.ed-right
+    div.ed-tabs
+      div.ed-tab
+        img.o-ico [src="oriel:textures/icons/furnace.png" style="height:16px;width:16px"]
+        span "熔炉进度"
+      div.ed-tab.on
+        img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
+        span "数据"
+    div.ed-tools [style="display:none"]
+      span.ed-tools-t "数据"
+      div.grow
+      div.k-mini [title="折叠 / 展开本页全部卡片"]
+        img.o-ico [src="oriel:textures/icons/layers.png" style="height:16px;width:16px"]
+    div.ed-body
+      div.k-list
+        div.k-card.w-card [data-card="w:data:完整数据"]
+          div.k-chead
+            div.k-cico
+              img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
+            div.k-ctx
+              div.k-ctitle
+                "完整数据"
+                span.k-badge [title="这一项和物品原版默认值不同"] "自定义"
+              div.k-cdesc "带类型的 SNBT"
+            div.k-csum
+            div.k-cval
+            div.k-reset [title="放弃这里的修改，使用物品原本的值"] "恢复默认"
+            span.k-swph
+            div.k-chev [title="折叠 / 展开"]
+              img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+          div.k-cbody
+            textarea.ed-snbt [value="{\n  id: \"minecraft:furnace\",\n  x: 1,\n  y: 2,\n  z: 3\n}"]
+            div.k-sub
+            div.k-btn
+              img.o-ico [src="oriel:textures/icons/undo.png" style="height:16px;width:16px"]
+              span "放弃这里的修改"
+          div.k-div
+## footer
+div
+  span.it
+    i.dot
+    "没有未应用的修改"
+  div.grow
+  span.it [title="这个目标在世界里的位置"] "位置 1 2 3 · 主世界"
+## overlays
+div
