@@ -159,7 +159,7 @@ function weContainerTab(body) {
   body.appendChild(xSec('chest', '里面的物品', n + ' 格'));
   body.appendChild(weDndHint());
   var ix = []; for (var i = 0; i < n; i++) ix.push(i);
-  body.appendChild(weSlotGrid({ tight: true, indices: ix, cols: cols, stackOf: weSlotStack, titleOf: function (i) { return '格子 ' + (i + 1); },
+  body.appendChild(kSlotGrid({ tight: true, indices: ix, cols: cols, stackOf: weSlotStack, titleOf: function (i) { return '格子 ' + (i + 1); },
     set: function (i, st) { if (st.empty && weOrigEmpty(i)) delete WE.slots[i]; else WE.slots[i] = st; drawWorldTop(); drawWorldFoot(); } }));
 }
 function weOrigEmpty(i) { var s = WE.w.container.slots.filter(function (x) { return x.slot === i; })[0]; return !s || s.stack.empty; }

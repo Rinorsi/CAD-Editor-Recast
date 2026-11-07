@@ -1,55 +1,4 @@
-/* 共用的格子网格 + 点开改物品的小窗：世界容器、玩家背包、玩家末影箱用同一套。
-   cfg = { indices:[格号…], cols, stackOf(i)→{id,count,comps…}|{empty:true}, set(i, stack), titleOf?(i)→鼠标提示 }
-   需要整行重画时返回 { el, repaint } */
-function weSlotPaint(cell, st, title) {
-  clear(cell);
-  cell.classList.remove('fl', 'r-uncommon', 'r-rare', 'r-epic', 'r-ench');
-  if (!st || st.empty) { cell.setAttribute('title', title || '空格子'); return; }
-  cell.classList.add('fl');
-  var cp = st.comps || {}, rar = cp.rarity || cp['minecraft:rarity'];
-  if (rar === 'uncommon' || rar === 'rare' || rar === 'epic') cell.classList.add('r-' + rar);
-  else if (cp.enchantment_glint_override === true || cp['minecraft:enchantment_glint_override'] === true || cp.enchantments || cp['minecraft:enchantments'] || cp.stored_enchantments) cell.classList.add('r-ench');
-  cell.appendChild(itemIcon(st.id, 26));
-  if ((st.count || 1) > 1) cell.appendChild(h('span', { class: 'cnt', text: String(st.count) }));
-  if ((st.comps && Object.keys(st.comps).length) || st.component_snbt) cell.appendChild(h('i', { class: 'mk', title: '这个物品带有自己的组件数据，会原样保留' }));
-  cell.setAttribute('title', nameOfItem(st.id) + ' × ' + (st.count || 1) + (title ? '（' + title + '）' : ''));
-}
-function weSlotPop(cell, cur, set) {
-  var box = h('div', { class: 'k-pickbox' }), empty = !cur || cur.empty;
-  var pick = h('div', { class: 'k-btn' }, empty ? [uiIcon('plus', 12), h('span', { text: '选择物品' })] : [itemIcon(cur.id, 22), h('span', { text: nameOfItem(cur.id) })]);
-  activate(pick, function () {
-    pickItem(cell, function (id) { set({ id: fullId(id), count: empty ? 1 : (cur.count || 1), comps: {}, removed: {} }); kPopClose(); },
-      { onStack: function (st) { var s2 = clone(st); delete s2.slot; delete s2.label; set(s2); kPopClose(); } });
-  });
-  box.appendChild(pick);
-  if (!empty) {
-    var ms = (protoOf(cur.id).max_stack_size || 64);
-    var cnt = kNumber(cur.count || 1, { min: 1, max: 99, noSlider: true, step: 1, unit: '个', warnMax: ms, warnWhy: '该物品原版最大堆叠 ' + ms, presets: [{ v: 1, label: '1' }, { v: 16, label: '16' }, { v: 64, label: '64' }],
-      onChange: function (v) { var o = clone(cur); o.count = v; cur = o; set(o); } });
-    box.appendChild(fieldRow('数量', cnt.el));
-    box.appendChild(kBtn('清空这一格', function () { set({ empty: true }); kPopClose(); }, { cls: 'dng', icon: 'trash' }));
-  }
-  kPopover(cell, box, { width: 250, maxHeight: 280 });
-}
-function weSlotGrid(cfg) {
-  var grid = h('div', { class: 'k-cgrid' + (cfg.bare ? '' : ' tray') + (cfg.tight ? ' inv' : '') + (cfg.fluid ? ' fluid' : '') }), cells = {};
-  grid.setAttribute('style', 'grid-template-columns:repeat(' + cfg.cols + ',' + (cfg.fluid ? '1fr' : (cfg.col || 26) + 'px') + ')');
-  function paint(cell, i) {
-    weSlotPaint(cell, cfg.stackOf(i), cfg.titleOf ? cfg.titleOf(i) : '格子 ' + (i + 1));
-    var g = cfg.ghostOf && cfg.ghostOf(i), s = cfg.stackOf(i);
-    if (g && (!s || s.empty)) cell.appendChild(uiIcon(g, 16, 'es-ghost'));
-  }
-  cfg.indices.forEach(function (i) {
-    if (i === null) { grid.appendChild(h('div', { class: 'slot s34 blank', style: 'visibility:hidden' })); return; }
-    var cell = h('div', { class: 'slot s34' + (cfg.clsOf && cfg.clsOf(i) ? ' ' + cfg.clsOf(i) : '') }); cells[i] = cell;
-    paint(cell, i);
-    weDndBind(cell, { get: function () { return cfg.stackOf(i); }, set: function (st) { cfg.set(i, st); } }, function () {
-      weSlotPop(cell, cfg.stackOf(i), function (st) { cfg.set(i, st); paint(cell, i); });
-    });
-    grid.appendChild(cell);
-  });
-  return grid;
-}
+/* 格子网格、点开改物品的小窗、拖动对换（kSlotGrid / kStackPop / weDnd*）在 slots.js。 */
 
 /* ====================== 玩家（在线玩家，docs/world-player-contract.md） ====================== */
 WE.pslots = { container: {}, ender: {} };
@@ -92,7 +41,7 @@ function wpInventoryTab(body) {
   var sel = typeof wpG('SelectedItemSlot') === 'number' ? wpG('SelectedItemSlot') : 0;
   var gearOf = {}; GEAR.forEach(function (k) { if (eq[k] !== undefined) gearOf[eq[k]] = k; });
   function mk(indices, cols, fluid) {
-    return weSlotGrid({ tight: true, bare: true, col: 28, fluid: !!fluid, indices: indices, cols: cols, stackOf: function (i) { return wpContainerStack(which, i); }, set: function (i, st) { wpSetSlot(which, i, st); },
+    return kSlotGrid({ tight: true, bare: true, col: 28, fluid: !!fluid, indices: indices, cols: cols, stackOf: function (i) { return wpContainerStack(which, i); }, set: function (i, st) { wpSetSlot(which, i, st); },
       ghostOf: function (i) { return gearOf[i] ? (ES_SLOT[gearOf[i]] || [0, 'shield'])[1] : null; },
       clsOf: function (i) { return i === sel && i < 9 ? 'hand' : ''; },
       titleOf: function (i) { return gearOf[i] ? (WP_EQ[gearOf[i]] || gearOf[i]) : (i < 9 ? '快捷栏 ' + (i + 1) + (i === sel ? '（手上拿的）' : '') : '背包 ' + (i - 8)); } });
@@ -124,7 +73,7 @@ function wpEnderTab(body) {
   var n = (wpV('ender') || {}).size || 27, ix = []; for (var i = 0; i < n; i++) ix.push(i);
   var secEnd = wpSec(body, 'wp:ender', 'chest', '末影箱', n + ' 格');
   secEnd.appendChild(weDndHint());
-  secEnd.appendChild(weSlotGrid({ tight: true, indices: ix, cols: 9, stackOf: function (i) { return wpContainerStack('ender', i); }, set: function (i, st) { wpSetSlot('ender', i, st); } }));
+  secEnd.appendChild(kSlotGrid({ tight: true, indices: ix, cols: 9, stackOf: function (i) { return wpContainerStack('ender', i); }, set: function (i, st) { wpSetSlot('ender', i, st); } }));
 }
 function wpNum(label, path, key, obj, o) {
   o = o || {}; var b = wpBound(path);
@@ -182,95 +131,4 @@ function wpAttrTab(body) {
   body.appendChild(xSec('flask', '状态效果'));
   var fx = kEffectList(function () { return clone(wpG('active_effects') || []); }, function (l) { evSet('player', 'active_effects', l); }, { empty: '没有效果' });
   body.appendChild(fx.el);
-}
-
-/* ====================== 和原版背包一致的操作 ======================
-   单击：编辑这一格。双击：拿起，再点另一个格子放下（两格对换；放到空格就是移动）。也可以按住拖动到另一格。Esc 取消拿起。
-   所有用 weSlotGrid / 装备格子 的页面共用这一套，同一个标签页里的格子之间都能互相搬。 */
-var WE_DND = { cells: [], carry: null, ghost: null, last: null, timer: null, bound: false };
-function weDndReset() { WE_DND.cells = []; WE_DND.carry = null; weDndGhost(null); clearTimeout(WE_DND.timer); WE_DND.last = null; }
-function weDndHint() { return h('div', { class: 'k-sub', text: '单击编辑 · 双击拿起，点别格放下' }); }
-function weDndStack(ref) { var st = ref.get(); return st && !st.empty && st.id ? st : null; }
-function weDndGhost(st, x, y) {
-  var g = WE_DND.ghost;
-  if (!st) { if (g && g.parentNode) g.parentNode.removeChild(g); WE_DND.ghost = null; return; }
-  if (!g) {
-    g = WE_DND.ghost = h('div', { class: 'slot-ghost', style: 'position:fixed;z-index:400;pointer-events:none;width:26px;height:26px;' }, [itemIcon(st.id, 26)]);
-    if ((st.count || 1) > 1) g.appendChild(h('span', { class: 'cnt', text: String(st.count), style: 'position:absolute;right:0;bottom:-2px;color:#fff' }));
-    document.getElementById('overlays').appendChild(g);
-  }
-  g.style.left = (x - 13) + 'px'; g.style.top = (y - 13) + 'px';
-}
-function weDndCellAt(x, y) {
-  for (var i = 0; i < WE_DND.cells.length; i++) {
-    var c = WE_DND.cells[i], r = c.el.getBoundingClientRect();
-    if (r.width && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return c;
-  }
-  return null;
-}
-function weDndMove(a, b) {
-  if (a === b) return;
-  var sa = a.ref.get(), sb = b.ref.get();
-  if (!weDndStack(a.ref) && !weDndStack(b.ref)) return;
-  a.ref.set(sb && sb.id && !sb.empty ? sb : { empty: true });
-  b.ref.set(sa && sa.id && !sa.empty ? sa : { empty: true });
-  weRedrawBody();
-}
-function weDndBind(cell, ref, onClick) {
-  var me = { el: cell, ref: ref };
-  WE_DND.cells.push(me);
-  if (!WE_DND.bound) {
-    WE_DND.bound = true;
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && WE_DND.carry) { WE_DND.carry = null; weDndGhost(null); weRedrawBody(); } });
-    document.addEventListener('mousemove', function (e) {
-      WE_DND.mx = e.clientX; WE_DND.my = e.clientY;
-      if (WE_DND.carry && WE_DND.ghost) { WE_DND.ghost.style.left = (e.clientX - 13) + 'px'; WE_DND.ghost.style.top = (e.clientY - 13) + 'px'; }
-    });
-  }
-  if (WE_DND.carry && WE_DND.carry.ref === ref) cell.classList.add('sel', 'carried');
-  var down = null, dragging = false;
-  cell.addEventListener('mousedown', function (e) {
-    if (e.button !== undefined && e.button !== 0) return;
-    if (!weDndStack(ref)) { down = null; return; }
-    down = { x: e.clientX, y: e.clientY }; dragging = false;
-    var st = weDndStack(ref);
-    function mv(ev) {
-      if (!down) return;
-      if (!dragging && Math.abs(ev.clientX - down.x) + Math.abs(ev.clientY - down.y) > 5) { dragging = true; clearTimeout(WE_DND.timer); cell.classList.add('sel'); }
-      if (dragging) weDndGhost(st, ev.clientX, ev.clientY);
-    }
-    function up(ev) {
-      document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up);
-      weDndGhost(null);
-      if (dragging) {
-        var t = weDndCellAt(ev.clientX, ev.clientY);
-        cell._noClick = true; setTimeout(function () { cell._noClick = false; }, 0);
-        if (t && t !== me) weDndMove(me, t); else cell.classList.remove('sel');
-      }
-      down = null; dragging = false;
-    }
-    document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
-  });
-  cell.addEventListener('click', function (e) {
-    if (cell._noClick) return;
-    if (WE_DND.carry) {   // 已经拿起了东西：点这里就是放下（点回原格取消）
-      var from = WE_DND.carry; WE_DND.carry = null; weDndGhost(null);
-      if (from.ref === ref) { weRedrawBody(); return; }
-      var t = null; WE_DND.cells.forEach(function (c) { if (c.ref === ref) t = c; });
-      weDndMove(from, t || me); return;
-    }
-    var now = Date.now();
-    if (WE_DND.last && WE_DND.last.ref === ref && now - WE_DND.last.t < 380) {   // 双击：拿起
-      clearTimeout(WE_DND.timer); WE_DND.last = null;
-      if (weDndStack(ref)) {   // 和原版一样：物品离开格子，跟着鼠标走，直到点另一格放下
-        WE_DND.carry = me; cell.classList.add('sel', 'carried');
-        weDndGhost(null); weDndGhost(weDndStack(ref), e && e.clientX !== undefined ? e.clientX : (WE_DND.mx || 0), e && e.clientY !== undefined ? e.clientY : (WE_DND.my || 0));
-        toast('已拿起，点另一格放下（Esc 取消）', 'info');
-      }
-      return;
-    }
-    WE_DND.last = { ref: ref, t: now };
-    clearTimeout(WE_DND.timer);
-    WE_DND.timer = setTimeout(function () { WE_DND.last = null; onClick(); }, 260);
-  });
 }
