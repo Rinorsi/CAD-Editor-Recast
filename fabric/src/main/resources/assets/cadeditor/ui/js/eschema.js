@@ -96,9 +96,7 @@ function esVariantRow(v, o, tpl, edit) {
   /* 范围很大的整数（史莱姆大小）：数字框，显示的是游戏里的尺寸，保存值由 min / semanticMin 换算 */
   if (v.kind === 'int' && typeof v.min === 'number' && typeof v.max === 'number' && (v.options || []).length > 16) {
     var off = typeof v.semanticMin === 'number' ? v.semanticMin - v.min : 0;
-    var num = kNumber(pick(cur) + off, { min: v.min + off, max: v.max + off, step: 1, noSlider: true, onChange: function (x) { edit(function (obj) { var st = x - off; esSet(obj, p, mask !== null ? (base() & ~mask) | (st & mask) : st); }); } });
-    num.el.classList.add('k-xnum');
-    return xRow({ icon: false, title: title, sub: (v.min + off) + ' – ' + (v.max + off), tip: p.join('.'), right: num.el });
+    return xNum({ title: title, sub: (v.min + off) + ' – ' + (v.max + off), tip: p.join('.'), value: pick(cur) + off, min: v.min + off, max: v.max + off, step: 1, onChange: function (x) { edit(function (obj) { var st = x - off; esSet(obj, p, mask !== null ? (base() & ~mask) | (st & mask) : st); }); } });
   }
   var curOpt = (v.options || []).filter(function (x) { return x.value === pick(cur); })[0];
   if (esIsDye(v)) {
@@ -132,21 +130,20 @@ function esFlagRow(f, o, edit) {
   if (f.id === 'baby' && f.type === 'int' && typeof f.babyAge === 'number') {
     /* 幼年：写游戏给的 babyAge / adultAge，不写探测样本 */
     var isBaby = typeof val === 'number' ? val < 0 : (typeof f.default === 'number' && f.default < 0);
-    return xRow({ icon: false, title: nm[0], sub: nm[1], tip: k, right: kToggle(isBaby, function (on) { edit(function (obj) { obj[k] = on ? f.babyAge : f.adultAge; }, true); }).el });
+    return xToggle({ title: nm[0], sub: nm[1], tip: k, value: isBaby, onChange: function (on) { edit(function (obj) { obj[k] = on ? f.babyAge : f.adultAge; }, true); } });
   }
   if (f.type === 'byte-bool') {
     var on = typeof val === 'number' ? val !== 0 : typeof val === 'boolean' ? val : !!f.default;
-    return xRow({ icon: false, title: nm[0], sub: nm[1], tip: k, right: kToggle(on, function (x) {
+    return xToggle({ title: nm[0], sub: nm[1], tip: k, value: on, onChange: function (x) {
       edit(function (obj) { if (x === !!f.default && !f.present_by_default) delete obj[k]; else obj[k] = x ? 1 : 0; }, true);
-    }).el });
+    } });
   }
   if (f.type === 'float' || f.type === 'int') {
     var def = typeof f.default === 'number' ? f.default : 0, cur = typeof val === 'number' ? val : def;
-    var opts = { min: typeof f.min === 'number' ? f.min : undefined, step: f.type === 'int' ? 1 : 0.5, dec: f.type === 'int' ? 0 : 2, noSlider: true,
+    var opts = { title: nm[0], sub: nm[1] || (typeof val === 'number' ? '' : '默认 ' + fmtNum(def)), tip: k, value: cur, min: typeof f.min === 'number' ? f.min : undefined, step: f.type === 'int' ? 1 : 0.5, dec: f.type === 'int' ? 0 : 2,
       onChange: function (x) { edit(function (obj) { obj[k] = x; }); } };
     if (k === 'Health' && typeof f.max === 'number') { opts.warnMax = f.max; opts.warnWhy = '默认上限是 ' + fmtNum(f.max) + '；改过体型或属性的生物，游戏会按实际上限校验'; }
-    var num = kNumber(cur, opts); num.el.classList.add('k-xnum');
-    return xRow({ icon: false, title: nm[0], sub: nm[1] || (typeof val === 'number' ? '' : '默认 ' + fmtNum(def)), tip: k, right: num.el });
+    return xNum(opts);
   }
   if (f.type === 'component' || f.type === 'string') {
     /* 名字：文本组件；已有的颜色、粗体等格式保留，只改 text */
@@ -336,11 +333,10 @@ function esAttrList(s, o) {
   function row(a) {
     var isScale = a.id === 'minecraft:scale', nm = nameOf('attribute', a.id);
     var step = isScale ? 0.25 : (a.max - a.min > 50 ? 1 : 0.1);
-    var num = kNumber(esAttrBase(o.get(), a), { min: a.min, max: a.max, softMax: isScale ? 4 : undefined, step: step, dec: 3, noSlider: !isScale,
+    return xNum({ title: isScale ? '体型' : nm, sub: (isScale ? '大小倍数，1 是原样；' : '') + '默认 ' + fmtNum(a.base) + ' · 范围 ' + fmtNum(a.min) + ' ~ ' + fmtNum(a.max), tip: a.id, value: esAttrBase(o.get(), a),
+      min: a.min, max: a.max, softMax: isScale ? 4 : undefined, step: step, dec: 3, noSlider: !isScale,
       presets: isScale ? [{ v: 0.5, label: '0.5' }, { v: 1, label: '1' }, { v: 2, label: '2' }, { v: 4, label: '4' }] : undefined,
       onChange: function (v) { edit(function (obj) { esAttrSet(obj, a, v); }, isScale); } });
-    num.el.classList.add('k-xnum');
-    return xRow({ icon: false, title: isScale ? '体型' : nm, sub: (isScale ? '大小倍数，1 是原样；' : '') + '默认 ' + fmtNum(a.base) + ' · 范围 ' + fmtNum(a.min) + ' ~ ' + fmtNum(a.max), tip: a.id, right: num.el });
   }
   main.forEach(function (a) { list.appendChild(row(a)); });
   if (rest.length) {
@@ -363,9 +359,7 @@ function esEffects(s, o) {
 function esTagsRow(s, o) {
   if (!(s.extras || []).some(function (x) { return x.key === 'Tags'; })) return null;
   var edit = esEditor(o), cur = esGet(o.get(), ['Tags']);
-  var inp = kInput(Array.isArray(cur) ? cur.join('，') : '', function () {}, { placeholder: '标签，用逗号隔开' }); inp.setAttribute('style', 'width:170px');
-  inp.addEventListener('change', function () { var t = inp.value.split(/[,，\s]+/).filter(function (x) { return x; }); edit(function (obj) { if (t.length) obj.Tags = t; else delete obj.Tags; }); });
-  return xRow({ icon: false, title: '标签', sub: '给 /tag 和选择器用的标签', tip: 'Tags', right: inp });
+  return xText({ title: '标签', sub: '给 /tag 和选择器用的标签', tip: 'Tags', value: Array.isArray(cur) ? cur.join('，') : '', placeholder: '标签，用逗号隔开', style: 'width:170px', onCommit: function (v) { var t = splitTags(v); edit(function (obj) { if (t.length) obj.Tags = t; else delete obj.Tags; }); } });
 }
 
 /* ====================== 公共：生物头部（图标 + 名字 + ID + 按钮） ======================

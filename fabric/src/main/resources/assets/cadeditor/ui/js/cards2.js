@@ -132,8 +132,7 @@ CARDS.extraAttrs = function (exclude, title) {
       var info = ATIDX[t], isAdd = m.operation === 'add_value', isOpen = openIdx === idx;
       /* 一行里直接改数值；展开才出现“计算方式 / 生效位置 / 删除” */
       var val = isAdd ? m.amount : m.amount * 100, headRef = null;
-      var num = kNumber(+val.toFixed(4), { min: -1e15, max: 1e15, step: isAdd ? 0.5 : 5, unit: isAdd ? '' : '%', noSlider: true, onChange: function (v) { all[idx].amount = isAdd ? v : v / 100; saveMods(all); } });
-      num.el.classList.add('k-xnum'); num.el.addEventListener('click', function (ev) { ev.stopPropagation(); });
+      var num = xNumCtl(+val.toFixed(4), { min: -1e15, max: 1e15, step: isAdd ? 0.5 : 5, unit: isAdd ? '' : '%', noSlider: true, onChange: function (v) { all[idx].amount = isAdd ? v : v / 100; saveMods(all); } }, true);
       var row = xRow({ grip: true, chevron: true, icon: attrIconEl(t), title: attrName(t), sub: (SLOT_ZH[m.slot || 'any'] || m.slot) + (isAdd ? '' : ' · 比例'), tip: info ? info.desc : '模组属性 ' + m.type, right: num.el, open: isOpen, onHead: function () { openIdx = isOpen ? -1 : idx; draw(); } });
       if (isOpen) {
         var opsel = kSeg(OPMODES, m.operation || 'add_value', function (v) { all[idx].operation = v; saveMods(all); draw(); });

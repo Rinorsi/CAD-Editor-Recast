@@ -258,6 +258,7 @@ function kInput(value, onChange, o) {
   o = o || {};
   var el = h('input', { class: 'k-input', type: 'text', value: value || '', placeholder: o.placeholder || '', maxlength: o.max ? String(o.max) : null, spellcheck: 'false' });
   el.addEventListener('input', function () { onChange(el.value); });
+  if (o.onCommit) el.addEventListener('change', function () { o.onCommit(el.value); });   // 失焦 / 回车才提交，输入过程不打断
   return el;
 }
 

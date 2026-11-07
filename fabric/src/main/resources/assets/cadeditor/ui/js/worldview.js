@@ -38,15 +38,10 @@ function weViewTabInfo() { var g = weViewGroups(), n = g.length === 1 && WEV_INF
 
 /* ---------- 小零件 ---------- */
 function wvNum(g, k, label, o) {
-  o = o || {}; var f = weViewField(g, k), v = weVal(g, k);
-  var num = kNumber(typeof v === 'number' ? v : 0, { min: f.min, max: f.max, noSlider: true, step: 1, unit: o.unit, onChange: function (x) { weSetV(g, k, x); } });
-  num.el.classList.add('k-xnum');
-  return xRow({ icon: false, title: label, sub: o.sub || (f.min !== undefined ? '范围 ' + f.min + ' ~ ' + f.max : ''), right: num.el });
+  o = o || {}; var f = weViewField(g, k);
+  return xNum({ title: label, sub: o.sub || undefined, range: true, value: weVal(g, k), min: f.min, max: f.max, unit: o.unit, onChange: function (x) { weSetV(g, k, x); } });
 }
-function wvToggle(g, k, label, sub) {
-  var t = kToggle(!!weVal(g, k), function (on) { weSetV(g, k, on); });
-  return xRow({ icon: false, title: label, sub: sub, right: t.el });
-}
+function wvToggle(g, k, label, sub) { return xToggle({ title: label, sub: sub, value: weVal(g, k), onChange: function (on) { weSetV(g, k, on); } }); }
 /* ItemStack（id / count / components）字段：选一件，或清空 */
 function wvItem(cur, onSet) {
   var has = cur && cur.id;
@@ -85,7 +80,7 @@ WEV.sign = function (body, g) {
   })(i);
   var o = cur();
   body.appendChild(xRow({ icon: false, title: '文字颜色', right: dyeButton(o.color || 'black', function (c) { setFace(function (x) { x.color = c; }); wvRedraw(); }) }));
-  body.appendChild(xRow({ icon: false, title: '发光文字', sub: '用荧光墨囊涂过的效果', right: kToggle(!!o.has_glowing_text, function (on) { setFace(function (x) { x.has_glowing_text = on; }); }).el }));
+  body.appendChild(xToggle({ title: '发光文字', sub: '用荧光墨囊涂过的效果', value: o.has_glowing_text, onChange: function (on) { setFace(function (x) { x.has_glowing_text = on; }); } }));
   body.appendChild(xSec('lock', '涂蜡'));
   body.appendChild(wvToggle(g, 'is_waxed', '涂蜡', '涂过蜡的告示牌不能再改字'));
   body.appendChild(h('div', { class: 'k-sub', text: '一行里想要样式（颜色、粗体）时，直接写文本组件，比如 {"text":"你好","color":"red"}。' }));
@@ -169,7 +164,7 @@ WEV.command_block = function (body, g) {
   body.appendChild(wvToggle(g, 'TrackOutput', '记录上次输出', '关掉后命令方块里看不到输出'));
   body.appendChild(wvToggle(g, 'powered', '当前通电'));
   var cond = weStateSchema().filter(function (p) { return p.name === 'conditional'; })[0];
-  if (cond) body.appendChild(xRow({ icon: false, title: '有条件', sub: '只有后面那个方块成功才执行', right: kToggle(weStateCur(cond) === 'true', function (on) { var v = on ? 'true' : 'false'; if (v === cond.current) delete WE.bstate.conditional; else WE.bstate.conditional = v; drawWorldTop(); drawWorldFoot(); }).el }));
+  if (cond) body.appendChild(xToggle({ title: '有条件', sub: '只有后面那个方块成功才执行', value: weStateCur(cond) === 'true', onChange: function (on) { var v = on ? 'true' : 'false'; if (v === cond.current) delete WE.bstate.conditional; else WE.bstate.conditional = v; drawWorldTop(); drawWorldFoot(); } }));
 };
 
 /* ---------- 头颅 ---------- */
@@ -178,13 +173,9 @@ WEV.skull = function (body, g) {
   body.appendChild(xSec('skull', '头颅'));
   if (simple) {
     var nm = typeof prof === 'string' ? prof : (prof && prof.name) || '';
-    var inp = kInput(nm, function () {}, { placeholder: '玩家名' }); inp.classList.add('we-in');
-    inp.addEventListener('change', function () { var v = inp.value.trim(); weSetV(g, 'minecraft:profile', v ? { name: v } : null); });
-    body.appendChild(xRow({ icon: false, title: '头颅的主人', sub: '玩家名；联网时游戏会补全皮肤', right: inp }));
+    body.appendChild(xText({ title: '头颅的主人', sub: '玩家名；联网时游戏会补全皮肤', value: nm, placeholder: '玩家名', cls: 'we-in', onCommit: function (t) { var v = t.trim(); weSetV(g, 'minecraft:profile', v ? { name: v } : null); } }));
   } else body.appendChild(xRow({ icon: false, title: '头颅的主人', sub: '带有皮肤数据，这里不改；要换请先清除', right: kBtn('清除', function () { weSetV(g, 'minecraft:profile', null); wvRedraw(); }, { icon: 'trash' }) }));
-  var cn = weVal(g, 'minecraft:custom_name'), cin = kInput(msgText(cn), function () {}, { placeholder: '自定义名称（可空）' }); cin.classList.add('we-in');
-  cin.addEventListener('change', function () { var v = cin.value; weSetV(g, 'minecraft:custom_name', v ? textMsg(v) : null); });
-  body.appendChild(xRow({ icon: false, title: '名称', right: cin }));
+  body.appendChild(xText({ title: '名称', value: msgText(weVal(g, 'minecraft:custom_name')), placeholder: '自定义名称（可空）', cls: 'we-in', onCommit: function (t) { weSetV(g, 'minecraft:custom_name', t ? textMsg(t) : null); } }));
 };
 
 /* ---------- 熔炉 / 酿造台 / 营火：计时 ---------- */
@@ -242,5 +233,5 @@ function weStateTab(body) {
   body.appendChild(xSec('sliders', '方块状态', sc.length ? sc.length + ' 项' : ''));
   if (!sc.length) body.appendChild(xEmpty('这个方块没有可以改的状态。'));
   sc.forEach(function (p) { body.appendChild(weStateRow(p)); });
-  body.appendChild(xRow({ icon: false, title: '通知相邻方块', sub: '关掉后这次修改不会触发周围方块更新', right: kToggle(WE.upd, function (on) { WE.upd = on; }).el }));
+  body.appendChild(xToggle({ title: '通知相邻方块', sub: '关掉后这次修改不会触发周围方块更新', value: WE.upd, onChange: function (on) { WE.upd = on; } }));
 }

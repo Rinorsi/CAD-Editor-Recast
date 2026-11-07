@@ -90,6 +90,52 @@ function foldify(root, keyBase) {
     i = j;
   }
 }
+/* ---- 表单行：一行 = 标题 / 说明 + 右侧控件。数值、开关、文本、分段、下拉都用这几个，不要再手搭 xRow + kXxx ---- */
+/* 数值行。o = { title, sub, subOf(v)→说明（随数值变化）, range:true（没写 sub 时自动写「范围 a ~ b」）, icon（元素 / false），tip,
+   value, def（value 不是数字时用）, min, max, softMin, softMax, step, dec, unit, noSlider（默认 true；有 softMax 时默认 false），presets, warnMax, warnWhy,
+   round（先 toFixed(4)）, stop:true（点数字框不触发行的展开）, onChange }。返回行元素；row.num 是 kNumber 控件。 */
+function xNumCtl(value, o, stop) {
+  var n = kNumber(value, o); n.el.classList.add('k-xnum');
+  if (stop) n.el.addEventListener('click', function (ev) { ev.stopPropagation(); });
+  return n;
+}
+function xNum(o) {
+  var v = typeof o.value === 'number' ? o.value : (o.def !== undefined ? o.def : 0);
+  if (o.round) v = +(+v).toFixed(4);
+  var sub = o.sub, row;
+  if (sub === undefined && o.subOf) sub = o.subOf(v);
+  if (!sub && o.range && o.min !== undefined && o.max !== undefined) sub = '范围 ' + o.min + ' ~ ' + o.max;
+  var q = { min: o.min, max: o.max, softMin: o.softMin, softMax: o.softMax, step: o.step || 1, dec: o.dec, unit: o.unit, presets: o.presets, warnMax: o.warnMax, warnWhy: o.warnWhy,
+    noSlider: o.noSlider !== undefined ? o.noSlider : o.softMax === undefined,
+    onChange: function (x) { o.onChange(x); if (o.subOf && row) { var s = row.querySelector('.s'); if (s) s.textContent = o.subOf(x); } } };
+  var n = xNumCtl(v, q, o.stop);
+  row = xRow({ icon: o.icon === undefined ? false : o.icon, title: o.title, sub: sub, tip: o.tip, right: n.el });
+  row.num = n; return row;
+}
+/* 开关行。o = { title, sub, tip, icon, value, onChange(on) } */
+function xToggle(o) {
+  var t = kToggle(!!o.value, o.onChange);
+  var row = xRow({ icon: o.icon === undefined ? false : o.icon, title: o.title, sub: o.sub, tip: o.tip, right: t.el });
+  row.toggle = t; return row;
+}
+/* 文本行（失焦 / 回车才提交）。o = { title, sub, tip, icon, value, placeholder, cls, style, onCommit(text), onInput(text) } */
+function xText(o) {
+  var inp = kInput(o.value === undefined || o.value === null ? '' : o.value, o.onInput || function () {}, { placeholder: o.placeholder, onCommit: o.onCommit });
+  if (o.cls) inp.classList.add(o.cls);
+  if (o.style) inp.setAttribute('style', o.style);
+  var row = xRow({ icon: o.icon === undefined ? false : o.icon, title: o.title, sub: o.sub, tip: o.tip, right: inp });
+  row.input = inp; return row;
+}
+/* 分段选择行。o = { title, sub, tip, icon, options:[{v,label}], value, onChange(v) } */
+function xSeg(o) {
+  var s = kSeg(o.options, o.value, o.onChange);
+  return xRow({ icon: o.icon === undefined ? false : o.icon, title: o.title, sub: o.sub, tip: o.tip, right: s.el });
+}
+/* 下拉行。o = { title, sub, tip, icon, options:[{v,label}], value, onChange(v), width } */
+function xSelect(o) {
+  var s = kSelect(o.options, o.value, o.onChange, o.width ? { width: o.width } : undefined);
+  return xRow({ icon: o.icon === undefined ? false : o.icon, title: o.title, sub: o.sub, tip: o.tip, right: s.el });
+}
 /* 虚线的「＋ 添加…」行 */
 function xAdd(text, fn) {
   var el = h('div', { class: 'k-add' }, [uiIcon('plus', 12), text]);

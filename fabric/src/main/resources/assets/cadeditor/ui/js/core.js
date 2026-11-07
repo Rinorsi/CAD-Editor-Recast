@@ -494,3 +494,5 @@ function validateDoc(d) {
   });
   return out;
 }
+/* 标签输入：逗号（中英文）或空白分隔，去掉空项 */
+function splitTags(s) { return String(s || '').split(/[,，\s]+/).filter(function (x) { return x; }); }

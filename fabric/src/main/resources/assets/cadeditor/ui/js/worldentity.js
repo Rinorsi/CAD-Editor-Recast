@@ -33,11 +33,9 @@ function evMsg(msg) {
 function evRedraw() { weRender(); }
 function evNum(label, v, o, on) {
   o = o || {};
-  var n = kNumber(typeof v === 'number' ? v : 0, { min: o.min, max: o.max, softMin: o.softMin, softMax: o.softMax, step: o.step || 1, dec: o.dec, unit: o.unit, noSlider: o.noSlider !== false && o.softMax === undefined, onChange: on });
-  n.el.classList.add('k-xnum');
-  return xRow({ icon: false, title: label, sub: o.sub, right: n.el });
+  return xNum({ title: label, sub: o.sub, value: v, min: o.min, max: o.max, softMin: o.softMin, softMax: o.softMax, step: o.step, dec: o.dec, unit: o.unit, noSlider: o.noSlider !== false && o.softMax === undefined, onChange: on });
 }
-function evBool(label, v, sub, on) { return xRow({ icon: false, title: label, sub: sub, right: kToggle(!!v, on).el }); }
+function evBool(label, v, sub, on) { return xToggle({ title: label, sub: sub, value: v, onChange: on }); }
 function evStack(cur, onSet, o) {
   o = o || {};
   var has = cur && cur.id && !cur.empty;
@@ -121,7 +119,7 @@ function evDisplayTab(body) {
     body: function () { return [evVec('偏移', g, 'translation', true, [0, 0, 0]), evVec('缩放', g, 'scale', true, [1, 1, 1]), evVec('先转', g, 'left_rotation', false, [0, 0, 0, 1]), evVec('后转', g, 'right_rotation', false, [0, 0, 0, 1])]; } }));
   var bills = (F.billboard && F.billboard.options) || ['fixed', 'vertical', 'horizontal', 'center'];
   var BN = { fixed: '固定', vertical: '绕竖轴', horizontal: '绕横轴', center: '始终面向' };
-  body.appendChild(xRow({ icon: false, title: '朝向', sub: '要不要跟着玩家的视角转', right: kSeg(bills.map(function (b) { return { v: b, label: BN[b] || b }; }), evGet(g, 'billboard') || 'fixed', function (x) { evSet(g, 'billboard', x); }).el }));
+  body.appendChild(xSeg({ title: '朝向', sub: '要不要跟着玩家的视角转', options: bills.map(function (b) { return { v: b, label: BN[b] || b }; }), value: evGet(g, 'billboard') || 'fixed', onChange: function (x) { evSet(g, 'billboard', x); } }));
   var br = evGet(g, 'brightness'), brOn = br && typeof br === 'object';
   body.appendChild(evBool('固定亮度', brOn, '不跟随周围的光照', function (on) { evSet(g, 'brightness', on ? { block: 15, sky: 15 } : null); evRedraw(); }));
   if (brOn) {
@@ -141,7 +139,7 @@ function evDisplayTab(body) {
     body.appendChild(xSec('sword', '展示的物品'));
     body.appendChild(xRow({ icon: false, title: '物品', right: evStack(evGet(g, 'item'), function (st) { evSet(g, 'item', st); evRedraw(); }, { empty: null }) }));
     var ctx = (F.item_display && F.item_display.options) || ['none', 'thirdperson_lefthand', 'thirdperson_righthand', 'firstperson_lefthand', 'firstperson_righthand', 'head', 'gui', 'ground', 'fixed', 'on_shelf'];
-    body.appendChild(xRow({ icon: false, title: '展示方式', sub: '摆的位置不同，物品的模型姿态也不同', right: kSelect(ctx.map(function (c) { return { v: c, label: c }; }), evGet(g, 'item_display') || 'none', function (x) { evSet(g, 'item_display', x); }, { width: 200 }).el }));
+    body.appendChild(xSelect({ title: '展示方式', sub: '摆的位置不同，物品的模型姿态也不同', options: ctx.map(function (c) { return { v: c, label: c }; }), value: evGet(g, 'item_display') || 'none', width: 200, onChange: function (x) { evSet(g, 'item_display', x); } }));
   }
   if (isBlock) {
     body.appendChild(xSec('cube_grass', '展示的方块'));
@@ -155,7 +153,7 @@ function evDisplayTab(body) {
     ta.addEventListener('change', function () { evSet(g, 'text', textMsg(ta.value)); });
     body.appendChild(ta);
     var al = (F.alignment && F.alignment.options) || ['center', 'left', 'right'], AN = { center: '居中', left: '靠左', right: '靠右' };
-    body.appendChild(xRow({ icon: false, title: '对齐', right: kSeg(al.map(function (a) { return { v: a, label: AN[a] || a }; }), evGet(g, 'alignment') || 'center', function (x) { evSet(g, 'alignment', x); }).el }));
+    body.appendChild(xSeg({ title: '对齐', options: al.map(function (a) { return { v: a, label: AN[a] || a }; }), value: evGet(g, 'alignment') || 'center', onChange: function (x) { evSet(g, 'alignment', x); } }));
     body.appendChild(evNum('一行最宽', evGet(g, 'line_width'), { unit: '像素', sub: '超过会自动换行' }, function (x) { evSet(g, 'line_width', x); }));
     var op = evGet(g, 'text_opacity'), op255 = typeof op === 'number' ? (op < 0 ? op + 256 : op) : 255;
     body.appendChild(evNum('文字不透明度', op255, { min: 0, max: 255, softMin: 0, softMax: 255, noSlider: false, sub: '0 全透明，255 不透明' }, function (x) { evSet(g, 'text_opacity', x > 127 ? x - 256 : x); }));
@@ -232,8 +230,7 @@ function evRidingTab(body) {
   ps.forEach(function (p) { node(p, 0); });
   var type = WE.rideType || 'minecraft:chicken', data = WE.rideData || '';
   addBox.appendChild(esEntityHeader({ id: type, onPick: function (id) { WE.rideType = id; weRedrawBody(); }, onEntityNbt: function (snbt) { var o = vaultEntityObj(snbt); WE.rideType = o.id || WE.rideType; delete o.id; WE.rideData = toSnbt(o, null, false); weRedrawBody(); } }));
-  var inp = kInput(data, function () {}, { placeholder: '可选的数据，比如 {CustomName:"小鸡"}' }); inp.classList.add('we-in');
-  inp.addEventListener('change', function () { WE.rideData = inp.value; });
+  var inp = kInput(data, function () {}, { placeholder: '可选的数据，比如 {CustomName:"小鸡"}', onCommit: function (t) { WE.rideData = t; } }); inp.classList.add('we-in');
   addBox.appendChild(xRow({ icon: false, title: '初始数据', sub: 'SNBT，可以不填', right: inp }));
   addBox.appendChild(h('div', { class: 'k-row' }, [kBtn('加上去', function () {
     var act = { action: 'add', type: WE.rideType || 'minecraft:chicken' }; if ((WE.rideData || '').trim()) act.entity_data = WE.rideData.trim();

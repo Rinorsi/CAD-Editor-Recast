@@ -136,7 +136,7 @@ function vaultSummary(e) {
   return bits.join(' · ');
 }
 var VaultGivePending = {};
-function vInput(value, onCommit, ph) { var el = kInput(value, function () {}, { placeholder: ph }); el.classList.add('vt-in'); el.addEventListener('change', function () { onCommit(el.value); }); return el; }
+function vInput(value, onCommit, ph) { var el = kInput(value, function () {}, { placeholder: ph, onCommit: onCommit }); el.classList.add('vt-in'); return el; }
 function vaultErr(r) { toast((r && r.reason) || (r && r.error) || '保险库操作失败', 'error'); }
 
 /* opts.pick(stack, entry)：作为选择器打开时，点「使用」把栈交出去；不传就是普通的保险库窗口 */
@@ -216,7 +216,7 @@ function openVault(opts) {
       return { chevron: true, icon: isEnt ? entityIcon(entI.id || 'minecraft:pig', 16) : itemIcon(e.item && e.item.id || 'minecraft:stick', 16), title: e.name, sub: isEnt ? (vaultEntitySummary(e) || entI.id) : (vaultSummary(e) || (e.item && e.item.id) || ''), tip: (e.note || '') + (e.translatedName ? '\n' + e.translatedName : ''), right: acts, meta: vaultMeta(e, isEnt),
         body: function () {
           var nm = vInput(e.name || '', function (v) { if (!v.trim()) return; Vault.call('update', { id: e.id, name: v }, function (r) { if (r.ok) { e.name = v; paintState(); } else vaultErr(r); }); }, '名称');
-          var tg = vInput((e.tags || []).join('，'), function (v) { var t = v.split(/[,，\s]+/).filter(function (x) { return x; }).slice(0, 8); Vault.call('update', { id: e.id, tags: t }, function (r) { if (r.ok) { e.tags = t; refresh();  xl.draw(); } else vaultErr(r); }); }, '标签，用逗号隔开（最多 8 个）');
+          var tg = vInput((e.tags || []).join('，'), function (v) { var t = splitTags(v).slice(0, 8); Vault.call('update', { id: e.id, tags: t }, function (r) { if (r.ok) { e.tags = t; refresh();  xl.draw(); } else vaultErr(r); }); }, '标签，用逗号隔开（最多 8 个）');
           var nt = vInput(e.note || '', function (v) { Vault.call('update', { id: e.id, note: v }, function (r) { if (r.ok) { e.note = v; xl.draw(); } else vaultErr(r); }); }, '备注（最多 200 字）');
           var foot = h('div', { class: 'x2f' }, [h('span', { class: 'k-sub', text: tagEls.length ? '' : '没有标签' }),
             kBtn('复制一份', function () { Vault.call('duplicate', { id: e.id }, function (r) { if (r.ok) refresh(); else vaultErr(r); }); }, { icon: 'copy' }),
@@ -250,7 +250,7 @@ function openVaultSaveEntity(snbt, defName, done) {
   if (!snbt || snbt === '{}') { toast('这只生物还没有数据', 'warn'); return; }
   var nm = kInput(defName || '', function () {}, { placeholder: '名称' }), tg = kInput('', function () {}, { placeholder: '标签，用逗号隔开（可不填）' }), nt = kInput('', function () {}, { placeholder: '备注（可不填）' });
   var go = kBtn('存入', function () {
-    var tags = (tg.value || '').split(/[,，\s]+/).filter(function (x) { return x; }).slice(0, 8);
+    var tags = splitTags(tg.value).slice(0, 8);
     Vault.saveEntity(snbt, { name: (nm.value || '').trim(), tags: tags, note: nt.value || '' }, function (r) {
       if (!r.ok) { vaultErr(r); return; }
       closeModal(); toast((r.duplicate ? '保险库里已经有一模一样的了：' : '已存入保险库：') + (r.entry ? r.entry.name : '') + (r.stripped && r.stripped.length ? '（位置、UUID 等运行时数据没有存）' : ''), 'ok');
@@ -266,7 +266,7 @@ function openVaultSave(done) {
   var nm = kInput(displayName(d), function () {}, { placeholder: '名称' }), tg = kInput('', function () {}, { placeholder: '标签，用逗号隔开（可不填）' }), nt = kInput('', function () {}, { placeholder: '备注（可不填）' });
   function val(c) { return c.value || ''; }
   var go = kBtn('存入', function () {
-    var tags = val(tg).split(/[,，\s]+/).filter(function (x) { return x; }).slice(0, 8);
+    var tags = splitTags(val(tg)).slice(0, 8);
     Vault.save(hostTipStack(d), { name: val(nm).trim(), tags: tags, note: val(nt) }, function (r) {
       if (!r.ok) { vaultErr(r); return; }
       closeModal(); toast(r.duplicate ? '保险库里已经有一模一样的了：' + r.entry.name : '已存入保险库：' + r.entry.name, 'ok');

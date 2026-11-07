@@ -127,10 +127,8 @@ function wpEnderTab(body) {
   secEnd.appendChild(weSlotGrid({ tight: true, indices: ix, cols: 9, stackOf: function (i) { return wpContainerStack('ender', i); }, set: function (i, st) { wpSetSlot('ender', i, st); } }));
 }
 function wpNum(label, path, key, obj, o) {
-  o = o || {}; var b = wpBound(path), cur = obj ? obj[key] : wpG(key);
-  var n = kNumber(typeof cur === 'number' ? cur : 0, { min: b.min, max: b.max, step: o.step || 1, dec: o.dec, noSlider: true, unit: o.unit, onChange: o.on });
-  n.el.classList.add('k-xnum');
-  return xRow({ icon: false, title: label, sub: o.sub || (b.min !== undefined && b.max !== undefined ? '范围 ' + b.min + ' ~ ' + b.max : ''), right: n.el });
+  o = o || {}; var b = wpBound(path);
+  return xNum({ title: label, sub: o.sub || undefined, range: true, value: obj ? obj[key] : wpG(key), min: b.min, max: b.max, step: o.step, dec: o.dec, unit: o.unit, onChange: o.on });
 }
 function wpSection(k) { var v = wpG(k); return v && typeof v === 'object' ? clone(v) : {}; }
 function wpStatusTab(body) {
@@ -151,12 +149,8 @@ function wpStatusTab(body) {
   cur.appendChild(h('div', { class: 'k-row' }, [kSeg(modes.map(function (m) { return { v: m, label: WP_MODE[m] || m }; }), wpG('playerGameType') || 'survival', function (v) { evSet('player', 'playerGameType', v); }).el]));
   cur.appendChild(h('div', { class: 'k-sub', text: '换模式会同时换成该模式的飞行 / 无敌 / 建造能力，除非你在「能力」页里同时指定。' }));
   cur = wpSec(body, 'wp:st:名字与标签', 'tag', '名字与标签');
-  var cn = wpG('CustomName'), cin = kInput(msgText(cn), function () {}, { placeholder: '自定义名称（可空）' }); cin.classList.add('we-in');
-  cin.addEventListener('change', function () { evSet('player', 'CustomName', cin.value ? textMsg(cin.value) : null); });
-  cur.appendChild(xRow({ icon: false, title: '自定义名称', right: cin }));
-  var tags = wpG('Tags') || [], tin = kInput(tags.join('，'), function () {}, { placeholder: '标签，用逗号隔开' }); tin.classList.add('we-in');
-  tin.addEventListener('change', function () { evSet('player', 'Tags', tin.value.split(/[,，\s]+/).filter(function (x) { return x; })); });
-  cur.appendChild(xRow({ icon: false, title: '标签', sub: '给 /tag 和选择器用的标签', right: tin }));
+  cur.appendChild(xText({ title: '自定义名称', value: msgText(wpG('CustomName')), placeholder: '自定义名称（可空）', cls: 'we-in', onCommit: function (v) { evSet('player', 'CustomName', v ? textMsg(v) : null); } }));
+  cur.appendChild(xText({ title: '标签', sub: '给 /tag 和选择器用的标签', value: (wpG('Tags') || []).join('，'), placeholder: '标签，用逗号隔开', cls: 'we-in', onCommit: function (v) { evSet('player', 'Tags', splitTags(v)); } }));
 }
 function wpAbilitiesTab(body) {
   var ab = wpSection('abilities'), sc = wpSchema(), smax = sc.speedMax || 1;
@@ -164,13 +158,12 @@ function wpAbilitiesTab(body) {
   function setAb(k, v) { var a = wpSection('abilities'); a[k] = v; evSet('player', 'abilities', a); }
   [['mayfly', '允许飞行', '双击空格起飞'], ['flying', '正在飞行', ''], ['invulnerable', '无敌', '不受伤害'], ['mayBuild', '可以放置 / 破坏方块', ''], ['instabuild', '创造模式的瞬间破坏', '']].forEach(function (f) {
     if (!(f[0] in ab)) return;
-    body.appendChild(xRow({ icon: false, title: f[1], sub: f[2], right: kToggle(!!ab[f[0]], function (on) { setAb(f[0], on); }).el }));
+    body.appendChild(xToggle({ title: f[1], sub: f[2], value: ab[f[0]], onChange: function (on) { setAb(f[0], on); } }));
   });
   [['walkSpeed', '行走速度', 'abilities.walkSpeed'], ['flySpeed', '飞行速度', 'abilities.flySpeed']].forEach(function (f) {
     if (!(f[0] in ab)) return;
-    var b = wpBound(f[2]), n = kNumber(ab[f[0]], { min: b.min !== undefined ? b.min : 0, max: b.max !== undefined ? b.max : smax, step: 0.01, dec: 3, noSlider: true, onChange: function (v) { setAb(f[0], v); } });
-    n.el.classList.add('k-xnum');
-    body.appendChild(xRow({ icon: false, title: f[1], sub: '默认 ' + (f[0] === 'walkSpeed' ? '0.1' : '0.05') + ' · 最大 ' + smax, right: n.el }));
+    var b = wpBound(f[2]);
+    body.appendChild(xNum({ title: f[1], sub: '默认 ' + (f[0] === 'walkSpeed' ? '0.1' : '0.05') + ' · 最大 ' + smax, value: ab[f[0]], min: b.min !== undefined ? b.min : 0, max: b.max !== undefined ? b.max : smax, step: 0.01, dec: 3, onChange: function (v) { setAb(f[0], v); } }));
   });
 }
 function wpAttrTab(body) {
@@ -178,13 +171,12 @@ function wpAttrTab(body) {
   body.appendChild(xSec('sword', '属性', '改的是基础值，装备带来的修饰符保持不变'));
   function baseOf(id) { for (var i = 0; i < attrs.length; i++) if (attrs[i].id === id) return attrs[i].base; return undefined; }
   defs.forEach(function (d) {
-    var cur = baseOf(d.id), n = kNumber(typeof cur === 'number' ? cur : d.base, { min: d.min, max: d.max, step: (d.max - d.min) > 50 ? 1 : 0.05, dec: 3, noSlider: true, onChange: function (v) {
-      var list = clone(wpG('attributes') || []), at = -1; list.forEach(function (a, i) { if (a.id === d.id) at = i; });
-      if (at >= 0) list[at].base = v; else list.push({ id: d.id, base: v });
-      evSet('player', 'attributes', list);
-    } });
-    n.el.classList.add('k-xnum');
-    body.appendChild(xRow({ icon: attrIconEl(d.id), title: Reg.nameOf2('attribute', d.id) || attrName(d.id), sub: '默认 ' + fmtNum(d.base) + (d.min !== undefined ? ' · 范围 ' + fmtNum(d.min) + ' ~ ' + fmtNum(d.max) : ''), tip: d.id, right: n.el }));
+    body.appendChild(xNum({ icon: attrIconEl(d.id), title: Reg.nameOf2('attribute', d.id) || attrName(d.id), sub: '默认 ' + fmtNum(d.base) + (d.min !== undefined ? ' · 范围 ' + fmtNum(d.min) + ' ~ ' + fmtNum(d.max) : ''), tip: d.id,
+      value: baseOf(d.id), def: d.base, min: d.min, max: d.max, step: (d.max - d.min) > 50 ? 1 : 0.05, dec: 3, onChange: function (v) {
+        var list = clone(wpG('attributes') || []), at = -1; list.forEach(function (a, i) { if (a.id === d.id) at = i; });
+        if (at >= 0) list[at].base = v; else list.push({ id: d.id, base: v });
+        evSet('player', 'attributes', list);
+      } }));
   });
   if (!defs.length) body.appendChild(xEmpty('游戏没有给出这个玩家的属性表。'));
   body.appendChild(xSec('flask', '状态效果'));

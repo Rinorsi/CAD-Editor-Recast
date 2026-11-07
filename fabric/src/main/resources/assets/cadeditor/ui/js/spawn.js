@@ -129,12 +129,8 @@ function spBlockEntity() {
 
 /* 一行数值：图标 + 名称 + 说明，右边是数字。get/set 读写；ticks 为真时说明里顺带换算成秒 */
 function spNumRow(o) {
-  var num = kNumber(+(+o.get()).toFixed(4), { min: o.min, max: o.max, step: o.step || 1, dec: o.dec, unit: o.ticks ? '' : (o.unit || ''), noSlider: true, onChange: function (v) { o.set(v); upd(v); } });
-  num.el.classList.add('k-xnum'); num.el.addEventListener('click', function (ev) { ev.stopPropagation(); });
-  var row = xRow({ icon: uiIcon(o.icon || 'sliders', 14), title: o.title, sub: sub(o.get()), tip: o.tip || '', right: num.el });
   function sub(v) { return (o.desc || '') + (o.ticks && v > 0 ? (o.desc ? ' · ' : '') + spNum(v) + ' 刻 = ' + spNum(v / 20) + ' 秒' : ''); }
-  function upd(v) { var s = row.querySelector('.s'); if (s) s.textContent = sub(v); }
-  return row;
+  return xNum({ icon: uiIcon(o.icon || 'sliders', 14), title: o.title, sub: sub(o.get()), subOf: sub, tip: o.tip || '', value: +o.get(), round: true, min: o.min, max: o.max, step: o.step, dec: o.dec, unit: o.ticks ? '' : (o.unit || ''), stop: true, onChange: o.set });
 }
 
 /* 带权重的实体池（SpawnPotentials / spawn_potentials）：[{data:{entity:{id}}, weight}] */
@@ -144,8 +140,7 @@ function spPool(arr, onChange, emptyText) {
     add: { text: '添加生物', fn: function () { openRegPick({ reg: 'entity_type', title: '选择生物', onEntityNbt: function (snbt) { var o = vaultEntityObj(snbt); NBT_FORCE.block_entity_data = true; NBT_FORCE.spawn_potentials = true; arr.push({ data: { entity: o }, weight: 1 }); onChange(); xl.select(arr.length - 1); }, onPick: function (id) { arr.push({ data: { entity: { id: Reg.full(id) } }, weight: 1 }); onChange(); xl.select(arr.length - 1); } }); } },
     row: function (it, i) {
       var eid = it.data && it.data.entity && typeof it.data.entity.id === 'string' ? it.data.entity.id : '';
-      var wt = kNumber(typeof it.weight === 'number' ? it.weight : 1, { min: 1, max: 1000000, step: 1, noSlider: true, onChange: function (v) { it.weight = v; onChange(); } });
-      wt.el.classList.add('k-xnum'); wt.el.addEventListener('click', function (ev) { ev.stopPropagation(); });
+      var wt = xNumCtl(typeof it.weight === 'number' ? it.weight : 1, { min: 1, max: 1000000, step: 1, noSlider: true, onChange: function (v) { it.weight = v; onChange(); } }, true);
       return { chevron: true, icon: eid ? entityIcon(eid, 14) : uiIcon('paw', 14), title: eid ? entityName(eid) : '（未选择生物）', sub: eid || '', tip: eid, right: wt.el, body: function () {
         return [
           esEntityHeader({ id: eid, empty: '（未选择）',
