@@ -1,0 +1,1 @@
+{"required":true,"package":"dev.rinorsi.editor.registry.supplementmixin","compatibilityLevel":"JAVA_25","client":["RegistrySupplementWindowMixin"],"injectors":{"defaultRequire":1}}

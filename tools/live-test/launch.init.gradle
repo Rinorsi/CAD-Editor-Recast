@@ -1,0 +1,35 @@
+gradle.projectsEvaluated {
+    def p = gradle.rootProject.project(':fabric:26.1.2')
+    def run = gradle.rootProject.file('logs/live-test/mctest-run')
+    def probe = p.tasks.register('liveTestWindowProbeJar', Jar) {
+        dependsOn p.tasks.named('autotestClasses')
+        archiveFileName = 'live-test-window-probe.jar'
+        destinationDirectory = p.layout.buildDirectory.dir('live-test-probe')
+        from(p.sourceSets.autotest.output.classesDirs) {
+            include 'dev/rinorsi/editor/livetest/**'
+            include 'dev/rinorsi/editor/probe/mixin/NoMouseCaptureMixin.class'
+            include 'dev/rinorsi/editor/registry/supplementmixin/RegistrySupplementWindowMixin.class'
+        }
+        from(gradle.rootProject.file('tools/live-test/resources'))
+    }
+    def prepare = p.tasks.register('prepareLiveTestClient', Copy) {
+        dependsOn probe
+        from(probe.flatMap { it.archiveFile })
+        into(new File(run, 'mods'))
+    }
+    p.tasks.named('prepareEditorClient') { into(new File(run, 'mods')) }
+    // This directory starts empty; do not quarantine mods from the interactive dev directory.
+    p.tasks.named('isolateEditorClient') { enabled = false }
+    p.loom.runs.named('client') {
+        runDirectory.set(run.absolutePath)
+        vmArg('-Deditor.autotest=live-smoke')
+        vmArg('-Deditor.liveTest.owner=' + gradle.startParameter.projectProperties['liveTestOwner'])
+        def inputEngine = gradle.startParameter.projectProperties['liveTestInput']
+        if (inputEngine) vmArg('-Doriel.inputBackend=' + inputEngine)
+        programArg('--username'); programArg('LiveTest')
+    }
+    p.tasks.named('runClient') {
+        dependsOn prepare
+        workingDir run
+    }
+}
