@@ -119,7 +119,7 @@ function kSlotGrid(cfg) {
    两个 ref 有相同的 group 和 swap 时，对换交给 swap 一次完成（物品页的容器卡片用它，只写一次草稿）。 */
 var WE_DND = { cells: [], carry: null, ghost: null, last: null, timer: null, bound: false };
 function weDndReset() { WE_DND.cells = []; WE_DND.carry = null; weDndGhost(null); clearTimeout(WE_DND.timer); WE_DND.last = null; }
-function weDndHint() { return h('div', { class: 'k-sub', text: '单击编辑 · 双击拿起，点别格放下' }); }
+function weDndHint() { return kHint('单击编辑 · 双击拿起，点别格放下'); }
 function weDndStack(ref) { var st = ref.get(); return st && !st.empty && st.id ? st : null; }
 /* 拖动 / 拿起后整体重画：格子自己给了 redraw 就用它；否则在世界页重画当前标签页内容；都没有就不做 */
 function weDndRedraw(ref) {

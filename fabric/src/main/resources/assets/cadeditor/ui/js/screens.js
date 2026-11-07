@@ -37,9 +37,8 @@ function toast(text, kind, key) {
   key = key || String(text);
   var box = $('toasts'); if (!box) return;
   var old = TOAST_LIVE[key]; if (old) { clearTimeout(old._t1); clearTimeout(old._t2); old.remove(); delete TOAST_LIVE[key]; }
-  else if (kind === 'ok') snd('minecraft:entity.experience_orb.pickup', 0.35, 1.3);
-  else if (kind === 'error') snd('minecraft:block.note_block.bass', 0.6, 0.7);
-  var icn = kind === 'error' || kind === 'warn' ? 'warning' : kind === 'ok' ? 'check' : 'info';
+  else { var sd = tkSound(kind); if (sd) snd(sd[0], sd[1], sd[2]); }
+  var icn = tkIcon(kind);
   var t = h('div', { class: 'k-toast ' + (kind || 'info') }, [uiIcon(icn, 14), String(text)]);
   box.appendChild(t); TOAST_LIVE[key] = t;
   while (box.children.length > 3) { var first = box.children[0]; Object.keys(TOAST_LIVE).forEach(function (k) { if (TOAST_LIVE[k] === first) delete TOAST_LIVE[k]; }); first.remove(); }
@@ -831,7 +830,7 @@ function advCmd(host) {
     });
     pad.appendChild(fieldRow('在哪里运行', whereSeg.el));
     pad.appendChild(fieldRow('目标选择器', selIn));
-    pad.appendChild(h('div', { class: 'ed-hint', text: '命令方块、函数、控制台没有执行者，不能写 @s；命令方块用 @p，控制台和函数填你的玩家名。' }));
+    pad.appendChild(kHint('命令方块、函数、控制台没有执行者，不能写 @s；命令方块用 @p，控制台和函数填你的玩家名。', 'hint'));
   }
   pad.appendChild(out);
   /* 页面脚本不能写剪贴板（Oriel 沙箱设计）：宿主声明 hostClip 后，把文本交给宿主写入；没有宿主时退回「全选，请按 Ctrl+C」 */

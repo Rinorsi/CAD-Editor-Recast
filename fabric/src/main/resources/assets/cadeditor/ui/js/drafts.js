@@ -59,7 +59,7 @@ var Drafts = {
       toast('已恢复上次没应用的修改', 'ok');
     }, { cls: 'pri', icon: 'check' });
     var no = kBtn('丢弃', function () { closeModal(); me.send({ op: 'clear', key: key }); }, { icon: 'trash' });
-    var win = modalShell('有没应用的修改', '', [h('div', { class: 'k-sub', text: '上次编辑这件物品时有 ' + n + ' 项改动没有应用到游戏（约 ' + ago + ' 分钟前）。要接着改吗？' })], [h('div', { class: 'grow' }), no, ok], 'k-narrow');
+    var win = modalShell('有没应用的修改', '', [kHint('上次编辑这件物品时有 ' + n + ' 项改动没有应用到游戏（约 ' + ago + ' 分钟前）。要接着改吗？')], [h('div', { class: 'grow' }), no, ok], 'k-narrow');
     openModal(win);
   },
 };

@@ -169,12 +169,12 @@ function weEntityTab(body) {
       WE.obj = cur; wePut(); weRedrawBody();
     } }));
   body.appendChild(esPanel({ type: WE.w.type, get: function () { return WE.obj; }, set: function (o) { WE.obj = o; wePut(); } }));
-  body.appendChild(h('div', { class: 'k-sub', text: '位置、UUID 等其余字段在「数据」页用 SNBT 编辑。' }));
+  body.appendChild(kHint('位置、UUID 等其余字段在「数据」页用 SNBT 编辑。'));
 }
 
 /* ---------- 数据：完整 SNBT（带类型），改完点应用 ---------- */
 function weDataTab(body) {
-  if (weTabs().length === 1) body.appendChild(h('div', { class: 'k-sub', text: '这个' + (WE.w.kind === 'block' ? '方块' : '实体') + '没有可视化的设置，可以在下面直接改带类型的数据（SNBT）。' }));
+  if (weTabs().length === 1) body.appendChild(kHint('这个' + (WE.w.kind === 'block' ? '方块' : '实体') + '没有可视化的设置，可以在下面直接改带类型的数据（SNBT）。'));
   body.appendChild(xSec('code', '完整数据', '带类型的 SNBT'));
   var ta = h('textarea', { class: 'ed-snbt', spellcheck: 'false' }); ta.value = WE.text;
   var msg = h('div', { class: 'k-sub' });

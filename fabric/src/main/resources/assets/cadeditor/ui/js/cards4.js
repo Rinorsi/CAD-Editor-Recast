@@ -91,10 +91,10 @@ AUTO_BODY.custom_model_data = function (card, cid, v) {
   var d = Store.doc(), mid = d.comps.item_model !== undefined ? String(d.comps.item_model) : d.id;
   var hints = Reg.hintsOf(Reg.full(mid));
   var top = h("div", { class: "cmd-hints" });
-  if (hints === null) top.appendChild(h("div", { class: "k-sub", text: Reg.live() ? "正在读取这个物品的模型定义…" : "未连接游戏，无法读取模型定义；可以直接填下面的原始数组。" }));
-  else if (!hints.length) top.appendChild(h("div", { class: "k-sub", text: "这个物品的模型定义里没有用到自定义模型数据（或没有找到模型文件），所以现在填什么都不会改变外观。需要时可以在下面直接填写。" }));
+  if (hints === null) top.appendChild(kHint(Reg.live() ? "正在读取这个物品的模型定义…" : "未连接游戏，无法读取模型定义；可以直接填下面的原始数组。"));
+  else if (!hints.length) top.appendChild(kHint("这个物品的模型定义里没有用到自定义模型数据（或没有找到模型文件），所以现在填什么都不会改变外观。需要时可以在下面直接填写。"));
   else {
-    top.appendChild(h("div", { class: "k-sub", text: "这个物品的模型会根据下面这些值切换外观：" }));
+    top.appendChild(kHint("这个物品的模型会根据下面这些值切换外观："));
     hints.forEach(function (hn) {
       var idx = hn.index || 0, row = h("div", { class: "fld" });
       var lab = { flag: "开关 #" + idx, range: "数字 #" + idx, select: "文字 #" + idx, color: "颜色 #" + idx }[hn.kind] || (hn.kind + " #" + idx);

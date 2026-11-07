@@ -67,7 +67,7 @@ function evPoseTab(body) {
     if (!(f[0] in evVal('pose')) && !(F[f[0]])) return;
     body.appendChild(evBool(f[1], evGet('pose', f[0]), f[2], function (on) { evSet('pose', f[0], on); }));
   });
-  body.appendChild(h('div', { class: 'k-sub', text: '手里拿的、身上穿的在「属性」页的装备里改。' }));
+  body.appendChild(kHint('手里拿的、身上穿的在「属性」页的装备里改。'));
 }
 
 /* ---------- 展示框 / 荧光展示框 ---------- */
@@ -195,7 +195,7 @@ function evTradeTab(body) {
       } }));
   });
   if (list.length < 256) body.appendChild(xAdd('添加一条交易', function () { list.push({ buy: { id: 'minecraft:emerald', count: 1, comps: {}, removed: {} }, sell: { id: 'minecraft:bread', count: 1, comps: {}, removed: {} }, uses: 0, maxUses: 12, rewardExp: true, xp: 1, priceMultiplier: 0.05, demand: 0, specialPrice: 0 }); UIOpen['we:offer:' + (list.length - 1)] = true; mark(); weRender(); }));
-  body.appendChild(h('div', { class: 'k-sub', text: '玩家正开着交易界面时游戏会拒绝修改。列表是整个替换：删掉的交易就真的没有了；清空后这个村民不会再自己刷新交易。' }));
+  body.appendChild(kHint('玩家正开着交易界面时游戏会拒绝修改。列表是整个替换：删掉的交易就真的没有了；清空后这个村民不会再自己刷新交易。'));
 }
 
 /* ---------- 乘客 / 骑乘：每一步都是单独的 apply.riding，立刻提交 ---------- */
@@ -207,7 +207,7 @@ function evRidingTab(body) {
   var r = evGroup('riding') || {}, ps = r.passengers || [], vh = r.vehicle;
   body.appendChild(xSec('users', '骑乘关系'));
   if (vh) body.appendChild(xRow({ icon: entityIcon(vh.type, 22), title: '正骑着：' + (vh.summary || entityName(vh.type)), sub: shortId(vh.type), right: kBtn('下来', function () { evRideSend({ action: 'dismount' }, '正在让它下来…'); }, { icon: 'down' }) }));
-  else body.appendChild(h('div', { class: 'k-sub', text: '没有骑着别的东西。' }));
+  else body.appendChild(kHint('没有骑着别的东西。'));
   /* 乘客卡片：头部右侧放「添加」和「全部赶下去」，列表在下面，添加表单点「添加」才展开 */
   var addOpen = WE.rideAddOpen === undefined ? !ps.length : !!WE.rideAddOpen, addBox = h('div', { class: 'wp-addbox' });
   var acts = h('span', { class: 'wp-acts' }, [
@@ -230,8 +230,8 @@ function evRidingTab(body) {
     var act = { action: 'add', type: WE.rideType || 'minecraft:chicken' }; if ((WE.rideData || '').trim()) act.entity_data = WE.rideData.trim();
     evRideSend(act, '正在加上乘客…');
   }, { cls: 'pri', icon: 'plus' })]));
-  addBox.appendChild(h('div', { class: 'k-sub', text: '骑乘关系的修改不能撤销。' }));
-  addBox.insertBefore(h('div', { class: 'k-sub', text: '新生物会按游戏的规则判断能不能骑上去' }), addBox.firstChild);
+  addBox.appendChild(kHint('骑乘关系的修改不能撤销。'));
+  addBox.insertBefore(kHint('新生物会按游戏的规则判断能不能骑上去'), addBox.firstChild);
   addBox.style.display = addOpen ? '' : 'none';
   body.appendChild(addBox);
 }

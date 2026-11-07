@@ -61,7 +61,7 @@ function stateEditor(getTarget, value, onChange) {
       var right = h('div', { class: 'x-rt' }, [valueCtl(key, cur, info), kBtn('', function () { delete obj[key]; put(); draw(); }, { icon: 'trash', title: '移除这个状态' })]);
       list.appendChild(xField('sliders', key, right));
     });
-    if (tb.wait) { foot.appendChild(h('div', { class: 'k-sub', text: '正在读取方块属性…' })); return; }
+    if (tb.wait) { foot.appendChild(kHint('正在读取方块属性…')); return; }
     var rest = Object.keys(tb.props).filter(function (k) { return !Object.prototype.hasOwnProperty.call(obj, k); });
     if (rest.length) {
       var add = xAdd('添加状态', function () {
@@ -84,7 +84,7 @@ function blockPredList(card, cid, v, what) {
   var arr = clone(v === undefined ? [] : (Array.isArray(v) ? v : [v])).map(function (p) { return typeof p === 'string' ? { blocks: p } : p; });
   var xl;
   function put() { if (!arr.length) { Ctx.disable(cid); closeModal(); return; } autoPut(cid, arr.length === 1 ? clone(arr[0]) : clone(arr)); }
-  card.body.appendChild(h('div', { class: 'world-note', text: '仅冒险模式生效，命中任意一条规则即可。' }));
+  card.body.appendChild(kHint('仅冒险模式生效，命中任意一条规则即可。', 'note'));
   function ruleIcon(p) {
     if (typeof p.blocks === 'string' && p.blocks.charAt(0) !== '#') return refIcon('block', p.blocks, 16);
     return uiIcon(p.blocks === undefined ? 'grid' : 'tag', 14);
@@ -112,11 +112,11 @@ function blockPredList(card, cid, v, what) {
     var adv = h('div', { class: 'world-adv' }), advN = 0;
     [['nbt', '方块实体数据', '方块内部存的数据，如箱子里的物品、告示牌上的文字。普通方块用不到。'], ['components', '必须带有的组件', '要求方块实体带有指定的物品组件及其值。'], ['predicates', '组件需满足的条件', '对方块实体的组件做范围判断，如附魔等级不低于 3。']].forEach(function (f) {
       var key = f[0], set = p[key] !== undefined; if (set) advN++;
-      adv.appendChild(worldCond(f[1], f[2], set ? kBtn('移除', function () { delete p[key]; put(); xl.draw(); }) : null, worldRaw(set ? p[key] : {}, function (x) { p[key] = x; put(); })));
+      adv.appendChild(worldCond(f[1], f[2], set ? kBtn('移除', function () { delete p[key]; put(); xl.draw(); }) : null, kSnbtEditor(set ? p[key] : {}, function (x) { p[key] = x; put(); })));
     });
     nodes.push(worldFold('高级条件', adv, advN > 0, advN ? '已设置 ' + advN + ' 项' : '一般用不到'));
     var extra = {}; Object.keys(p).forEach(function (k) { if (['blocks', 'state', 'nbt', 'components', 'predicates'].indexOf(k) < 0) extra[k] = p[k]; });
-    if (Object.keys(extra).length) nodes.push(worldFold('其他条件（原样保留）', worldRaw(extra, function (x) { worldCompound(x); Object.keys(x).forEach(function (k) { if (['blocks', 'state', 'nbt', 'components', 'predicates'].indexOf(k) >= 0) throw new Error('请在对应字段编辑 ' + k); }); Object.keys(extra).forEach(function (k) { delete p[k]; }); Object.keys(x).forEach(function (k) { p[k] = x[k]; }); extra = x; put(); }), false));
+    if (Object.keys(extra).length) nodes.push(worldFold('其他条件（原样保留）', kSnbtEditor(extra, function (x) { worldCompound(x); Object.keys(x).forEach(function (k) { if (['blocks', 'state', 'nbt', 'components', 'predicates'].indexOf(k) >= 0) throw new Error('请在对应字段编辑 ' + k); }); Object.keys(extra).forEach(function (k) { delete p[k]; }); Object.keys(x).forEach(function (k) { p[k] = x[k]; }); extra = x; put(); }), false));
     nodes.push(xFoot('', function () { arr.splice(i, 1); xl.select(-1); put(); }));
     return nodes;
   }
@@ -125,7 +125,7 @@ function blockPredList(card, cid, v, what) {
 /* 方块状态组件：目标就是这个物品放下后的方块 */
 AUTO_BODY.block_state = function (card, id, v) {
   var d = Store.doc(), item = d ? fullId(d.id) : '';
-  card.body.appendChild(h('div', { class: 'world-note', text: '放下后，方块会带上这些状态。' }));
+  card.body.appendChild(kHint('放下后，方块会带上这些状态。', 'note'));
   card.body.appendChild(stateEditor(function () { return { ids: item ? [item] : [], wait: false }; }, v, function (x) { autoPut(id, x); }));
 };
 /* 调试棒状态：每个方块记住一个属性 */
@@ -147,7 +147,7 @@ AUTO_BODY.debug_stick_state = function (card, id, v) {
     if (!Object.keys(obj).length) list.appendChild(xEmpty('还没有记住任何方块'));
   }
   var off = Reg.on(function (kind, kinds) { if (!inDocument(list)) { off(); return; } if ((kinds || []).indexOf('block_properties') >= 0) draw(); });
-  card.body.appendChild(h('div', { class: 'world-note', text: '调试棒对每种方块记住的选中属性。' }));
+  card.body.appendChild(kHint('调试棒对每种方块记住的选中属性。', 'note'));
   card.body.appendChild(list);
   card.body.appendChild(xAdd('添加方块', function () {
     openRegPick({ reg: 'block', title: '选择方块', onPick: function (bid) { var p = Reg.blockProps(bid), n = p ? Object.keys(p)[0] : ''; obj[Reg.full(bid)] = n || ''; put(); draw(); } });

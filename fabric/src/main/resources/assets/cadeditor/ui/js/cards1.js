@@ -214,7 +214,7 @@ CARDS.maxDamage = function () {
 CARDS.damage = function () {
   var card = kCard({ id: 'damage', icon: 'hammer', title: '当前磨损', desc: '现在还剩多少耐久；设为满耐久就是一件全新的物品', comps: ['damage'] }, Ctx);
   var maxd = Ctx.get('max_damage');
-  if (typeof maxd !== 'number') { card.body.appendChild(h('div', { class: 'k-sub', text: '这个物品没有耐久，所以没有磨损值。' })); return card; }
+  if (typeof maxd !== 'number') { card.body.appendChild(kHint('这个物品没有耐久，所以没有磨损值。')); return card; }
   var num = kNumber(maxd - (Ctx.get('damage') || 0), { min: 0, max: 2147483647, softMax: maxd, step: 1, big: true, unit: '/ ' + fmtInt(maxd), presets: [{ v: maxd, label: '全新' }, { v: Math.max(1, Math.round(maxd / 2)), label: '一半' }, { v: 1, label: '只剩 1 点' }], onChange: function (v) { Ctx.setSmart('damage', Math.max(0, maxd - v), { label: '当前磨损' }); } });
   var bar = h('div', { class: 'k-meter' }, [h('i', {})]);
   var eff = kEffect('');

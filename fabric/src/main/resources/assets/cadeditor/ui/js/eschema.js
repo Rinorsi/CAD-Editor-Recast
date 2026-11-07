@@ -199,7 +199,7 @@ function esGearGrid(s, o, type) {
       kBtn('更换', function () { choose(q, cell); }, { icon: 'refresh' }),
       kBtn('清空', function () { kPopClose(); edit(function (obj) { esDel(obj, q.nbtPath); if (q.dropChancePath) esDel(obj, q.dropChancePath); }, true); }, { cls: 'dng', icon: 'trash' })
     ]));
-    box.appendChild(h('div', { class: 'k-sub', text: '附魔等物品组件在「其他数据」的 ' + q.nbtPath[0] + ' 里改' }));
+    box.appendChild(kHint('附魔等物品组件在「其他数据」的 ' + q.nbtPath[0] + ' 里改'));
     kPopover(cell, box, { width: 300, maxHeight: 260 });
   }
   return esGearLayout({
@@ -239,7 +239,7 @@ function esPanel(o) {
     if ((s.attributes || []).some(function (a) { return a.common; })) { box.appendChild(xSec('sword', '属性')); box.appendChild(esAttrList(s, oo)); }
     if (s.effects && s.effects.common) { box.appendChild(xSec('flask', '状态效果')); box.appendChild(esEffects(s, oo)); }
     box.appendChild(xSec('helmet', '装备')); box.appendChild(esGearGrid(s, oo, o.type));
-    (s.warnings || []).forEach(function (w) { box.appendChild(h('div', { class: 'k-sub', text: '游戏提示：' + w })); });
+    (s.warnings || []).forEach(function (w) { box.appendChild(kHint('游戏提示：' + w)); });
     foldify(box, 'es');
   }
   draw();

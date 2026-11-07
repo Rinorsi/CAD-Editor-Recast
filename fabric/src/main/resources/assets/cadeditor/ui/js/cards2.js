@@ -185,7 +185,7 @@ CARDS.reach = function () {
   card.body.appendChild(fieldRow('最近要隔开', mn.el, '离得太近反而打不到'));
   card.body.appendChild(fieldRow('判定箱放大', hb.el, '数值越大越容易打中'));
   card.live.push(function () { var o = Ctx.get('attack_range'); if (o) { mx.set(o.max_reach === undefined ? 3 : o.max_reach); mn.set(o.min_reach || 0); hb.set(o.hitbox_margin === undefined ? 0.3 : o.hitbox_margin); } });
-  if (!v) card.body.appendChild(h('div', { class: 'k-sub', text: '这个物品没有自带的攻击距离，改动任何一项即启用。' }));
+  if (!v) card.body.appendChild(kHint('这个物品没有自带的攻击距离，改动任何一项即启用。'));
   return card;
 };
 
@@ -334,7 +334,7 @@ CARDS.trim = function () {
   function trimPick(label, reg, key) {
     var art = h('div', { class: 'trim-pick-image' }, [refIcon(reg, v[key] || '', 32)]);
     var select = kRegSelect({ reg: reg, value: v[key] || '', title: '选择纹饰' + label, empty: '（未选择）', onChange: function (x) { if (x) { put(key, x); clear(art); art.appendChild(refIcon(reg, x, 32)); } } });
-    return h('div', { class: 'trim-pick' }, [art, h('div', { class: 'k-sub', text: label }), select.el]);
+    return h('div', { class: 'trim-pick' }, [art, kHint(label), select.el]);
   }
   picks.appendChild(trimPick('材料', 'trim_material', 'material'));
   picks.appendChild(trimPick('图案', 'trim_pattern', 'pattern'));

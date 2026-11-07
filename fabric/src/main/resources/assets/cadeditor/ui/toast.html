@@ -13,6 +13,7 @@ html, body { margin: 0; height: 100%; background: transparent; }
 .k-toast.big .msg { color: var(--tx); white-space: normal; word-break: break-all; }
 </style></head>
 <body><div id="stage"></div>
+<script src="js/toastkit.js"></script>
 <script>
 /* 物品工坊自己的提示（代替聊天栏里的系统消息）。Java 用 OrielHud 显示这页并推送 {text, level, title, seq}；
    level: info / ok / warn / error。几秒后自己关掉；新消息来了就换内容、重新计时。 */
@@ -24,7 +25,7 @@ html, body { margin: 0; height: 100%; background: transparent; }
     (kids || []).forEach(function (c) { if (c) el.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
     return el;
   }
-  function ico(level) { var n = level === 'error' || level === 'warn' ? 'warning' : level === 'ok' ? 'check' : 'info'; var i = h('img', { class: 'o-ico', src: 'oriel:textures/icons/' + n + '.png', alt: '' }); i.style.width = '16px'; i.style.height = '16px'; return i; }
+  function ico(level) { var n = tkIcon(level); var i = h('img', { class: 'o-ico', src: 'oriel:textures/icons/' + n + '.png', alt: '' }); i.style.width = '16px'; i.style.height = '16px'; return i; }
   function snd(id, vol, pitch) { try { if (oriel.playSound) oriel.playSound(id, vol, pitch); } catch (e) {} }
   function show(d) {
     if (!d || typeof d.text !== 'string' || !d.text) return;
@@ -35,7 +36,7 @@ html, body { margin: 0; height: 100%; background: transparent; }
     while (stage.firstChild) stage.removeChild(stage.firstChild);
     var t = h('div', { class: 'k-toast big ' + level }, [ico(level), h('div', { class: 'tx' }, [h('div', { class: 'tag' }, [h('b', { text: d.title || '物品工坊' }), h('span', { text: level === 'error' ? '出错了' : level === 'warn' ? '注意' : level === 'ok' ? '完成' : '提示' })]), h('div', { class: 'msg', text: d.text })])]);
     stage.appendChild(t);
-    if (level === 'error') snd('minecraft:block.note_block.bass', 0.6, 0.7); else if (level === 'ok') snd('minecraft:entity.experience_orb.pickup', 0.35, 1.3);
+    var sd = tkSound(level); if (sd) snd(sd[0], sd[1], sd[2]);
     var ms = Math.max(2600, Math.min(9000, 1800 + d.text.length * 90));
     timer = setTimeout(function () { t.classList.add('out'); gone = setTimeout(function () { try { oriel.close(); } catch (e) {} }, 450); }, ms);
   }

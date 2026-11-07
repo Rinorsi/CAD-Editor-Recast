@@ -146,7 +146,7 @@ function kConsumeEffects(getList, setList) {
           body.appendChild(fieldRow('要移除的效果', chips));
         } else if (e.type === 'minecraft:play_sound') {
           body.appendChild(fieldRow('音效', kSoundField(typeof e.sound === 'string' ? e.sound : '', function (t) { arr[i].sound = t; setList(arr); }).el));
-        } else body.appendChild(h('div', { class: 'k-sub', text: '这一项没有额外设置。' }));
+        } else body.appendChild(kHint('这一项没有额外设置。'));
         body.appendChild(kBtn('删除这一项', function () { arr.splice(i, 1); setList(arr); openIdx = -1; draw(); }, { cls: 'dng', icon: 'trash' }));
         row.appendChild(body);
       }

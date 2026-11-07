@@ -96,7 +96,7 @@ function wpStatusTab(body) {
   var modes = sc.gameModes || ['survival', 'creative', 'adventure', 'spectator'];
   cur = wpSec(body, 'wp:st:游戏模式', 'gamepad', '游戏模式');
   cur.appendChild(h('div', { class: 'k-row' }, [kSeg(modes.map(function (m) { return { v: m, label: WP_MODE[m] || m }; }), wpG('playerGameType') || 'survival', function (v) { evSet('player', 'playerGameType', v); }).el]));
-  cur.appendChild(h('div', { class: 'k-sub', text: '换模式会同时换成该模式的飞行 / 无敌 / 建造能力，除非你在「能力」页里同时指定。' }));
+  cur.appendChild(kHint('换模式会同时换成该模式的飞行 / 无敌 / 建造能力，除非你在「能力」页里同时指定。'));
   cur = wpSec(body, 'wp:st:名字与标签', 'tag', '名字与标签');
   cur.appendChild(xText({ title: '自定义名称', value: msgText(wpG('CustomName')), placeholder: '自定义名称（可空）', cls: 'we-in', onCommit: function (v) { evSet('player', 'CustomName', v ? textMsg(v) : null); } }));
   cur.appendChild(xText({ title: '标签', sub: '给 /tag 和选择器用的标签', value: (wpG('Tags') || []).join('，'), placeholder: '标签，用逗号隔开', cls: 'we-in', onCommit: function (v) { evSet('player', 'Tags', splitTags(v)); } }));

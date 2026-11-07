@@ -236,7 +236,7 @@ function kRich(value, o) {
   function gradientPop(anchor) {
     var sBox = h('div', { class: 'k-pickbox' }); var c1 = '#FF5555', c2 = '#5555FF';
     var a = kColor(0xFF5555, function (n) { c1 = hex6(n); }), b = kColor(0x5555FF, function (n) { c2 = hex6(n); });
-    sBox.appendChild(h('div', { class: 'k-sub', text: '起始' })); sBox.appendChild(a.el); sBox.appendChild(h('div', { class: 'k-sub', text: '结束' })); sBox.appendChild(b.el);
+    sBox.appendChild(kHint('起始')); sBox.appendChild(a.el); sBox.appendChild(kHint('结束')); sBox.appendChild(b.el);
     sBox.appendChild(kBtn('应用渐变', function () {
       var text = runs.map(function (r) { return r.text; }).join(''), chars = text.split(''); if (chars.length > 64) { toast('渐变最多 64 个字', 'error'); return; }
       var st = runStyleOf(runs[0]); delete st.color; var out = [];

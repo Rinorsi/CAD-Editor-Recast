@@ -79,7 +79,7 @@ WEV.sign = function (body, g) {
   body.appendChild(xToggle({ title: '发光文字', sub: '用荧光墨囊涂过的效果', value: o.has_glowing_text, onChange: function (on) { setFace(function (x) { x.has_glowing_text = on; }); } }));
   body.appendChild(xSec('lock', '涂蜡'));
   body.appendChild(wvToggle(g, 'is_waxed', '涂蜡', '涂过蜡的告示牌不能再改字'));
-  body.appendChild(h('div', { class: 'k-sub', text: '一行里想要样式（颜色、粗体）时，直接写文本组件，比如 {"text":"你好","color":"red"}。' }));
+  body.appendChild(kHint('一行里想要样式（颜色、粗体）时，直接写文本组件，比如 {"text":"你好","color":"red"}。'));
 };
 
 /* ---------- 旗帜图案 ---------- */
@@ -112,7 +112,7 @@ WEV.beehive = function (body, g) {
       body: function () { return [esEntityHeader({ id: ed.id || 'minecraft:bee', onPick: function (id) { list[i].entity_data = Object.assign({}, list[i].entity_data, { id: id }); save(); weRender(); }, onEntityNbt: function (snbt) { list[i].entity_data = vaultEntityObj(snbt); save(); weRender(); } }), xField('clock', '已在里面', t1.el), xField('hourglass', '最短待多久', t2.el), h('div', { class: 'x2f' }, [h('div', { class: 'grow' }), rm])]; } }));
   });
   if (!max || list.length < max) body.appendChild(xAdd('放进一只蜜蜂', function () { list.push({ entity_data: { id: 'minecraft:bee' }, ticks_in_hive: 0, min_ticks_in_hive: 600 }); save(); weRender(); }));
-  body.appendChild(h('div', { class: 'k-sub', text: '蜂蜜等级在「方块状态」里改。' }));
+  body.appendChild(kHint('蜂蜜等级在「方块状态」里改。'));
 };
 
 /* ---------- 讲台 / 唱片机 ---------- */
@@ -136,12 +136,12 @@ WEV.decorated_pot = function (body, g) {
     activate(btn, function () { pickItem(btn, function (x) { cur[i] = fullId(x); weSetV(g, 'sherds', cur.slice()); kPopClose(); weRender(); }); });
     body.appendChild(xRow({ icon: false, title: nm + '面', right: btn }));
   });
-  body.appendChild(h('div', { class: 'k-sub', text: '陶罐里放的东西在「容器」页。' }));
+  body.appendChild(kHint('陶罐里放的东西在「容器」页。'));
 };
 WEV.chiseled_bookshelf = function (body, g) {
   body.appendChild(xSec('book', '雕纹书架'));
   body.appendChild(wvNum(g, 'last_interacted_slot', '上次碰过的格子', { sub: '-1 表示还没碰过' }));
-  body.appendChild(h('div', { class: 'k-sub', text: '六本书在「容器」页里放。' }));
+  body.appendChild(kHint('六本书在「容器」页里放。'));
 };
 
 /* ---------- 命令方块：模式 + 命令 ---------- */
@@ -181,7 +181,7 @@ WEV.furnace = function (body, g) {
   body.appendChild(wvNum(g, 'cooking_total_time', '这一件要烧多久', { unit: '刻' }));
   body.appendChild(wvNum(g, 'lit_time_remaining', '燃料还能烧', { unit: '刻' }));
   body.appendChild(wvNum(g, 'lit_total_time', '这块燃料一共能烧', { unit: '刻' }));
-  body.appendChild(h('div', { class: 'k-sub', text: '游戏运行时会自己推进这些数；你没改的项，保存时以当时的实际进度为准。' }));
+  body.appendChild(kHint('游戏运行时会自己推进这些数；你没改的项，保存时以当时的实际进度为准。'));
 };
 WEV.brewing_stand = function (body, g) {
   body.appendChild(xSec('flask', '进度'));

@@ -388,6 +388,10 @@ function kEffect(text, tone) {
 }
 
 /* 小按钮 */
+/* 提示文字（一小段灰字说明、错误、备注）。tone：'sub'（默认，灰色小字）/ 'note'（备注，下面留白）/ 'err'（错误）/ 'hint'（提示）。
+   新写的提示一律用它，不要再自己选类名。 */
+var HINT_CLASS = { sub: 'k-sub', note: 'world-note', err: 'ed-err', hint: 'ed-hint' };
+function kHint(text, tone) { return h('div', { class: HINT_CLASS[tone || 'sub'], text: text }); }
 function kBtn(label, onClick, o) {
   o = o || {};
   var b = h('div', { class: 'k-btn' + (o.cls ? ' ' + o.cls : ''), title: o.title || '' }, [o.icon ? uiIcon(o.icon, 12) : null, label ? h('span', { text: label }) : null]);

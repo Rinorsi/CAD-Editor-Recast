@@ -268,7 +268,7 @@ function wText(sc, val, commit, ctx) {
     ta.addEventListener('change', function () {
       try { var p = parseSnbtUser(ta.value); err.textContent = ''; commit(p, {}); } catch (e) { err.textContent = '解析失败：' + e.message; }
     });
-    wrap.appendChild(h('div', { class: 'ed-hint', text: '这是带 translate / extra / 点击事件等的复杂文本，请直接编辑 SNBT。' }));
+    wrap.appendChild(kHint('这是带 translate / extra / 点击事件等的复杂文本，请直接编辑 SNBT。', 'hint'));
     wrap.appendChild(ta); wrap.appendChild(err);
     return wrap;
   }
@@ -343,7 +343,7 @@ function wRaw(sc, val, commit) {
   var err = h('div', { class: 'ed-err' });
   ta.addEventListener('change', function () { try { var p = parseSnbtUser(ta.value); err.textContent = ''; ta.classList.remove('bad'); commit(p, {}); } catch (e) { err.textContent = '解析失败：' + e.message; ta.classList.add('bad'); } });
   var box = h('div', { class: 'ed-rawbox' }, [ta, err]);
-  if (sc.hint) box.insertBefore(h('div', { class: 'ed-hint', text: '结构较复杂（' + sc.hint + '），暂以 SNBT 编辑。' }), ta);
+  if (sc.hint) box.insertBefore(kHint('结构较复杂（' + sc.hint + '），暂以 SNBT 编辑。', 'hint'), ta);
   return box;
 }
 

@@ -250,7 +250,7 @@ function buildTrialSpawner(body, obj, beId, put) {
     var tpot = Array.isArray(cfg.spawn_potentials) ? cfg.spawn_potentials : [];
     body.appendChild(spPool(tpot, function () { if (tpot.length) cfg.spawn_potentials = tpot; else delete cfg.spawn_potentials; obj[name] = cfg; put(); }, '没有指定生物池，沿用游戏默认').el);
   });
-  body.appendChild(h('div', { class: 'k-sub', text: '战利品表等其余字段在「放置与数据 → 方块实体数据」里用 SNBT 编辑，这里不会改动它们。' }));
+  body.appendChild(kHint('战利品表等其余字段在「放置与数据 → 方块实体数据」里用 SNBT 编辑，这里不会改动它们。'));
 }
 /* 重绘当前卡片所在的页（数值被整体恢复 / 配置被展开后用） */
 function drawDetailSafe() { try { if (typeof drawTabBody === 'function') drawTabBody(); } catch (e) {} }
