@@ -179,6 +179,10 @@ function openVault(opts) {
         if (!append) { V.rows = []; V.total = 0; V.next = null; } more.style.display = 'none'; xl.draw(); vaultErrRow(r); return;
       }
       clear(errBox);
+      /* 两类条目分开：生物页只留 kind==='entity' 的，物品页不要 entity。旧版本的游戏不认 kind，会把物品原样返回——那时生物页给出说明，不把物品当生物 */
+      var got = r.entries || [], mine = got.filter(function (x) { return V.kind === 'entity' ? x.kind === 'entity' : x.kind !== 'entity'; });
+      if (V.kind === 'entity' && got.length && !got.some(function (x) { return x.kind !== undefined; })) { mine = []; V.legacy = true; } else V.legacy = false;
+      r = Object.assign({}, r, { entries: mine, total: V.legacy ? 0 : r.total });
       V.rows = append ? V.rows.concat(r.entries) : r.entries; V.total = r.total; V.next = r.done ? null : r.nextOffset;
       more.style.display = V.next === null ? 'none' : '';
       paintState(); xl.draw();
@@ -189,7 +193,7 @@ function openVault(opts) {
   function vaultErrRow(r) { clear(errBox); errBox.appendChild(xEmpty((r.reason || r.error || '读取保险库失败') + (r.error === 'NOT_READY' ? '（文件还在加载，稍后再点一下搜索）' : ''))); }
   function takeAnd(e, fn) { Vault.take(e.id, function (r) { if (!r.ok) { vaultErr(r); return; } fn(r.stack, r.entry); }); }
   var xl = xList({
-    items: function () { return V.rows; }, empty: V.query || V.tags.length ? '没有匹配的条目' : V.kind === 'entity' ? '还没有存过生物。在刷怪蛋、刷怪笼或世界里的生物编辑页点“存入保险库”。' : '保险库还是空的。编辑好物品后点上面的“存入当前物品”。',
+    items: function () { return V.rows; }, empty: V.legacy ? '这个版本的游戏还不支持把生物存进保险库，请更新模组后重启游戏。' : V.query || V.tags.length ? '没有匹配的条目' : V.kind === 'entity' ? '还没有存过生物。在刷怪蛋、刷怪笼或世界里的生物编辑页点“存入保险库”。' : '保险库还是空的。编辑好物品后点上面的“存入当前物品”。',
     row: function (e, i) {
       var tagEls = (e.tags || []).map(function (t) { return h('span', { class: 'k-tag dim', text: t }); });
       var acts = h('div', { class: 'x-rt' }, []);
