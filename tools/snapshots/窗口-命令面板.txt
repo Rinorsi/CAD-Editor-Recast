@@ -1,0 +1,89 @@
+div.k-modal.k-pal
+  div.k-ph
+    img.o-ico [src="oriel:textures/icons/search.png" style="height:16px;width:16px"]
+    input.k-input [placeholder="输入命令、分页、设置名…" type="text"]
+  div.k-pall
+    div.k-pr.on
+      img.o-ico [src="oriel:textures/icons/undo.png" style="height:16px;width:16px"]
+      span "撤销"
+      span.sb "回到上一步"
+      span.k-kbd "Ctrl+Z"
+    div.k-pr
+      img.o-ico [src="oriel:textures/icons/redo.png" style="height:16px;width:16px"]
+      span "重做"
+      span.sb "恢复被撤销的步骤"
+      span.k-kbd "Ctrl+Y"
+    div.k-pr
+      img.o-ico [src="oriel:textures/icons/play.png" style="height:16px;width:16px"]
+      span "应用修改…"
+      span.sb "查看改动并应用"
+      span.k-kbd "Ctrl+S"
+    div.k-pr
+      img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
+      span "添加设置…"
+      span.sb "给物品加上它本来没有的功能"
+    div.k-pr
+      img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
+      span "高级…"
+      span.sb "原始组件、物品数据、命令"
+    div.k-pr
+      img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
+      span "跳到：外观"
+      span.sb "分页"
+      span.k-kbd "Ctrl+1"
+    div.k-pr
+      img.o-ico [src="oriel:textures/icons/sword.png" style="height:16px;width:16px"]
+      span "跳到：战斗"
+      span.sb "分页"
+      span.k-kbd "Ctrl+2"
+    div.k-pr
+      img.o-ico [src="oriel:textures/icons/shield.png" style="height:16px;width:16px"]
+      span "跳到：耐久"
+      span.sb "分页"
+      span.k-kbd "Ctrl+3"
+    div.k-pr
+      img.o-ico [src="oriel:textures/icons/enchant.png" style="height:16px;width:16px"]
+      span "跳到：附魔"
+      span.sb "分页"
+      span.k-kbd "Ctrl+4"
+    div.k-pr
+      img.o-ico [src="oriel:textures/icons/restore.png" style="height:16px;width:16px"]
+      span "还原全部修改"
+      span.sb "丢弃未应用的改动"
+    div.k-pr
+      img.o-ico [src="oriel:textures/icons/download.png" style="height:16px;width:16px"]
+      span "从命令导入…"
+      span.sb "粘贴 /give 或 /item 命令"
+      span.k-kbd "Ctrl+I"
+    div.k-pr
+      img.o-ico [src="oriel:textures/icons/tag.png" style="height:16px;width:16px"]
+      span "卡片：名称"
+      span.sb "当前页"
+    div.k-pr
+      img.o-ico [src="oriel:textures/icons/tag.png" style="height:16px;width:16px"]
+      span "卡片：说明文字"
+      span.sb "当前页"
+    div.k-pr
+      img.o-ico [src="oriel:textures/icons/tag.png" style="height:16px;width:16px"]
+      span "卡片：稀有度"
+      span.sb "当前页"
+    div.k-pr
+      img.o-ico [src="oriel:textures/icons/tag.png" style="height:16px;width:16px"]
+      span "卡片：附魔光效"
+      span.sb "当前页"
+    div.k-pr
+      img.o-ico [src="oriel:textures/icons/tag.png" style="height:16px;width:16px"]
+      span "卡片：悬停提示"
+      span.sb "当前页"
+    div.k-pr
+      img.o-ico [src="oriel:textures/icons/tag.png" style="height:16px;width:16px"]
+      span "卡片：外观借用"
+      span.sb "当前页"
+    div.k-pr
+      img.o-ico [src="oriel:textures/icons/sun.png" style="height:16px;width:16px"]
+      span "切换亮 / 暗主题"
+      span.sb
+    div.k-pr
+      img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
+      span "切换界面风格"
+      span.sb "像素 / 平滑"

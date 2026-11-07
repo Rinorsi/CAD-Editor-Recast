@@ -226,11 +226,9 @@ function openPicker(o) {
   var cancel = kBtn('取消', closeModal);
   confirm = kBtn(o.confirmLabel || '添加所选', function () { if (!selN) return; var ids = Object.keys(sel); closeModal(); o.onConfirm(ids, vals); }, { cls: 'pri' });
   foot.appendChild(info); (o.footExtra || []).forEach(function (b) { foot.appendChild(b); }); foot.appendChild(h('div', { class: 'grow' })); foot.appendChild(cancel); foot.appendChild(confirm);
-  var x = h('div', { class: 'k-mini', text: '×' }); activate(x, closeModal);
   var srcTag = h('span', { class: 'k-tag' + (o.live ? '' : ' dim'), text: o.live ? '游戏实时注册表' : '内置数据（未连接游戏）' });
-  var win = h('div', { class: 'k-modal addwin pickwin' }, [
-    h('div', { class: 'k-mh' }, [uiIcon(o.icon || 'plus', 14), h('b', { text: o.title }), h('span', { class: 'k-sub', text: o.sub || '' }), h('div', { class: 'grow' }), srcTag, x]),
-    h('div', { class: 'addbody' }, [cats, h('div', { class: 'addmain' }, [h('div', { class: 'addtop' }, top), list])]), foot]);
+  var win = modalShell({ icon: o.icon || 'plus', title: o.title, sub: o.sub || '', actions: [srcTag], cls: 'addwin pickwin',
+    body: h('div', { class: 'addbody' }, [cats, h('div', { class: 'addmain' }, [h('div', { class: 'addtop' }, top), list])]), foot: foot });
   paintCats(); paint(); paintFoot(); openModal(win, true); windowify(win, 'pick-' + (o.kind || 'x')); search.focus();
 }
 

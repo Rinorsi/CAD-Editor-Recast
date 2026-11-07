@@ -62,12 +62,11 @@ function openDetail(o) {
   UI.detail = o; UI.detailSel = UI.detailSel && UI.detailCid === cid ? UI.detailSel : sel; UI.detailCid = cid;
   if (!secs.some(function (s) { return s.id === UI.detailSel; })) UI.detailSel = secs[0].id;
   var nav = h('div', { class: 'advnav' }), main = h('div', { class: 'advmain', id: 'detailmain' });
-  var x = h('div', { class: 'k-mini', text: '×' }); activate(x, closeModal);
   var rst = h('div', { class: 'k-btn det-reset', title: '放弃这里的修改，使用物品原本的值' }, [h('span', { text: '恢复默认' })]);
   activate(rst, function () { var cs = o.cid ? [o.cid] : []; if (o.key && !cs.length) cs = cardComps(o.key); cs.forEach(function (c) { Ctx.reset(c); }); if (WORLD_DETAIL.indexOf(cid) >= 0 && !Ctx.has(cid)) closeModal(); });
-  var win = h('div', { class: 'k-modal advwin detailwin' + (secs.length > 1 ? ' hasnav' : '') + (WORLD_DETAIL.indexOf(cid) >= 0 ? ' worldwin' : '') + (cid === 'banner_patterns' ? ' bannerwin' : ''), id: 'detailwin' }, [
-    h('div', { class: 'k-mh' }, [uiIcon(o.icon || 'edit', 14), h('b', { text: title }), h('span', { class: 'k-sub', text: nameOfItem(Store.doc().id) }), h('div', { class: 'grow' }), rst, x]),
-    h('div', { class: 'advbody' }, [secs.length > 1 ? nav : null, main])]);
+  var win = modalShell({ icon: o.icon || 'edit', title: title, sub: nameOfItem(Store.doc().id), actions: [rst], id: 'detailwin',
+    cls: 'advwin detailwin' + (secs.length > 1 ? ' hasnav' : '') + (WORLD_DETAIL.indexOf(cid) >= 0 ? ' worldwin' : '') + (cid === 'banner_patterns' ? ' bannerwin' : ''),
+    body: h('div', { class: 'advbody' }, [secs.length > 1 ? nav : null, main]) });
   function paintNav() {
     clear(nav);
     secs.forEach(function (s) { var it = h('div', { class: 'advnav-i' + (UI.detailSel === s.id ? ' on' : '') }, [h('span', { text: s.label })]); activate(it, function () { UI.detailSel = s.id; paintNav(); drawDetail(); }); nav.appendChild(it); });

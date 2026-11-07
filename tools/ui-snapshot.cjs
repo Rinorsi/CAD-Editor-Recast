@@ -74,6 +74,14 @@ function vaultWindow(kind) {
   c.Reg.ingest('vault.result', { version: 1, requestId: req.requestId, op: 'list', ok: true, entries, total: entries.length, offset: 0, nextOffset: entries.length, done: true, persisted: true });
   return '## overlays\n' + shot(t.doc.getElementById('overlays'));
 }
+// 弹窗：窗口外壳、页头、各自的主体（物品页载入后打开）
+function windowOf(open) {
+  const t = fresh(), c = t.c; c.Store.doc = c.Store.doc;
+  const d = c.makeDoc({ id: 'minecraft:diamond_sword', comps: {} }); c.Store.docs.push(d); c.Store.cur = 0; c.drawEdit();
+  open(c);
+  const m = t.doc.getElementById('overlays').querySelector('.k-modal');
+  return m ? H.snapshotOf(m) : '!! 没有弹窗\n';
+}
 function toasts() {
   const t = fresh(), c = t.c;
   ['info', 'ok', 'warn', 'error'].forEach(k => c.toast('提示 ' + k, k));
@@ -101,6 +109,11 @@ const SCENES = [
   ['玩家', () => worldTabs(player)],
   ['保险库-物品', () => vaultWindow('item')],
   ['保险库-生物', () => vaultWindow('entity')],
+  ['窗口-高级', () => windowOf(c => c.openAdvanced())],
+  ['窗口-添加设置', () => windowOf(c => c.openAddSetting())],
+  ['窗口-详情', () => windowOf(c => c.openDetail({ cid: 'lore' }))],
+  ['窗口-选择生物', () => windowOf(c => c.openRegPick({ reg: 'entity_type', title: '选择生物', onPick() {} }))],
+  ['窗口-命令面板', () => windowOf(c => c.openPalette())],
   ['提示', toasts]
 ];
 

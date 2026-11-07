@@ -1,0 +1,39 @@
+div.advwin.detailwin.k-modal
+  div.k-mh
+    img.o-ico [src="oriel:textures/icons/edit.png" style="height:16px;width:16px"]
+    b "说明文字"
+    span.k-sub "钻石剑"
+    div.grow
+    div.det-reset.k-btn.m-ripple [title="放弃这里的修改，使用物品原本的值"]
+      span "恢复默认"
+    div.k-mini.m-ripple "×"
+  div.advbody
+    div.advmain
+      div.detail-pad.pad
+        div.in-detail.k-card [data-card="auto-lore"]
+          div.k-chead.m-spot
+            div.k-cico
+              img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
+            div.k-ctx
+              div.k-ctitle
+                "说明文字"
+                span.k-badge [title="这一项和物品原版默认值不同"] "自定义"
+              div.k-cdesc "保存物品的自定义提示框描述文本"
+            div.k-csum
+            div.k-cval
+            div.k-reset [title="放弃这里的修改，使用物品原本的值"] "恢复默认"
+            div.k-sw2.on [title="开 / 关这项功能" role="switch"]
+              i
+            div.k-chev [title="折叠 / 展开"]
+              img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+          div.k-cbody
+            div.ed-lore
+              div.ed-list
+                div.ed-empty "没有说明行"
+              div.ed-addbtn
+                img.o-ico [src="oriel:textures/icons/plus.png"]
+                "添加一行（最多 256 行）"
+          div.k-div
+  div.k-medge-r [title="拖动调整宽度"]
+  div.k-medge-b [title="拖动调整高度"]
+  div.k-mresize [title="拖动调整大小"]

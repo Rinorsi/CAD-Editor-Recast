@@ -1,0 +1,361 @@
+div.advwin.k-modal
+  div.k-mh
+    img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
+    b "高级"
+    span.k-sub "钻石剑"
+    div.grow
+    div.k-mini "×"
+  div.advbody
+    div.advnav
+      div.advnav-i.on
+        img.o-ico [src="oriel:textures/icons/list.png" style="height:16px;width:16px"]
+        span "全部组件"
+      div.advnav-i
+        img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
+        span "物品数据"
+      div.advnav-i
+        img.o-ico [src="oriel:textures/icons/terminal.png" style="height:16px;width:16px"]
+        span "命令"
+      div.advnav-i
+        img.o-ico [src="oriel:textures/icons/filter.png" style="height:16px;width:16px"]
+        span "改动对比"
+      div.advnav-i
+        img.o-ico [src="oriel:textures/icons/clock.png" style="height:16px;width:16px"]
+        span "修改历史"
+    div.advmain
+      div.adv
+        div.adv-l
+          div.k-sbox
+            input.k-input [placeholder="筛选 107 个组件" type="text"]
+            div.k-btn.k-sbtn [title="搜索（也可以按回车）"]
+              img.o-ico [src="oriel:textures/icons/search.png" style="height:16px;width:16px"]
+              span "搜索"
+          div.adv-list
+            div.adv-grp "原型自带 15"
+            div.adv-row [title="minecraft:lore\n此组件负责保存物品的自定义提示框描述文本。"]
+              span.z "说明文字"
+              i.inherit.st
+            div.adv-row [title="minecraft:rarity\n此组件负责物品的基础稀有度。"]
+              span.z "稀有度"
+              i.inherit.st
+            div.adv-row [title="minecraft:tooltip_display\n此组件控制由组件产生的提示框文本可见性和提示框可见性。"]
+              span.z "提示框显示"
+              i.inherit.st
+            div.adv-row [title="minecraft:damage\n此组件负责存储物品的损坏值，和max_damage一起控制物品能否被损坏。此组件不存在时代表物品处于最大耐久值。"]
+              span.z "已损耗耐久"
+              i.inherit.st
+            div.adv-row [title="minecraft:max_damage\n此组件负责存储物品的最大耐久度，和damage组件一起控制物品能否被损坏。此组件不存在时若物品被损坏则游戏将最大耐久度视为0。"]
+              span.z "最大耐久"
+              i.inherit.st
+            div.adv-row [title="minecraft:max_stack_size\n此组件负责物品的最大堆叠数，如果此组件不存在，则视为1。"]
+              span.z "最大堆叠"
+              i.inherit.st
+            div.adv-row [title="minecraft:repair_cost\n此组件负责保存物品在铁砧操作中的累积惩罚。"]
+              span.z "铁砧惩罚"
+              i.inherit.st
+            div.adv-row [title="minecraft:repairable\n此组件负责物品可使用何种物品在铁砧上进行原料修复。"]
+              span.z "可修复材料"
+              i.inherit.st
+            div.adv-row [title="minecraft:attribute_modifiers\n此组件负责存储修饰生物属性的属性修饰符，当物品在生物的指定槽位上时可以修改其所在生物的属性。"]
+              span.z "属性修饰器"
+              i.inherit.st
+            div.adv-row [title="minecraft:swing_animation\n挥动动画；26.3拆分"]
+              span.z "挥动动画"
+              i.inherit.st
+            div.adv-row [title="minecraft:tool\n此组件负责物品作为挖掘工具的行为。"]
+              span.z "工具"
+              i.inherit.st
+            div.adv-row [title="minecraft:weapon\n攻击时损耗与阻挡禁用时间"]
+              span.z "武器"
+              i.inherit.st
+            div.adv-row [title="minecraft:enchantable\n此组件负责存储物品的附魔能力。该组件不存在时，物品不可在附魔台中附魔。该组件存在时，若物品存在enchantments组件且为空，且存在可附加的魔咒，则该物品可在附魔台中附魔。"]
+              span.z "可附魔性"
+              i.inherit.st
+            div.adv-row [title="minecraft:enchantments\n直接生效的附魔映射"]
+              span.z "附魔"
+              i.inherit.st
+            div.adv-row [title="minecraft:use_effects\n此组件负责使用物品时的部分行为。"]
+              span.z "使用时效果"
+              i.inherit.st
+            div.adv-grp "其它组件 92"
+            div.adv-row [title="minecraft:custom_model_data\n此组件负责保存自定义数据，供物品模型映射选择物品模型的自定义模型数据。"]
+              span.z "自定义模型数据"
+              i.inherit.st
+            div.adv-row [title="minecraft:custom_name\n此组件负责保存自定义名称。物品的自定义名称默认具有斜体。"]
+              span.z "自定义名称"
+              i.inherit.st
+            div.adv-row [title="minecraft:dyed_color\n此组件负责保存物品的染色数据。根据不同的物品模型定义或其装备模型定义，此组件的颜色也会影响物品外观或装备外观。"]
+              span.z "染色"
+              i.inherit.st
+            div.adv-row [title="minecraft:enchantment_glint_override\n此组件负责控制物品是否会显示光效，优先级高于其他任何影响光效的组件和物品自身属性。"]
+              span.z "附魔光效"
+              i.inherit.st
+            div.adv-row [title="minecraft:item_model\n此组件控制了物品使用的物品模型映射。物品模型映射会根据命名空间ID解析为assets/<命名空间>/items/<路径>.json。若对应的物品模型映射不存在或无法解析则使用无效模型。此组件不存在时什么也不会渲染。"]
+              span.z "物品模型"
+              i.inherit.st
+            div.adv-row [title="minecraft:item_name\n此组件控制了物品的默认名称。该名称无法通过铁砧修改，不能在物品展示框中显示名称，带有该组件的旗帜在充当地图标记时也不会显示名称。此组件对物品名称的控制等级永远最低，会被其他所有影响物品名称的组件覆盖。"]
+              span.z "基础名称"
+              i.inherit.st
+            div.adv-row [title="minecraft:tooltip_style\n此组件负责物品的提示框外观。"]
+              span.z "提示框样式"
+              i.inherit.st
+            div.adv-row [title="minecraft:break_sound\n此组件负责物品耐久度耗尽时播放的音效。音效的声音分类取决于持有此物品的生物。"]
+              span.z "损坏音效"
+              i.inherit.st
+            div.adv-row [title="minecraft:damage_resistant\n此组件负责控制物品免疫的伤害类型。当物品实体受到此类伤害时不会被摧毁，且物品被装备时也不会因为受到此类伤害而消耗耐久度。"]
+              span.z "免疫伤害"
+              i.inherit.st
+            div.adv-row [title="minecraft:unbreakable\n此组件存在时，物品没有耐久度属性，不会减少耐久度，提示框中会显示“无法破坏”。"]
+              span.z "不可破坏"
+              i.inherit.st
+            div.adv-row [title="minecraft:attack_range\n此组件负责生物使用物品攻击时使用的攻击距离。"]
+              span.z "攻击范围"
+              i.inherit.st
+            div.adv-row [title="minecraft:blocks_attacks\n此组件负责物品的格挡行为。"]
+              span.z "格挡"
+              i.inherit.st
+            div.adv-row [title="minecraft:damage_type\n此组件负责生物使用此物品攻击时使用的伤害类型。如果不存在此组件，则正常使用生物默认的（如player_attack和mob_attack）伤害类型。"]
+              span.z "攻击伤害类型"
+              i.inherit.st
+            div.adv-row [title="minecraft:kinetic_weapon\n此组件负责决定物品是否可触发冲锋攻击，其也会影响一系列与冲锋攻击判定的行为，部分生物的生物AI和手持物品的动作等。"]
+              span.z "动能武器"
+              i.inherit.st
+            div.adv-row [title="minecraft:minimum_attack_charge\n此组件负责玩家使用物品攻击时，需要多少攻击冷却完成度才可发动攻击，此组件不存在时游戏会视为0。"]
+              span.z "最小攻击充能"
+              i.inherit.st
+            div.adv-row [title="minecraft:piercing_weapon\n此组件负责物品是否会发动戳刺攻击。"]
+              span.z "穿刺武器"
+              i.inherit.st
+            div.adv-row [title="minecraft:stored_enchantments\n附魔书储存附魔映射"]
+              span.z "存储的附魔"
+              i.inherit.st
+            div.adv-row [title="minecraft:consumable\n此组件控制物品是否具有消耗使用行为，以及使用后的效果。此处的消耗使用指物品数量在使用后会减少的操作，不包含方块物品的放置等对方块进行的有效操作。"]
+              span.z "消耗行为"
+              i.inherit.st
+            div.adv-row [title="minecraft:death_protection\n此组件负责物品是否具有类似不死图腾的行为。当物品在手上时，如果生物受到伤害类型不为#bypasses_invulnerability的致死伤害，游戏会阻止生物死亡、将生命值设置为1，并消耗此物品。此消耗行为不属于消耗使用行为。"]
+              span.z "死亡保护"
+              i.inherit.st
+            div.adv-row [title="minecraft:food\n此组件控制物品被消耗使用后能提供的食物属性。要让物品能被玩家消耗使用，物品需要同时拥有consumable组件。"]
+              span.z "食物"
+              i.inherit.st
+            div.adv-row [title="minecraft:intangible_projectile\n此组件负责箭被射出后是否只能被创造模式玩家捡起。默认情况下，只有多重射击的弩额外装填的箭会具有此组件。"]
+              span.z "不可拾取投射物"
+              i.inherit.st
+            div.adv-row [title="minecraft:ominous_bottle_amplifier\n控制物品被消耗使用后，玩家获得的不祥之兆状态效果倍率。要让物品能被玩家消耗使用，物品需要同时拥有consumable组件。"]
+              span.z "不祥之瓶强度"
+              i.inherit.st
+            div.adv-row [title="minecraft:suspicious_stew_effects\n存储谜之炖菜的状态效果信息。要让物品能被玩家消耗使用，物品需要同时拥有consumable组件。"]
+              span.z "谜之炖菜效果"
+              i.inherit.st
+            div.adv-row [title="minecraft:use_cooldown\n此组件负责物品的使用冷却行为。"]
+              span.z "使用冷却"
+              i.inherit.st
+            div.adv-row [title="minecraft:use_remainder\n此组件负责物品被消耗使用后返还的物品。"]
+              span.z "使用后剩余"
+              i.inherit.st
+            div.adv-row [title="minecraft:banner_patterns\n此组件负责存储旗帜和盾牌上的旗帜图案。"]
+              span.z "旗帜图案"
+              i.inherit.st
+            div.adv-row [title="minecraft:base_color\n此组件负责盾牌的基础颜色。"]
+              span.z "盾牌底色"
+              i.inherit.st
+            div.adv-row [title="minecraft:equippable\n此组件负责物品是否可像盔甲一样穿戴，控制了盔甲等装备的行为。"]
+              span.z "可装备"
+              i.inherit.st
+            div.adv-row [title="minecraft:glider\n此组件存在时，物品被穿戴后可以让生物滑翔。"]
+              span.z "滑翔"
+              i.inherit.st
+            div.adv-row [title="minecraft:provides_banner_patterns\n此组件负责物品被置于织布机旗帜图案槽位时提供的旗帜图案。"]
+              span.z "提供旗帜图案"
+              i.inherit.st
+            div.adv-row [title="minecraft:provides_trim_material\n此组件负责物品被作为锻造原材料时提供的盔甲纹饰材料。"]
+              span.z "提供纹饰材料"
+              i.inherit.st
+            div.adv-row [title="minecraft:trim\n此组件负责保存物品的盔甲纹饰数据。"]
+              span.z "盔甲纹饰"
+              i.inherit.st
+            div.adv-row [title="minecraft:bees\n此组件负责保存蜂巢和蜂箱的蜜蜂数据。"]
+              span.z "蜜蜂"
+              i.inherit.st
+            div.adv-row [title="minecraft:block_entity_data\n此组件负责保存方块实体数据。当玩家放置具有方块实体的方块时，此组件内部的NBT数据就会转化为方块实体数据。"]
+              span.z "方块实体数据"
+              i.inherit.st
+            div.adv-row [title="minecraft:block_state\n此组件负责保存方块状态。当玩家放置方块时，游戏会根据此组件内部的方块属性及其值设置方块属性，没有指定的方块属性使用默认值。如果方块属性对于被放置的方块不存在或对应的方块属性值无效，则这项设置不起任何作用。"]
+              span.z "方块状态"
+              i.inherit.st
+            div.adv-row [title="minecraft:bucket_entity_data\n此组件负责保存生物桶的数据。游戏从生物获取生物桶时会设置下列数据，放出生物时会设置对应的数据，指定其他的NBT数据不起作用。"]
+              span.z "桶内实体数据"
+              i.inherit.st
+            div.adv-row [title="minecraft:bundle_contents\n此组件负责保存收纳袋内部包含的物品；拥有此组件的物品实体被摧毁时会释放内容物。"]
+              span.z "收纳袋内容"
+              i.inherit.st
+            div.adv-row [title="minecraft:can_break\n此组件负责控制冒险模式玩家能否破坏指定方块或与指定方块交互，可互动方块会在提示框中提示。如果存在此组件但方块谓词未指定或不满足条件，则显示于提示框的方块为“未知”，且此物品可与任何方块互动。游戏不会测试方块实体组件。"]
+              span.z "可破坏方块"
+              i.inherit.st
+            div.adv-row [title="minecraft:can_place_on\n此组件负责控制冒险模式玩家能否破坏指定方块或与指定方块交互，可互动方块会在提示框中提示。如果存在此组件但方块谓词未指定或不满足条件，则显示于提示框的方块为“未知”，且此物品可与任何方块互动。游戏不会测试方块实体组件。"]
+              span.z "可放置于"
+              i.inherit.st
+            div.adv-row [title="minecraft:charged_projectiles\n此组件负责存储弩装载的物品信息。此组件的所有物品将在提示框中显示，连续的相同内容物会合并显示。若物品列表存在烟花火箭则弩显示为“装填烟花火箭的弩”，否则为“装填箭的弩”。此组件不存在时代表弩没有装载任何物品。"]
+              span.z "已装填弹药"
+              i.inherit.st
+            div.adv-row [title="minecraft:container\n此组件存储容器方块内部物品栏的物品。当此方块的物品实体被摧毁时会释放内容物。"]
+              span.z "容器内容"
+              i.inherit.st
+            div.adv-row [title="minecraft:container_loot\n此组件负责保存战利品容器方块的战利品表数据。"]
+              span.z "容器战利品"
+              i.inherit.st
+            div.adv-row [title="minecraft:custom_data\n此组件负责保存自定义数据。"]
+              span.z "自定义数据"
+              i.inherit.st
+            div.adv-row [title="minecraft:debug_stick_state\n此组件负责保存调试棒的数据。"]
+              span.z "调试棒状态"
+              i.inherit.st
+            div.adv-row [title="minecraft:entity_data\n此组件负责存储物品生成对应实体时（如使用刷怪蛋或放置盔甲架）应用于所生成实体的数据。应用时采取合并的方式。若指定的实体类型无法在和平模式下存在，则提示框会提示“已在和平难度下禁用”。"]
+              span.z "实体数据"
+              i.inherit.st
+            div.adv-row [title="minecraft:lock\n此组件负责保存可上锁的方块实体数据。"]
+              span.z "容器锁"
+              i.inherit.st
+            div.adv-row [title="minecraft:pot_decorations\n此组件负责保存饰纹陶罐的陶片数据，物品提示框中会显示其合成物品。"]
+              span.z "陶罐装饰"
+              i.inherit.st
+            div.adv-row [title="minecraft:profile\n此组件负责游戏档案数据。任何与游戏档案相关的物品、方块实体和实体均使用此解析方式。"]
+              span.z "头颅档案"
+              i.inherit.st
+            div.adv-row [title="minecraft:lodestone_tracker\n此组件负责保存磁石指针的数据。"]
+              span.z "磁石追踪"
+              i.inherit.st
+            div.adv-row [title="minecraft:map_color\n地图物品着色；26.3移除"]
+              span.z "地图颜色"
+              i.inherit.st
+            div.adv-row [title="minecraft:map_decorations\n此组件负责保存地图图标，这些图标属于物品数据的一部分，而不是全局地图数据保存的图标。"]
+              span.z "地图标记"
+              i.inherit.st
+            div.adv-row [title="minecraft:map_id\n此组件负责存储地图编号。具有此组件的所有物品均会尝试读取相应编号的地图内容，且能被玩家展开，在物品展示框上铺开，作为地图被复制、锁定或扩展。提示框中会显示地图的缩放信息等数据。但是，只有地图物品可以主动要求游戏获取地图内容。"]
+              span.z "地图编号"
+              i.inherit.st
+            div.adv-row [title="minecraft:recipes\n此组件负责知识之书的数据。"]
+              span.z "解锁配方"
+              i.inherit.st
+            div.adv-row [title="minecraft:writable_book_content\n存储书与笔的数据。当玩家使用拥有此组件的书与笔或成书时会显示编辑界面，在讲台上打开拥有此组件的任意物品时游戏会显示每页的文本信息。此组件的优先级低于written_book_content组件。"]
+              span.z "书与笔内容"
+              i.inherit.st
+            div.adv-row [title="minecraft:written_book_content\n存储成书的数据。当玩家使用拥有此组件的书与笔或成书，或在讲台上打开拥有此组件的任意物品时游戏会显示每页的文本信息。此组件的title字段也被视为物品的自定义名称。"]
+              span.z "成书内容"
+              i.inherit.st
+            div.adv-row [title="minecraft:dye\n此组件负责存储物品的染料颜色。具有dye组件是物品可作为染料使用的必要条件，在对应的游戏场景测试成功后将使用此组件的颜色进行计算："]
+              span.z "染料"
+              i.inherit.st
+            div.adv-row [title="minecraft:firework_explosion\n此组件负责保存烟火之星的数据。"]
+              span.z "烟花爆炸"
+              i.inherit.st
+            div.adv-row [title="minecraft:fireworks\n此组件负责保存烟花火箭的数据。"]
+              span.z "烟花"
+              i.inherit.st
+            div.adv-row [title="minecraft:instrument\n此组件负责保存山羊角的数据。"]
+              span.z "乐器"
+              i.inherit.st
+            div.adv-row [title="minecraft:jukebox_playable\n此组件负责保存音乐唱片的数据。"]
+              span.z "唱片"
+              i.inherit.st
+            div.adv-row [title="minecraft:note_block_sound\n此组件负责保存玩家的头放置在音符盒上播放的自定义音效。"]
+              span.z "音符盒音效"
+              i.inherit.st
+            div.adv-row [title="minecraft:potion_contents\n存储药水效果和状态效果信息。影响物品的名称和状态效果，提示框中会显示药水信息。下文的<药水物品类型>只对药水、喷溅药水、滞留药水和药箭有效。要让物品能被玩家消耗使用，物品需要同时拥有consumable组件。"]
+              span.z "药水内容"
+              i.inherit.st
+            div.adv-row [title="minecraft:potion_duration_scale\n此组件负责potion_contents组件的状态效果的缩放倍率。"]
+              span.z "药水时长倍率"
+              i.inherit.st
+            div.adv-row [title="minecraft:axolotl/variant\naxolotl/variant"]
+              span.z "变种 · axolotl"
+              i.inherit.st
+            div.adv-row [title="minecraft:cat/collar\ncat/collar"]
+              span.z "变种 · cat collar"
+              i.inherit.st
+            div.adv-row [title="minecraft:cat/sound_variant\ncat/sound_variant"]
+              span.z "变种 · cat sound_variant"
+              i.inherit.st
+            div.adv-row [title="minecraft:cat/variant\ncat/variant"]
+              span.z "变种 · cat"
+              i.inherit.st
+            div.adv-row [title="minecraft:chicken/sound_variant\nchicken/sound_variant"]
+              span.z "变种 · chicken sound_variant"
+              i.inherit.st
+            div.adv-row [title="minecraft:chicken/variant\nchicken/variant"]
+              span.z "变种 · chicken"
+              i.inherit.st
+            div.adv-row [title="minecraft:cow/sound_variant\ncow/sound_variant"]
+              span.z "变种 · cow sound_variant"
+              i.inherit.st
+            div.adv-row [title="minecraft:cow/variant\ncow/variant"]
+              span.z "变种 · cow"
+              i.inherit.st
+            div.adv-row [title="minecraft:fox/variant\nfox/variant"]
+              span.z "变种 · fox"
+              i.inherit.st
+            div.adv-row [title="minecraft:frog/variant\nfrog/variant"]
+              span.z "变种 · frog"
+              i.inherit.st
+            div.adv-row [title="minecraft:horse/variant\nhorse/variant"]
+              span.z "变种 · horse"
+              i.inherit.st
+            div.adv-row [title="minecraft:llama/variant\nllama/variant"]
+              span.z "变种 · llama"
+              i.inherit.st
+            div.adv-row [title="minecraft:mooshroom/variant\nmooshroom/variant"]
+              span.z "变种 · mooshroom"
+              i.inherit.st
+            div.adv-row [title="minecraft:painting/variant\npainting/variant"]
+              span.z "变种 · painting"
+              i.inherit.st
+            div.adv-row [title="minecraft:parrot/variant\nparrot/variant"]
+              span.z "变种 · parrot"
+              i.inherit.st
+            div.adv-row [title="minecraft:pig/sound_variant\npig/sound_variant"]
+              span.z "变种 · pig sound_variant"
+              i.inherit.st
+            div.adv-row [title="minecraft:pig/variant\npig/variant"]
+              span.z "变种 · pig"
+              i.inherit.st
+            div.adv-row [title="minecraft:rabbit/variant\nrabbit/variant"]
+              span.z "变种 · rabbit"
+              i.inherit.st
+            div.adv-row [title="minecraft:salmon/size\nsalmon/size"]
+              span.z "变种 · salmon size"
+              i.inherit.st
+            div.adv-row [title="minecraft:sheep/color\nsheep/color"]
+              span.z "变种 · sheep color"
+              i.inherit.st
+            div.adv-row [title="minecraft:shulker/color\nshulker/color"]
+              span.z "变种 · shulker color"
+              i.inherit.st
+            div.adv-row [title="minecraft:tropical_fish/base_color\ntropical_fish/base_color"]
+              span.z "变种 · tropical_fish base_color"
+              i.inherit.st
+            div.adv-row [title="minecraft:tropical_fish/pattern\n此组件会为物品提示框提供内容：根据其他热带鱼相关的组件，显示热带鱼变种信息。"]
+              span.z "变种 · tropical_fish pattern"
+              i.inherit.st
+            div.adv-row [title="minecraft:tropical_fish/pattern_color\ntropical_fish/pattern_color"]
+              span.z "变种 · tropical_fish pattern_color"
+              i.inherit.st
+            div.adv-row [title="minecraft:villager/variant\nvillager/variant"]
+              span.z "变种 · villager"
+              i.inherit.st
+            div.adv-row [title="minecraft:wolf/collar\nwolf/collar"]
+              span.z "变种 · wolf collar"
+              i.inherit.st
+            div.adv-row [title="minecraft:wolf/sound_variant\nwolf/sound_variant"]
+              span.z "变种 · wolf sound_variant"
+              i.inherit.st
+            div.adv-row [title="minecraft:wolf/variant\nwolf/variant"]
+              span.z "变种 · wolf"
+              i.inherit.st
+            div.adv-row [title="minecraft:zombie_nautilus/variant\nzombie_nautilus/variant"]
+              span.z "变种 · zombie_nautilus"
+              i.inherit.st
+        div.adv-r
+          div.k-empty "在左边选一个组件，查看并编辑它的原始数据。"
+  div.k-medge-r [title="拖动调整宽度"]
+  div.k-medge-b [title="拖动调整高度"]
+  div.k-mresize [title="拖动调整大小"]

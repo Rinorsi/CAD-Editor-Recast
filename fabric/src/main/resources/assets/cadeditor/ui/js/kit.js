@@ -52,7 +52,7 @@ function nameOfItem(id) { return Reg.itemName(id) || EDATA.iname[shortId(id)] ||
 function nameOf(reg, id) { return Reg.nameOf2(reg, id) || humanId(shortId(id)); }
 function entityName(id) { return nameOf('entity_type', id); }
 /* 选项（{v, label}）的显示名：游戏没给翻译（label 等于 ID）时转成可读文字 */
-function optLabel(e) { return optLabel(e); }
+function optLabel(e) { return e.label === e.v ? humanId(shortId(e.v)) : e.label; }
 /* 物品类别：优先用游戏里的真实事实（默认组件 + item_meta），数据没到、或离线时才退回内置表 EDATA.ikind。
    facts：dc = 默认组件（短 ID 键），meta = item_meta_one 的一行。不靠物品名后缀猜（书除外：原版只有这两本）。 */
 function kindFromFacts(id, dc, meta) {
@@ -349,6 +349,14 @@ function kNumber(value, o) {
 /* 颜色：value 为 0xRRGGBB 整数或 null；palette 为 16 色 + 自定义 */
 var DYE_RGB = { white: 0xF9FFFE, orange: 0xF9801D, magenta: 0xC74EBD, light_blue: 0x3AB3DA, yellow: 0xFED83D, lime: 0x80C71F, pink: 0xF38BAA, gray: 0x474F52, light_gray: 0x9D9D97, cyan: 0x169C9C, purple: 0x8932B8, blue: 0x3C44AA, brown: 0x835432, green: 0x5E7C16, red: 0xB02E26, black: 0x1D1D21 };
 function hex6(n) { var s = (n & 0xFFFFFF).toString(16).toUpperCase(); while (s.length < 6) s = '0' + s; return '#' + s; }
+/* 点开一个带取色器的小窗。o = { width（默认 270）, maxHeight, cls（小窗内容的类名，默认 k-pickbox）, extra:[元素…]（放在取色器下面，如「删除这个颜色」） }。返回 kColor 控件 */
+function kColorPop(anchor, value, onChange, o) {
+  o = o || {};
+  var cc = kColor(value, onChange), box = h('div', { class: o.cls || 'k-pickbox' }, [cc.el].concat(o.extra || []));
+  var po = { width: o.width || 270 }; if (o.maxHeight) po.maxHeight = o.maxHeight;
+  kPopover(anchor, box, po);
+  return cc;
+}
 function kColor(value, onChange, o) {
   o = o || {};
   var cur = typeof value === 'number' ? (value & 0xFFFFFF) : null;

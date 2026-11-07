@@ -4,8 +4,7 @@ HEAD_AUTO.map_color=1;
 AUTO_BODY.map_color=function(card,cid,v){
   var color=typeof v==='number'?v:0xffffff, chip=h('span',{class:'world-color-chip',style:'background:'+hex6(color)});
   var choose=kBtn(hex6(color),function(){
-    var ctl=kColor(color,function(x){color=x;autoPut(cid,x);chip.setAttribute('style','background:'+hex6(x));choose.querySelector('span').textContent=hex6(x);});
-    kPopover(choose,h('div',{class:'world-color-pop'},[ctl.el]),{width:240,maxHeight:160});
+    kColorPop(choose,color,function(x){color=x;autoPut(cid,x);chip.setAttribute('style','background:'+hex6(x));choose.querySelector('span').textContent=hex6(x);},{cls:'world-color-pop',width:240,maxHeight:160});
   });headCtl(card,h('div',{class:'world-inline'},[chip,choose]));
 };
 var WORLD_SEC_ICON = { '数据字段': 'code', '玩家皮肤': 'user', '解锁配方': 'book', '条目': 'list' };

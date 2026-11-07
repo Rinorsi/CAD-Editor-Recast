@@ -146,21 +146,30 @@ function xEmpty(text) { return h('div', { class: 'k-empty', text: text }); }
 /* 一组可展开的行（同一时间只展开一条）+ 底部「＋ 添加」+ 空状态。
    cfg: { items: ()=>数组, row: (item,i)=>xRow 参数(不含 open/onHead；有 body 才可展开), add: {text, fn(api)}, empty, selected }
    返回 { el, draw(), select(i), selected() } */
+/* 可增删的行列表。
+   cfg = { items()→数组, row(it, i)→xRow 的参数, empty（空时的文字，'' 不显示）, add:{text, fn(api)}, selected（初始展开的行）,
+           sortable:true + onMove(from, to)（行首出现抓手，按住拖动排序；onMove 里改数据，列表会自己重画）,
+           context(it, i)→右键菜单项, scroll:像素（超过这个高度就在列表里滚动）, onDrawn?() } */
 function xList(cfg) {
   var box = h('div', { class: 'x-list' }), list = h('div', { class: 'k-sortlist' }), selected = cfg.selected === undefined ? -1 : cfg.selected, api;
+  if (cfg.scroll) list.setAttribute('style', 'max-height:' + cfg.scroll + 'px;overflow-y:auto');
   function draw() {
     clear(list);
     var items = cfg.items();
     items.forEach(function (it, i) {
       var o = cfg.row(it, i);
       o.open = selected === i && !!o.body;
+      if (cfg.sortable && o.grip === undefined) o.grip = true;
       if (o.body) o.onHead = function () { selected = selected === i ? -1 : i; draw(); };
-      list.appendChild(xRow(o));
+      var rowEl = xRow(o);
+      if (cfg.context) onContext(rowEl, function () { return cfg.context(it, i); });
+      list.appendChild(rowEl);
     });
     if (!items.length && cfg.empty !== '') list.appendChild(xEmpty(cfg.empty || '暂无条目'));
   }
   api = { el: box, draw: draw, select: function (i) { selected = i; draw(); }, selected: function () { return selected; } };
   box.appendChild(list);
+  if (cfg.sortable) kSortable(list, { onMove: function (from, to) { if (cfg.onMove) cfg.onMove(from, to); draw(); } });
   if (cfg.add) box.appendChild(xAdd(cfg.add.text, function () { cfg.add.fn(api); }));
   draw();
   return api;

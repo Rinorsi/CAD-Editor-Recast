@@ -25,6 +25,12 @@ for (const f of order) src[f].forEach((line, i) => {
 Object.keys(defs).forEach(n => { if (defs[n].length > 1) errors.push('全局函数重复定义 ' + n + '：' + defs[n].join('、')); });
 assigns.forEach(a => { if (defs[a.name]) errors.push('用赋值覆盖了别处声明的函数 ' + a.name + '：' + a.at + '（原定义 ' + defs[a.name].join('、') + '）'); else warns.push('给未声明的全局赋值 ' + a.name + '：' + a.at); });
 
+// 2b：函数体就是「return 自己(同样的参数)」——无限递归（批量替换时容易把函数自己的定义也换掉）
+for (const f of order) src[f].forEach((line, i) => {
+  const m = line.match(/^function\s+([A-Za-z_$][\w$]*)\s*\(([^)]*)\)\s*\{\s*return\s+([A-Za-z_$][\w$]*)\s*\(([^)]*)\)\s*;?\s*\}/);
+  if (m && m[1] === m[3] && m[2].trim() === m[4].trim()) errors.push('函数直接调用自己（无限递归）' + m[1] + '：' + where(f, i));
+});
+
 // 3：AUTO_BODY 键
 const bodies = {};
 for (const f of order) src[f].forEach((line, i) => {

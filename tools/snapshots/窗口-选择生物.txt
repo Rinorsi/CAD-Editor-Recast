@@ -1,0 +1,37 @@
+div.addwin.k-modal.pickwin
+  div.k-mh
+    img.o-ico [src="oriel:textures/icons/grid.png" style="height:16px;width:16px"]
+    b "选择生物"
+    span.k-sub
+    div.grow
+    span.k-tag "游戏实时注册表"
+    div.k-mini "×"
+  div.addbody
+    div.addcats
+      div.addcat.on
+        img.o-ico [src="oriel:textures/icons/grid.png" style="height:16px;width:16px"]
+        span "全部"
+        em.n "0"
+      div.addcat
+        img.o-ico [src="oriel:textures/icons/cube.png" style="height:16px;width:16px"]
+        span "模组"
+        em.n "0"
+    div.addmain
+      div.addtop
+        div.k-sbox
+          input.k-input [placeholder="搜索名称或 ID；也可直接输入 模组id:名字" type="text"]
+          div.k-btn.k-sbtn [title="搜索（也可以按回车）"]
+            img.o-ico [src="oriel:textures/icons/search.png" style="height:16px;width:16px"]
+            span "搜索"
+      div.addlist
+        div.k-empty "正在向游戏读取…"
+  div.k-mf
+    span.k-sub "点一条选中"
+    div.grow
+    div.k-btn
+      span "取消"
+    div.dim.k-btn.pri
+      span "使用这个"
+  div.k-medge-r [title="拖动调整宽度"]
+  div.k-medge-b [title="拖动调整高度"]
+  div.k-mresize [title="拖动调整大小"]

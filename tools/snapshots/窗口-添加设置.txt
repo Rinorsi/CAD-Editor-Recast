@@ -1,0 +1,596 @@
+div.addwin.k-modal
+  div.k-mh
+    img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
+    b "添加设置"
+    span.k-sub "给物品加上它本来没有的功能"
+    div.grow
+    div.k-mini "×"
+  div.addbody
+    div.addcats
+      div.addcat.on
+        img.o-ico [src="oriel:textures/icons/grid.png" style="height:16px;width:16px"]
+        span "全部"
+      div.addcat
+        img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
+        span "外观文本"
+      div.addcat
+        img.o-ico [src="oriel:textures/icons/shield.png" style="height:16px;width:16px"]
+        span "耐久堆叠"
+      div.addcat
+        img.o-ico [src="oriel:textures/icons/sword.png" style="height:16px;width:16px"]
+        span "战斗工具"
+      div.addcat
+        img.o-ico [src="oriel:textures/icons/enchant.png" style="height:16px;width:16px"]
+        span "附魔"
+      div.addcat
+        img.o-ico [src="oriel:textures/icons/apple.png" style="height:16px;width:16px"]
+        span "食用使用"
+      div.addcat
+        img.o-ico [src="oriel:textures/icons/helmet.png" style="height:16px;width:16px"]
+        span "装备纹饰"
+      div.addcat
+        img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+        span "容器数据"
+      div.addcat
+        img.o-ico [src="oriel:textures/icons/book.png" style="height:16px;width:16px"]
+        span "书与地图"
+      div.addcat
+        img.o-ico [src="oriel:textures/icons/potion_round.png" style="height:16px;width:16px"]
+        span "药水烟花"
+    div.addmain
+      div.addtop
+        div.k-sbox
+          input.k-input [placeholder="搜索，例如「发光」「食物」「耐久」" type="text"]
+          div.k-btn.k-sbtn [title="搜索（也可以按回车）"]
+            img.o-ico [src="oriel:textures/icons/search.png" style="height:16px;width:16px"]
+            span "搜索"
+      div.addlist
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "自定义模型数据"
+            div.s "保存自定义数据，供物品模型映射选择物品模型的自定义模型数据"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "自定义名称"
+            div.s "保存自定义名称"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "染色"
+            div.s "保存物品的染色数据"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "附魔光效"
+            div.s "控制物品是否会显示光效，优先级高于其他任何影响光效的组件和物品自身属性"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "物品模型"
+            div.s "物品使用的物品模型映射"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "基础名称"
+            div.s "物品的默认名称"
+          span.k-tag "添加"
+        div.addrow.has
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "说明文字"
+            div.s "保存物品的自定义提示框描述文本"
+          span.dim.k-tag "已有"
+        div.addrow.has
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "稀有度"
+            div.s "物品的基础稀有度"
+          span.dim.k-tag "已有"
+        div.addrow.has
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "提示框显示"
+            div.s "由组件产生的提示框文本可见性和提示框可见性"
+          span.dim.k-tag "已有"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "提示框样式"
+            div.s "物品的提示框外观"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "损坏音效"
+            div.s "物品耐久度耗尽时播放的音效"
+          span.k-tag "添加"
+        div.addrow.has
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "已损耗耐久"
+            div.s "存储物品的损坏值，和max_damage一起控制物品能否被损坏"
+          span.dim.k-tag "已有"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "免疫伤害"
+            div.s "控制物品免疫的伤害类型"
+          span.k-tag "添加"
+        div.addrow.has
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "最大耐久"
+            div.s "存储物品的最大耐久度，和damage组件一起控制物品能否被损坏"
+          span.dim.k-tag "已有"
+        div.addrow.has
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "最大堆叠"
+            div.s "物品的最大堆叠数，如果此组件不存在，则视为1"
+          span.dim.k-tag "已有"
+        div.addrow.has
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "铁砧惩罚"
+            div.s "保存物品在铁砧操作中的累积惩罚"
+          span.dim.k-tag "已有"
+        div.addrow.has
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "可修复材料"
+            div.s "物品可使用何种物品在铁砧上进行原料修复"
+          span.dim.k-tag "已有"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "不可破坏"
+            div.s "存在时，物品没有耐久度属性，不会减少耐久度，提示框中会显示“无法破坏”"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "攻击范围"
+            div.s "生物使用物品攻击时使用的攻击距离"
+          span.k-tag "添加"
+        div.addrow.has
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "属性修饰器"
+            div.s "存储修饰生物属性的属性修饰符，当物品在生物的指定槽位上时可以修改其所在生物的属性"
+          span.dim.k-tag "已有"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "格挡"
+            div.s "物品的格挡行为"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "攻击伤害类型"
+            div.s "生物使用此物品攻击时使用的伤害类型"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "动能武器"
+            div.s "决定物品是否可触发冲锋攻击，其也会影响一系列与冲锋攻击判定的行为，部分生物的生物AI和手持物品的动作等"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "最小攻击充能"
+            div.s "玩家使用物品攻击时，需要多少攻击冷却完成度才可发动攻击，此组件不存在时游戏会视为0"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "穿刺武器"
+            div.s "物品是否会发动戳刺攻击"
+          span.k-tag "添加"
+        div.addrow.has
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "挥动动画"
+            div.s "挥动动画"
+          span.dim.k-tag "已有"
+        div.addrow.has
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "工具"
+            div.s "物品作为挖掘工具的行为"
+          span.dim.k-tag "已有"
+        div.addrow.has
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "武器"
+            div.s "攻击时损耗与阻挡禁用时间"
+          span.dim.k-tag "已有"
+        div.addrow.has
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "可附魔性"
+            div.s "存储物品的附魔能力"
+          span.dim.k-tag "已有"
+        div.addrow.has
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "附魔"
+            div.s "直接生效的附魔映射"
+          span.dim.k-tag "已有"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "存储的附魔"
+            div.s "附魔书储存附魔映射"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "消耗行为"
+            div.s "物品是否具有消耗使用行为，以及使用后的效果"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "死亡保护"
+            div.s "物品是否具有类似不死图腾的行为"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "食物"
+            div.s "物品被消耗使用后能提供的食物属性"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "不可拾取投射物"
+            div.s "箭被射出后是否只能被创造模式玩家捡起"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "不祥之瓶强度"
+            div.s "控制物品被消耗使用后，玩家获得的不祥之兆状态效果倍率"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "谜之炖菜效果"
+            div.s "存储谜之炖菜的状态效果信息"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "使用冷却"
+            div.s "物品的使用冷却行为"
+          span.k-tag "添加"
+        div.addrow.has
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "使用时效果"
+            div.s "使用物品时的部分行为"
+          span.dim.k-tag "已有"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "使用后剩余"
+            div.s "物品被消耗使用后返还的物品"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "旗帜图案"
+            div.s "存储旗帜和盾牌上的旗帜图案"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "盾牌底色"
+            div.s "盾牌的基础颜色"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "可装备"
+            div.s "物品是否可像盔甲一样穿戴，控制了盔甲等装备的行为"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "滑翔"
+            div.s "存在时，物品被穿戴后可以让生物滑翔"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "提供旗帜图案"
+            div.s "物品被置于织布机旗帜图案槽位时提供的旗帜图案"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "提供纹饰材料"
+            div.s "物品被作为锻造原材料时提供的盔甲纹饰材料"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "盔甲纹饰"
+            div.s "保存物品的盔甲纹饰数据"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "蜜蜂"
+            div.s "保存蜂巢和蜂箱的蜜蜂数据"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "方块实体数据"
+            div.s "保存方块实体数据"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "方块状态"
+            div.s "保存方块状态"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "桶内实体数据"
+            div.s "保存生物桶的数据"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "收纳袋内容"
+            div.s "保存收纳袋内部包含的物品"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "可破坏方块"
+            div.s "控制冒险模式玩家能否破坏指定方块或与指定方块交互，可互动方块会在提示框中提示"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "可放置于"
+            div.s "控制冒险模式玩家能否破坏指定方块或与指定方块交互，可互动方块会在提示框中提示"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "已装填弹药"
+            div.s "存储弩装载的物品信息"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "容器内容"
+            div.s "容器方块内部物品栏的物品"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "容器战利品"
+            div.s "保存战利品容器方块的战利品表数据"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "自定义数据"
+            div.s "保存自定义数据"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "调试棒状态"
+            div.s "保存调试棒的数据"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "实体数据"
+            div.s "存储物品生成对应实体时（如使用刷怪蛋或放置盔甲架）应用于所生成实体的数据"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "容器锁"
+            div.s "保存可上锁的方块实体数据"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "陶罐装饰"
+            div.s "保存饰纹陶罐的陶片数据，物品提示框中会显示其合成物品"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "头颅档案"
+            div.s "游戏档案数据"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "磁石追踪"
+            div.s "保存磁石指针的数据"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "地图颜色"
+            div.s "地图物品着色"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "地图标记"
+            div.s "保存地图图标，这些图标属于物品数据的一部分，而不是全局地图数据保存的图标"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "地图编号"
+            div.s "存储地图编号"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "解锁配方"
+            div.s "知识之书的数据"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "书与笔内容"
+            div.s "存储书与笔的数据"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "成书内容"
+            div.s "存储成书的数据"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "染料"
+            div.s "存储物品的染料颜色"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "烟花爆炸"
+            div.s "保存烟火之星的数据"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "烟花"
+            div.s "保存烟花火箭的数据"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "乐器"
+            div.s "保存山羊角的数据"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "唱片"
+            div.s "保存音乐唱片的数据"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "音符盒音效"
+            div.s "保存玩家的头放置在音符盒上播放的自定义音效"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "药水内容"
+            div.s "存储药水效果和状态效果信息"
+          span.k-tag "添加"
+        div.addrow
+          div.ic
+            item.k-ico [style="height:16px;width:16px"]
+          div.tx
+            div.z "药水时长倍率"
+            div.s "potion_contents组件的状态效果的缩放倍率"
+          span.k-tag "添加"
+  div.k-medge-r [title="拖动调整宽度"]
+  div.k-medge-b [title="拖动调整高度"]
+  div.k-mresize [title="拖动调整大小"]

@@ -386,7 +386,7 @@ function kColorList(list, onChange, addLabel) {
     clear(wrap);
     list.forEach(function (c, i) {
       var chip = h('div', { class: 'k-chip' }, [h('span', { class: 'k-colorchip small', style: 'background:' + hex6(c) }), hex6(c)]);
-      activate(chip, function () { var box = h('div', { class: 'k-pickbox' }); var cc = kColor(c, function (n) { list[i] = n; onChange(list); draw(); }); box.appendChild(cc.el); box.appendChild(kBtn('删除这个颜色', function () { list.splice(i, 1); onChange(list); kPopClose(); draw(); }, { cls: 'dng', icon: 'trash' })); kPopover(chip, box, { width: 270 }); });
+      activate(chip, function () { kColorPop(chip, c, function (n) { list[i] = n; onChange(list); draw(); }, { width: 270, extra: [kBtn('删除这个颜色', function () { list.splice(i, 1); onChange(list); kPopClose(); draw(); }, { cls: 'dng', icon: 'trash' })] }); });
       wrap.appendChild(chip);
     });
     var add = h('div', { class: 'k-chip' }, [uiIcon('plus', 12), addLabel || '添加颜色']);

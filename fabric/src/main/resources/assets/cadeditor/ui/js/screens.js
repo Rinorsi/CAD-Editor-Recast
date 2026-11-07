@@ -71,10 +71,24 @@ function closeModal() {
   if (ModalParents.length) { var p = ModalParents.pop(); p.el.id = 'modal'; p.el.style.display = ''; if (p.focus != null && p.focus.focus) p.focus.focus(); }
   else if (VaultOnly && !ModalSwap && !$('modal') && typeof oriel !== 'undefined' && oriel.close) oriel.close();
 }
-function modalShell(title, sub, body, foot, cls) {
+/* 弹窗页头：[图标] 标题 [副标题] ……空白…… [操作按钮…] ×。所有弹窗都用它，不要手搭 k-mh。
+   o = { icon（图标名，可省）, title, sub（给了就画，空串也画一个空的副标题）, actions（元素数组，放在 × 前面） } */
+function modalHead(o) {
   var x = h('div', { class: 'k-mini', text: '×' }); activate(x, closeModal);
+  return h('div', { class: 'k-mh' }, [o.icon ? uiIcon(o.icon, 14) : null, h('b', { text: o.title }), o.sub !== undefined && o.sub !== null ? h('span', { class: 'k-sub', text: o.sub }) : null, h('div', { class: 'grow' })].concat(o.actions || [], [x]));
+}
+/* 弹窗外壳。简单窗口：modalShell(标题, 副标题, 主体数组, 底栏数组, 额外类名)。
+   自己安排主体的窗口（高级 / 添加设置 / 详情 / 选择窗）：modalShell({ icon, title, sub, actions, cls, id, body: 主体元素（直接放在页头下面）, foot: 底栏元素 }) */
+function modalShell(title, sub, body, foot, cls) {
+  if (title && typeof title === 'object') {
+    var o = title, kids = [modalHead(o)];
+    if (o.body) kids.push(o.body);
+    if (o.foot) kids.push(o.foot);
+    var attrs = { class: 'k-modal' + (o.cls ? ' ' + o.cls : '') }; if (o.id) attrs.id = o.id;
+    return h('div', attrs, kids);
+  }
   return h('div', { class: 'k-modal' + (cls ? ' ' + cls : '') }, [
-    h('div', { class: 'k-mh' }, [h('b', { text: title }), sub ? h('span', { class: 'k-sub', text: sub }) : null, h('div', { class: 'grow' }), x]),
+    modalHead({ title: title, sub: sub || undefined }),
     h('div', { class: 'k-mb' }, body), foot ? h('div', { class: 'k-mf' }, foot) : null]);
 }
 
@@ -600,10 +614,7 @@ var ADV_TABS = [['all', '全部组件', 'list'], ['snbt', '物品数据', 'code'
 function openAdvanced(which) {
   if (which) UI.adv = which;
   var nav = h('div', { class: 'advnav' }), main = h('div', { class: 'advmain', id: 'advmain' });
-  var x = h('div', { class: 'k-mini', text: '×' }); activate(x, closeModal);
-  var win = h('div', { class: 'k-modal advwin', id: 'advwin' }, [
-    h('div', { class: 'k-mh' }, [uiIcon('code', 14), h('b', { text: '高级' }), h('span', { class: 'k-sub', text: nameOfItem(Store.doc().id) }), h('div', { class: 'grow' }), x]),
-    h('div', { class: 'advbody' }, [nav, main])]);
+  var win = modalShell({ icon: 'code', title: '高级', sub: nameOfItem(Store.doc().id), cls: 'advwin', id: 'advwin', body: h('div', { class: 'advbody' }, [nav, main]) });
   function paintNav() {
     clear(nav);
     ADV_TABS.forEach(function (a) { var it = h('div', { class: 'advnav-i' + (UI.adv === a[0] ? ' on' : '') }, [uiIcon(a[2], 14), h('span', { text: a[1] })]); activate(it, function () { UI.adv = a[0]; paintNav(); drawAdvContent(); }); nav.appendChild(it); });
@@ -704,10 +715,7 @@ function openAddSetting() {
     if (!n) list.appendChild(h('div', { class: 'k-empty', text: '没有匹配的设置。' }));
   }
   var sbox = kSearchBox(q, paint);
-  var x = h('div', { class: 'k-mini', text: '×' }); activate(x, closeModal);
-  var win = h('div', { class: 'k-modal addwin' }, [
-    h('div', { class: 'k-mh' }, [uiIcon('plus', 14), h('b', { text: '添加设置' }), h('span', { class: 'k-sub', text: '给物品加上它本来没有的功能' }), h('div', { class: 'grow' }), x]),
-    h('div', { class: 'addbody' }, [cats, h('div', { class: 'addmain' }, [h('div', { class: 'addtop' }, [sbox.el]), list])])]);
+  var win = modalShell({ icon: 'plus', title: '添加设置', sub: '给物品加上它本来没有的功能', cls: 'addwin', body: h('div', { class: 'addbody' }, [cats, h('div', { class: 'addmain' }, [h('div', { class: 'addtop' }, [sbox.el]), list])]) });
   paintCats(); paint(); openModal(win); windowify(win, 'add'); q.focus();
 }
 /* 把一个组件加到物品上，然后跳到能编辑它的那一页 */
