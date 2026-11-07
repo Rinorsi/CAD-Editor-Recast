@@ -1483,3 +1483,5 @@ textarea.world-snbt { min-height: 56px; }
 /* 设置页：每项一行，右侧控件不撑满 */
 .set-list { padding: 4px 4px 8px 4px; }
 .set-list .k-xhead > :last-child:not(.fold-arrow) { flex: none; }
+
+.k-tipwrap { display: flex; flex-direction: column; min-width: 0; }

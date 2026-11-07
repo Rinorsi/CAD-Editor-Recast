@@ -450,12 +450,49 @@ function fitTip() {
 }
 function openTipModal() {
   var d = Store.doc();
-  openModal(modalShell('提示框预览', nameOfItem(d.id), [h('div', { class: 'k-bigtip' }, [buildTooltip(d, UI.tipAdv)])], [kBtn('关闭', closeModal, { cls: 'pri' })], 'slim'));
+  openModal(modalShell('提示框预览', nameOfItem(d.id), [h('div', { class: 'k-bigtip' }, [buildTooltip(d, UI.tipAdv, 'item-preview-big')])], [kBtn('关闭', closeModal, { cls: 'pri' })], 'slim'));
 }
 
 /* ---------- 提示框 ---------- */
 var SLOT_HEAD = { mainhand: '在主手：', offhand: '在副手：', hand: '拿在手上时：', head: '穿在头部：', chest: '穿在身上：', legs: '穿在腿上：', feet: '穿在脚上：', armor: '穿着时：', body: '穿在身体：', saddle: '作为鞍时：', any: '生效时：' };
-function buildTooltip(d, adv) {
+/* 提示框预览：优先显示游戏自己生成的那份（和游戏里一模一样，含模组组件、附魔、属性行）；
+   宿主不可用 / 请求太大 / 出错时退回下面页面里手写的近似版。结果到之前先显示上一份（或近似版），到了再换。 */
+function hostTipStack(d) {
+  var typed = nbtApplyFormats(d), st = { id: d.id, count: d.count, comps: typed.comps, removed: clone(d.removed) };
+  if (typed.formats) st.component_formats = typed.formats;
+  if (d.snbt && Object.keys(d.snbt).length) st.component_snbt = clone(d.snbt);
+  return st;
+}
+function paintHostTip(box, r) {
+  clear(box);
+  if (!r.lines || !r.lines.length) { box.appendChild(h('div', { class: 'tl', style: 'color:#888', text: '（这个物品的提示框被完全隐藏）' })); return; }
+  r.lines.forEach(function (runs) {
+    var el = h('div', { class: 'tl' });
+    (runs || []).forEach(function (u) {
+      if (!u.text) return;
+      var css = 'color:' + (u.color || '#FFFFFF') + ';' + (u.bold ? 'font-weight:bold;' : '') + (u.italic ? 'font-style:italic;' : '');
+      var deco = []; if (u.underlined) deco.push('underline'); if (u.strikethrough) deco.push('line-through');
+      if (deco.length) css += 'text-decoration-line:' + deco.join(' ') + ';';
+      var sp = h('span', { text: u.obfuscated ? String(u.text).replace(/./g, '▒') : u.text }); sp.setAttribute('style', css); el.appendChild(sp);
+    });
+    box.appendChild(el);
+  });
+}
+function buildTooltip(d, adv, view) {
+  view = view || 'item-preview';
+  var wrap = h('div', { class: 'k-tipwrap' }), box = null;
+  function show(node) { clear(wrap); wrap.appendChild(node); }
+  function local() { show(buildTooltipLocal(d, adv)); }
+  var last = HostTip.last[view];
+  if (last && HostTip.supported === true) { box = h('div', { class: 'ed-tip' }); paintHostTip(box, last); show(box); } else local();
+  HostTip.request(view, hostTipStack(d), adv, function (r) {
+    if (r.fallback) { local(); return; }
+    var b = h('div', { class: 'ed-tip' }); paintHostTip(b, r); show(b);
+    try { fitTip(); } catch (e) {}
+  });
+  return wrap;
+}
+function buildTooltipLocal(d, adv) {
   var eff = effectiveComps(d), box = h('div', { class: 'ed-tip' });
   var hid = eff.tooltip_display || {}, hidden = hid.hidden_components || [];
   if (hid.hide_tooltip) { box.appendChild(h('div', { class: 'tl', style: 'color:#888', text: '（这个物品的提示框被完全隐藏）' })); return box; }

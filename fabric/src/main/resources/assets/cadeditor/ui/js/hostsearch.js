@@ -45,3 +45,38 @@ var HostSearch = {
     v.cb(r);
   }
 };
+
+/* 游戏自己生成的物品提示框（docs/tooltip-contract.md）：宿主用真实的 getTooltipLines 算好带样式的行，页面只负责画。
+   和 HostSearch 一样：每个 view 只有一个有效请求；老宿主 / 没回应 / 请求太大 / 出错时调用方退回页面里的近似版。 */
+var HostTip = {
+  seq: 0, views: {}, supported: null, last: {},
+  request: function (view, stack, adv, cb) {
+    if (this.supported === false || typeof Reg === 'undefined' || !Reg.live() || typeof oriel === 'undefined' || !oriel.send) return false;
+    var me = this, id = 'tp' + (++this.seq), msg = { requestId: id, view: view, advanced: !!adv, stack: stack };
+    var len; try { len = JSON.stringify(msg).length; } catch (e) { return false; }
+    if (len > 7600) return false;   // 宿主限制整条请求 8192 字符；太大的物品用近似版
+    var old = this.views[view]; if (old) clearTimeout(old.timer);
+    var v = this.views[view] = { id: id, cb: cb, view: view, timer: null };
+    v.timer = setTimeout(function () {
+      if (me.views[view] !== v) return;
+      delete me.views[view];
+      if (me.supported !== true) me.supported = false;
+      cb({ fallback: true });
+    }, this.supported === true ? 4000 : 3000);
+    var sent = false; try { sent = oriel.send('tooltip', msg); } catch (e) {}
+    if (sent === false) { clearTimeout(v.timer); delete this.views[view]; return false; }
+    return true;
+  },
+  receive: function (r) {
+    if (!r || typeof r !== 'object') return;
+    var v = null, k;
+    for (k in this.views) if (this.views[k].id === r.requestId) v = this.views[k];
+    if (!v) return;
+    this.supported = true;
+    clearTimeout(v.timer); delete this.views[v.view];
+    if (r.cancelled) return;
+    if (!r.ok) { v.cb({ fallback: true, error: r.error || 'ERROR', reason: r.reason }); return; }
+    this.last[v.view] = r;
+    v.cb(r);
+  }
+};

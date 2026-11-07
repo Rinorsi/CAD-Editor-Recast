@@ -354,3 +354,28 @@ console.log('PASS picker uses host search with local fallback.');
   c.Reg.meta = null; c.Reg.lazy = {}; c.Reg.rows = {}; c.HostSearch.supported = null; c.HostSearch.views = {};
 }
 console.log('PASS lazy catalog: handshake, on-demand lookup, host-driven picker.');
+
+// 提示框预览：用游戏生成的行；没回应 / 出错 / 太大退回近似版
+{
+  const sent = []; c.oriel.send = (k, v) => { sent.push([k, v]); return true; };
+  let timers = []; c.setTimeout = (fn) => { timers.push(fn); return timers.length; }; c.clearTimeout = () => {};
+  c.Reg.meta = {}; c.HostTip.supported = null; c.HostTip.views = {}; c.HostTip.last = {};
+  const d = c.makeDoc({ id: 'minecraft:diamond_sword', comps: { custom_name: '测试' } });
+  const wrap = c.buildTooltip(d, false);
+  const req = sent.filter(x => x[0] === 'tooltip').pop();
+  assert.ok(req, '向宿主发了 tooltip'); assert.equal(req[1].view, 'item-preview'); assert.equal(req[1].stack.id, 'minecraft:diamond_sword'); assert.equal(req[1].advanced, false);
+  assert.ok(wrap.textContent.length > 0, '结果到之前先显示近似版');
+  c.Reg.ingest('tooltip.result', { version: 1, requestId: req[1].requestId, ok: true, partial: false,
+    lines: [[{ text: '钻石剑', color: '#55FFFF', bold: false, italic: false, underlined: false, strikethrough: false, obfuscated: false }], [], [{ text: '在主手：', color: '#AAAAAA', bold: false, italic: false, underlined: false, strikethrough: false, obfuscated: false }], [{ text: '+7 攻击伤害', color: '#00AA00', bold: true, italic: false, underlined: false, strikethrough: false, obfuscated: false }]] });
+  assert.ok(wrap.textContent.includes('钻石剑') && wrap.textContent.includes('+7 攻击伤害'), '换成游戏给的行');
+  assert.equal(wrap.querySelectorAll('.tl').length, 4, '空行保留');
+  // 出错 → 近似版
+  const w2 = c.buildTooltip(d, true, 'item-preview-big'); const r2 = sent.filter(x => x[0] === 'tooltip').pop();
+  c.Reg.ingest('tooltip.result', { requestId: r2[1].requestId, ok: false, error: 'INVALID_STACK', reason: 'x' });
+  assert.ok(w2.textContent.length > 0 && !w2.textContent.includes('+7 攻击伤害'), '出错退回近似版');
+  // 没回应（老宿主）→ 近似版，之后不再发
+  c.HostTip.supported = null; const n0 = sent.length; const w3 = c.buildTooltip(d, false, 'item-preview'); timers[timers.length - 1]();
+  assert.equal(c.HostTip.supported, false); const n1 = sent.length; c.buildTooltip(d, false, 'item-preview'); assert.equal(sent.length, n1, '判定老宿主后不再发请求');
+  c.Reg.meta = null; c.HostTip.supported = null; c.HostTip.views = {}; c.HostTip.last = {};
+}
+console.log('PASS tooltip preview: host lines, fallback.');
