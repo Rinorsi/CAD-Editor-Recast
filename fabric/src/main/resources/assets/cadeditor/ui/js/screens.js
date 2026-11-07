@@ -38,6 +38,7 @@ function toast(text, kind) {
   setTimeout(function () { t.remove(); }, 2900);
 }
 var ModalParents = [];
+var VaultOnly = false, ModalSwap = false;   // 独立保险库页（主菜单打开，没有物品）：最后一个窗口关掉就关页面
 function openModal(node, stacked) {
   var previous = $('modal');
   if (stacked && previous != null) {
@@ -45,7 +46,7 @@ function openModal(node, stacked) {
     previous.removeAttribute('id'); previous.style.display = 'none';
     kPopClose(); popClose();
   } else {
-    closeModal();
+    ModalSwap = true; try { closeModal(); } finally { ModalSwap = false; }
     while (ModalParents.length) { var old = $('modal'); if (old != null) old.remove(); var p = ModalParents.pop(); p.el.remove(); }
     var remaining = $('modal'); if (remaining != null) remaining.remove();
   }
@@ -58,6 +59,7 @@ function openModal(node, stacked) {
 function closeModal() {
   var m = $('modal'); if (m != null) m.remove(); kPopClose(); popClose();
   if (ModalParents.length) { var p = ModalParents.pop(); p.el.id = 'modal'; p.el.style.display = ''; if (p.focus != null && p.focus.focus) p.focus.focus(); }
+  else if (VaultOnly && !ModalSwap && !$('modal') && typeof oriel !== 'undefined' && oriel.close) oriel.close();
 }
 function modalShell(title, sub, body, foot, cls) {
   var x = h('div', { class: 'k-mini', text: '×' }); activate(x, closeModal);

@@ -70,6 +70,8 @@ function boot() {
     else if (key === 'result' || (key === undefined && data.result)) { if (weActive()) weResult(data.result); else receiveEditorResult(data.result); }
     else if (!Store.docs.length && data.stack) { Prefs.init(data); OrielEditor.open(data.stack); }
   });
+  /* 独立保险库（主菜单 / 暂停菜单的按钮或 V 键）：不是编辑某件物品，只开保险库窗口，关掉窗口就回到原界面 */
+  if (typeof oriel !== 'undefined' && oriel.data && oriel.data.mode === 'vault') { VaultOnly = true; document.body.classList.add('vault-only'); openVault({}); return; }
   /* 世界编辑模式：宿主给的是 world（已放置的方块实体 / 实体），不是物品栈 */
   if (typeof oriel !== 'undefined' && oriel.data && oriel.data.world) { weOpen(oriel.data.world); return; }
   var init = typeof oriel !== 'undefined' && oriel.data && oriel.data.stack ? oriel.data.stack :

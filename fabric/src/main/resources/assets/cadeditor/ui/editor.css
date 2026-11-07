@@ -1530,3 +1530,5 @@ textarea.world-snbt { min-height: 56px; }
 .vt-top { width: 100%; }
 .vt-top .k-sbox { flex: 1; width: 100%; }
 .vt-top .k-sbox > .k-input { flex: 1; min-width: 60px; }
+
+body.vault-only .ew { display: none; }
