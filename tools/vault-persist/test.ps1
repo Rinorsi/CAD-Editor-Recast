@@ -1,4 +1,4 @@
-param([switch]$CompileOnly)
+param([switch]$CompileOnly,[switch]$GlobalOnly)
 $ErrorActionPreference='Stop'
 $Root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $Workspace=[IO.Path]::GetFullPath((Join-Path $Root '../Oriel-UI-Workspace'))
@@ -19,6 +19,12 @@ $TestCp=(@($Main,($Root+'/fabric/src/main/resources'),$Mc,$BaseJar)+$Runtime) -j
 $TestSources=@(Get-ChildItem ($Root+'/fabric/src/test/java') -Recurse -Filter '*.java' | ForEach-Object FullName)+@(Get-ChildItem ($Root+'/fabric/src/testFixtures/java') -Recurse -Filter '*.java' | ForEach-Object FullName)
 & ($JavaBin+'/javac.exe') -proc:none -encoding UTF-8 -cp $TestCp -d $Tests $TestSources *> ($Logs+'/compile-tests.log')
 if($LASTEXITCODE){Get-Content ($Logs+'/compile-tests.log') -Tail 35;throw '测试编译失败：logs/vault-persist/compile-tests.log'}
+if($GlobalOnly){
+  & ($JavaBin+'/java.exe') -Xmx2G -cp ($Tests+';'+$TestCp) dev.rinorsi.editor.vault.VaultGlobalTest *> ($Logs+'/VaultGlobalTest.log')
+  if($LASTEXITCODE){Get-Content ($Logs+'/VaultGlobalTest.log') -Tail 25;exit $LASTEXITCODE}
+  Write-Output 'PASS VaultGlobalTest; logs/vault-persist/VaultGlobalTest.log'
+  exit 0
+}
 if($CompileOnly){Write-Output 'PASS full-source javac + all test javac';exit 0}
 & ($JavaBin+'/java.exe') -Xmx2G -cp ($Tests+';'+$TestCp) dev.rinorsi.editor.vault.VaultTest *> ($Logs+'/tests.log')
 if($LASTEXITCODE){Get-Content ($Logs+'/tests.log') -Tail 35;throw '测试失败：logs/vault-persist/tests.log'}
@@ -27,10 +33,9 @@ Write-Output 'PASS javac + VaultTest; logs/vault-persist/tests.log'
 & ($JavaBin+'/java.exe') -Xmx2G -cp ($Tests+';'+$TestCp) dev.rinorsi.editor.vault.VaultPersistenceTest *> ($Logs+'/persistence-tests.log')
 if($LASTEXITCODE){Get-Content ($Logs+'/persistence-tests.log') -Tail 35;throw '测试失败：logs/vault-persist/persistence-tests.log'}
 Write-Output 'PASS VaultPersistenceTest; logs/vault-persist/persistence-tests.log'
-foreach($name in @('dev.rinorsi.editor.StackCodecTest','dev.rinorsi.editor.client.EditorPrefsTest')) {
+foreach($name in @('dev.rinorsi.editor.vault.VaultGlobalTest','dev.rinorsi.editor.StackCodecTest','dev.rinorsi.editor.client.EditorPrefsTest')) {
   $short=$name.Split('.')[-1]
   & ($JavaBin+'/java.exe') -Xmx2G -cp ($Tests+';'+$TestCp) $name *> ($Logs+'/'+$short+'.log')
   if($LASTEXITCODE){throw ('相关测试失败：'+$short+'；logs/vault-persist/'+$short+'.log')}
   Write-Output ('PASS '+$short+'; logs/vault-persist/'+$short+'.log')
 }
-

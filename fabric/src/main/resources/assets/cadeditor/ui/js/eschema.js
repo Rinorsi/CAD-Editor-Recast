@@ -202,16 +202,26 @@ function esGearGrid(s, o, type) {
     box.appendChild(h('div', { class: 'k-sub', text: '附魔等物品组件在「其他数据」的 ' + q.nbtPath[0] + ' 里改' }));
     kPopover(cell, box, { width: 300, maxHeight: 260 });
   }
+  return esGearLayout({
+    has: function (slot) { return !!bySlot[slot]; },
+    stackOf: function (slot) { return stackOf(bySlot[slot]); },
+    emptyHint: function (slot) { return needs(bySlot[slot]) ? '空（选物品时会一并打开「显示手臂」）' : '空'; },
+    onEmpty: function (slot, cell) { choose(bySlot[slot], cell); },
+    onFilled: function (slot, cell, st) { menu(bySlot[slot], cell, st); }
+  });
+}
+/* 装备格子的外观（生物、刷怪蛋、刷怪笼、世界实体、玩家共用）：两排，每排四格——第一排四件盔甲，第二排主手 / 副手 / 身体 / 鞍；
+   没有的位置不画，整排没有就不画那一排。cfg = { has(slot), stackOf(slot)→{id,count}|null, onEmpty(slot,cell), onFilled(slot,cell,stack), emptyHint?(slot) } */
+function esGearLayout(cfg) {
   function cellOf(slot) {
-    var q = bySlot[slot]; if (!q) return null;
-    var meta = ES_SLOT[slot] || [humanId(slot), 'shield'], st = stackOf(q);
+    if (!cfg.has(slot)) return null;
+    var meta = ES_SLOT[slot] || [humanId(slot), 'shield'], st = cfg.stackOf(slot);
     var cell = h('div', { class: 'slot s34 es-slot' + (st ? ' on' : '') }, [st ? itemIcon(st.id, 26) : uiIcon(meta[1], 16, 'es-ghost')]);
     if (st && (st.count || 1) > 1) cell.appendChild(h('span', { class: 'cnt', text: String(st.count) }));
-    cell.setAttribute('title', meta[0] + '：' + (st ? nameOfItem(st.id) : needs(q) ? '空（选物品时会一并打开「显示手臂」）' : '空'));
-    cell.addEventListener('click', function () { if (st) menu(q, cell, st); else choose(q, cell); });
+    cell.setAttribute('title', meta[0] + '：' + (st ? nameOfItem(st.id) : (cfg.emptyHint ? cfg.emptyHint(slot) : '空')));
+    cell.addEventListener('click', function () { if (st) cfg.onFilled(slot, cell, st); else cfg.onEmpty(slot, cell); });
     return h('div', { class: 'es-gear' }, [cell, h('span', { class: 'es-gearl', text: meta[0] })]);
   }
-  /* 两排，每排四格：第一排四件盔甲，第二排主手 / 副手 / 身体 / 鞍；这只生物没有的位置不画，整排没有就不画那一排 */
   function row(slots) { var r = h('div', { class: 'es-gearrow' }); slots.forEach(function (k) { var x = cellOf(k); if (x) r.appendChild(x); }); return r.children.length ? r : null; }
   return h('div', { class: 'es-geargrid' }, [row(ES_GEAR_COLS[0]), row(ES_GEAR_COLS[1])].filter(function (x) { return x; }));
 }
@@ -238,10 +248,14 @@ function esPanel(o) {
 /* 刷怪蛋左栏里的 3D 生物：左键拖动旋转（引擎自带），滚轮缩放，右键或中键拖动移动位置。
    同一只生物重画时沿用原来的元素，转过的角度不丢；换了生物或点「恢复默认视角」才回到默认 */
 var ES_PAN = null;
-function heroEntity(type, data, old) {
-  var full = Reg.full(type), v = UI.entView;
-  if (!v || v.type !== full) v = UI.entView = { type: full, s: 1, x: 0, y: 0 };
-  var el = old && old.getAttribute('type') === full ? old : h('entity', { class: 'k-ent', type: full, rotatable: true });
+function heroEntity(type, data, old, src) {
+  var full = Reg.full(type), v = UI.entView, key = src ? (src.player ? 'player' : 'id:' + src.id) : full;
+  if (!v || v.type !== key) v = UI.entView = { type: key, s: 1, x: 0, y: 0 };
+  var el = old && old.getAttribute('data-src') === key ? old : (function () {
+    var a = { class: 'k-ent', rotatable: true, 'data-src': key };
+    if (src && src.player) a.player = ''; else if (src) a.id = String(src.id); else a.type = full;
+    return h('entity', a);
+  })();
   var pa = esPreviewAttrs(full, data);
   ['baby', 'components'].concat(Object.keys(ES_SLOT)).forEach(function (k) {
     if (pa[k] === undefined) { if (el.getAttribute(k) !== null) el.removeAttribute(k); }

@@ -6,15 +6,15 @@ if($Games.Count){
     $LogRoot=Join-Path ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))) 'logs/vault-menu'
     New-Item -ItemType Directory -Force $LogRoot | Out-Null
     $Games | Select-Object ProcessId | ConvertTo-Json | Set-Content ($LogRoot+'/user-game-processes.json')
-    Write-Output ('real-client run pending: user game running; PID='+($Games.ProcessId -join ',')+'; logs/vault-menu/user-game-processes.json')
+    Write-Output ('检测到用户游戏正在运行，真实客户端验证待游戏退出后再执行；PID='+($Games.ProcessId -join ',')+'; logs/vault-menu/user-game-processes.json')
     exit 2
 }
 $Root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $Workspace = [IO.Path]::GetFullPath((Join-Path $Root '../Oriel-UI-Workspace'))
 $Out = Join-Path $Root ('daily/' + (Get-Date -Format 'yyyy-MM-dd') + '/vault-menu')
 $Run = Join-Path $Out $(if ($UseReleaseJar) { 'run-release' } else { 'run' })
-$Classes = Join-Path $Out 'compiled'
-$Probe = Join-Path $Out 'probe'
+$Classes = Join-Path $Out ('compiled-'+[Guid]::NewGuid().ToString('N'))
+$Probe = Join-Path $Out ('probe-'+[Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force $Run,$Classes,$Probe,(Join-Path $Run 'mods'),(Join-Path $Run 'saves') | Out-Null
 if (!$ClasspathFile) { $ClasspathFile = (Get-ChildItem ($Workspace+'/daily/*/scratch/editor-mod/runtime-classpath.json') | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).FullName }
 if (!$BaseJar) { $BaseJar = (Get-ChildItem ($Workspace+'/daily/*/scratch/editor-mod/build/fabric-26.1.2/libs/cadeditor-fabric-26.1.2-0.99.1.jar') | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).FullName }
@@ -25,7 +25,7 @@ $Mc = Join-Path $Cache 'minecraftMaven/net/minecraft/minecraft-merged-deobf/26.1
 $Runtime = @(Get-Content $ClasspathFile | ConvertFrom-Json)
 $CompileMc=(Get-ChildItem (Join-Path $Root '.gradle/loom-cache/minecraftMaven') -Recurse -Filter '*.jar' | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).FullName
 $Cp = (@($CompileMc,$BaseJar,$Mc) + $Runtime) -join ';'
-$Sources=@('registry/VaultChannel.java','registry/RegistryBridge.java','vault/VaultStore.java','vault/VaultStacks.java','registry/search/Pinyin.java','StackCodec.java','ComponentValidation.java','registry/SpawnerData.java','client/VaultClient.java','client/VaultButtonLayout.java','client/EditorClient.java') | ForEach-Object {Join-Path $Root ('fabric/src/main/java/dev/rinorsi/editor/'+$_)}
+$Sources=@(Get-ChildItem (Join-Path $Root 'fabric/src/main/java') -Recurse -Filter '*.java' | ForEach-Object FullName)
 # Existing interactive Gradle runClient processes remain untouched; compile the owned entry/channel sources directly.
 if (!$UseReleaseJar) {
     & ($JavaBin+'/javac.exe') -proc:none -encoding UTF-8 -cp $Cp -d $Classes $Sources *> ($Out+'/compile.log')

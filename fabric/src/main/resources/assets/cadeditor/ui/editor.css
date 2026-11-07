@@ -539,16 +539,7 @@ textarea.ed-raw, textarea.ed-snbt, textarea.ed-out { width: 100%; color: var(--t
 /* 小 GUI（比如 1080p 自动缩放 4 → 480×270）：窗口留 8，左栏收成图标条，分页只留当前页的名字 */
 @media (max-width: 540px), (max-height: 290px) {
   .eb .crumb, .k-search span, .k-search .k-kbd { display: none; }
-  .ew:not(.snug) .ed-hero { width: 68px; padding: 6px 4px; gap: 4px; align-items: center; }
-  .ew:not(.snug) .ed-hero:not(.pop) .ed-stagehead, .ew:not(.snug) .ed-hero:not(.pop) .ed-tags, .ew:not(.snug) .ed-hero:not(.pop) .ed-stats, .ew:not(.snug) .ed-hero:not(.pop) .ed-tiphead, .ew:not(.snug) .ed-hero:not(.pop) .k-scrollbox, .ew:not(.snug) .ed-hero:not(.pop) .k-togrow, .ew:not(.snug) .ed-hero:not(.pop) .k-note { display: none; }
-  .ew:not(.snug) .ed-hero { cursor: pointer; }
-  .ew:not(.snug) .ed-hero.pop { width: 200px; align-items: stretch; }
-  .ew:not(.snug) .ed-hero.pop .ed-name { font-size: 12px; line-height: 16px; }
-  .ew:not(.snug) .ed-stage { height: 40px; } .ew:not(.snug) .ed-stage .plate { width: 44px; height: 44px; margin: -22px 0 0 -22px; }
-  .ew:not(.snug) .ed-stage .k-ico { width: 32px !important; height: 32px !important; }
   .ed-stage.ent { height: 64px; }
-  .ed-name { font-size: 8px; line-height: 14px; }
-  .ed-tip { display: none; }
   .ed-tabs .ed-tab:not(.on) span { display: none; }
   .ed-addset span { display: none; } .ed-addset { padding: 0 4px; }
   .ed-body { padding: 6px 6px 8px 6px; }
@@ -582,6 +573,7 @@ textarea.ed-raw, textarea.ed-snbt, textarea.ed-out { width: 100%; color: var(--t
 /* ======================= 动效（沿用 showcase 的节奏：--m-* 曲线，进场只播一次）=======================
    进场 360ms out；悬停/按下 120ms；弹出用 spring；大面板不弹。常驻循环只有 3D 转动和光斑呼吸两处。 */
 .ew { transition: left 280ms var(--m-out), right 280ms var(--m-out), top 280ms var(--m-out), bottom 280ms var(--m-out); animation: fx-pop var(--m-slow) var(--m-spring) both; }
+.ew.rs { transition: none; }
 .ew.max { left: 0; right: 0; top: 0; bottom: 0; }
 .ew.max .ed-resize { display: none; }
 .ew.leave { animation: ed-leave 150ms var(--m-in) both; }
@@ -755,9 +747,6 @@ textarea.ed-code-in { min-height: 56px; }
 .ed-stage .k-model { width: 88px; height: 88px; -mc-model-scale: 0.7; -mc-pitch: 14deg; }
 .ed-stage .plate { width: 92px; height: 92px; margin: -46px 0 0 -46px; }
 @media (max-width: 540px), (max-height: 290px) {
-  .ew:not(.snug) .ed-stage { height: 52px; }
-  .ew:not(.snug) .ed-stage .k-model { width: 52px !important; height: 52px !important; }
-  .ew:not(.snug) .ed-stage .plate { width: 52px; height: 52px; margin: -26px 0 0 -26px; }
 }
 
 /* 预览折叠头 */

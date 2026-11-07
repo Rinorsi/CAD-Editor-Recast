@@ -36,6 +36,8 @@ public final class ResizePreviewProbe {
             for(int[] s:new int[][]{{460,360,1},{1500,1100,1},{600,420,1},{1500,1100,4},{1500,1100,1},{460,360,1},{1500,1100,1}}) {
                 d.setViewport((float)Math.ceil((double)s[0]/s[2]),(float)Math.ceil((double)s[1]/s[2]),s[2]);
                 var immediate=sample(d);frames(d,6);var settled=sample(d);
+                String want=s[0]==460||s[2]==4?"ew narrow":s[0]==600?"ew snug":"ew";
+                expect(settled.get("classes").getAsString().replace(" rs","").equals(want),"same-document settled mode "+s[0]+"@"+s[2]+": "+settled);
                 settled.addProperty("physical",s[0]+"x"+s[1]+"@"+s[2]);settled.addProperty("kind","same_document");settled.add("immediate",immediate);all.add(settled);check(d);
             }
             String events=d.scripts().evaluateToJson("resizeSamples","resize-inspect");
@@ -48,7 +50,7 @@ public final class ResizePreviewProbe {
             for(int w:new int[]{460,1500,460,1500}) {
                 d.setViewport(w,w==460?360:1100,1);frames(d,6);
                 var row=sample(d);row.addProperty("physical",w+"x"+(w==460?360:1100)+"@1");row.addProperty("kind","same_document_no_transition");all.add(row);
-                expect(row.get("classes").getAsString().equals(w==460?"ew narrow":"ew"),"unanimated resize mode: "+row);
+                expect(row.get("classes").getAsString().replace(" rs","").equals(w==460?"ew narrow":"ew"),"unanimated resize mode: "+row);
             }
             Files.writeString(out.resolve("resize-events-no-transition.json"),d.scripts().evaluateToJson("resizeSamples","resize-inspect"));
             d.close();

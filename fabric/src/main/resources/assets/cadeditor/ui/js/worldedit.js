@@ -240,15 +240,15 @@ function weHero() {
   var w = WE.w, isBlock = w.kind === 'block', scrollTop = hero.scrollTop, oldEnt = hero.querySelector('.k-ent'); clear(hero);
   var can3d = typeof ED_MC === 'undefined', view = can3d && UI.heroView === '3d' ? '3d' : '2d';
   var bid = isBlock ? shortId(w.block || w.type) : '';
-  var isPlayer = !!w.player; if (isPlayer) view = '2d';
-  var vis, entView = !isBlock && !isPlayer && view === '3d';
+  var isPlayer = !!w.player, psrc = isPlayer ? (w.player.self ? { player: true } : (w.slot && /^[0-9]+$/.test(String(w.slot.id)) ? { id: w.slot.id } : null)) : null;
+  var vis, entView = !isBlock && view === '3d' && (!isPlayer || !!psrc);
   if (isBlock) vis = view === '3d' ? h('model', { class: 'k-ico k-model', item: fullId(bid), rotatable: true }) : itemIcon(bid, 48);
-  else if (isPlayer) vis = itemIcon('player_head', 48);
+  else if (isPlayer) vis = entView ? heroEntity(w.type, {}, oldEnt, psrc) : itemIcon('player_head', 48);
   else vis = entView ? heroEntity(w.type, weObj(), oldEnt) : entityIcon(w.type, 48);
   var open = UI.stageOpen !== false;
   var shead = h('div', { class: 'ed-stagehead' }, [foldArrow(open, 8), h('span', { text: '预览' }), h('div', { class: 'grow' })]);
   shead.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.ed-view')) return; heroFold('.ed-stage', open, function (v) { UI.stageOpen = v; Prefs.set('stageOpen', v); }); });
-  if (can3d && open && !isPlayer) {
+  if (can3d && open && (!isPlayer || psrc)) {
     var seg = h('div', { class: 'k-seg ed-view', title: isBlock ? '方块预览：2D 图标 / 3D 模型（会记住你的选择）' : '2D 显示图标 / 3D 显示生物（会记住你的选择）' });
     ['2d', '3d'].forEach(function (v) {
       var b = h('div', { class: 'k-segi' + (view === v ? ' on' : ''), text: v.toUpperCase() });
@@ -281,4 +281,4 @@ function weHero() {
   hero.scrollTop = scrollTop;
 }
 /* 编辑实体后 3D 预览跟着变（体型、幼年、装备） */
-function weHeroLive() { var hero = $('hero'), el = hero && hero.querySelector('.k-ent'); if (el && WE.w) { try { heroEntity(WE.w.type, weObj(), el); } catch (e) {} } }
+function weHeroLive() { var hero = $('hero'), el = hero && hero.querySelector('.k-ent'); if (el && WE.w && !WE.w.player) { try { heroEntity(WE.w.type, weObj(), el); } catch (e) {} } }

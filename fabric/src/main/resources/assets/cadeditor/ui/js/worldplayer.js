@@ -80,11 +80,13 @@ function wpInventoryTab(body) {
     return weSlotGrid({ indices: indices, cols: cols, stackOf: function (i) { return wpContainerStack(which, i); }, set: function (i, st) { wpSetSlot(which, i, st); },
       titleOf: function (i) { var name = null; Object.keys(eq).forEach(function (k) { if (eq[k] === i) name = WP_EQ[k] || k; }); return name || (i < 9 ? '快捷栏 ' + (i + 1) : '格子 ' + (i + 1)); } });
   }
-  var armor = ['head', 'chest', 'legs', 'feet', 'offhand', 'body', 'saddle'].filter(function (k) { return eq[k] !== undefined; });
-  if (armor.length) {
-    body.appendChild(h('div', { class: 'k-sub', text: '穿戴：' + armor.map(function (k) { return WP_EQ[k] || k; }).join(' · ') }));
-    body.appendChild(mk(armor.map(function (k) { return eq[k]; }), armor.length));
-  }
+  /* 装备：和生物 / 刷怪蛋同一个公共格子（esGearLayout）；玩家的主手就是下面快捷栏里选中的那一格 */
+  body.appendChild(esGearLayout({
+    has: function (slot) { return eq[slot] !== undefined && slot !== 'mainhand'; },
+    stackOf: function (slot) { var st = wpContainerStack(which, eq[slot]); return st && !st.empty ? st : null; },
+    onEmpty: function (slot, cell) { weSlotPop(cell, { empty: true }, function (st) { wpSetSlot(which, eq[slot], st); weRender(); }); },
+    onFilled: function (slot, cell, st) { weSlotPop(cell, st, function (n) { wpSetSlot(which, eq[slot], n); weRender(); }); }
+  }));
   var main = [], hot = [], i;
   for (i = 9; i < 36 && i < total; i++) main.push(i);
   for (i = 0; i < 9 && i < total; i++) hot.push(i);

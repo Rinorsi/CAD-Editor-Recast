@@ -181,10 +181,10 @@ function applyWinStyle() {
   if (!UI.dragging) { setTimeout(scheduleFit, 160); setTimeout(scheduleFit, 520); }
 }
 /* 拖动时每帧都重排很贵：量尺寸的适配（顶栏收纳、提示框高度）合并成限频执行 */
-var fitT = null;
+var fitT = null, rsT = null;
 function scheduleFit() { if (fitT) return; fitT = setTimeout(function () { fitT = null; var wn = $('win'); if (wn) { var ww = wn.getBoundingClientRect().width; if (ww > 100) { wn.classList.toggle('narrow', ww < 420); wn.classList.toggle('snug', ww >= 420 && ww < 680); } } fitTopbar(); fitTip(); }, UI.dragging ? 110 : 0); }
 /* 窗口几何有 280ms 的过渡：resize 触发时量到的是动画中间值，所以立即量一次之后，过渡结束再量一次，否则模式会停在旧的一档 */
-if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', function () { scheduleFit(); setTimeout(scheduleFit, 320); setTimeout(scheduleFit, 600); });
+if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', function () { var wn = $('win'); if (wn) { wn.classList.add('rs'); clearTimeout(rsT); rsT = setTimeout(function () { var w2 = $('win'); if (w2) w2.classList.remove('rs'); scheduleFit(); }, 700); } fitT = null; scheduleFit(); setTimeout(scheduleFit, 120); setTimeout(scheduleFit, 400); setTimeout(scheduleFit, 800); });
 function clampN(v, a, b) { return Math.max(a, Math.min(b, v)); }
 /* 调试开关（高级 → 设置）：打开后关键操作会弹提示，并写进游戏日志 latest.log（前缀 [CAD-Editor-Recast]） */
 function dbg(msg) {
