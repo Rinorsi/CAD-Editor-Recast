@@ -97,7 +97,7 @@ function drawWorldFoot() {
 function drawWorldScreen() {
   var host = clear($('screen')), w = WE.w;
   applyWinStyle();
-  var hero = h('aside', { class: 'ed-hero' + (UI.heroPop ? ' pop' : ''), id: 'hero' }); heroPopBind(hero);
+  var hero = h('aside', { class: 'ed-hero', id: 'hero' });
   var right = h('section', { class: 'ed-right' }), tabbar = h('div', { class: 'ed-tabs', id: 'tabbar' }), body = h('div', { class: 'ed-body', id: 'edbody' });
   weTabs().forEach(function (t) {
     var el = h('div', { class: 'ed-tab' + (WE.tab === t.id ? ' on' : '') }, [uiIcon(t.icon, 14), h('span', { text: t.label })]);

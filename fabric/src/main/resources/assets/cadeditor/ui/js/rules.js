@@ -80,7 +80,7 @@ function ruleSummary(p) {
   var t = st.length ? '状态 ' + st.join('、') : '不限状态'; if (adv) t += ' · 高级条件 ' + adv + ' 项';
   return t;
 }
-blockPredList = function (card, cid, v, what) {
+function blockPredList(card, cid, v, what) {
   var arr = clone(v === undefined ? [] : (Array.isArray(v) ? v : [v])).map(function (p) { return typeof p === 'string' ? { blocks: p } : p; });
   var xl;
   function put() { if (!arr.length) { Ctx.disable(cid); closeModal(); return; } autoPut(cid, arr.length === 1 ? clone(arr[0]) : clone(arr)); }
@@ -120,7 +120,7 @@ blockPredList = function (card, cid, v, what) {
     nodes.push(xFoot('', function () { arr.splice(i, 1); xl.select(-1); put(); }));
     return nodes;
   }
-};
+}
 
 /* 方块状态组件：目标就是这个物品放下后的方块 */
 AUTO_BODY.block_state = function (card, id, v) {

@@ -200,7 +200,6 @@ function refreshForViewport() {
   lastVp = vp;
   applyWinStyle();
   if (UI.dragging || (document.querySelector && document.querySelector('.k-modal, .k-pop'))) { scheduleFit(); return; }
-  UI.heroPop = false;
   try { if (typeof WE !== 'undefined' && WE.w) weRender(); else if (Store.doc()) drawEdit(); } catch (e) { dbg('视口变化重绘失败：' + (e && e.message || e)); }
   scheduleFit();
 }
@@ -234,7 +233,6 @@ function startResize(e) {
   dragTrack(e, function (ev) { UI.winW = clampN(Math.round(w0 + 2 * (ev.clientX - x0)), Math.min(340, window.innerWidth - 20), window.innerWidth - 20); UI.winH = clampN(Math.round(h0 + 2 * (ev.clientY - y0)), Math.min(220, window.innerHeight - 20), window.innerHeight - 20); applyWinStyle(); }, function () { Prefs.setSoon('winW', UI.winW); Prefs.setSoon('winH', UI.winH); });
 }
 /* 窗口把手：世界页（方块 / 实体 / 玩家）和物品页共用。#win 是同一个元素，缩放角只建一次 */
-function heroPopBind(hero) { UI.heroPop = false; hero.classList.remove('pop'); }   /* 旧的“点左栏展开成固定 200px”已取消：左栏宽度只由分隔条（--hw）决定 */
 function makeSplit() {
   var split = h('div', { class: 'ed-split', title: '拖动调整左栏宽度（双击恢复）' });
   split.addEventListener('mousedown', startSplit); split.addEventListener('dblclick', function () { UI.heroW = 0; applyWinStyle(); Prefs.set('heroWidth', 0); });
@@ -251,8 +249,7 @@ function drawEdit() {
   var tabs = tabsOfKind(kind);
   if (!tabs.some(function (t) { return t.id === UI.tab; })) UI.tab = tabs[0].id;
   applyWinStyle();
-  var hero = h('aside', { class: 'ed-hero' + (UI.heroPop ? ' pop' : ''), id: 'hero', title: '' });
-  heroPopBind(hero);
+  var hero = h('aside', { class: 'ed-hero', id: 'hero', title: '' });
   var split = makeSplit();
   var right = h('section', { class: 'ed-right' });
   var tabbar = h('div', { class: 'ed-tabs', id: 'tabbar' });

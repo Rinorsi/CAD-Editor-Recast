@@ -38,7 +38,6 @@ function kEffectList(getList, setList, o) {
         var infTg = kToggle(inf, function (on) { arr[i].duration = on ? -1 : 600; setList(arr); draw(); }, '永久持续（不会消失）');
         if (!inf) body.appendChild(fieldRow('持续时间', secs.el, '游戏内以刻计，20 刻 = 1 秒'));
         body.appendChild(h('div', { class: 'k-fxlist' }, [infTg.el]));
-        if (inf) {}
         if (full) {
           var t1 = kToggle(fx.show_particles !== false, function (on) { arr[i].show_particles = on; setList(arr); }, '显示粒子');
           var t2 = kToggle(fx.show_icon !== false && (fx.show_icon === undefined ? fx.show_particles !== false : fx.show_icon), function (on) { arr[i].show_icon = on; setList(arr); }, '在屏幕角落显示效果图标');

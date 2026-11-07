@@ -17,7 +17,6 @@ function kSelect(entries, value, onPick, o) {
 }
 
 /* ==================== 属性 ==================== */
-var ATTR_ICON = { attack_damage: 'sword', attack_speed: 'bolt', armor: 'chestplate', armor_toughness: 'shield', max_health: 'heart', movement_speed: 'boots', knockback_resistance: 'anvil', attack_knockback: 'hammer', luck: 'luck', block_interaction_range: 'pickaxe', entity_interaction_range: 'target', jump_strength: 'up', safe_fall_distance: 'feather', scale: 'maximize', step_height: 'up', gravity: 'down', fall_damage_multiplier: 'down', max_absorption: 'heart_half', burning_time: 'flame', oxygen_bonus: 'wind', water_movement_efficiency: 'wind', sneaking_speed: 'boots', mining_efficiency: 'pickaxe', block_break_speed: 'pickaxe', submerged_mining_speed: 'pickaxe', sweeping_damage_ratio: 'swords' };
 /* 属性图标：优先用原版的精灵（心、护甲）、状态效果图和物品图，没有对应的才退回通用图标 */
 var ATTR_VIS = { armor: ['spr', 'hud/armor_full'], max_health: ['spr', 'hud/heart/full'], max_absorption: ['spr', 'hud/heart/absorbing_full'],
   attack_damage: ['eff', 'strength'], attack_speed: ['eff', 'haste'], movement_speed: ['eff', 'speed'], luck: ['eff', 'luck'], armor_toughness: ['eff', 'resistance'],

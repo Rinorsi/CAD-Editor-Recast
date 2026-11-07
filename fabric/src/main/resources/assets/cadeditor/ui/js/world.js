@@ -83,7 +83,7 @@ function worldMap(value, set, strings, ph) {
 }
 
 /* 对象列表：行结构同「其它属性加成」。ops: add/remove/changed/summary，可选 title(it,i) 与 icon(it,i) */
-list5 = function (host, items, rowFn, ops, label, empty) {
+function list5(host, items, rowFn, ops, label, empty) {
   var xl = xList({
     items: items, empty: empty || '暂无条目',
     add: { text: label || '添加', fn: function () { var n = items().length; ops.add(); xl.select(items().length > n ? n : -1); } },
@@ -93,7 +93,7 @@ list5 = function (host, items, rowFn, ops, label, empty) {
     }
   });
   host.appendChild(xl.el);
-};
+}
 
 function worldBlockPicker(current,set,title){
   openTagPicker({title:title||'选择目标方块',tagsReg:'block',entryReg:'block',multi:true,entryIcon:function(e){return refIcon('block',e.v);},onConfirm:function(ids){
