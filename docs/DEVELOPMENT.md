@@ -61,3 +61,12 @@ Oriel 锁定 `>=0.11.0 <0.12.0`。`EditorPageController` 使用发布 jar 中的
 `tools/preview/shot.sh` 无头渲染页面（不启动游戏）。依赖：`../Oriel-UI` 已构建的预览器、`../Oriel-UI-Workspace/tools/new-day.sh`。输出到 `../Oriel-UI-Workspace/daily/<日期>/screenshots/`。用法见脚本头部注释。
 
 `dev/browser/mock.js` 与 `tools/extract-mc-icons.mjs` 用于“浏览器预览”：图标图集由脚本从**本机** Minecraft 资源抽取到 `dev/browser/mc/`（Mojang 资源，已被 `.gitignore` 忽略，不进仓库、不进游戏）。
+
+## MCTest 开发期客户端控制
+
+MCTest 让 agent 通过 MCP / 本机 WebSocket 驱动真实 Minecraft 客户端。
+仅通过 Loom `localRuntime` 加载，关闭传递依赖，不进入发布 jar 或 POM；本工程另从 `runServer` 类路径排除它。
+启动：`./gradlew :fabric:26.1.2:runClient`（Windows 可使用 `./gradlew.bat`）。
+默认控制地址为 `127.0.0.1:25599`；改端口需给客户端 JVM 添加 `-Dmctest.port=端口号`，例如 Loom client run 的 `vmArg('-Dmctest.port=25600')`。
+注意：它会在你自己的 `runClient` 里也开一个仅本机回环的控制端口，不要把此端口转发到外网。
+当前默认启用，尚未提供 `-P` 启停或端口开关；构建通过不代表客户端交互已验收。

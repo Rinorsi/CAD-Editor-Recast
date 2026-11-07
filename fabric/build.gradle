@@ -21,12 +21,20 @@ def day = java.time.LocalDate.now().toString()
 def daily = rootProject.file('../Oriel-UI-Workspace/daily/' + day)
 def clientRun = new File(daily, 'run/editor-mod-client')
 layout.buildDirectory.set(new File(daily, 'scratch/editor-mod/build/fabric-26.1.2'))
-repositories { mavenCentral() }
+repositories {
+    mavenCentral()
+    maven {
+        url = 'https://maven.coolerpromc.com/releases/'
+        content { includeGroup('com.coolerpromc.mctest') }
+    }
+}
 dependencies {
     minecraft "com.mojang:minecraft:${minecraft_version}"
     implementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
     implementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
     implementation files(rootProject.file('libs/oriel-fabric-26.1.2-0.11.0.jar'))
+    // Development only: agent/MCP client control; never include or publish this dependency.
+    localRuntime('com.coolerpromc.mctest:mctest-fabric-26.1.2:26.1.2.1') { transitive = false }
 }
 loom {
     mods { editor { sourceSet(sourceSets.main) } }
@@ -49,6 +57,10 @@ tasks.register('prepareEditorClient', Copy) {
     into(new File(clientRun, 'mods'))
 }
 tasks.named('runClient') { dependsOn('prepareEditorClient') }
+// Loom shares localRuntime with server runs; keep MCTest strictly client-only here.
+tasks.named('runServer') {
+    classpath = classpath.filter { it.name != 'mctest-fabric-26.1.2-26.1.2.1.jar' }
+}
 tasks.register('isolateEditorClient') {
     doLast {
         def modsDir = new File(clientRun, 'mods')
