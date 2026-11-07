@@ -36,6 +36,17 @@ function uiIcon(name, size, cls) {
   if (size) { size = size <= 11 ? 8 : size <= 20 ? 16 : 32; el.style.width = size + 'px'; el.style.height = size + 'px'; }
   return el;
 }
+/* 搜索框 + 「搜索」按钮。输入时不搜（装了几百个模组后，每个字符都跑一遍拼音匹配很吃性能）；
+   按回车或点「搜索」才执行 onSearch(文字)；把输入框清空则立即恢复全部（不需要匹配，零成本）。返回 { el, input, go } */
+function kSearchBox(input, onSearch) {
+  var last = input.value;
+  function go() { last = input.value; onSearch(input.value); }
+  input.addEventListener('input', function () { if (input.value === '' && last !== '') go(); });
+  input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); if (e.stopPropagation) e.stopPropagation(); go(); } });
+  var btn = h('div', { class: 'k-btn k-sbtn', title: '搜索（也可以按回车）' }, [uiIcon('search', 12), h('span', { text: '搜索' })]);
+  activate(btn, go);
+  return { el: h('div', { class: 'k-sbox' }, [input, btn]), input: input, go: go };
+}
 function nameOfItem(id) { return Reg.itemName(id) || EDATA.iname[shortId(id)] || humanId(shortId(id)); }
 /* 物品类别：优先用游戏里的真实事实（默认组件 + item_meta），数据没到、或离线时才退回内置表 EDATA.ikind。
    facts：dc = 默认组件（短 ID 键），meta = item_meta_one 的一行。不靠物品名后缀猜（书除外：原版只有这两本）。 */
@@ -90,7 +101,7 @@ document.addEventListener('mousedown', function (e) { if (KPop.el && !KPop.el.co
 function pickItem(anchor, onPick, o) {
   o = o || {};
   var q = h('input', { class: 'k-input', type: 'text', placeholder: o.placeholder || '搜索物品，如「钻石」「sword」', spellcheck: 'false' });
-  var grid = h('div', { class: 'k-pgrid' }), hint = h('div', { class: 'k-phint' }), cancel = null, typingT = null;
+  var grid = h('div', { class: 'k-pgrid' }), hint = h('div', { class: 'k-phint' }), cancel = null;
   /* 候选来自游戏实时注册表（含模组物品）；没有宿主时才用内置清单。原版物品用短 ID，模组物品用完整 ID。
      搜索按时间片分批（kFilterSliced）：一千多个物品的拼音匹配不能在一次脚本入口里做完，否则会被引擎停页 */
   function show(list, s, src) {
@@ -116,9 +127,9 @@ function pickItem(anchor, onPick, o) {
     if (!s) { show(pool, s, src); return; }
     cancel = kFilterSliced(pool, function (id) { return kMatch(id, s) || kMatch(nameOfItem(id), s); }, function (list) { show(list, s, src); });
   }
-  q.addEventListener('input', function () { clearTimeout(typingT); typingT = setTimeout(paint, 90); });   // 连续敲字只在停顿后搜一次
+  var sbox = kSearchBox(q, paint);
   onKey(q, { Escape: function () { kPopClose(); } });
-  var box = h('div', { class: 'k-pickbox' }, [q, grid, hint]);
+  var box = h('div', { class: 'k-pickbox' }, [sbox.el, grid, hint]);
   kPopover(anchor, box, { width: 292, maxHeight: 340 });
   paint(); q.focus();
 }
@@ -140,9 +151,9 @@ function pickFrom(anchor, entries, onPick, o) {
     });
     if (!n) list.appendChild(h('div', { class: 'k-phint', text: '没有匹配项' }));
   }
-  q.addEventListener('input', paint);
+  var sbox = kSearchBox(q, paint);
   onKey(q, { Escape: function () { kPopClose(); } });
-  kPopover(anchor, h('div', { class: 'k-pickbox' }, [entries.length > 8 ? q : null, list]), { width: o.width || 260, maxHeight: o.maxHeight || 320 });
+  kPopover(anchor, h('div', { class: 'k-pickbox' }, [entries.length > 8 ? sbox.el : null, list]), { width: o.width || 260, maxHeight: o.maxHeight || 320 });
   paint(); if (entries.length > 8) q.focus();
 }
 

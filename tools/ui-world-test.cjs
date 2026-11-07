@@ -233,3 +233,21 @@ console.log('PASS resource-id registries.');
   c.Reg.meta = null; c.Reg.kinds = {}; c.Reg.imeta = {}; c.Reg.einfo = {};
 }
 console.log('PASS spawn egg / spawner / trial spawner cards.');
+
+// 搜索框：输入时不搜；回车或点「搜索」才搜；清空立即恢复
+{
+  const input = c.h('input', { class: 'k-input', type: 'text' }); const calls = [];
+  const sb = c.kSearchBox(input, v => calls.push(v));
+  input.value = 'dia'; input.fire('input'); input.fire('input');
+  assert.equal(calls.length, 0, '输入过程中不触发搜索');
+  let prevented = false;
+  input.events.keydown.forEach(fn => fn({ key: 'Enter', preventDefault() { prevented = true; }, stopPropagation() {} }));
+  assert.deepEqual(Array.from(calls), ['dia']); assert.ok(prevented);
+  input.value = 'sword'; sb.el.querySelector('.k-sbtn').fire('click');
+  assert.deepEqual(Array.from(calls), ['dia', 'sword'], '点按钮搜索');
+  input.value = ''; input.fire('input');
+  assert.deepEqual(Array.from(calls), ['dia', 'sword', ''], '清空后立即恢复全部');
+  input.value = ''; input.fire('input');
+  assert.equal(calls.length, 3, '没变化不重复触发');
+}
+console.log('PASS search box: search only on Enter / button, clear resets.');

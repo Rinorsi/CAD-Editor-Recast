@@ -583,11 +583,11 @@ function openAddSetting() {
     });
     if (!n) list.appendChild(h('div', { class: 'k-empty', text: '没有匹配的设置。' }));
   }
-  q.addEventListener('input', paint);
+  var sbox = kSearchBox(q, paint);
   var x = h('div', { class: 'k-mini', text: '×' }); activate(x, closeModal);
   var win = h('div', { class: 'k-modal addwin' }, [
     h('div', { class: 'k-mh' }, [uiIcon('plus', 14), h('b', { text: '添加设置' }), h('span', { class: 'k-sub', text: '给物品加上它本来没有的功能' }), h('div', { class: 'grow' }), x]),
-    h('div', { class: 'addbody' }, [cats, h('div', { class: 'addmain' }, [h('div', { class: 'addtop' }, [q]), list])])]);
+    h('div', { class: 'addbody' }, [cats, h('div', { class: 'addmain' }, [h('div', { class: 'addtop' }, [sbox.el]), list])])]);
   paintCats(); paint(); openModal(win); windowify(win, 'add'); q.focus();
 }
 /* 把一个组件加到物品上，然后跳到能编辑它的那一页 */
@@ -609,8 +609,8 @@ function advAll(host) {
     function grp(t, arr, cls) { if (!arr.length) return; list.appendChild(h('div', { class: 'adv-grp ' + (cls || ''), text: t + ' ' + arr.length })); arr.forEach(function (c) { var it = intentOf(d, c.id); var row = h('div', { class: 'adv-row' + (UI.advSel === c.id ? ' on' : ''), title: 'minecraft:' + c.id + '\n' + c.desc }, [h('span', { class: 'z', text: c.name }), h('i', { class: 'st ' + it })]); activate(row, function () { UI.advSel = c.id; paint(); drawAdvForm(right); }); list.appendChild(row); }); }
     grp('已修改', chg, 'chg'); grp('原型自带', inh); grp('其它组件', rest);
   }
-  q.addEventListener('input', function () { UI.advQ = q.value; paint(); });
-  left.appendChild(q); left.appendChild(list); wrap.appendChild(left); wrap.appendChild(right); host.appendChild(wrap);
+  var sbox = kSearchBox(q, function (v) { UI.advQ = v; paint(); });
+  left.appendChild(sbox.el); left.appendChild(list); wrap.appendChild(left); wrap.appendChild(right); host.appendChild(wrap);
   paint(); drawAdvForm(right);
 }
 function drawAdvForm(host) {

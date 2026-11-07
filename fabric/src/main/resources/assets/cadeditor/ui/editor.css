@@ -893,10 +893,10 @@ textarea.ed-code-in { min-height: 56px; }
 .addcat em, .addcat .n { flex: none; font-style: normal; }
 
 /* ---- 提示条（toast）：不再给贴图染色（亮色下会变成深块），改成面板 + 彩色左条 + 彩色图标 ---- */
-.k-toast { -mc-tint: none; --ico: var(--info); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), inset 3px 0 0 var(--info); }
-.k-toast.ok { -mc-tint: none; --ico: var(--acc2); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), inset 3px 0 0 var(--acc2); }
-.k-toast.error { -mc-tint: none; --ico: var(--bad); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), inset 3px 0 0 var(--bad); }
-.k-toast.warn { -mc-tint: none; --ico: var(--warn); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), inset 3px 0 0 var(--warn); }
+.k-toast { -mc-tint: #fff; --ico: var(--info); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), inset 3px 0 0 var(--info); }
+.k-toast.ok { -mc-tint: #fff; --ico: var(--acc2); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), inset 3px 0 0 var(--acc2); }
+.k-toast.error { -mc-tint: #fff; --ico: var(--bad); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), inset 3px 0 0 var(--bad); }
+.k-toast.warn { -mc-tint: #fff; --ico: var(--warn); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), inset 3px 0 0 var(--warn); }
 [data-theme=light] .k-toast { border-image-source: url(oriel:textures/ore/panel_raised_l.png); }
 
 /* ======== 亮色主题补丁：深色里写死的浅色文字，在亮色背景上要换成深色 ======== */
@@ -1012,7 +1012,6 @@ textarea.tc-raw { min-height: 140px; width: 100%; }
 
 /* 分页栏：放不下时左右滚动（滚轮 / 拖动），分页不再被压缩；当前分页完整显示名字（过长才省略） */
 .ed-tabs { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; scroll-behavior: auto; }
-.ed-tabs::-webkit-scrollbar { display: none; height: 0; }
 .ed-tab, .ed-tab.on, .ed-tab.more { flex: none; }
 .ed-tab > span { flex: none; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
 .ew.narrow .fld { align-items: stretch; text-align: left; }
@@ -1435,3 +1434,8 @@ textarea.world-snbt { min-height: 56px; }
 .vd-badge.ok { color: var(--ok, #6cc349); -mc-tint: var(--ok, #6cc349); }
 .vd-badge.bad { color: var(--bad, #ff5a6a); -mc-tint: var(--bad, #ff5a6a); align-items: flex-start; line-height: 1.5; }
 .vd-badge.bad span { overflow-wrap: anywhere; }
+
+/* 搜索框 + 搜索按钮 */
+.k-sbox { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.k-sbox > .k-input { flex: 1; min-width: 0; width: auto; }
+.k-sbox > .k-sbtn { flex: none; }

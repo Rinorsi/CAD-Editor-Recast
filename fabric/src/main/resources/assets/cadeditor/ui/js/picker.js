@@ -134,9 +134,8 @@ function openPicker(o) {
     if (vis.length > shown.length) { var more = h('div', { class: 'k-add', text: '显示更多（还有 ' + (vis.length - shown.length) + ' 个）' }); activate(more, function () { limit += 120; render(lastVis); }); list.appendChild(more); }
     if (!vis.length) list.appendChild(xEmpty(emptyReason(q, openedAt, o.emptyReg)));
   }
-  var searchT = null;
-  search.addEventListener('input', function () { q = search.value; limit = 80; clearTimeout(searchT); searchT = setTimeout(paint, 90); });   // 连续敲字只在停顿后搜一次
-  var top = [search];
+  var sbox = kSearchBox(search, function (v) { q = v; limit = 80; paint(); });   // 回车或点「搜索」才搜
+  var top = [sbox.el];
   if (PR.length && !o.single) {
     var bar = h('div', { class: 'k-row pk-ctl pk-bulk' }, [h('span', { class: 'k-sub', text: '统一设置' })]);
     PR.forEach(function (p) {
