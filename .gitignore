@@ -11,6 +11,12 @@
 /.backend-b/
 /.world-edit/
 /.world-entity/
+/.world-player/
+/.permission/
+/.toast/
+/.world-merge/
+/.world-merge2/
+/.world-permission/
 /.search-tooltip-api.tmp
 /.search/
 fabric/versions/*/logs/
