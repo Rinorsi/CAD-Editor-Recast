@@ -30,7 +30,7 @@ function xRow(o) {
   var open = !!o.open, kids = [];
   if (o.grip) kids.push(kGrip());
   if (o.icon !== false) kids.push(h('div', { class: 'ic' }, [o.icon || uiIcon('cube', 14)]));
-  kids.push(h('div', { class: 'tx', title: o.tip || '' }, [h('div', { class: 'z', text: o.title }), o.sub ? h('div', { class: 's', text: o.sub }) : null]));
+  kids.push(h('div', { class: 'tx', title: o.tip || '' }, [h('div', { class: 'z', text: o.title }), o.sub ? h('div', { class: 's', text: o.sub }) : null, o.meta || null]));
   if (o.right) kids.push(o.right);
   if (o.body || o.chevron) kids.push(foldArrow(open, 10));
   var head = h('div', { class: 'k-xhead' }, kids);
