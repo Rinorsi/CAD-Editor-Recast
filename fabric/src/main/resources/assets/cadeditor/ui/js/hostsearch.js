@@ -15,11 +15,11 @@ var HostSearch = {
       v.timer = setTimeout(function () {
         if (me.views[o.view] !== v) return;
         delete me.views[o.view];
-        if (me.supported !== true) me.supported = false;   /* 第一次就没回应：当作老宿主，之后不再等 */
+        if (me.supported !== true && !Reg.anyLazy()) me.supported = false;   /* 第一次就没回应：当作老宿主，之后不再等（大目录模式下没有本地表可退，不下结论） */
         cb({ fallback: true });
       }, ms);
     }
-    v.arm = arm; arm(this.supported === true ? 8000 : 2500);
+    v.arm = arm; arm(this.supported === true ? 8000 : 6000);
     var msg = { requestId: id, view: o.view, kind: o.kind, query: String(o.query || '').slice(0, 128), offset: o.offset || 0, limit: o.limit || 80 };
     if (o.filters) msg.filters = o.filters;
     if (o.ids) msg.ids = o.ids;

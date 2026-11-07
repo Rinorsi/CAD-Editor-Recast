@@ -329,6 +329,7 @@ Reg.lazyKind = function (reg) {
   for (var i = 0; i < alts.length; i++) if (this.lazy[alts[i]] !== undefined) return alts[i];
   return null;
 };
+Reg.anyLazy = function () { for (var k in this.lazy) return true; return false; };
 Reg.isLazy = function (reg) { return this.lazyKind(reg) !== null; };
 Reg.noteRows = function (kind, entries) {
   var m = this.rows[kind] || (this.rows[kind] = {});
