@@ -886,22 +886,23 @@ function openImport() {
 /* 设置：界面本身的偏好，和「高级」（原始数据、命令）分开 */
 function openSettings() {
   var host = h('div', {}); advSettings(host);
-  openModal(modalShell('设置', '界面偏好', [host], [h('div', { class: 'grow' }), kBtn('完成', closeModal, { cls: 'pri' })], 'wide'));
+  openModal(modalShell('设置', '界面偏好', [host], [h('div', { class: 'grow' }), kBtn('完成', closeModal, { cls: 'pri' })]));
 }
 function advSettings(host) {
-  var box = h('div', { class: 'k-cbody' });
-  function sec(t) { box.appendChild(h('div', { class: 'k-sech', text: t })); }
-  sec('界面');
-  var snd1 = kToggle(Snd.on, function (on) { Snd.on = on; Prefs.set('uiSound', on); if (on) snd('minecraft:ui.button.click', 0.5, 1.1); }, '界面音效');
-  box.appendChild(fieldRow('声音', snd1.el, '按钮、拖动排序、打开窗口时的音效'));
+  var box = h('div', { class: 'x-list set-list' });
+  /* 一项设置 = 一行：图标 + 名称 / 一句说明 + 右侧控件（和子页的行同一个样式） */
+  function row(icon, title, sub, control) { box.appendChild(xRow({ icon: uiIcon(icon, 14), title: title, sub: sub, right: control })); }
+  box.appendChild(xSec('palette', '界面'));
+  var snd1 = kToggle(Snd.on, function (on) { Snd.on = on; Prefs.set('uiSound', on); if (on) snd('minecraft:ui.button.click', 0.5, 1.1); }, '');
+  row('music', '界面音效', '按钮、拖动排序、打开窗口时的声音', snd1.el);
   var th1 = kSeg([{ v: 'dark', label: '暗色' }, { v: 'light', label: '亮色' }], UI.theme, function (v) { if (v !== UI.theme) toggleTheme(); });
-  box.appendChild(fieldRow('主题', th1.el));
+  row('sparkle', '主题', '暗色或亮色', th1.el);
   var hv = kSeg([{ v: '3d', label: '3D' }, { v: '2d', label: '2D' }], UI.heroView, function (v) { UI.heroView = v; Prefs.set('heroView', v); drawHero(); });
-  box.appendChild(fieldRow('左栏预览', hv.el, '物品预览用 3D 还是 2D 图标'));
-  sec('窗口');
-  box.appendChild(fieldRow('大小', kBtn('恢复默认窗口大小和左栏宽度', function () { UI.winW = 0; UI.winH = 0; UI.heroW = 0; UI.maxed = false; applyWinStyle(); Prefs.set('winW', 0); Prefs.set('winH', 0); Prefs.set('heroWidth', 0); Prefs.set('windowMax', false); drawTopbar(); toast('已恢复默认窗口大小', 'ok'); }, { icon: 'refresh' })));
-  sec('调试');
-  var t = kToggle(Prefs.get('debug', false) === true, function (on) { Prefs.set('debug', on); if (on) dbg('调试已开启：拖动、写回、草稿等事件会弹提示并写入游戏日志'); }, '调试模式');
-  box.appendChild(fieldRow('调试', t.el, '开启后关键操作会弹出提示，同时写进游戏日志（logs/latest.log，前缀 [CAD-Editor-Recast]），反馈问题时附上这段日志'));
+  row('cube', '左栏预览', '物品用 3D 模型还是 2D 图标', hv.el);
+  box.appendChild(xSec('maximize', '窗口'));
+  row('maximize', '窗口大小', '恢复默认窗口和左栏宽度', kBtn('恢复默认', function () { UI.winW = 0; UI.winH = 0; UI.heroW = 0; UI.maxed = false; applyWinStyle(); Prefs.set('winW', 0); Prefs.set('winH', 0); Prefs.set('heroWidth', 0); Prefs.set('windowMax', false); drawTopbar(); toast('已恢复默认窗口大小', 'ok'); }, { icon: 'undo' }));
+  box.appendChild(xSec('bug', '调试'));
+  var t = kToggle(Prefs.get('debug', false) === true, function (on) { Prefs.set('debug', on); if (on) dbg('调试已开启：拖动、写回、草稿等事件会弹提示并写入游戏日志'); }, '');
+  row('bug', '调试模式', '关键操作弹提示，并写入游戏日志', t.el);
   host.appendChild(box);
 }
