@@ -27,6 +27,22 @@ EDATA.enchants.forEach(function (e) { ENIDX[e.id] = e; });
 EDATA.attrs.forEach(function (a) { ATIDX[a.id] = a; });
 EDATA.effects.forEach(function (e) { EFIDX[e.id] = e; });
 EDATA.items.forEach(function (i) { ITEMSET[i] = 1; });
+/* 游戏里注册了、但编辑器没有专用表单的组件（其他模组的、比 26.1.2 更新的）：按组件登记一条，用 SNBT 编辑，保存时交给游戏校验。
+   id 写法和 d.comps 的键一致：minecraft 命名空间省略，别的命名空间保留 */
+function registerLiveComps(entries) {
+  var added = 0;
+  (entries || []).forEach(function (e) {
+    if (!e || !e.id) return;
+    var id = shortId(e.id); if (CIDX[id]) return;
+    var ns = e.id.indexOf(':') > 0 ? e.id.split(':')[0] : 'minecraft';
+    if (!EDATA.cats.some(function (k) { return k.id === 'live'; })) EDATA.cats.push({ id: 'live', name: '游戏新增', icon: 'grid' });
+    var c = { id: id, name: e.name && e.name !== e.id ? e.name : humanId(id.indexOf(':') > 0 ? id.split(':')[1] : id), cat: 'live', live: true,
+      desc: (ns === 'minecraft' ? '游戏里有、编辑器还没有专用表单的组件' : '来自模组 ' + ns + ' 的组件') + '；用 SNBT 编辑，改完交给游戏校验',
+      schema: { t: 'raw' } };
+    EDATA.comps.push(c); CIDX[id] = c; added++;
+  });
+  return added;
+}
 
 /* ---------- SNBT 序列化 ---------- */
 function snbtStr(s) {

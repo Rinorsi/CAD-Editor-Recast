@@ -700,3 +700,19 @@ console.log('PASS undo history is bounded by size and by steps.');
   const cells = box.querySelectorAll('.slot'); assert.equal(cells.length, 2, '两格内容'); assert.ok(cells[0].querySelector('.cnt').textContent === '3');
 }
 console.log('PASS tooltip bundle grid.');
+
+// 游戏里有、编辑器没有表单的组件（其他模组）：登记后能加、能编辑、不报“不存在”
+{
+  const n0 = c.EDATA.comps.length;
+  c.Reg.ingest('registry.data_component_types', { generation: 1, offset: 0, total: 3, done: true, entries: [{ id: 'minecraft:damage', name: '耐久' }, { id: 'mymod:charge', name: '充能' }, { id: 'mymod:plain_thing', name: 'mymod:plain_thing' }] });
+  assert.equal(c.EDATA.comps.length, n0 + 2, '只登记不认识的');
+  const m = c.CIDX['mymod:charge']; assert.ok(m && m.live && m.name === '充能' && m.schema.t === 'raw');
+  assert.equal(c.CIDX['mymod:plain_thing'].name, 'Plain Thing');
+  const d = c.makeDoc({ id: 'minecraft:stick', comps: { 'mymod:charge': { energy: 5 } } });
+  const out = []; c.validateDoc(d).forEach(p => out.push(p));
+  assert.ok(!out.some(p => /不存在/.test(p.msg) && p.cid === 'mymod:charge'), '不再报不存在');
+  assert.ok(c.stackString(d).indexOf('mymod:charge={energy:5}') >= 0 || c.stackString(d).indexOf('mymod:charge=') >= 0);
+  c.Reg.ingest('registry.data_component_types', { generation: 1, offset: 0, total: 3, done: true, entries: [{ id: 'mymod:charge', name: '充能' }] });
+  assert.equal(c.EDATA.comps.length, n0 + 2, '重复到达不重复登记');
+}
+console.log('PASS live-only (mod) components are registered and editable.');

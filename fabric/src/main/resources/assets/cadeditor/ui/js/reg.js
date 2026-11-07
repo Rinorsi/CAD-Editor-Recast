@@ -26,6 +26,7 @@ var Reg = {
     var off = val.offset || 0, ents = val.entries || [];
     for (var i = 0; i < ents.length; i++) k.entries[off + i] = ents[i];
     k.total = val.total || k.total; if (val.done) { k.done = true; delete this.cache[kind]; }
+    if (kind === 'data_component_types' && typeof registerLiveComps === 'function') registerLiveComps(val.entries);
     if (val.availability === 'unavailable') k.unavail = String(val.reason || '服务器没有向客户端同步完整列表');   /* 远程服务器上的战利品表 / 配方等：空是“拿不到”，不是“没有” */
     this.fire(kind);
   },

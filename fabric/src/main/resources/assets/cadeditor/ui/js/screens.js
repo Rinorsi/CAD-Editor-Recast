@@ -683,7 +683,7 @@ function addSetting(cid) {
 }
 function advAll(host) {
   var d = Store.doc(), wrap = h('div', { class: 'adv' }), left = h('div', { class: 'adv-l' }), right = h('div', { class: 'adv-r' });
-  var q = h('input', { class: 'k-input', type: 'text', value: UI.advQ, placeholder: '筛选 107 个组件', spellcheck: 'false' });
+  var q = h('input', { class: 'k-input', type: 'text', value: UI.advQ, placeholder: '筛选 ' + EDATA.comps.length + ' 个组件', spellcheck: 'false' });
   var list = h('div', { class: 'adv-list' });
   function paint() {
     clear(list); var s = UI.advQ.trim().toLowerCase();
