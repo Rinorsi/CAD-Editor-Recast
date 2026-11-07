@@ -54,7 +54,7 @@ function create(opts) {
   opts = opts || {};
   const root = new Element('body'), overlays = new Element('div'); overlays.id = 'overlays'; root.appendChild(overlays);
   const doc = {
-    body: root, documentElement: new Element('html'), activeElement: null, addEventListener() {}, removeEventListener() {},
+    body: root, documentElement: new Element('html'), activeElement: null, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
     createElement(tag) { const e = new Element(tag); e.ownerDoc = doc; return e; },
     createTextNode(t) { const e = new Element('text'); e.ownerDoc = doc; e.textContent = t; return e; },
     getElementById(id) { return root.querySelector('#' + id); },
@@ -65,14 +65,14 @@ function create(opts) {
   const win = { innerWidth: opts.width || 760, innerHeight: opts.height || 560, devicePixelRatio: 1, addEventListener() {}, removeEventListener() {} };
   const timers = [];
   const ctx = vm.createContext({
-    document: doc, window: win, console,
+    document: doc, window: win, console, CustomEvent: function CustomEvent(type, init) { this.type = type; this.detail = init && init.detail; },
     requestAnimationFrame(fn) { timers.push({ fn, ms: 16 }); return timers.length; }, cancelAnimationFrame() {},
     setTimeout(fn, ms) { timers.push({ fn, ms: ms || 0 }); return timers.length; }, clearTimeout() {},
     oriel: { data: opts.data || {}, send(k, v) { sent.push([k, v]); return true; }, on() {} }
   });
   // 固定时间与随机数：快照要逐字相同
   vm.runInContext('Math.random = function () { return 0.5; }; var __t = 1700000000000; Date.now = function () { return __t; };', ctx);
-  const dir = path.resolve(__dirname, '../../fabric/src/main/resources/assets/cadeditor/ui');
+  const dir = process.env.UI_DIR || path.resolve(__dirname, '../../fabric/src/main/resources/assets/cadeditor/ui');   // UI_DIR：对别的版本的 ui 目录跑同样的检查
   const html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8'), files = [];
   html.replace(/<script src="(js\/[^"]+)"/g, (m, f) => { files.push(f); return m; });
   const skip = new Set(opts.skip || ['js/app.js']);

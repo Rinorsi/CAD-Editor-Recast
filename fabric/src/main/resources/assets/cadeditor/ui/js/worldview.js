@@ -45,7 +45,7 @@ function wvToggle(g, k, label, sub) { return xToggle({ title: label, sub: sub, v
 /* ItemStack（id / count / components）字段：选一件，或清空 */
 function wvItem(cur, onSet) {
   var has = cur && cur.id;
-  var btn = h('div', { class: 'k-btn' }, has ? [itemIcon(shortId(cur.id), 22), h('span', { text: nameOfItem(cur.id) })] : [uiIcon('plus', 12), h('span', { text: '选择物品' })]);
+  var btn = kItemBtn(has ? cur : null);
   activate(btn, function () { pickItem(btn, function (id) { onSet({ id: fullId(id), count: 1 }); kPopClose(); }); });
   var kids = [btn];
   if (has) kids.push(kBtn('清空', function () { onSet(null); }, { icon: 'trash' }));
@@ -54,12 +54,6 @@ function wvItem(cur, onSet) {
 function wvRedraw() { weRender(); }
 
 /* ---------- 告示牌 / 悬挂告示牌 ---------- */
-function msgText(m) { return typeof m === 'string' ? m : (m === undefined || m === null ? '' : JSON.stringify(m)); }
-function textMsg(t) {
-  var s = t.replace(/^\s+/, '');
-  if (s.charAt(0) === '{' || s.charAt(0) === '[' || (s.charAt(0) === '"' && s.charAt(s.length - 1) === '"')) { try { return JSON.parse(s); } catch (e) {} }
-  return t;
-}
 WEV.sign = function (body, g) {
   var face = WE.face === 'back' ? 'back_text' : 'front_text', fs = weViewField(g, face), n = fs.messages_length || 4;
   body.appendChild(xSec('edit', '文字', undefined, kSeg([{ v: 'front', label: '正面' }, { v: 'back', label: '背面' }], WE.face, function (v) { WE.face = v; wvRedraw(); }).el));

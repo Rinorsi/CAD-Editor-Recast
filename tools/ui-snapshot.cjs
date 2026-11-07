@@ -7,7 +7,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const H = require('./lib/ui-harness.cjs');
 
-const SNAP = path.resolve(__dirname, 'snapshots');
+const SNAP = process.env.SNAP_DIR || path.resolve(__dirname, 'snapshots');
 const args = process.argv.slice(2), UPDATE = args.includes('--update'), only = args.filter(a => a[0] !== '-');
 const examples = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../docs/entity-schema-examples-26.1.2.json'), 'utf8'));
 const exOne = k => { const e = examples[k]; return e.entries ? e.entries[0] : e; };
@@ -85,6 +85,8 @@ const SCENES = [
   ['物品-潜影盒', () => itemPages('minecraft:shulker_box')],
   ['物品-刷怪蛋', () => itemPages('minecraft:cat_spawn_egg')],
   ['物品-刷怪笼', () => itemPages('minecraft:spawner')],
+  ['物品-收纳袋', () => itemPages('minecraft:bundle', { bundle_contents: [{ id: 'minecraft:apple', count: 3 }, { id: 'minecraft:stick', count: 12 }] })],
+  ['物品-潜影盒有内容', () => itemPages('minecraft:shulker_box', { container: [{ slot: 0, item: { id: 'minecraft:diamond', count: 5 } }, { slot: 3, item: { id: 'minecraft:stick', count: 1, components: { custom_name: 'x' } } }] })],
   ['世界-箱子', () => worldTabs(chest)],
   ['世界-告示牌', () => worldTabs(() => blockOf('minecraft:sign', { block: 'minecraft:oak_sign', block_state_schema: [{ name: 'rotation', type: 'int', values: ['0', '1', '2'], default: '8', current: '1' }, { name: 'waterlogged', type: 'boolean', values: ['true', 'false'], default: 'false', current: 'false' }],
     views: { sign: { value: { front_text: { messages: ['a', '', '', ''], color: 'black', has_glowing_text: false }, back_text: { messages: ['', '', '', ''], color: 'black', has_glowing_text: false }, is_waxed: true }, schema: { fields: { front_text: { messages_length: 4 } } } } } }))],

@@ -39,7 +39,7 @@ function evBool(label, v, sub, on) { return xToggle({ title: label, sub: sub, va
 function evStack(cur, onSet, o) {
   o = o || {};
   var has = cur && cur.id && !cur.empty;
-  var btn = h('div', { class: 'k-btn' }, has ? [itemIcon(shortId(cur.id), 22), h('span', { text: nameOfItem(cur.id) })] : [uiIcon('plus', 12), h('span', { text: o.placeholder || '选择物品' })]);
+  var btn = kItemBtn(has ? cur : null, null, o.placeholder);
   function norm(st) { var s = clone(st); delete s.slot; delete s.label; return s; }
   activate(btn, function () { pickItem(btn, function (id) { onSet({ id: fullId(id), count: 1, comps: {}, removed: {} }); kPopClose(); }, { onStack: function (st) { onSet(norm(st)); kPopClose(); } }); });
   var kids = [btn];
@@ -175,7 +175,7 @@ function evTradeTab(body) {
   function stackLine(o, key, label, optional) {
     var cur = o[key];
     var has = cur && cur.id;
-    var btn = h('div', { class: 'k-btn' }, has ? [itemIcon(shortId(cur.id), 22), h('span', { text: nameOfItem(cur.id) })] : [uiIcon('plus', 12), h('span', { text: optional ? '不需要第二件' : '选择物品' })]);
+    var btn = kItemBtn(has ? cur : null, null, optional ? '不需要第二件' : undefined);
     function put(st) { if (st === null) delete o[key]; else { if (cur && cur.cost_predicate_snbt !== undefined && st.id !== cur.id) delete st.cost_predicate_snbt; o[key] = st; } mark(); evRedraw(); }
     activate(btn, function () { pickItem(btn, function (id) { var prev = o[key] || {}; put({ id: fullId(id), count: prev.count || 1, comps: {}, removed: {} }); kPopClose(); }, { onStack: function (st) { var s2 = clone(st); delete s2.slot; delete s2.label; put(s2); kPopClose(); } }); });
     var kids = [btn];

@@ -253,37 +253,39 @@ function stackWeight(st) { var ms = (protoOf(st.id).max_stack_size || 64); retur
 CARDS.container = function () {
   var n = slotCountFor(Ctx.doc().id);
   var card = kCard({ id: 'container', icon: 'chest', title: '里面的物品', desc: '点一个格子放入或修改物品，右键可复制 / 清空', comps: ['container'], span: 2, value: function () { var l = Ctx.get('container'); return l && l.length ? l.length + ' 格有物品' : ''; } }, Ctx);
-  var grid = h('div', { class: 'k-cgrid' });
-  var cols = n <= 5 ? n : n <= 9 ? 3 : 9;
-  grid.setAttribute('style', 'grid-template-columns:repeat(' + cols + ',34px)');
   function list() { return Ctx.get('container') || []; }
   function save(l) { l.sort(function (a, b) { return a.slot - b.slot; }); if (!l.length) Ctx.disable('container', { structural: false }); else Ctx.setSmart('container', l, { label: '容器内容' }); }
   function stackAt(i) { var l = list(), r = null; l.forEach(function (e) { if (e.slot === i) r = e; }); return r; }
-  function edit(anchor, i) {
-    var cur = stackAt(i);
-    var box = h('div', { class: 'k-pickbox' });
-    var btn = h('div', { class: 'k-btn' }, cur ? [itemIcon(cur.item.id, 22), h('span', { text: nameOfItem(cur.item.id) })] : [uiIcon('plus', 12), h('span', { text: '选择物品' })]);
-    activate(btn, function () { pickItem(anchor, function (id) { var l = list(), e = stackAt(i); if (e) { e.item.id = fullId(id); l = l.map(function (x) { return x.slot === i ? e : x; }); } else l.push({ slot: i, item: { id: 'minecraft:' + id, count: 1 } }); save(l); draw(); }, { onStack: function (st) { var l = list(), item = vaultNested(st); NBT_FORCE.container = true; if (stackAt(i)) l = l.map(function (x) { return x.slot === i ? { slot: i, item: item } : x; }); else l.push({ slot: i, item: item }); save(l); kPopClose(); draw(); } }); });
-    box.appendChild(btn);
-    if (cur) {
-      var ms = protoOf(cur.item.id).max_stack_size || 64;
-      var cnt = kNumber(cur.item.count || 1, { min: 1, max: 99, noSlider: true, step: 1, unit: '个', warnMax: ms, warnWhy: '该物品原版最大堆叠 ' + ms, presets: [{ v: 1, label: '1' }, { v: 16, label: '16' }, { v: 64, label: '64' }], onChange: function (v) { var l = list(); l.forEach(function (x) { if (x.slot === i) x.item.count = v; }); save(l); paintCell(i); } });
-      box.appendChild(fieldRow('数量', cnt.el));
-      box.appendChild(kBtn('清空这一格', function () { save(list().filter(function (x) { return x.slot !== i; })); kPopClose(); draw(); }, { cls: 'dng', icon: 'trash' }));
-    }
-    kPopover(anchor, box, { width: 250, maxHeight: 280 });
+  /* 物品页存的是嵌套格式 {slot, item:{id,count,components}}；格子只认视图，这里做适配 */
+  function viewOf(i) { var e = stackAt(i); return e ? { id: e.item.id, count: e.item.count, marked: !!e.item.components, _item: e.item } : null; }
+  var grid;
+  function edit(cell, i) {
+    kStackPop(cell, viewOf(i), {
+      closeOnPick: false,
+      onPick: function (id) { var l = list(), e = stackAt(i); if (e) { e.item.id = fullId(id); l = l.map(function (x) { return x.slot === i ? e : x; }); } else l.push({ slot: i, item: { id: 'minecraft:' + id, count: 1 } }); save(l); grid.repaint(); },
+      onStack: function (st) { var l = list(), item = vaultNested(st); NBT_FORCE.container = true; if (stackAt(i)) l = l.map(function (x) { return x.slot === i ? { slot: i, item: item } : x; }); else l.push({ slot: i, item: item }); save(l); grid.repaint(); },
+      onCount: function (v) { var l = list(); l.forEach(function (x) { if (x.slot === i) x.item.count = v; }); save(l); grid.repaint(); },
+      onClear: function () { save(list().filter(function (x) { return x.slot !== i; })); grid.repaint(); }
+    });
   }
-  var cells = [];
-  function paintCell(i) {
-    var c = cells[i]; if (!c) return; clear(c);
-    var e = stackAt(i);
-    if (e) { c.appendChild(itemIcon(e.item.id, 26)); if ((e.item.count || 1) > 1) c.appendChild(h('span', { class: 'cnt', text: String(e.item.count) })); if (e.item.components) c.appendChild(h('i', { class: 'mk', title: '这个物品带有自己的组件数据' })); c.setAttribute('title', nameOfItem(e.item.id) + ' × ' + (e.item.count || 1)); }
-    else c.setAttribute('title', '空格子 ' + (i + 1));
-  }
-  function draw() { clear(grid); cells = []; for (var i = 0; i < n; i++) { (function (i) { var c = h('div', { class: 'slot s34' }); cells[i] = c; c.addEventListener('click', function () { edit(c, i); }); onContext(c, function () { var e = stackAt(i); return [{ label: '编辑…', icon: 'edit', run: function () { edit(c, i); } }, { label: '复制到下一个空格', icon: 'copy', dis: !e, run: function () { var l = list(); for (var k = 0; k < n; k++) { if (!stackAt(k)) { l.push({ slot: k, item: clone(e.item) }); break; } } save(l); draw(); } }, { sep: 1 }, { label: '清空', icon: 'trash', danger: 1, dis: !e, run: function () { save(list().filter(function (x) { return x.slot !== i; })); draw(); } }]; }); grid.appendChild(c); paintCell(i); })(i); } }
-  draw(); card.live.push(function () { for (var i = 0; i < n; i++) paintCell(i); });
+  var ix = []; for (var k0 = 0; k0 < n; k0++) ix.push(k0);
+  grid = kSlotGrid({ indices: ix, cols: slotCols(n), col: 34, bare: true, plain: true, noSuffix: true, markTitle: '这个物品带有自己的组件数据',
+    stackOf: viewOf, titleOf: function (i) { return '空格子 ' + (i + 1); }, edit: edit, redraw: function () { grid.repaint(); },
+    menu: function (i, cell) {
+      var e = stackAt(i);
+      return [{ label: '编辑…', icon: 'edit', run: function () { edit(cell, i); } },
+        { label: '复制到下一个空格', icon: 'copy', dis: !e, run: function () { var l = list(); for (var k = 0; k < n; k++) { if (!stackAt(k)) { l.push({ slot: k, item: clone(e.item) }); break; } } save(l); grid.repaint(); } },
+        { sep: 1 },
+        { label: '清空', icon: 'trash', danger: 1, dis: !e, run: function () { save(list().filter(function (x) { return x.slot !== i; })); grid.repaint(); } }];
+    },
+    ref: function (i) {
+      return { group: card, i: i, get: function () { return viewOf(i); },
+        set: function (st) { var l = list().filter(function (x) { return x.slot !== i; }); if (st && st.id && !st.empty) l.push({ slot: i, item: st._item ? clone(st._item) : { id: st.id, count: st.count || 1 } }); save(l); },
+        swap: function (o) { var j = o.i, l = list(); l.forEach(function (x) { if (x.slot === i) x.slot = j; else if (x.slot === j) x.slot = i; }); save(l); } };
+    } });
+  card.live.push(function () { grid.repaint(); });
   card.body.appendChild(grid);
-  card.body.appendChild(kBtn('全部清空', function () { Ctx.disable('container', { structural: false }); draw(); }, { cls: 'dng', icon: 'trash' }));
+  card.body.appendChild(kBtn('全部清空', function () { Ctx.disable('container', { structural: false }); grid.repaint(); }, { cls: 'dng', icon: 'trash' }));
   return card;
 };
 
@@ -292,18 +294,22 @@ CARDS.bundle = function () {
   var row = h('div', { class: 'k-cgrid' }), bar = h('div', { class: 'k-meter' }, [h('i', {})]), eff = kEffect('');
   function list() { return Ctx.get('bundle_contents') || []; }
   function save(l) { if (!l.length) Ctx.disable('bundle_contents', { structural: false }); else Ctx.setSmart('bundle_contents', l, { label: '收纳袋内容' }); }
+  function viewOf(i) { var st = list()[i]; return st ? { id: st.id, count: st.count, marked: false, _st: st } : null; }
   function draw() {
-    clear(row);
-    list().forEach(function (st, i) {
-      var c = h('div', { class: 'slot s34', title: nameOfItem(st.id) + ' × ' + (st.count || 1) }, [itemIcon(st.id, 26), (st.count || 1) > 1 ? h('span', { class: 'cnt', text: String(st.count) }) : null]);
-      c.addEventListener('click', function () {
-        var box = h('div', { class: 'k-pickbox' });
-        var cnt = kNumber(st.count || 1, { min: 1, max: 99, noSlider: true, step: 1, onChange: function (v) { var l = list(); l[i].count = v; save(l); draw(); } });
-        box.appendChild(fieldRow(nameOfItem(st.id) + ' 数量', cnt.el)); box.appendChild(kBtn('取出', function () { var l = list(); l.splice(i, 1); save(l); kPopClose(); draw(); }, { cls: 'dng', icon: 'trash' }));
-        kPopover(c, box, { width: 230 });
-      });
-      row.appendChild(c);
-    });
+    var len = list().length, ix = []; for (var k = 0; k < len; k++) ix.push(k);
+    var g = kSlotGrid({ indices: ix, bare: true, plain: true, noSuffix: true, stackOf: viewOf, redraw: draw,
+      edit: function (cell, i) {
+        var st = list()[i];
+        kStackPop(cell, viewOf(i), { pick: false, plain: true, width: 230, maxHeight: null, countLabel: nameOfItem(st.id) + ' 数量', clearLabel: '取出',
+          onCount: function (v) { var l = list(); l[i].count = v; save(l); draw(); },
+          onClear: function () { var l = list(); l.splice(i, 1); save(l); draw(); } });
+      },
+      ref: function (i) {
+        return { group: card, i: i, get: function () { return viewOf(i); },
+          set: function (st) { var l = list(); if (!st || st.empty || !st.id) l.splice(i, 1); else l[i] = st._st ? clone(st._st) : { id: st.id, count: st.count || 1 }; save(l); },
+          swap: function (o) { var l = list(), t = l[i]; l[i] = l[o.i]; l[o.i] = t; save(l); } };
+      } });
+    clear(row); while (g.firstChild) row.appendChild(g.firstChild);
     var add = h('div', { class: 'slot s34 addslot', title: '放入物品' }, [uiIcon('plus', 14)]);
     activate(add, function () { pickItem(add, function (id) { var l = list(); l.push({ id: fullId(id), count: 1 }); save(l); draw(); }, { onStack: function (st) { var l = list(); l.push(vaultNested(st)); NBT_FORCE.bundle_contents = true; save(l); draw(); } }); });
     row.appendChild(add);

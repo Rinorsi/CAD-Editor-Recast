@@ -353,6 +353,7 @@ function updateCrumb() {
   });
 }
 function drawTabBody() {
+  if (typeof weDndReset === 'function') weDndReset();   // 上一页的格子和拿起状态不带过来
   var body = clear($('edbody')), d = Store.doc(), kind = kindOfItem(d.id);
   var tabs = tabsOfKind(kind), tab = tabs.filter(function (t) { return t.id === UI.tab; })[0];
   if (!tab) { tab = tabs[0]; UI.tab = tab.id; drawTabbar(); }

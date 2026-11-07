@@ -3,23 +3,6 @@
    这里不猜任何数据：容器格数、方块状态、类型都来自宿主给的 world；SNBT 带类型（byte/short/long/float/double）原样往返。 */
 
 /* ---------- SNBT 打印（保留类型）：把 nbtParse 的节点打印成紧凑 / 缩进文本 ---------- */
-function nbtPrint(n, pretty, ind) {
-  ind = ind || '';
-  var nx = ind + '  ';
-  if (n.k === 'num') return n.raw;
-  if (n.k === 'bool') return n.v ? 'true' : 'false';
-  if (n.k === 'str') return snbtStr(n.v);
-  if (n.k === 'arr' || n.k === 'list') {
-    var pre = n.k === 'arr' ? n.p + ';' : '';
-    if (!n.items.length) return '[' + pre + ']';
-    var scalars = n.items.every(function (x) { return x.k !== 'obj' && x.k !== 'list' && x.k !== 'arr'; });
-    if (!pretty || (scalars && n.items.length <= 12)) return '[' + pre + n.items.map(function (x) { return nbtPrint(x, false); }).join(',') + ']';
-    return '[' + pre + '\n' + n.items.map(function (x) { return nx + nbtPrint(x, true, nx); }).join(',\n') + '\n' + ind + ']';
-  }
-  if (!n.keys.length) return '{}';
-  if (!pretty) return '{' + n.keys.map(function (k) { return snbtKey(k) + ':' + nbtPrint(n.map[k], false); }).join(',') + '}';
-  return '{\n' + n.keys.map(function (k) { return nx + snbtKey(k) + ': ' + nbtPrint(n.map[k], true, nx); }).join(',\n') + '\n' + ind + '}';
-}
 
 var WE = { w: null, text: '', slots: {}, pending: null, tab: '', seq: 0, obj: null, timer: null, err: '' };
 function weActive() { return !!WE.w; }

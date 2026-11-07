@@ -314,3 +314,30 @@ var Valid = {
     return el;
   }
 };
+
+/* SNBT 文本输出（原在 worldedit.js，spawn.js 等也用） */
+function nbtPrint(n, pretty, ind) {
+  ind = ind || '';
+  var nx = ind + '  ';
+  if (n.k === 'num') return n.raw;
+  if (n.k === 'bool') return n.v ? 'true' : 'false';
+  if (n.k === 'str') return snbtStr(n.v);
+  if (n.k === 'arr' || n.k === 'list') {
+    var pre = n.k === 'arr' ? n.p + ';' : '';
+    if (!n.items.length) return '[' + pre + ']';
+    var scalars = n.items.every(function (x) { return x.k !== 'obj' && x.k !== 'list' && x.k !== 'arr'; });
+    if (!pretty || (scalars && n.items.length <= 12)) return '[' + pre + n.items.map(function (x) { return nbtPrint(x, false); }).join(',') + ']';
+    return '[' + pre + '\n' + n.items.map(function (x) { return nx + nbtPrint(x, true, nx); }).join(',\n') + '\n' + ind + ']';
+  }
+  if (!n.keys.length) return '{}';
+  if (!pretty) return '{' + n.keys.map(function (k) { return snbtKey(k) + ':' + nbtPrint(n.map[k], false); }).join(',') + '}';
+  return '{\n' + n.keys.map(function (k) { return nx + snbtKey(k) + ': ' + nbtPrint(n.map[k], true, nx); }).join(',\n') + '\n' + ind + '}';
+}
+
+/* 文本组件 <-> 输入框文字：字符串原样，复合 / 列表转成 JSON 文本；反过来输入 JSON 就还原成组件 */
+function msgText(m) { return typeof m === 'string' ? m : (m === undefined || m === null ? '' : JSON.stringify(m)); }
+function textMsg(t) {
+  var s = t.replace(/^\s+/, '');
+  if (s.charAt(0) === '{' || s.charAt(0) === '[' || (s.charAt(0) === '"' && s.charAt(s.length - 1) === '"')) { try { return JSON.parse(s); } catch (e) {} }
+  return t;
+}

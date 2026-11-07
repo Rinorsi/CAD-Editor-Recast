@@ -9,10 +9,10 @@
 
 function slotCols(n) { return n <= 5 ? n : n <= 9 ? 3 : 9; }
 
-/* 「选择物品」按钮。cur 为 null / 空 = ＋ 选择物品；onClick 可省（调用方自己 activate） */
-function kItemBtn(cur, onClick) {
+/* 「选择物品」按钮。cur 为 null / 空 = ＋ 选择物品（placeholder 可换字）；onClick 可省（调用方自己 activate） */
+function kItemBtn(cur, onClick, placeholder) {
   var empty = !cur || cur.empty || !cur.id;
-  var b = h('div', { class: 'k-btn' }, empty ? [uiIcon('plus', 12), h('span', { text: '选择物品' })] : [itemIcon(cur.id, 22), h('span', { text: nameOfItem(cur.id) })]);
+  var b = h('div', { class: 'k-btn' }, empty ? [uiIcon('plus', 12), h('span', { text: placeholder || '选择物品' })] : [itemIcon(cur.id, 22), h('span', { text: nameOfItem(cur.id) })]);
   if (onClick) activate(b, onClick);
   return b;
 }
@@ -53,7 +53,9 @@ function kStackPop(anchor, cur, o) {
     box.appendChild(fieldRow(o.countLabel || '数量', kNumber(cur.count || 1, q).el));
     box.appendChild(kBtn(o.clearLabel || '清空这一格', function () { o.onClear(); kPopClose(); }, { cls: 'dng', icon: 'trash' }));
   }
-  kPopover(anchor, box, { width: o.width || 250, maxHeight: o.maxHeight === undefined ? 280 : o.maxHeight });
+  var po = { width: o.width || 250 };
+  if (o.maxHeight !== null) po.maxHeight = o.maxHeight === undefined ? 280 : o.maxHeight;   // maxHeight:null = 不限高
+  kPopover(anchor, box, po);
 }
 
 /* 线格式栈的点开小窗（世界页）：选物品时清掉组件，数量改的是副本 */
@@ -102,7 +104,12 @@ function kSlotGrid(cfg) {
     grid.appendChild(cell);
   });
   grid.cells = cells;
-  grid.repaint = function () { Object.keys(cells).forEach(function (k) { paint(cells[k], +k); }); };
+  grid.repaint = function () {
+    Object.keys(cells).forEach(function (k) {
+      var c = cells[k]; paint(c, +k);
+      if (!(WE_DND.carry && WE_DND.carry.el === c)) c.classList.remove('sel', 'carried');   // 放下 / 取消后去掉拿起的样子
+    });
+  };
   return grid;
 }
 

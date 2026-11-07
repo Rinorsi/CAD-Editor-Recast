@@ -1,0 +1,418 @@
+# 页签 look
+## topbar
+div
+## screen
+div
+  aside.ed-hero
+    div.ed-stagehead
+      span.fold-arrow
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      span "预览"
+      div.grow
+      div.ed-view.k-seg [title="物品预览：2D 图标 / 3D 模型（会记住你的选择）"]
+        div.k-segi.on "2D"
+        div.k-segi "3D"
+    div.ed-stage
+      div.plate
+      item.k-ico [style="height:48px;width:48px"]
+    div.ed-name
+      span [style="color:#FFFFFF;"] "潜影盒"
+    div.ed-tags
+      span.k-tag "容器"
+      span.dim.k-tag "普通"
+    div.ed-stagehead
+      span.fold-arrow
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      span "属性"
+      div.grow
+    div.ed-stats
+      div.k-stat
+        span.sl "最大堆叠"
+        b "1"
+    div.ed-tiphead
+      span.fold-arrow
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      span "提示框预览"
+      div.grow
+      div.k-mini.m-ripple [title="调试信息（F3+H）：显示物品 ID 和耐久"]
+        img.o-ico [src="oriel:textures/icons/bug.png" style="height:8px;width:8px"]
+      div.k-mini.m-ripple [title="放大查看（近似预览，游戏内以原版绘制为准）"]
+        img.o-ico [src="oriel:textures/icons/maximize.png" style="height:8px;width:8px"]
+    div.k-scrollbox.tip [style="maxHeight:290px"]
+      div.k-tipwrap
+        div.ed-tip
+          div.tl
+            span [style="color:#FFFFFF;"] "潜影盒"
+  div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
+  section.ed-right
+    div.ed-tabs
+      div.ed-tab.m-ripple.on [title="外观（Ctrl+1）"]
+        img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
+        span "外观"
+      div.ed-tab.m-ripple [title="内容（Ctrl+2）"]
+        img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+        span "内容"
+        b "1"
+      div.ed-tab.m-ripple.more [title="更多分页：功能、攻击与防御、放置与数据……"]
+        img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
+        span "更多"
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+    div.ed-tools
+      span.ed-tools-t "外观"
+      div.grow
+      div.ed-addset.m-ripple [title="给这个物品加上它本来没有的功能"]
+        img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
+        span "添加设置"
+      div.k-mini.m-ripple [title="折叠 / 展开本页全部卡片"]
+        img.o-ico [src="oriel:textures/icons/layers.png" style="height:16px;width:16px"]
+    div.ed-body
+      div.k-sech "名称与说明"
+      div.k-list
+        div.k-card.wide [data-card="name"]
+          div.k-chead.m-spot
+            div.k-cico
+              img.o-ico [src="oriel:textures/icons/tag.png" style="height:16px;width:16px"]
+            div.k-ctx
+              div.k-ctitle
+                "名称"
+                span.k-badge [title="这一项和物品原版默认值不同"] "自定义"
+              div.k-cdesc "物品在背包、提示框和聊天里显示的名字"
+            div.k-csum
+            div.k-cval
+            div.k-reset [title="放弃这里的修改，使用物品原本的值"] "恢复默认"
+            span.k-swph
+            div.k-chev [title="折叠 / 展开"]
+              img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+          div.k-cbody.x-sliding [style="height:300px;opacity:1"]
+            div.k-rich.open
+              div.k-rprev
+                span.k-ph "潜影盒（默认名称）"
+              div.k-redit [style="display:flex"]
+                div.k-rruns
+                  div.k-rrun.k-srow
+                    div.k-rcolb [title="文字颜色：点开选色，或输入 #RRGGBB"]
+                      i.none.sw
+                      span "颜色"
+                    input.k-input [placeholder="输入新名称；留空 = 使用「潜影盒」" type="text"]
+                    div.k-rsty
+                      div.bold.k-rs [title="粗体"] "B"
+                      div.italic.k-rs [title="斜体（再点一次=强制非斜体）"] "I"
+                      div.k-rs.underlined [title="下划线"] "U"
+                      div.k-rs.strikethrough [title="删除线"] "S"
+                    div.k-mini.m-ripple [title="分色：把文字分成几段，每段单独设置颜色"]
+                      img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
+                    div.k-mini.m-ripple [title="渐变色、§ 代码、清除格式"]
+                      img.o-ico [src="oriel:textures/icons/menu.png" style="height:16px;width:16px"]
+                div.k-row.k-rtools [style="display:none"]
+          div.k-div
+        div.k-card.wide [data-card="lore"]
+          div.k-chead.m-spot
+            div.k-cico
+              img.o-ico [src="oriel:textures/icons/list.png" style="height:16px;width:16px"]
+            div.k-ctx
+              div.k-ctitle
+                "说明文字"
+                span.k-badge [title="这一项和物品原版默认值不同"] "自定义"
+              div.k-cdesc "显示在名称下方的多行文字，可写背景故事、使用提示"
+            div.k-csum
+            div.k-cval
+            div.k-reset [title="放弃这里的修改，使用物品原本的值"] "恢复默认"
+            span.k-swph
+            div.k-chev [title="折叠 / 展开"]
+              img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+          div.k-cbody.x-sliding [style="height:300px;opacity:1"]
+            div.k-scrollbox.tall
+              div.k-sortlist
+                div.k-empty "还没有说明文字，点下面添加一行"
+            div.k-add
+              img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
+              "添加一行"
+          div.k-div
+      div.k-sech "稀有度与显示"
+      div.k-list
+        div.k-card [data-card="rarity"]
+          div.k-chead.m-spot
+            div.k-cico
+              img.o-ico [src="oriel:textures/icons/star.png" style="height:16px;width:16px"]
+            div.k-ctx
+              div.k-ctitle
+                "稀有度"
+                span.k-badge [title="这一项和物品原版默认值不同"] "自定义"
+              div.k-cdesc "决定名称的颜色，让物品看起来更珍贵"
+            div.k-csum
+            div.k-cval
+            div.k-reset [title="放弃这里的修改，使用物品原本的值"] "恢复默认"
+            span.k-swph
+            div.k-chev [title="折叠 / 展开"]
+              img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+          div.k-cbody.x-sliding [style="height:300px;opacity:1"]
+            div.k-tiles.pill
+              div.k-tile.m-ripple.on [title="白色" style="--tone:#ffffff"]
+                div.tl [style="color:#ffffff"] "普通"
+                div.ts "白色"
+              div.k-tile.m-ripple [title="黄色" style="--tone:#ffff55"]
+                div.tl [style="color:#ffff55"] "优秀"
+                div.ts "黄色"
+              div.k-tile.m-ripple [title="青色" style="--tone:#55ffff"]
+                div.tl [style="color:#55ffff"] "稀有"
+                div.ts "青色"
+              div.k-tile.m-ripple [title="粉紫色" style="--tone:#ff55ff"]
+                div.tl [style="color:#ff55ff"] "史诗"
+                div.ts "粉紫色"
+          div.k-div
+        div.k-card [data-card="glint"]
+          div.k-chead.m-spot
+            div.k-cico
+              img.o-ico [src="oriel:textures/icons/sparkle.png" style="height:16px;width:16px"]
+            div.k-ctx
+              div.k-ctitle
+                "附魔光效"
+                span.k-badge [title="这一项和物品原版默认值不同"] "自定义"
+              div.k-cdesc "物品表面的紫色流光"
+            div.k-csum
+            div.k-cval
+            div.k-reset [title="放弃这里的修改，使用物品原本的值"] "恢复默认"
+            span.k-swph
+            div.k-chev [title="折叠 / 展开"]
+              img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+          div.k-cbody.x-sliding [style="height:300px;opacity:1"]
+            div.k-tiles.pill
+              div.k-tile.m-ripple.on [title="有附魔才发光"]
+                div.ti
+                  img.o-ico [src="oriel:textures/icons/refresh.png" style="height:16px;width:16px"]
+                div.tl "自动"
+                div.ts "有附魔才发光"
+              div.k-tile.m-ripple [title="没附魔也闪"]
+                div.ti
+                  img.o-ico [src="oriel:textures/icons/sparkle.png" style="height:16px;width:16px"]
+                div.tl "总是发光"
+                div.ts "没附魔也闪"
+              div.k-tile.m-ripple [title="有附魔也不闪"]
+                div.ti
+                  img.o-ico [src="oriel:textures/icons/eye_off.png" style="height:16px;width:16px"]
+                div.tl "不发光"
+                div.ts "有附魔也不闪"
+          div.k-div
+        div.k-card [data-card="tooltip"]
+          div.k-chead.m-spot
+            div.k-cico
+              img.o-ico [src="oriel:textures/icons/eye_off.png" style="height:16px;width:16px"]
+            div.k-ctx
+              div.k-ctitle
+                "悬停提示"
+                span.k-badge [title="这一项和物品原版默认值不同"] "自定义"
+              div.k-cdesc "鼠标放在物品上时弹出的信息框"
+            div.k-csum
+            div.k-cval
+            div.k-reset [title="放弃这里的修改，使用物品原本的值"] "恢复默认"
+            span.k-swph
+            div.k-chev [title="折叠 / 展开"]
+              img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+          div.k-cbody.x-sliding [style="height:300px;opacity:1"]
+            div.k-togrow
+              div.k-toggle [role="switch"]
+                i
+              span.k-togl "完全隐藏提示框（神秘物品）"
+            div.k-fld.wide [title="被选中的信息不会在提示框里显示"]
+              div.lb
+                span.lt "只隐藏其中几项"
+                span.k-sub "被选中的信息不会在提示框里显示"
+              div.k-chips
+                div.k-chip.m-ripple [title="minecraft:enchantments"] "附魔"
+                div.k-chip.m-ripple [title="minecraft:attribute_modifiers"] "属性加成"
+                div.k-chip.m-ripple [title="minecraft:unbreakable"] "不可破坏"
+                div.k-chip.m-ripple [title="minecraft:dyed_color"] "染色"
+                div.k-chip.m-ripple [title="minecraft:trim"] "盔甲纹饰"
+                div.k-chip.m-ripple [title="minecraft:stored_enchantments"] "书中的附魔"
+                div.k-chip.m-ripple [title="minecraft:potion_contents"] "药水效果"
+                div.k-chip.m-ripple [title="minecraft:jukebox_playable"] "唱片信息"
+                div.k-chip.m-ripple "＋ 其他组件"
+          div.k-div
+        div.flat.k-card [data-card="model"]
+          div.k-chead.m-spot
+            div.k-cico
+              img.o-ico [src="oriel:textures/icons/image.png" style="height:16px;width:16px"]
+            div.k-ctx
+              div.k-ctitle
+                "外观借用"
+                span.k-badge [title="这一项和物品原版默认值不同"] "自定义"
+              div.k-cdesc "让它看起来像另一个物品（只改外观，功能不变）"
+            div.k-csum
+            div.hd-pick.k-row
+              div.k-btn.m-ripple
+                item.k-ico [style="height:16px;width:16px"]
+                span.hd-model [title="潜影盒\nminecraft:shulker_box"] "潜影盒"
+                img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+            div.k-cval
+            div.k-reset [title="放弃这里的修改，使用物品原本的值"] "恢复默认"
+            span.k-swph
+            div.k-chev [title="折叠 / 展开"]
+              img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+          div.k-cbody
+          div.k-div
+## footer
+div
+## overlays
+div
+
+# 页签 inside
+## topbar
+div
+## screen
+div
+  aside.ed-hero
+    div.ed-stagehead
+      span.fold-arrow
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      span "预览"
+      div.grow
+      div.ed-view.k-seg [title="物品预览：2D 图标 / 3D 模型（会记住你的选择）"]
+        div.k-segi.on "2D"
+        div.k-segi "3D"
+    div.ed-stage
+      div.plate
+      item.k-ico [style="height:48px;width:48px"]
+    div.ed-name
+      span [style="color:#FFFFFF;"] "潜影盒"
+    div.ed-tags
+      span.k-tag "容器"
+      span.dim.k-tag "普通"
+    div.ed-stagehead
+      span.fold-arrow
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      span "属性"
+      div.grow
+    div.ed-stats
+      div.k-stat
+        span.sl "最大堆叠"
+        b "1"
+    div.ed-tiphead
+      span.fold-arrow
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      span "提示框预览"
+      div.grow
+      div.k-mini.m-ripple [title="调试信息（F3+H）：显示物品 ID 和耐久"]
+        img.o-ico [src="oriel:textures/icons/bug.png" style="height:8px;width:8px"]
+      div.k-mini.m-ripple [title="放大查看（近似预览，游戏内以原版绘制为准）"]
+        img.o-ico [src="oriel:textures/icons/maximize.png" style="height:8px;width:8px"]
+    div.k-scrollbox.tip [style="maxHeight:290px"]
+      div.k-tipwrap
+        div.ed-tip
+          div.tl
+            span [style="color:#FFFFFF;"] "潜影盒"
+  div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
+  section.ed-right
+    div.ed-tabs
+      div.ed-tab.m-ripple [title="外观（Ctrl+1）"]
+        img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
+        span "外观"
+      div.ed-tab.m-ripple.on [title="内容（Ctrl+2）"]
+        img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+        span "内容"
+        b "1"
+      div.ed-tab.m-ripple.more [title="更多分页：功能、攻击与防御、放置与数据……"]
+        img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
+        span "更多"
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+    div.ed-tools
+      span.ed-tools-t "内容"
+      div.grow
+      div.ed-addset.m-ripple [title="给这个物品加上它本来没有的功能"]
+        img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
+        span "添加设置"
+      div.k-mini.m-ripple [title="折叠 / 展开本页全部卡片"]
+        img.o-ico [src="oriel:textures/icons/layers.png" style="height:16px;width:16px"]
+    div.ed-body
+      div.k-sech "里面的物品"
+      div.k-list
+        div.det-card.det-on.k-card.mod.wide [data-card="container"]
+          div.k-chead.m-spot
+            div.k-cico
+              img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+            div.k-ctx
+              div.k-ctitle
+                "里面的物品"
+                span.k-badge [title="这一项和物品原版默认值不同"] "自定义"
+              div.k-cdesc "点一个格子放入或修改物品，右键可复制 / 清空"
+            div.k-csum
+            div.k-cval "2 格有物品"
+            div.k-reset [title="放弃这里的修改，使用物品原本的值"] "恢复默认"
+            span.k-swph
+            div.det.k-chev [title="折叠 / 展开"]
+              img.o-ico [src="oriel:textures/icons/external.png" style="height:16px;width:16px"]
+          div.k-cbody
+            div.k-cgrid [style="grid-template-columns:repeat(9,34px)"]
+              div.s34.slot [title="钻石 × 5"]
+                item.k-ico [style="height:16px;width:16px"]
+                span.cnt "5"
+              div.s34.slot [title="空格子 2"]
+              div.s34.slot [title="空格子 3"]
+              div.s34.slot [title="木棍 × 1"]
+                item.k-ico [style="height:16px;width:16px"]
+                i.mk [title="这个物品带有自己的组件数据"]
+              div.s34.slot [title="空格子 5"]
+              div.s34.slot [title="空格子 6"]
+              div.s34.slot [title="空格子 7"]
+              div.s34.slot [title="空格子 8"]
+              div.s34.slot [title="空格子 9"]
+              div.s34.slot [title="空格子 10"]
+              div.s34.slot [title="空格子 11"]
+              div.s34.slot [title="空格子 12"]
+              div.s34.slot [title="空格子 13"]
+              div.s34.slot [title="空格子 14"]
+              div.s34.slot [title="空格子 15"]
+              div.s34.slot [title="空格子 16"]
+              div.s34.slot [title="空格子 17"]
+              div.s34.slot [title="空格子 18"]
+              div.s34.slot [title="空格子 19"]
+              div.s34.slot [title="空格子 20"]
+              div.s34.slot [title="空格子 21"]
+              div.s34.slot [title="空格子 22"]
+              div.s34.slot [title="空格子 23"]
+              div.s34.slot [title="空格子 24"]
+              div.s34.slot [title="空格子 25"]
+              div.s34.slot [title="空格子 26"]
+              div.s34.slot [title="空格子 27"]
+            div.dng.k-btn.m-ripple
+              img.o-ico [src="oriel:textures/icons/trash.png" style="height:16px;width:16px"]
+              span "全部清空"
+          div.k-div
+        div.k-card [data-card="stack"]
+          div.k-chead.m-spot
+            div.k-cico
+              img.o-ico [src="oriel:textures/icons/layers.png" style="height:16px;width:16px"]
+            div.k-ctx
+              div.k-ctitle
+                "最大堆叠"
+                span.k-badge [title="这一项和物品原版默认值不同"] "自定义"
+              div.k-cdesc "一格里最多能放多少个"
+            div.k-csum
+            div.k-cval "1 个/格"
+            div.k-reset [title="放弃这里的修改，使用物品原本的值"] "恢复默认"
+            span.k-swph
+            div.k-chev [title="折叠 / 展开"]
+              img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+          div.k-cbody.x-sliding [style="height:300px;opacity:1"]
+            div.k-num
+              div.k-numrow
+                div.k-stepper
+                  div.k-step [title="减少（按住 Shift 一次 ×10）"] "−"
+                  input.big.k-input.k-numin [type="text" value="1"]
+                  div.k-step [title="增加（按住 Shift 一次 ×10）"] "+"
+                  span.k-big [style="display:none"]
+                div.k-slider
+                  div.tr
+                  div.fl [style="width:0%"]
+                  div.th [style="left:0%"]
+              div.k-numerr [style="display:none"]
+              div.k-numwarn [style="display:none"]
+              div.k-presets
+                div.k-preset "1 不可堆叠"
+                div.k-preset "16"
+                div.k-preset "64 标准"
+                div.k-preset "99 上限"
+          div.k-div
+## footer
+div
+## overlays
+div
