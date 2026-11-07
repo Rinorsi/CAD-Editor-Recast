@@ -42,6 +42,7 @@ public final class RegistryBridge {
         initialize();
         if (driver.serverSession() || DOCUMENTS.containsKey(driver)) return;
         DOCUMENTS.put(driver, new State());
+        SearchChannel.attach(driver);
         DraftChannel.attach(driver);
         ComponentValidationChannel.attach(driver);
         driver.onMessage("registry", value -> request(driver, value));
@@ -59,7 +60,7 @@ public final class RegistryBridge {
                 .registerReloadListener(Identifier.parse("cadeditor:registry_invalidation"), (net.minecraft.server.packs.resources.ResourceManagerReloadListener) resources -> RELOAD.incrementAndGet());
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
                 long registryTickStart = System.nanoTime();
-                if (client.level == null) { world = null; warmup = null; return; }
+                if (client.level == null) { if (world != null) SearchChannel.reset("disconnected"); world = null; warmup = null; return; }
                 Object currentLanguage = net.minecraft.locale.Language.getInstance();
                 if (world != client.level || language != currentLanguage || observedReload != RELOAD.get()) {
                     world = client.level; language = currentLanguage; observedReload = RELOAD.get();
@@ -67,10 +68,12 @@ public final class RegistryBridge {
                     Map<String, java.util.function.Supplier<java.util.Iterator<JsonObject>>> sources = new java.util.LinkedHashMap<>();
                     RegistrySnapshot.KINDS.forEach((kind, path) -> sources.put("minecraft:" + path, () -> snapshot.iterator(Identifier.withDefaultNamespace(path))));
                     warmup = new RegistryWarmup(Long.toString(GENERATION.incrementAndGet()), sources);
+                    SearchChannel.reset(warmup.generation());
                     DOCUMENTS.values().forEach(state -> { state.generation = null; state.pages.clear(); state.interactive.clear(); state.waiting.clear(); });
                     RESOURCE_CACHE.clear();
                 }
                 warmup.tick();
+                SearchChannel.tick();
                 // A page-load hook precedes scripts; wait until listeners actually exist.
                 long pushStart = 0; int count = 0; String pushedKey = null;
                 for (var entry : java.util.List.copyOf(DOCUMENTS.entrySet())) {

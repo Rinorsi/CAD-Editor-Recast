@@ -16,7 +16,7 @@ $Cache = Join-Path $env:USERPROFILE '.gradle/caches/fabric-loom'
 $Mc = Join-Path $Cache 'minecraftMaven/net/minecraft/minecraft-merged-deobf/26.1.2/minecraft-merged-deobf-26.1.2.jar'
 $Runtime = @(Get-Content $ClasspathFile | ConvertFrom-Json)
 $Cp = (@($BaseJar,$Mc) + $Runtime) -join ';'
-$Sources = @(Get-ChildItem ($Root+'/fabric/src/main/java/dev/rinorsi/editor/registry/*.java') | ForEach-Object FullName)
+$Sources = @(Get-ChildItem ($Root+'/fabric/src/main/java/dev/rinorsi/editor/registry') -Recurse -Filter '*.java' | ForEach-Object FullName)
 $Sources += $Root+'/fabric/src/main/java/dev/rinorsi/editor/ComponentValidation.java'
 # Existing interactive Gradle runClient processes remain untouched; compile the registry package directly.
 if (!$UseReleaseJar) {

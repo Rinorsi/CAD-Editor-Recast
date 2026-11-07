@@ -69,6 +69,10 @@ public final class RegistrySnapshot {
         });
         return entries;
     }
+    /** Lazy live capture for the search service; sorting/index construction happen after detachment. */
+    public java.util.Iterator<JsonObject> tagIterator(Identifier registryId) {
+        return registry(registryId).getTags().map(tag -> { JsonObject row = tagLabel(tag.key()); row.addProperty("count",tag.size()); return row; }).iterator();
+    }
     public JsonArray tagMembers(Identifier registryId, Identifier tagId) {
         var tag = registry(registryId).getTags().filter(t -> t.key().location().equals(tagId)).findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("当前注册表没有标签: " + tagId));
@@ -101,6 +105,7 @@ public final class RegistrySnapshot {
     private <T> JsonObject serializeRow(Registry<T> registry, net.minecraft.core.Holder.Reference<T> holder) {
             Identifier id = holder.key().identifier(); T value = holder.value();
             JsonObject row = new JsonObject(); row.addProperty("id", id.toString());
+            JsonArray searchTags = new JsonArray(); holder.tags().forEach(tag -> searchTags.add(tag.location().toString())); row.add("tags", searchTags);
             row.addProperty("name", name(registry.key().identifier(), id, value));
             if (value instanceof TrimMaterial) {
                 JsonArray ingredients = new JsonArray();

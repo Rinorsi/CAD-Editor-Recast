@@ -46,7 +46,7 @@ public final class RegistryWarmup {
                 source = sources.next();
                 long sourceStart = System.nanoTime();
                 try { rows = source.getValue().get(); }
-                catch (RuntimeException error) { futures.put(source.getKey(), CompletableFuture.completedFuture(RegistryIndex.error(source.getKey(), generation, error))); rows = null; continue; }
+                catch (RuntimeException error) { futures.put(source.getKey(), CompletableFuture.completedFuture(error(source.getKey(), error))); rows = null; continue; }
                 finally { maxSourceNs = Math.max(maxSourceNs, System.nanoTime() - sourceStart); }
                 // Creating a lazy MC iterator and serializing its first row are separate slices.
                 break;
@@ -54,22 +54,22 @@ public final class RegistryWarmup {
             boolean hasNext;
             try { hasNext = rows.hasNext(); }
             catch (RuntimeException error) {
-                futures.put(source.getKey(), CompletableFuture.completedFuture(RegistryIndex.error(source.getKey(), generation, error)));
+                futures.put(source.getKey(), CompletableFuture.completedFuture(error(source.getKey(), error)));
                 captured = new ArrayList<>(); rows = null; continue;
             }
             if (hasNext) {
                 long rowStart = System.nanoTime(); count++;
                 try { captured.add(rows.next()); }
-                catch (RuntimeException error) { futures.put(source.getKey(), CompletableFuture.completedFuture(RegistryIndex.error(source.getKey(), generation, error))); captured = new ArrayList<>(); rows = null; }
+                catch (RuntimeException error) { futures.put(source.getKey(), CompletableFuture.completedFuture(error(source.getKey(), error))); captured = new ArrayList<>(); rows = null; }
                 finally { maxRowNs = Math.max(maxRowNs, System.nanoTime() - rowStart); }
             } else {
                 List<JsonObject> detached = captured; captured = new ArrayList<>();
                 String name = source.getKey();
                 try { futures.put(name, CompletableFuture.supplyAsync(() -> {
-                    try { return RegistryIndex.build(name, generation, detached); }
-                    catch (RuntimeException error) { return RegistryIndex.error(name, generation, error); }
+                    try { var index = RegistryIndex.build(name, generation, detached); if (!generation.equals("prime")) SearchChannel.offer(name, generation, detached); return index; }
+                    catch (RuntimeException error) { return error(name, error); }
                 }, WORKER)); }
-                catch (RejectedExecutionException error) { futures.put(name, CompletableFuture.completedFuture(RegistryIndex.error(name, generation, error))); }
+                catch (RejectedExecutionException error) { futures.put(name, CompletableFuture.completedFuture(error(name, error))); }
                 rows = null;
                 break;
             }
@@ -80,6 +80,7 @@ public final class RegistryWarmup {
         if (finished && ready.size() == futures.size()) completeNs = System.nanoTime();
     }
     public RegistryIndex index(String name) { return ready.get(name); }
+    private RegistryIndex error(String name,Throwable error) { if(!generation.equals("prime"))SearchChannel.failed(name,generation); return RegistryIndex.error(name,generation,error); }
     public boolean complete() { return completeNs != 0; }
     public String generation() { return generation; }
     public Map<String, RegistryIndex> indexes() { return Collections.unmodifiableMap(ready); }

@@ -9,6 +9,7 @@
 /logs/
 /daily/
 /.backend-b/
+/.search/
 fabric/versions/*/logs/
 fabric/versions/*/run/
 

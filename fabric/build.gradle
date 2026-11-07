@@ -100,6 +100,15 @@ tasks.register('clipboardTest', JavaExec) {
 }
 tasks.named('check') { dependsOn('clipboardTest') }
 
+tasks.register('searchTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.registry.search.SearchTest'
+    args rootProject.file('fabric/src/main/resources/assets/cadeditor/ui/js/pinyin-data.js').absolutePath
+    workingDir = rootProject.projectDir
+}
+tasks.named('check') { dependsOn('searchTest') }
+
 tasks.register('soundPreviewTest', JavaExec) {
     dependsOn codecVerificationClasses
     classpath = sourceSets.codecVerification.runtimeClasspath
