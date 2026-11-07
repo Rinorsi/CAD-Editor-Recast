@@ -18,9 +18,11 @@ import net.minecraft.world.level.storage.TagValueOutput;
 /** On-demand data, isolated from initial warmup and never added to the client level. */
 public final class EntityRegistryChannel {
     private static final AtomicLong GENERATION = new AtomicLong();
+    private static final AtomicLong SCHEMA_GENERATION = new AtomicLong();
+    public static void invalidateSchemas() { SCHEMA_GENERATION.incrementAndGet(); EntitySchemaValidation.invalidate(); }
     private EntityRegistryChannel() {}
     public static boolean supports(String name) {
-        return name.equals("entity_info") || name.startsWith("entity_info:")
+        return name.equals("entity_info") || name.startsWith("entity_info:") || name.equals("entity_schema") || name.startsWith("entity_schema:")
                 || name.equals("entity_base_attributes") || name.equals("equipment_slot_groups") || name.equals("spawner_info");
     }
     public static void request(JsonObject request, String name, BiConsumer<List<String>, JsonObject> reply) {
@@ -28,8 +30,9 @@ public final class EntityRegistryChannel {
         JsonObject context = new JsonObject();
         if (request.has("id") && request.get("id").isJsonPrimitive() && request.getAsJsonPrimitive("id").isString()) context.add("id", request.get("id"));
         if (name.startsWith("entity_info:")) context.addProperty("id", name.substring("entity_info:".length()));
+        if (name.startsWith("entity_schema:")) context.addProperty("id", name.substring("entity_schema:".length()));
         mc.execute(() -> {
-            String generation = "entity-" + GENERATION.incrementAndGet();
+            String generation = name.startsWith("entity_schema") ? "entity-schema-" + SCHEMA_GENERATION.get() : "entity-" + GENERATION.incrementAndGet();
             try {
                 JsonArray entries;
                 if (name.equals("equipment_slot_groups")) entries = EntityDefaults.slotGroups();
@@ -46,6 +49,11 @@ public final class EntityRegistryChannel {
                 } else {
                     if (mc.level == null) throw new IllegalStateException("没有客户端世界，无法读取实体/刷怪器模板");
                     if (name.equals("spawner_info")) entries = SpawnerData.entries(mc.level.registryAccess());
+                    else if (name.equals("entity_schema") || name.startsWith("entity_schema:")) {
+                        if (!context.has("id")) throw new IllegalArgumentException("缺少实体 id");
+                        var type=resolve(context.get("id").getAsString());entries=new JsonArray();
+                        entries.add(EntitySchemaValidation.schema(BuiltInRegistries.ENTITY_TYPE.getKey(type).toString(),mc.level));
+                    }
                     else {
                         if (!context.has("id")) throw new IllegalArgumentException("缺少实体 id");
                         var type = resolve(context.get("id").getAsString());

@@ -281,3 +281,11 @@ exclusive/supported/primary集合超过64成员或数组序列化超过4000字�
 - `oriel.send("registry",{name:"tag:item",id:"minecraft:logs"})`：registry.tag:item，entries为成员完整id字符串数组；每页额外带id（标签id）/field:"members"。同一注册表多标签请求须按id+generation区别，未知标签返回空页+error并保留id/field。后缀同样支持模组注册表。
 - `oriel.send("registry",{name:"equipment_asset"})`：registry.equipment_asset，entries=[{id,name}]，来自当前ResourceManager的equipment/**/*.json，去equipment/前缀和.json后缀，保留命名空间/子目录；资源包覆盖按最终可见资源去重。name=id。列出资源id，不读取任意文件或承诺该JSON一定可加载。
 - `oriel.send("registry",{name:"enum:dye_color"})`等：registry.enum:<name>，entries=[{id:序列化名,name:本地化名或id}]；支持use_animation、equipment_slot、equipment_slot_group、attribute_operation、rarity、firework_shape、consume_effect_type、dye_color、text_color。实际枚举直接values()/getSerializedName()；consume_effect_type实际是BuiltInRegistries.CONSUME_EFFECT_TYPE注册表，id带命名空间，包含模组注册类型；text_color只取ChatFormatting.isColor()，不含bold/reset等格式。dye_color带rgb=纹理diffuse RGB的24位整数，text_color带rgb=官方文字RGB整数。烟花形状用官方getName()，颜色使用color.minecraft.<id>翻译，其余无官方翻译时保留序列化id。
+
+## component_schema 与 component_validate（26.1.2）
+
+新增真实Codec结构派生接口，完整字段、限额、未知值和56项真实捕获见 [component-schema-contract.md](component-schema-contract.md)。registry请求 name=component_schema，可选id；或name=component_schema:minecraft:food。字面量顶层key为registry.<name>，使用既有分页信封。不会从测试快照提供生产数据。
+
+component_validate为新增只读消息，输入与validate_component相同，顶层component_validate.result在旧回执基础上增加errors:[{path,code,message}]和path_precision；旧validate_component保持不变。路径来自失败子树的真实Codec再解码；无法定位就返回根$。不会用字段树替代最终保存校验。
+
+本地客户端registry access派生，不访问远端文件；当前没有unavailable回执，availability:complete只表示推导完成，字段仍可能unknown。服务器独有/未同步信息不构成已核实。缓存按世界与generation失效。

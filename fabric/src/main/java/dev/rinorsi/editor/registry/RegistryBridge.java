@@ -49,8 +49,10 @@ public final class RegistryBridge {
         if (driver.serverSession() || DOCUMENTS.containsKey(driver)) return;
         DOCUMENTS.put(driver, new State());
         SearchChannel.attach(driver);
+        TooltipChannel.attach(driver);
         DraftChannel.attach(driver);
         ComponentValidationChannel.attach(driver);
+        ComponentSchemaChannel.attach(driver);
         driver.onMessage("registry", value -> request(driver, value));
         driver.onClose(() -> DOCUMENTS.remove(driver));
     }
@@ -66,10 +68,11 @@ public final class RegistryBridge {
                 .registerReloadListener(Identifier.parse("cadeditor:registry_invalidation"), (net.minecraft.server.packs.resources.ResourceManagerReloadListener) resources -> RELOAD.incrementAndGet());
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
                 long registryTickStart = System.nanoTime();
-                if (client.level == null) { if (world != null) SearchChannel.reset("disconnected"); world = null; warmup = null; return; }
+                if (client.level == null) { if (world != null) { SearchChannel.reset("disconnected"); EntityRegistryChannel.invalidateSchemas(); } world = null; warmup = null; return; }
                 Object currentLanguage = net.minecraft.locale.Language.getInstance();
                 if (world != client.level || language != currentLanguage || observedReload != RELOAD.get()) {
                     world = client.level; language = currentLanguage; observedReload = RELOAD.get();
+                    EntityRegistryChannel.invalidateSchemas();
                     var snapshot = snapshot();
                     LIVE_COUNTS=snapshot.catalogCounts();
                     Map<String, java.util.function.Supplier<java.util.Iterator<JsonObject>>> sources = new java.util.LinkedHashMap<>();
@@ -230,6 +233,11 @@ public final class RegistryBridge {
         if (!request.has("name") || !request.get("name").isJsonPrimitive() || !request.getAsJsonPrimitive("name").isString()) return;
         String raw = request.get("name").getAsString();
         if (raw.length() > 247) return;
+        if (ComponentSchemaChannel.supports(raw)) {
+            ComponentSchemaChannel.request(request, raw, Long.toString(GENERATION.get()),
+                    (pages, context) -> queuePages(driver, "registry." + raw, pages, context));
+            return;
+        }
         State negotiated=DOCUMENTS.get(driver);if(negotiated==null)return;
         negotiated.features.document(driver.document());
         java.util.List<String> features=new java.util.ArrayList<>();

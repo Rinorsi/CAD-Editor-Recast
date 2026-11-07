@@ -1,0 +1,30 @@
+gradle.projectsEvaluated {
+    def p = gradle.rootProject.project(':fabric:26.1.2')
+    def world = gradle.startParameter.projectProperties['finalGateWorld']
+    def day = java.time.LocalDate.now().toString()
+    def run = gradle.rootProject.file('../Oriel-UI-Workspace/daily/' + day + '/run/editor-mod-client')
+    def probe = p.tasks.register('finalGateProbeJar', Jar) {
+        dependsOn p.tasks.named('autotestClasses')
+        archiveFileName = 'cadeditor-final-gate-probe.jar'
+        destinationDirectory = p.layout.buildDirectory.dir('final-gate-probe')
+        from(p.sourceSets.autotest.output.classesDirs) {
+            include 'dev/rinorsi/editor/finalgate/**'
+            include 'dev/rinorsi/editor/probe/mixin/NoMouseCaptureMixin.class'
+            include 'dev/rinorsi/editor/registry/supplementmixin/RegistrySupplementWindowMixin.class'
+        }
+        from(gradle.rootProject.file('tools/final-gate/resources'))
+    }
+    if (world) {
+        def prepare = p.tasks.register('prepareFinalGateClient', Copy) { dependsOn probe; from(probe.flatMap { it.archiveFile }); into(new File(run,'mods')) }
+        p.tasks.named('runClient') { dependsOn prepare }
+        p.loom.runs.named('client') {
+            vmArg('-Deditor.autotest=final-gate')
+            vmArg('-Dcadeditor.finalGateCopiedWorld=true')
+            vmArg('-Dcadeditor.finalGateWorld=' + world)
+            vmArg('-Dcadeditor.finalGateCommit=' + gradle.startParameter.projectProperties.getOrDefault('finalGateCommit','working-tree'))
+            vmArg('-Dcadeditor.finalGateReceipt=' + gradle.rootProject.file('logs/final-gate/client-receipt.json').absolutePath)
+            programArg('--quickPlaySingleplayer'); programArg(world)
+            programArg('--username'); programArg('Player13')
+        }
+    }
+}

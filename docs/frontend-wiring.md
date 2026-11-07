@@ -355,3 +355,7 @@ enum 请求统一 {name:'enum:<下列名>'}，回复 registry.enum:<名>；条�
 - 历史整栈保存证明：logs/backend-b/backend-data-e2e.json（10类回执），不是本轮重新跑游戏的证明。
 
 本轮验证：独立 Java25 javac 编译全部主源码；FrontendWiringTest 319项、BackendDataTest 66项、EntityDataTest 106项，以及分页/发送队列回归通过。另用独立离屏静默客户端重跑注册表探针，46类请求、849个布尔检查通过（同一S路径的本轮新回执）；实际覆盖新增标签显示字段、枚举symbol、四种复数别名和标签成员。未跑Gradle、未重启/结束用户进程、未实连远程服、未重测真实服务器apply保存链。Java更新须重启相关端后才对前端生效。
+
+## Codec字段树与字段级校验
+
+新增component_schema / component_validate，接线以 [component-schema-contract.md](component-schema-contract.md) 为准。先取单组件字段树，unknown字段保留JSON/SNBT与手动输入，再用完整Codec的component_validate回执标注errors路径；不能凭schema中没有min/max就认为没有约束。详情包含max_stack_size、enchantments、attribute_modifiers、food、equippable、tool、container_loot、written_book_content的真实捕获和56项覆盖清单。

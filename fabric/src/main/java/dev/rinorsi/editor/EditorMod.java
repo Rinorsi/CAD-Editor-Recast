@@ -22,6 +22,8 @@ public final class EditorMod implements ModInitializer {
     private static EditorPolicy policy;
 
     @Override public void onInitialize() {
+        ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, manager, success) -> dev.rinorsi.editor.registry.EntitySchemaValidation.invalidate());
+        dev.rinorsi.editor.world.WorldEditor.initialize();
         TestKitCommand.register(() -> policy);
         PayloadTypeRegistry.serverboundPlay().register(EditorPackets.Request.TYPE, EditorPackets.Request.CODEC);
         PayloadTypeRegistry.clientboundPlay().register(EditorPackets.Reply.TYPE, EditorPackets.Reply.CODEC);
@@ -38,6 +40,8 @@ public final class EditorMod implements ModInitializer {
         String requestId = "";
         try {
             JsonObject request = JsonParser.parseString(json).getAsJsonObject();
+            request = dev.rinorsi.editor.world.WorldWire.decode(request);
+            if (dev.rinorsi.editor.world.WorldEditor.route(player, request, () -> policy)) return;
             requestId = StackCodec.string(request, "requestId");
             if (requestId.length() > 80) StackCodec.fail("请求编号过长");
             String operation = StackCodec.string(request, "op");
@@ -78,6 +82,7 @@ public final class EditorMod implements ModInitializer {
             var session = SESSIONS.apply(player.getUUID(), slot, optionalBaseline(request, "baseline"), current, player.registryAccess());
             if (missing) LOG.info("Editor apply recovered from unchanged baseline: {}", player.getUUID());
             ItemStack next = StackCodec.decode(request, player.registryAccess(), session.original);
+            dev.rinorsi.editor.registry.EntitySchemaValidation.validateStack(next, player.level());
             if (target.menuSlot != null && !target.menuSlot.mayPlace(next))
                 EditorSessions.fail("slot_invalid", "该槽位不接受此物品；草稿已保留");
             if (target.menuSlot != null && next.getCount() > target.menuSlot.getMaxStackSize(next))

@@ -14,87 +14,89 @@
 
 目标固定为MC **26.1.2**。ID和名称以 [data.js](../fabric/src/main/resources/assets/cadeditor/ui/js/data.js) 为底稿，变种名译成中文；形态对照 [审计脚本](../tools/audit-backend-status.cjs) 输出：CARDS关联为专用卡片，AUTO_BODY/SPEC_FORMS为专用表单，schema及自动头部控件为通用表单。含局部SNBT不等于整项仅SNBT；核不准的写未核实。
 
+component_schema来源只说明独立JVM核验的宿主Codec结构；full不代表玩法验收，partial/unknown仍有未导出约束，前端消费尚待接线。完整证据见 [component-schema-contract](component-schema-contract.md)。
+
 来源列“部分”只证明部分候选已接实时来源，不证明整个组件权威；“否”表示尚有手写数据充当权威来源；“未核实”缺少逐字段来源确认。全部组件仍须与实际持久组件全集、Codec核对；静态107项不能作为模组组件白名单。
 
 | 组件 id | 中文名 | 当前界面形态 | 数据来源是否权威 | 是否已验收 |
 |---|---|---|---|---|
-| `minecraft:custom_model_data` | 自定义模型数据 | 专用表单 | 未核实：约束/默认值 | [ ] 未核实 |
-| `minecraft:custom_name` | 自定义名称 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:dyed_color` | 染色 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:enchantment_glint_override` | 附魔光效 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:item_model` | 物品模型 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:item_name` | 基础名称 | 专用表单 | 未核实：约束/默认值 | [ ] 未核实 |
-| `minecraft:lore` | 说明文字 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:rarity` | 稀有度 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:tooltip_display` | 提示框显示 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:tooltip_style` | 提示框样式 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:custom_model_data` | 自定义模型数据 | 专用表单 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:custom_name` | 自定义名称 | 专用卡片 | authoritative: component_schema（结构 unknown；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:dyed_color` | 染色 | 专用卡片 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:enchantment_glint_override` | 附魔光效 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:item_model` | 物品模型 | 专用卡片 | authoritative: component_schema（结构 unknown；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:item_name` | 基础名称 | 专用表单 | authoritative: component_schema（结构 unknown；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:lore` | 说明文字 | 专用卡片 | authoritative: component_schema（结构 unknown；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:rarity` | 稀有度 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:tooltip_display` | 提示框显示 | 专用卡片 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:tooltip_style` | 提示框样式 | 专用表单 | authoritative: component_schema（结构 unknown；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:break_sound` | 损坏音效 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
-| `minecraft:damage` | 已损耗耐久 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:damage_resistant` | 免疫伤害 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:max_damage` | 最大耐久 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:max_stack_size` | 最大堆叠 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:repair_cost` | 铁砧惩罚 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:repairable` | 可修复材料 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:unbreakable` | 不可破坏 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:damage` | 已损耗耐久 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:damage_resistant` | 免疫伤害 | 专用卡片 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:max_damage` | 最大耐久 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:max_stack_size` | 最大堆叠 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:repair_cost` | 铁砧惩罚 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:repairable` | 可修复材料 | 专用卡片 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:unbreakable` | 不可破坏 | 专用卡片 | authoritative: component_schema（结构 unknown；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:attack_range` | 攻击范围 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:attribute_modifiers` | 属性修饰器 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:blocks_attacks` | 格挡 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:attribute_modifiers` | 属性修饰器 | 专用卡片 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:blocks_attacks` | 格挡 | 专用表单 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:damage_type` | 攻击伤害类型 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
 | `minecraft:kinetic_weapon` | 动能武器 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
 | `minecraft:minimum_attack_charge` | 最小攻击充能 | 通用表单 | 未核实：约束/默认值 | [ ] 未核实 |
 | `minecraft:piercing_weapon` | 穿刺武器 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
 | `minecraft:swing_animation` | 挥动动画 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:tool` | 工具 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:weapon` | 武器 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:enchantable` | 可附魔性 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:enchantments` | 附魔 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:stored_enchantments` | 存储的附魔 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:consumable` | 消耗行为 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:death_protection` | 死亡保护 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:food` | 食物 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:tool` | 工具 | 专用卡片 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:weapon` | 武器 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:enchantable` | 可附魔性 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:enchantments` | 附魔 | 专用卡片 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:stored_enchantments` | 存储的附魔 | 专用卡片 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:consumable` | 消耗行为 | 专用卡片 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:death_protection` | 死亡保护 | 专用卡片 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:food` | 食物 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:intangible_projectile` | 不可拾取投射物 | 通用表单 | 未核实：约束/默认值 | [ ] 未核实 |
 | `minecraft:ominous_bottle_amplifier` | 不祥之瓶强度 | 通用表单 | 未核实：约束/默认值 | [ ] 未核实 |
-| `minecraft:suspicious_stew_effects` | 谜之炖菜效果 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:use_cooldown` | 使用冷却 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:suspicious_stew_effects` | 谜之炖菜效果 | 专用卡片 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:use_cooldown` | 使用冷却 | 专用卡片 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:use_effects` | 使用时效果 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:use_remainder` | 使用后剩余 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:banner_patterns` | 旗帜图案 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
-| `minecraft:base_color` | 盾牌底色 | 通用表单 | 部分：实时染料枚举 | [ ] 未核实 |
-| `minecraft:equippable` | 可装备 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:glider` | 滑翔 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:use_remainder` | 使用后剩余 | 专用卡片 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:banner_patterns` | 旗帜图案 | 专用表单 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:base_color` | 盾牌底色 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:equippable` | 可装备 | 专用卡片 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:glider` | 滑翔 | 专用卡片 | authoritative: component_schema（结构 unknown；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:provides_banner_patterns` | 提供旗帜图案 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
 | `minecraft:provides_trim_material` | 提供纹饰材料 | 通用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
-| `minecraft:trim` | 盔甲纹饰 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:trim` | 盔甲纹饰 | 专用卡片 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:bees` | 蜜蜂 | 专用表单 | 未核实：约束/默认值 | [ ] 未核实 |
-| `minecraft:block_entity_data` | 方块实体数据 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:block_entity_data` | 方块实体数据 | 专用表单 | authoritative: component_schema（结构 unknown；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:block_state` | 方块状态 | 专用表单 | 未核实：约束/默认值 | [ ] 未核实 |
-| `minecraft:bucket_entity_data` | 桶内实体数据 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
-| `minecraft:bundle_contents` | 收纳袋内容 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:can_break` | 可破坏方块 | 专用表单 | 未核实：约束/默认值 | [ ] 未核实 |
-| `minecraft:can_place_on` | 可放置于 | 专用表单 | 未核实：约束/默认值 | [ ] 未核实 |
+| `minecraft:bucket_entity_data` | 桶内实体数据 | 专用表单 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:bundle_contents` | 收纳袋内容 | 专用卡片 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:can_break` | 可破坏方块 | 专用表单 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:can_place_on` | 可放置于 | 专用表单 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:charged_projectiles` | 已装填弹药 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
-| `minecraft:container` | 容器内容 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:container_loot` | 容器战利品 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
-| `minecraft:custom_data` | 自定义数据 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:container` | 容器内容 | 专用卡片 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:container_loot` | 容器战利品 | 专用表单 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:custom_data` | 自定义数据 | 专用表单 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:debug_stick_state` | 调试棒状态 | 专用表单 | 未核实：约束/默认值 | [ ] 未核实 |
-| `minecraft:entity_data` | 实体数据 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:entity_data` | 实体数据 | 专用表单 | authoritative: component_schema（结构 unknown；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:lock` | 容器锁 | 专用表单 | 未核实：约束/默认值 | [ ] 未核实 |
 | `minecraft:pot_decorations` | 陶罐装饰 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
-| `minecraft:profile` | 头颅档案 | 专用表单 | 未核实：约束/默认值 | [ ] 未核实 |
-| `minecraft:lodestone_tracker` | 磁石追踪 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
-| `minecraft:map_color` | 地图颜色 | 专用表单 | 未核实：约束/默认值 | [ ] 未核实 |
-| `minecraft:map_decorations` | 地图标记 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
-| `minecraft:map_id` | 地图编号 | 通用表单 | 未核实：约束/默认值 | [ ] 未核实 |
+| `minecraft:profile` | 头颅档案 | 专用表单 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:lodestone_tracker` | 磁石追踪 | 专用表单 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:map_color` | 地图颜色 | 专用表单 | authoritative: component_schema（结构 unknown；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:map_decorations` | 地图标记 | 专用表单 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:map_id` | 地图编号 | 通用表单 | authoritative: component_schema（结构 unknown；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:recipes` | 解锁配方 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
-| `minecraft:writable_book_content` | 书与笔内容 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:written_book_content` | 成书内容 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:writable_book_content` | 书与笔内容 | 专用卡片 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:written_book_content` | 成书内容 | 专用卡片 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:dye` | 染料 | 通用表单 | 部分：实时染料枚举 | [ ] 未核实 |
-| `minecraft:firework_explosion` | 烟花爆炸 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:fireworks` | 烟花 | 专用卡片 | 未核实 | [ ] 未核实 |
-| `minecraft:instrument` | 乐器 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
-| `minecraft:jukebox_playable` | 唱片 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
+| `minecraft:firework_explosion` | 烟花爆炸 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:fireworks` | 烟花 | 专用卡片 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:instrument` | 乐器 | 专用表单 | authoritative: component_schema（结构 unknown；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:jukebox_playable` | 唱片 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:note_block_sound` | 音符盒音效 | 专用表单 | 部分：实时注册表；结构待核实 | [ ] 未核实 |
-| `minecraft:potion_contents` | 药水内容 | 专用卡片 | 未核实 | [ ] 未核实 |
+| `minecraft:potion_contents` | 药水内容 | 专用卡片 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:potion_duration_scale` | 药水时长倍率 | 通用表单 | 未核实：约束/默认值 | [ ] 未核实 |
 | `minecraft:axolotl/variant` | 美西螈变种 | 通用表单 | 部分：实时枚举；离线回退 | [ ] 未核实 |
 | `minecraft:cat/collar` | 猫项圈颜色 | 通用表单 | 部分：实时染料枚举 | [ ] 未核实 |

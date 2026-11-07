@@ -51,6 +51,7 @@ public final class EditorClient implements ClientModInitializer {
     private static final String PAGE = "cadeditor:ui/index.html";
 
     @Override public void onInitializeClient() {
+        WorldEditorClient.initialize();
         dev.rinorsi.editor.registry.RegistryBridge.initialize();
         EditorPageController.register();
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> { EditorPrefs.flush(); uiLog.close(); });
@@ -87,7 +88,7 @@ public final class EditorClient implements ClientModInitializer {
 
     private void open() {
         var mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null || screen != null || opening != null) return;
+        if (mc.player == null || mc.level == null || screen != null || opening != null || WorldEditorClient.active()) return;
         try {
             if (mc.getResourceManager().getResource(Identifier.parse(PAGE)).isEmpty())
                 StackCodec.fail("缺少物品工坊页面 cadeditor:ui/index.html，请检查 Editor jar 是否包含界面资源");
@@ -186,6 +187,7 @@ public final class EditorClient implements ClientModInitializer {
             if (!EditorSessions.sameSlot(slot, StackCodec.object(edit, "slot")))
                 EditorSessions.fail("slot_invalid", "页面槽位与打开时不一致；草稿已保留");
             ItemStack next = StackCodec.decode(edit, mc.level.registryAccess(), original);
+            dev.rinorsi.editor.registry.EntitySchemaValidation.validateStack(next, mc.level);
             pending = requestId;
             deadline = System.nanoTime() + 10_000_000_000L;
             if (connected) {
@@ -226,6 +228,8 @@ public final class EditorClient implements ClientModInitializer {
         var mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
         JsonObject result = JsonParser.parseString(json).getAsJsonObject();
+        result = dev.rinorsi.editor.world.WorldWire.decode(result);
+        if (WorldEditorClient.receive(result)) return;
         String id = StackCodec.string(result, "requestId");
         String status = StackCodec.string(result, "status");
         if (opening != null && id.equals(opening)) {

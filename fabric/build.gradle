@@ -59,7 +59,8 @@ tasks.register('isolateEditorClient') {
                 def meta = archive.getEntry('fabric.mod.json')
                 if (meta != null) id = new groovy.json.JsonSlurper().parse(archive.getInputStream(meta)).id
             } finally { archive.close() }
-            if (id in ['editor_backend_probe', 'editor'] || (id == 'oriel' && candidate.name != 'oriel-fabric-26.1.2-0.11.0.jar')) {
+            if (id in ['editor_backend_probe', 'editor'] || (id == 'oriel' && candidate.name != 'oriel-fabric-26.1.2-0.11.0.jar')
+                    || (id == 'cadeditor_final_gate_probe' && !providers.gradleProperty('finalGateWorld').isPresent())) {
                 def quarantine = new File(daily, 'scratch/editor-mod/launcher-quarantine/' + candidate.name)
                 quarantine.parentFile.mkdirs()
                 java.nio.file.Files.move(candidate.toPath(), quarantine.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
@@ -149,3 +150,43 @@ tasks.register('catalogMemoryBench', JavaExec) {
     maxHeapSize = '3G'
     workingDir = rootProject.projectDir
 }
+
+// Native vanilla-tooltip projection; read-only, no client window in this check.
+tasks.register('tooltipTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.registry.TooltipPreviewTest'
+    workingDir = rootProject.projectDir
+}
+tasks.named('check') { dependsOn('tooltipTest') }
+
+// Live-Codec schema snapshot drift gate; never regenerate snapshots implicitly.
+tasks.register('componentSchemaTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.registry.ComponentSchemaTest'
+    workingDir = rootProject.projectDir
+}
+tasks.named('check') { dependsOn('componentSchemaTest') }
+
+// World/editor schema checks use real factories in a non-ticking JVM level.
+['entitySchemaTest': true, 'entitySchemaServerTest': false].each { taskName, clientSide ->
+    tasks.register(taskName, JavaExec) {
+        dependsOn codecVerificationClasses
+        classpath = sourceSets.codecVerification.runtimeClasspath
+        mainClass = 'dev.rinorsi.editor.registry.EntitySchemaTest'
+        workingDir = rootProject.projectDir
+        jvmArgs '-Djava.awt.headless=true', '-Dcadeditor.schema.client=' + clientSide
+        args rootProject.file('logs/final-gate/entity-schema-' + (clientSide ? 'client' : 'server') + '.json').absolutePath
+        doFirst { rootProject.file('logs/final-gate').mkdirs() }
+    }
+    tasks.named('check') { dependsOn(taskName) }
+}
+tasks.register('worldEditTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.registry.WorldEditTest'
+    workingDir = rootProject.projectDir
+    args rootProject.file('logs/final-gate/world-edit').absolutePath
+}
+tasks.named('check') { dependsOn('worldEditTest') }
