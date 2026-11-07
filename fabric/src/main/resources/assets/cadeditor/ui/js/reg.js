@@ -9,7 +9,7 @@ var Reg = {
     if (key === 'validate_component.result') { if (typeof Valid !== 'undefined') Valid.receive(val); return; }
     if (typeof key !== 'string' || key.indexOf('registry.') !== 0) return;
     if (key === 'registry.client_features') { if (val && val.accepted) this.features = val.accepted; if (val && val.lazy) this.setLazy(val.lazy); this.fire(); return; }
-    if (key === 'registry.meta') { this.meta = val; this.cache = {}; if (val && val.lazy) this.setLazy(val.lazy); this.fire(); return; }
+    if (key === 'registry.meta') { this.meta = val; this.cache = {}; this.eschema = {}; this.esAsk = {}; if (val && val.lazy) this.setLazy(val.lazy); this.fire(); return; }
     if (!val || typeof val !== 'object') return;
     if (key === 'registry.relation') { this.ingestRel(val); return; }
     var kind = key.substring(9), k = this.kinds[kind];
@@ -19,6 +19,7 @@ var Reg = {
     if (kind === 'item_meta_one' || kind === 'item_meta') { this.ingestIM(kind, val); return; }
     if (kind === 'entity_base_attributes') { this.ingestEB(val); return; }
     if (kind === 'entity_info' || kind.indexOf('entity_info:') === 0) { this.ingestEI(val); return; }
+    if (kind === 'entity_schema' || kind.indexOf('entity_schema:') === 0) { this.ingestES(val); return; }
     if (kind.indexOf('tag:') === 0) { this.ingestTag(kind, val); return; }
     if (!k || k.gen !== val.generation) { k = this.kinds[kind] = { gen: val.generation, entries: [], total: val.total || 0, done: false, name: val.name }; delete this.cache[kind]; }
     var off = val.offset || 0, ents = val.entries || [];
@@ -114,6 +115,23 @@ var Reg = {
     var p = this.einfo[full];
     if (p !== undefined) return p;
     if (!this.eiAsk[full] && typeof oriel !== 'undefined' && oriel.send) { this.eiAsk[full] = 1; oriel.send('registry', { name: 'entity_info', id: full }); }
+    return null;
+  },
+  /* 实体能改什么（entity_schema）：变种、常用开关、装备槽。按需请求；离线 / 未知实体 = false，还在等 = null，
+     工厂不可用 = {available:false}。世界或语言换了（registry.meta 重新推送）就重新要 */
+  eschema: {}, esAsk: {},
+  ingestES: function (v) {
+    var ents = v.entries || [];
+    ents.forEach(function (e) { if (e && e.id) Reg.eschema[Reg.full(e.id)] = e; });
+    if (v.id && !ents.length) Reg.eschema[this.full(v.id)] = v.error ? { id: this.full(v.id), available: false, error: String(v.error) } : false;
+    this.fire('entity_schema');
+  },
+  entitySchema: function (full) {
+    if (!this.live()) return false;
+    full = this.full(full);
+    var p = this.eschema[full];
+    if (p !== undefined) return p;
+    if (!this.esAsk[full] && typeof oriel !== 'undefined' && oriel.send) { this.esAsk[full] = 1; oriel.send('registry', { name: 'entity_schema', id: full }); }
     return null;
   },
   /* 物品元信息（item_meta_one / item_meta）：武器 / 工具 / 食物 / 盔甲槽 / 容器格数 / 收纳袋容量 / 刷怪蛋实体 等事实。

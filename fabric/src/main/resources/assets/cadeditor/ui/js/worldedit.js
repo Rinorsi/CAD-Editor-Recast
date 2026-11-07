@@ -41,6 +41,7 @@ function weTabs() {
   var w = WE.w, t = [];
   if (w.container && w.container.slots) t.push({ id: 'container', label: '容器', icon: 'chest' });
   if (w.kind === 'block' && (w.type === 'minecraft:mob_spawner' || w.type === 'minecraft:trial_spawner')) t.push({ id: 'spawner', label: '刷怪设置', icon: 'paw' });
+  if (w.kind === 'entity') t.push({ id: 'entity', label: '属性', icon: 'paw' });
   t.push({ id: 'data', label: '数据', icon: 'code' });
   return t;
 }
@@ -93,6 +94,7 @@ function drawWorldScreen() {
   host.appendChild(hero); host.appendChild(right);
   if (WE.tab === 'container') weContainerTab(body);
   else if (WE.tab === 'spawner') weSpawnerTab(body);
+  else if (WE.tab === 'entity') weEntityTab(body);
   else weDataTab(body);
 }
 
@@ -136,15 +138,28 @@ function weContainerTab(body) {
 }
 function weOrigEmpty(i) { var s = WE.w.container.slots.filter(function (x) { return x.slot === i; })[0]; return !s || s.stack.empty; }
 
+/* 表单页用的对象：从当前文本取（「数据」页改过的内容不丢）；写回时按当前文本的类型合并，没动的字段原样保留 */
+function weObj() {
+  if (!WE.obj) { try { WE.obj = nbtToJson(nbtParse(WE.text)); } catch (e) { WE.obj = clone(WE.w.nbt) || {}; } }
+  return WE.obj;
+}
+function wePut() {
+  var ref; try { ref = nbtParse(WE.text); } catch (e) { ref = nbtParse(WE.w.snbt); }
+  try { WE.text = nbtPrint(nbtParse(nbtMerge(WE.obj, ref)), true); WE.err = ''; } catch (e) { WE.err = String(e.message || e); }
+  drawWorldTop(); drawWorldFoot();
+}
+
 /* ---------- 刷怪笼：直接复用物品里的刷怪笼页（spawn.js），数据换成这个方块实体的 NBT ---------- */
 function weSpawnerTab(body) {
-  var w = WE.w;
-  if (!WE.obj) { try { WE.obj = clone(w.nbt); } catch (e) { WE.obj = {}; } }
-  var put = function () {
-    try { WE.text = nbtPrint(nbtParse(nbtMerge(WE.obj, nbtParse(w.snbt))), true); WE.err = ''; } catch (e) { WE.err = String(e.message || e); }
-    drawWorldTop(); drawWorldFoot();
-  };
-  if (w.type === 'minecraft:trial_spawner') buildTrialSpawner(body, WE.obj, w.type, put); else buildMobSpawner(body, WE.obj, w.type, put);
+  var w = WE.w, obj = weObj();
+  if (w.type === 'minecraft:trial_spawner') buildTrialSpawner(body, obj, w.type, wePut); else buildMobSpawner(body, obj, w.type, wePut);
+}
+
+/* ---------- 实体：变种、常用开关、装备（eschema.js，数据来自游戏的 entity_schema）；其余字段在「数据」页 ---------- */
+function weEntityTab(body) {
+  weObj();
+  body.appendChild(esPanel({ type: WE.w.type, get: function () { return WE.obj; }, set: function (o) { WE.obj = o; wePut(); } }));
+  body.appendChild(h('div', { class: 'k-sub', text: '位置、UUID 等其余字段在「数据」页用 SNBT 编辑。' }));
 }
 
 /* ---------- 数据：完整 SNBT（带类型），改完点应用 ---------- */
@@ -196,3 +211,5 @@ function weSaved(world) {
   var keepTab = WE.tab;
   weOpen(world); WE.tab = weTabs().some(function (t) { return t.id === keepTab; }) ? keepTab : weTabs()[0].id; weRender();
 }
+/* 世界实体页：entity_schema 到了再画一次（物品页的重画在 app.js，世界页没有物品文档，要自己接） */
+Reg.on(function (kind, kinds) { if (weActive() && WE.tab === 'entity' && (kinds || [kind]).indexOf('entity_schema') >= 0 && !$('modal')) { try { drawWorldScreen(); } catch (e) {} } });

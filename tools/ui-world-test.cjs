@@ -30,7 +30,7 @@ const root=new Element('body'),overlays=new Element('div');overlays.id='overlays
 const doc={body:root,activeElement:null,addEventListener(){},createElement(tag){return new Element(tag);},createTextNode(t){const el=new Element('text');el.textContent=t;return el;},getElementById(id){return root.querySelector('#'+id);}};
 const c=vm.createContext({document:doc,window:{innerWidth:760,innerHeight:560},console,setTimeout(){},clearTimeout(){},oriel:{data:{},send(){return true;}}});
 const dir=path.resolve(__dirname,'../fabric/src/main/resources/assets/cadeditor/ui/js');
-for(const f of ['data','core','pinyin-data','search','forms','kit','kit2','nbt','xlist','reg','hostsearch','picker','cards1','cards2','cards3','cards5','world','rules','spawn','screens','worldedit'])vm.runInContext(fs.readFileSync(path.join(dir,f+'.js'),'utf8'),c);
+for(const f of ['data','core','pinyin-data','search','forms','kit','kit2','nbt','xlist','reg','hostsearch','picker','cards1','cards2','cards3','cards5','world','rules','spawn','eschema','screens','worldedit'])vm.runInContext(fs.readFileSync(path.join(dir,f+'.js'),'utf8'),c);
 c.uiIcon=()=>new Element('i');c.itemIcon=()=>new Element('i');c.uiClick=()=>{};c.snd=()=>{};c.toast=()=>{};
 let saved,disabled=0,writes=0;
 c.autoPut=(cid,value)=>{saved=JSON.parse(JSON.stringify(value));writes++;};
@@ -418,3 +418,101 @@ console.log('PASS tooltip preview: host lines, fallback.');
   c.WE.w = null;
 }
 console.log('PASS world edit: container slots, typed SNBT apply, rejected keeps draft.');
+
+// 实体 schema：变种 / 开关 / 装备来自游戏采集的真实 entity_schema（docs/entity-schema-examples-26.1.2.json）
+{
+  const ex = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../docs/entity-schema-examples-26.1.2.json'), 'utf8'));
+  const one = k => { const e = ex[k]; return e.entries ? e.entries[0] : e; };
+  const sent = []; c.oriel.send = (k, v) => { sent.push([k, v]); return true; };
+  c.Reg.meta = {}; c.Reg.kinds = {}; c.Reg.eschema = {}; c.Reg.esAsk = {};
+  // 请求：没到之前是 null，只发一次；回来后可用；未知实体 = false；工厂不可用带原因
+  assert.equal(c.Reg.entitySchema('cat'), null);
+  c.Reg.entitySchema('minecraft:cat');
+  assert.deepEqual(sent.filter(x => x[0] === 'registry').map(x => x[1].name + '|' + x[1].id), ['entity_schema|minecraft:cat']);
+  c.Reg.ingest('registry.entity_schema', { version: 1, name: 'entity_schema', generation: 'entity-schema-1', id: 'minecraft:cat', offset: 0, total: 1, entries: [one('cat')], done: true });
+  assert.equal(c.Reg.entitySchema('cat').id, 'minecraft:cat');
+  c.Reg.ingest('registry.entity_schema', { name: 'entity_schema', id: 'mod:nope', entries: [], done: true });
+  assert.equal(c.Reg.entitySchema('mod:nope'), false);
+  c.Reg.ingest('registry.entity_schema', { name: 'entity_schema', id: 'mod:broken', entries: [], error: '工厂不可用', done: true });
+  assert.equal(c.Reg.entitySchema('mod:broken').available, false);
+  ['sheep', 'zombie', 'armor_stand'].forEach(k => c.Reg.ingest('registry.entity_schema', { name: 'entity_schema', id: 'minecraft:' + k, entries: [one(k)], done: true }));
+
+  let data = {}; const panel = type => c.esPanel({ type, get: () => data, set: o => { data = JSON.parse(JSON.stringify(o)); } });
+  const row = (el, t) => el.querySelectorAll('.k-xrow').find(r => r.querySelector('.z').textContent === t);
+  // 猫：品种 / 项圈 / 幼年 / 没有 AI / 生命值
+  let p = panel('minecraft:cat');
+  for (const t of ['品种', '项圈颜色', '叫声', '没有 AI', '幼年', '生命值', '主手']) assert.ok(row(p, t), '有「' + t + '」');
+  row(p, '没有 AI').querySelector('.k-toggle').fire('click');
+  assert.equal(data.NoAI, 1);
+  row(p, '没有 AI').querySelector('.k-toggle').fire('click');
+  assert.equal(data.NoAI, undefined, '关回默认就不写');
+  row(p, '幼年').querySelector('.k-toggle').fire('click');
+  assert.equal(data.Age, -24000, '幼年写游戏给的 babyAge，不写探测样本 -1');
+  let picked; c.pickFrom = (a, entries, fn) => { picked = entries; fn(entries.find(e => e.v === 'minecraft:red')); };
+  row(p, '品种').querySelector('.k-sel').fire('click');
+  assert.equal(data.variant, 'minecraft:red');
+  assert.ok(picked.some(e => e.label === '手动输入…'), '选择器带手动输入');
+  // 名字：文本组件，清空就删掉
+  const nameIn = row(p, '名字').querySelector('input'); nameIn.value = '小黑'; nameIn.fire('input');
+  assert.deepEqual(data.CustomName, { text: '小黑' });
+  nameIn.value = ''; nameIn.fire('input'); assert.equal(data.CustomName, undefined);
+  // 装备：主手放钻石剑
+  c.pickItem = (a, fn) => fn('diamond_sword');
+  row(p, '主手').querySelector('.k-btn').fire('click');
+  assert.deepEqual(data.equipment.mainhand, { id: 'minecraft:diamond_sword', count: 1 });
+  // 盔甲架：手持槽需要先显示手臂，选物品时一并写上
+  data = {}; p = panel('minecraft:armor_stand');
+  assert.ok(/显示手臂/.test(row(p, '主手').textContent));
+  row(p, '主手').querySelector('.k-btn').fire('click');
+  assert.equal(data.ShowArms, 1); assert.equal(data.equipment.mainhand.id, 'minecraft:diamond_sword');
+  // 共用整数的变种按 mask 合并（马的毛色与斑纹都在 Variant 里）
+  const horse = { id: 'minecraft:horse', available: true, variants: [
+    { id: 'minecraft:horse/variant', kind: 'enum', nbt: { path: ['Variant'], valueFormat: 'snbt', mask: 7 }, default: 0, options: [{ value: 0, snbt: '0', label: 'white' }, { value: 2, snbt: '2', label: 'chestnut' }] },
+    { id: 'horse/markings', kind: 'enum', nbt: { path: ['Variant'], valueFormat: 'snbt', mask: 1792 }, default: 0, options: [{ value: 0, snbt: '0', label: 'none' }, { value: 512, snbt: '512', label: 'white_field' }] }], equipment: [], flags: [] };
+  c.Reg.eschema['minecraft:horse'] = horse;
+  data = { Variant: 512 }; p = panel('minecraft:horse');
+  c.pickFrom = (a, entries, fn) => fn(entries.find(e => e.v === 2));
+  p.querySelectorAll('.k-sel')[0].fire('click');
+  assert.equal(data.Variant, 514, '改毛色不覆盖斑纹');
+  // 史莱姆：范围大的整数用数字框，显示的是实际尺寸，保存值 = 尺寸 - 1
+  c.Reg.eschema['minecraft:slime'] = { id: 'minecraft:slime', available: true, equipment: [], flags: [], variants: [{ id: 'slime/size', kind: 'int', nbt: { path: ['Size'], mask: 127 }, default: 0, min: 0, max: 126, semanticMin: 1, semanticMax: 127, options: Array.from({ length: 127 }, (_, i) => ({ value: i, snbt: String(i), label: String(i + 1) })) }] };
+  data = {}; p = panel('minecraft:slime');
+  const sz = row(p, '大小').querySelector('.k-numin'); assert.equal(sz.value, '1');
+  sz.value = '5'; sz.fire('input'); sz.fire('change'); assert.equal(data.Size, 4);
+  // 离线 / 读不到：说明原因，不画假选项
+  c.Reg.meta = null; p = panel('minecraft:cat'); assert.ok(/没有连接游戏/.test(p.textContent)); c.Reg.meta = {};
+  p = panel('mod:broken'); assert.ok(/工厂不可用/.test(p.textContent));
+
+  // 刷怪蛋页：上面控件管的字段不在「其他数据」里重复，原始字段改不了它们
+  let doc2 = c.makeDoc({ id: 'minecraft:cat_spawn_egg' }); const comps = doc2.comps;
+  c.Store.doc = () => doc2; c.Ctx.doc = () => doc2; c.Ctx.get = cid => comps[cid] === undefined ? undefined : JSON.parse(JSON.stringify(comps[cid]));
+  c.Ctx.setSmart = (cid, v) => { comps[cid] = JSON.parse(JSON.stringify(v)); };
+  c.Reg.imeta['minecraft:cat_spawn_egg'] = { id: 'minecraft:cat_spawn_egg', spawn_egg_entity: 'minecraft:cat' };
+  c.Reg.einfo['minecraft:cat'] = { id: 'minecraft:cat', attributes: {} };
+  comps.entity_data = { id: 'minecraft:cat', NoAI: 1, Tag: 'keep' };
+  const egg = c.CARDS.spawnEgg();
+  const mapTitles = egg.body.querySelectorAll('.world-map')[0].querySelectorAll('.z').map(x => x.textContent);
+  assert.deepEqual(mapTitles, ['Tag'], 'NoAI 由开关管，不在原始字段里重复');
+  row(egg.body, '静音').querySelector('.k-toggle').fire('click');
+  assert.deepEqual(comps.entity_data, { id: 'minecraft:cat', NoAI: 1, Tag: 'keep', Silent: 1 }, '开关写入并保留其他字段');
+
+  // 世界实体页：「属性」页改开关，写回的 SNBT 保留原有类型（Health 仍是 float，UUID 仍是 int 数组）
+  for (const id of ['win', 'topbar', 'screen', 'footer']) { if (!root.querySelector('#' + id)) { const e = doc.createElement('div'); e.id = id; root.appendChild(e); } }
+  c.Store.doc = () => null;
+  const w = { kind: 'entity', type: 'minecraft:cat', slot: { kind: 'entity', uuid: 'u', token: 'tk' }, revision: 'r1', canUndo: false,
+    snbt: '{id:"minecraft:cat",Health:10.0f,UUID:[I;1,2,3,4],Pos:[1.0d,64.0d,2.0d],variant:"minecraft:black"}', nbt: {} };
+  c.weOpen(w);
+  assert.ok(c.weTabs().some(t => t.id === 'entity'));
+  c.WE.tab = 'entity'; c.weRender();
+  const scr = root.querySelector('#screen');
+  row(scr, '没有 AI').querySelector('.k-toggle').fire('click');
+  assert.ok(c.weDirty());
+  const txt = c.nbtPrint(c.nbtParse(c.WE.text), false);
+  assert.ok(txt.includes('NoAI:1') && txt.includes('Health:10.0f') && txt.includes('UUID:[I;1,2,3,4]') && txt.includes('Pos:[1.0d,64.0d,2.0d]'), txt);
+  // 先在「数据」页改文本，再切到「属性」页：文本里的改动不丢
+  c.weOpen(w); c.WE.text = c.WE.text.replace('Health: 10.0f', 'Health: 3.0f'); c.WE.obj = null; c.WE.tab = 'entity'; c.weRender();
+  row(root.querySelector('#screen'), '静音').querySelector('.k-toggle').fire('click');
+  assert.ok(c.nbtPrint(c.nbtParse(c.WE.text), false).includes('Health:3.0f'), '数据页的改动保留');
+  c.WE.w = null; c.Reg.meta = null; c.Reg.kinds = {}; c.Reg.eschema = {}; c.Reg.imeta = {}; c.Reg.einfo = {};
+}
+console.log('PASS entity schema: request/cache, variants with mask merge, flags, baby age, name component, equipment requires, spawn egg raw dedupe, world entity typed write-back.');

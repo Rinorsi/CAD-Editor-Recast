@@ -1,5 +1,5 @@
 /* 刷怪蛋 / 刷怪笼 / 试炼刷怪笼。
-   数据全部来自游戏：entity_info（属性）、item_meta（默认实体、方块实体类型）、spawner_info（字段与默认值）。
+   数据全部来自游戏：entity_info（属性）、entity_schema（变种、常用开关、装备，见 eschema.js）、item_meta（默认实体、方块实体类型）、spawner_info（字段与默认值）。
    刷怪笼写在 block_entity_data 里（id = 方块实体类型，不是物品 ID）；数值范围对应游戏的 SpawnerData 校验，
    最终以 apply 时宿主的整栈校验为准。 */
 
@@ -43,18 +43,31 @@ CARDS.spawnEgg = function () {
       });
       if (!any) card.body.appendChild(xEmpty('这只生物没有可显示的基础属性'));
     }
-    /* 生成时带上的数据（NoAI、CustomName 等）；id 由上面的选择器管 */
-    var rest = isObj(ed) ? clone(ed) : {}; delete rest.id;
-    var sug = kBtn('常用字段', function () {
-      suggestEntityFields(id, function (k) { return Object.prototype.hasOwnProperty.call(rest, k); }, function (k, val) { try { mapEl.addField(k, val); } catch (e) { toast(e.message || String(e), 'warn'); } }, sug);
-    }, { title: '从这只生物的默认数据里挑字段' });
-    var mapEl = worldMap(rest, function (x) {
-      if (Object.prototype.hasOwnProperty.call(x, 'id')) throw new Error('生物请通过上方选择器修改');
-      var o = clone(x); if (id) o.id = Reg.full(id); writeData(o);
-    }, false);
-    card.body.appendChild(worldSection('生成时带上的数据', sug));
-    card.body.appendChild(mapEl);
+    /* 变种、常用开关、装备：来自游戏的 entity_schema */
+    var rawBox = h('div');
+    var panel = esPanel({ type: id, get: function () { return Ctx.get('entity_data'); }, set: function (o) { if (id) o.id = Reg.full(id); writeData(o); }, changed: drawRaw });
+    card.body.appendChild(panel);
+    card.body.appendChild(rawBox);
     card.body.appendChild(Valid.badge('entity_data'));
+    /* 其余字段（原始数据）；id 由上面的选择器管，上面控件管的字段不重复显示 */
+    function drawRaw() {
+      clear(rawBox);
+      var owned = esOwnedKeys(id ? Reg.entitySchema(id) : null), cur = isObj(Ctx.get('entity_data')) ? Ctx.get('entity_data') : {};
+      var rest = {}; Object.keys(cur).forEach(function (k) { if (k !== 'id' && !owned[k]) rest[k] = cur[k]; });
+      var sug = kBtn('常用字段', function () {
+        suggestEntityFields(id, function (k) { return owned[k] || Object.prototype.hasOwnProperty.call(rest, k); }, function (k, val) { try { mapEl.addField(k, val); } catch (e) { toast(e.message || String(e), 'warn'); } }, sug);
+      }, { title: '从这只生物的默认数据里挑字段' });
+      var mapEl = worldMap(rest, function (x) {
+        if (Object.prototype.hasOwnProperty.call(x, 'id')) throw new Error('生物请通过上方选择器修改');
+        Object.keys(x).forEach(function (k) { if (owned[k]) throw new Error(k + ' 请在上面的设置里修改'); });
+        var base = isObj(Ctx.get('entity_data')) ? Ctx.get('entity_data') : {}, o = clone(x);
+        Object.keys(base).forEach(function (k) { if (owned[k]) o[k] = base[k]; });
+        if (id) o.id = Reg.full(id); writeData(o); panel.redraw();
+      }, false);
+      rawBox.appendChild(worldSection('其他数据', sug));
+      rawBox.appendChild(mapEl);
+    }
+    drawRaw();
   }
   draw();
   return card;
