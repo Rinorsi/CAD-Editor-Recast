@@ -30,7 +30,7 @@ const root=new Element('body'),overlays=new Element('div');overlays.id='overlays
 const doc={body:root,activeElement:null,addEventListener(){},createElement(tag){return new Element(tag);},createTextNode(t){const el=new Element('text');el.textContent=t;return el;},getElementById(id){return root.querySelector('#'+id);}};
 const c=vm.createContext({document:doc,window:{innerWidth:760,innerHeight:560},console,setTimeout(){},clearTimeout(){},oriel:{data:{},send(){return true;}}});
 const dir=path.resolve(__dirname,'../fabric/src/main/resources/assets/cadeditor/ui/js');
-for(const f of ['data','core','pinyin-data','search','forms','kit','kit2','nbt','xlist','reg','hostsearch','picker','cards1','cards2','cards3','cards5','world','rules','spawn','eschema','screens','worldedit','worldview','vault'])vm.runInContext(fs.readFileSync(path.join(dir,f+'.js'),'utf8'),c);
+for(const f of ['data','core','pinyin-data','search','forms','kit','kit2','nbt','xlist','reg','hostsearch','picker','cards1','cards2','cards3','cards5','world','rules','spawn','eschema','screens','worldedit','worldview','worldentity','vault'])vm.runInContext(fs.readFileSync(path.join(dir,f+'.js'),'utf8'),c);
 c.uiIcon=()=>new Element('i');c.itemIcon=()=>new Element('i');c.uiClick=()=>{};c.snd=()=>{};c.toast=()=>{};
 let saved,disabled=0,writes=0;
 c.autoPut=(cid,value)=>{saved=JSON.parse(JSON.stringify(value));writes++;};
@@ -773,3 +773,42 @@ console.log('PASS live component ranges override hand-written ones.');
   c.WE.w = null;
 }
 console.log('PASS block views, block state, command block mode, volatile-friendly diffs.');
+
+// 世界实体：盔甲架姿势 / 展示框 / 展示实体 / 交易 / 乘客，按契约发 apply.entity 与 apply.riding
+{
+  const sent = []; c.oriel.send = (k, v) => { sent.push([k, v]); return true; };
+  const last = () => sent.filter(x => x[0] === 'apply').pop()[1];
+  const mk = (type, views) => ({ kind: 'entity', type, slot: { kind: 'entity', dim: 'minecraft:overworld', uuid: 'u', token: 't' }, revision: 'r', canUndo: false, snbt: '{id:"' + type + '"}', nbt: {}, views });
+  const riding = { passengers: [{ type: 'minecraft:cat', uuid: 'cat-1', summary: 'Cat', passengers: [] }], vehicle: null, rideCheck: {} };
+  const stand = mk('minecraft:armor_stand', { pose: { Head: [10, 20, 30], Body: [0, 0, 0], LeftArm: [-10, 0, -10], RightArm: [-15, 0, 10], LeftLeg: [-1, 0, -1], RightLeg: [1, 0, 1], Marker: false, Small: false, ShowArms: false, Invisible: false, NoBasePlate: false, schema: { fields: { Head: { default: [0, 0, 0] } } } }, riding });
+  c.weOpen(stand); assert.deepEqual(Array.from(c.weTabs(), t => t.id), ['pose', 'entity', 'riding', 'data']);
+  c.WE.tab = 'pose'; c.weRender();
+  assert.equal(c.evVal('pose').Head[1], 20); assert.equal(c.evVal('pose').schema, undefined, 'schema 不当数据');
+  c.evSet('pose', 'Head', [10, 45, 30]); c.evSet('pose', 'ShowArms', true);
+  c.WE.pending = null; c.weApply(); const ap = last();
+  assert.equal(JSON.stringify(ap.entity.pose), '{"Head":[10,45,30],"ShowArms":true}', '只发改过的'); assert.equal(ap.snbt, undefined);
+  c.evSet('pose', 'Head', [10, 20, 30]); c.evSet('pose', 'ShowArms', false); assert.equal(c.weDirty(), false, '改回原值不算改');
+  // 乘客：独立 apply.riding，别的修改没提交时拒绝
+  c.WE.tab = 'riding'; c.weRender();
+  c.WE.pending = null; c.evRideSend({ action: 'remove', uuid: 'cat-1' }); assert.deepEqual(JSON.parse(JSON.stringify(last().riding)), { action: 'remove', uuid: 'cat-1' }); assert.equal(last().entity, undefined);
+  const n0 = sent.length; c.evSet('pose', 'Small', true); c.WE.pending = null; c.evRideSend({ action: 'eject' }); assert.equal(sent.length, n0, '有草稿时不发乘客操作');
+  // 展示框
+  const fr = mk('minecraft:item_frame', { item_frame: { Fixed: false, Invisible: false, ItemDropChance: 1, ItemRotation: 0, item: { empty: true }, schema: { fields: { ItemRotation: { max: 7 } } } }, riding });
+  c.weOpen(fr); assert.equal(c.weTabs()[0].id, 'frame'); c.evSet('item_frame', 'ItemRotation', 3); c.evSet('item_frame', 'item', { id: 'minecraft:diamond', count: 1, comps: {}, removed: {} });
+  c.WE.pending = null; c.weApply(); assert.equal(last().entity.item_frame.ItemRotation, 3); assert.equal(last().entity.item_frame.item.id, 'minecraft:diamond');
+  // 文字展示：不透明度按 0..255 显示、有符号 byte 提交
+  const td = mk('minecraft:text_display', { display: { billboard: 'fixed', text: 'hi', text_opacity: -1, alignment: 'center', line_width: 200, transformation: { translation: [0, 0, 0], scale: [1, 1, 1], left_rotation: [0, 0, 0, 1], right_rotation: [0, 0, 0, 1] }, schema: { fields: {} } }, riding });
+  c.weOpen(td); c.WE.tab = 'display'; c.weRender();
+  c.evSet('display', 'text_opacity', 100 > 127 ? 100 - 256 : 100); c.evSet('display', 'text', c.textMsg('{"text":"x","bold":true}'));
+  const t = JSON.parse(JSON.stringify(c.evGet('display', 'transformation'))); t.scale = [2, 2, 2]; c.evSet('display', 'transformation', t);
+  c.WE.pending = null; c.weApply(); const ad = last().entity.display;
+  assert.equal(ad.text_opacity, 100); assert.equal(ad.text.bold, true); assert.equal(JSON.stringify(ad.transformation.scale), '[2,2,2]'); assert.equal(Object.keys(ad).length, 3);
+  // 交易
+  const vi = mk('minecraft:villager', { trades: { available: true, offers: [{ buy: { id: 'minecraft:emerald', count: 2, comps: {}, removed: {}, cost_predicate_snbt: '{}' }, sell: { id: 'minecraft:bread', count: 3, comps: {}, removed: {} }, uses: 3, maxUses: 12, rewardExp: true, xp: 5, priceMultiplier: 0.05, demand: 0, specialPrice: 0 }] }, riding });
+  c.weOpen(vi); c.WE.tab = 'trades'; c.weRender(); assert.equal(c.weDirty(), false, '只是看不算改');
+  c.evOffers()[0].uses = 0; assert.equal(c.weDirty(), true);
+  c.WE.pending = null; c.weApply(); const ao = last().entity.offers; assert.equal(ao.length, 1); assert.equal(ao[0].uses, 0); assert.equal(ao[0].buy.cost_predicate_snbt, '{}', '谓词旁路原样带回');
+  const noSrv = mk('minecraft:villager', { trades: { available: false, reason: '没有服务器' }, riding }); c.weOpen(noSrv); c.WE.tab = 'trades'; c.weRender();
+  c.WE.w = null;
+}
+console.log('PASS world entity: pose, frame, display, trades, riding.');

@@ -25,7 +25,7 @@ var WE = { w: null, text: '', slots: {}, pending: null, tab: '', seq: 0, obj: nu
 function weActive() { return !!WE.w; }
 function weBase() { try { return nbtPrint(nbtParse(WE.w.snbt), false); } catch (e) { return WE.w.snbt; } }
 function weDirtyText() { if (!WE.w) return false; try { return nbtPrint(nbtParse(WE.text), false) !== weBase(); } catch (e) { return true; } }
-function weDirty() { return weDirtyText() || Object.keys(WE.slots).length > 0 || (typeof weViewsDirty === 'function' && weViewsDirty()); }
+function weDirty() { return weDirtyText() || Object.keys(WE.slots).length > 0 || (typeof weViewsDirty === 'function' && weViewsDirty()) || (typeof evDirty === 'function' && evDirty()); }
 function weName() {
   var w = WE.w;
   if (w.kind === 'block') return Reg.nameOf2('block', w.block || w.type) || humanId(shortId(w.block || w.type));
@@ -33,7 +33,7 @@ function weName() {
 }
 
 function weOpen(world) {
-  WE.w = world; WE.text = nbtPrint(nbtParse(world.snbt), true); WE.slots = {}; WE.err = ''; WE.obj = null; if (typeof weResetEdits === 'function') weResetEdits();
+  WE.w = world; WE.text = nbtPrint(nbtParse(world.snbt), true); WE.slots = {}; WE.err = ''; WE.obj = null; if (typeof weResetEdits === 'function') weResetEdits(); if (typeof weEntReset === 'function') weEntReset();
   var tabs = weTabs(); if (!tabs.some(function (t) { return t.id === WE.tab; })) WE.tab = tabs[0].id;
   weRender();
 }
@@ -44,7 +44,15 @@ function weTabs() {
   if (noBE) return t;
   if (w.container && w.container.slots) t.push({ id: 'container', label: '容器', icon: 'chest' });
   if (w.kind === 'block' && (w.type === 'minecraft:mob_spawner' || w.type === 'minecraft:trial_spawner')) t.push({ id: 'spawner', label: '刷怪设置', icon: 'paw' });
-  if (w.kind === 'entity') t.push({ id: 'entity', label: '属性', icon: 'paw' });
+  if (w.kind === 'entity') {
+    if (evGroup('pose')) t.push({ id: 'pose', label: '姿势', icon: 'user' });
+    if (evGroup('item_frame')) t.push({ id: 'frame', label: '展示框', icon: 'image' });
+    if (evGroup('painting')) t.push({ id: 'painting', label: '画', icon: 'image' });
+    if (evGroup('display')) t.push({ id: 'display', label: '展示', icon: 'cube' });
+    if (evGroup('trades')) t.push({ id: 'trades', label: '交易', icon: 'coins' });
+    t.push({ id: 'entity', label: '属性', icon: 'paw' });
+    if (evGroup('riding')) t.push({ id: 'riding', label: '乘客', icon: 'users' });
+  }
   t.push({ id: 'data', label: '数据', icon: 'code' });
   return t;
 }
@@ -95,7 +103,13 @@ function drawWorldScreen() {
   });
   right.appendChild(tabbar); right.appendChild(body);
   host.appendChild(hero); host.appendChild(right);
-  if (WE.tab === 'view') weViewTab(body);
+  if (WE.tab === 'pose') evPoseTab(body);
+  else if (WE.tab === 'frame') evFrameTab(body);
+  else if (WE.tab === 'painting') evPaintingTab(body);
+  else if (WE.tab === 'display') evDisplayTab(body);
+  else if (WE.tab === 'trades') evTradeTab(body);
+  else if (WE.tab === 'riding') evRidingTab(body);
+  else if (WE.tab === 'view') weViewTab(body);
   else if (WE.tab === 'state') weStateTab(body);
   else if (WE.tab === 'container') weContainerTab(body);
   else if (WE.tab === 'spawner') weSpawnerTab(body);
@@ -191,7 +205,8 @@ function weApply() {
   var cs = Object.keys(WE.slots).map(function (k) { return { slot: Number(k), stack: WE.slots[k] }; });
   if (cs.length) msg.container = { slots: cs };
   if (typeof weViewsMsg === 'function') weViewsMsg(msg);
-  if (!msg.snbt && !msg.container && !msg.views && !msg.block_state && !msg.block_type) { toast('还没有修改', 'info'); return; }
+  if (typeof evMsg === 'function') evMsg(msg);
+  if (!msg.snbt && !msg.container && !msg.entity && !msg.views && !msg.block_state && !msg.block_type) { toast('还没有修改', 'info'); return; }
   weSend('apply', msg, '已提交给游戏，等待回执…');
 }
 function weUndo() {

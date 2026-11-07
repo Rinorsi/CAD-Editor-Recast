@@ -1537,3 +1537,6 @@ body.vault-only .ew { display: none; }
 .we-cmd { width: 100%; min-height: 64px; box-sizing: border-box; }
 .we-row { gap: 6px; align-items: center; }
 .we-row > .rs-field { flex: 1; min-width: 0; }
+.we-vec { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.we-cell { display: flex; align-items: center; gap: 3px; }
+.we-vnum { width: 52px; }
