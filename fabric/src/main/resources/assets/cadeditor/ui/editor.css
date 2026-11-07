@@ -1503,7 +1503,8 @@ textarea.world-snbt { min-height: 56px; }
 .egg-datahd { display: flex; align-items: center; margin-bottom: 2px; }
 
 /* ---------- 装备格子：左列盔甲，中间生物，右列手持 / 身体 / 鞍 ---------- */
-.es-geargrid { display: flex; align-items: stretch; justify-content: center; gap: 14px; padding: 8px 0 4px; }
+.es-geargrid { display: flex; flex-direction: column; gap: 8px; padding: 4px 0 2px; }
+.es-gearrow { display: flex; gap: 10px; }
 .es-gearcol { display: flex; flex-direction: column; gap: 6px; }
 .es-gear { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 44px; }
 .es-gear .slot.s34 { width: 30px; height: 30px; }
@@ -1514,3 +1515,7 @@ textarea.world-snbt { min-height: 56px; }
 .es-gearhd { display: flex; align-items: center; gap: 8px; padding: 2px 0 4px; }
 .es-gearhd .tx { display: flex; flex-direction: column; min-width: 0; }
 .es-gearact { display: flex; gap: 6px; justify-content: flex-end; }
+
+/* 装备卡片不折叠 */
+.k-card.es-open .k-chev, .k-card.es-open .k-reset { display: none; }
+.k-card.es-open .k-chead { cursor: default; }

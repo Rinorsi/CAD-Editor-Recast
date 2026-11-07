@@ -66,6 +66,7 @@ CARDS.eggFlags = function () {
 };
 CARDS.eggGear = function () {
   var id = eggCur(), card = eggCard('eggGear', 'helmet', '装备', '点格子放物品；有物品的格子点开可以改掉落概率');
+  card.el.classList.add('es-open'); card.onHead = function () { return true; };   // 不折叠：装备直接摆在页面里
   var ok = esReady(id, card.body); if (ok) card.body.appendChild(esGearGrid(ok, eggIo(), id));
   return card;
 };

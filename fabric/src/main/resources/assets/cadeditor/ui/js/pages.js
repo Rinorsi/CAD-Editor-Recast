@@ -90,7 +90,7 @@ var PAGES = {
     { id: 'ench', label: '附魔', icon: 'enchant', cards: ENCH },
   ],
 };
-PAGES.banner = [PAGES.generic[0], { id: 'banner', label: '旗帜图案', icon: 'banner', cards: ['#旗帜', ['auto', 'banner_patterns'], ['auto', 'base_color'], '#作为材料', ['auto', 'provides_banner_patterns']] }].concat(PAGES.generic.slice(1)); PAGES.disc = PAGES.generic; PAGES.spawn = [{ id: 'egg', label: '刷怪蛋', icon: 'paw', cards: ['spawnEgg', 'eggLook', 'eggFlags', 'eggData'] }, { id: 'gear', label: '装备', icon: 'helmet', cards: ['eggGear'] }, PAGES.generic[0], PAGES.generic[1]]; PAGES.spawner = [{ id: 'spawner', label: '刷怪设置', icon: 'paw', cards: ['#刷怪笼', 'spawner'] }, PAGES.generic[0], PAGES.generic[1]];
+PAGES.banner = [PAGES.generic[0], { id: 'banner', label: '旗帜图案', icon: 'banner', cards: ['#旗帜', ['auto', 'banner_patterns'], ['auto', 'base_color'], '#作为材料', ['auto', 'provides_banner_patterns']] }].concat(PAGES.generic.slice(1)); PAGES.disc = PAGES.generic; PAGES.spawn = [{ id: 'egg', label: '刷怪蛋', icon: 'paw', cards: ['spawnEgg', 'eggLook', 'eggFlags', 'eggGear', 'eggData'] }, PAGES.generic[0], PAGES.generic[1]]; PAGES.spawner = [{ id: 'spawner', label: '刷怪设置', icon: 'paw', cards: ['#刷怪笼', 'spawner'] }, PAGES.generic[0], PAGES.generic[1]];
 
 /* 卡片是否适用于当前物品（有些卡片只在物品本来有对应功能时出现） */
 var CARD_NEEDS = {

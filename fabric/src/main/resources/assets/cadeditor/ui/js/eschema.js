@@ -202,14 +202,9 @@ function esGearGrid(s, o, type) {
     cell.addEventListener('click', function () { if (st) menu(q, cell, st); else choose(q, cell); });
     return h('div', { class: 'es-gear' }, [cell, h('span', { class: 'es-gearl', text: meta[0] })]);
   }
-  function col(slots) { var c = h('div', { class: 'es-gearcol' }); slots.forEach(function (k) { var x = cellOf(k); if (x) c.appendChild(x); }); return c; }
-  var mid = h('div', { class: 'es-gearmid' });
-  if (type && typeof ED_MC === 'undefined') {
-    var pa = esPreviewAttrs(type, o.get()), ent = h('entity', { class: 'es-gearent', type: Reg.full(type), 'follow-mouse': '' });
-    Object.keys(pa).forEach(function (k) { ent.setAttribute(k, pa[k]); });
-    mid.appendChild(ent);
-  }
-  return h('div', { class: 'es-geargrid' }, [col(ES_GEAR_COLS[0]), mid, col(ES_GEAR_COLS[1])]);
+  /* 两排，每排四格：第一排四件盔甲，第二排主手 / 副手 / 身体 / 鞍；这只生物没有的位置不画，整排没有就不画那一排 */
+  function row(slots) { var r = h('div', { class: 'es-gearrow' }); slots.forEach(function (k) { var x = cellOf(k); if (x) r.appendChild(x); }); return r.children.length ? r : null; }
+  return h('div', { class: 'es-geargrid' }, [row(ES_GEAR_COLS[0]), row(ES_GEAR_COLS[1])].filter(function (x) { return x; }));
 }
 
 /* 世界实体页「属性」：外观、常用设置、装备一页排下来 */
