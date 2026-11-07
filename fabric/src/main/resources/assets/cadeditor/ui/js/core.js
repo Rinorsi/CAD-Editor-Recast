@@ -222,6 +222,7 @@ function makeDoc(spec) {
   d.hi = 0;
   return d;
 }
+var HIST_CHARS = 3000000;   // 撤销历史快照总字符数上限（约 3 MB 文本）
 var Store = (function () {
   var docs = [], cur = 0, subs = [], clock = 0;
   function now() { return ++clock * 400; } // 虚拟时钟：脚本环境里 performance.now 在一次入口内不前进
@@ -237,6 +238,10 @@ var Store = (function () {
       d.hist.push({ label: label, snap: s, t: t, key: key || null });
       d.hi = d.hist.length - 1;
       if (d.hist.length > 200) { d.hist.shift(); d.hi--; }
+      /* 每一步是整个物品的快照：物品很大（装满东西的潜影盒、带大量 NBT）时，200 步会占很多内存，所以再按体积限制，至少留 20 步 */
+      var total = 0, i;
+      for (i = 0; i < d.hist.length; i++) total += d.hist[i].snap.length;
+      while (total > HIST_CHARS && d.hist.length > 20 && d.hi > 0) { total -= d.hist[0].snap.length; d.hist.shift(); d.hi--; }
     }
     return true;
   }

@@ -675,3 +675,20 @@ console.log('PASS vault take-out into container keeps typed values.');
   if (tr) { const inp = tr.querySelector('input'); inp.value = 'a，b c'; inp.fire('change'); assert.deepEqual(JSON.parse(JSON.stringify(data.Tags)), ['a', 'b', 'c']); }
 }
 console.log('PASS entity attributes, scale, tags.');
+
+// 撤销历史：按体积限制（大物品不会让历史无限占内存），小物品仍保留 200 步
+{
+  const mk = n => c.makeDoc({ id: 'minecraft:stick', comps: { custom_data: { blob: 'x'.repeat(n) } } });
+  c.Store.docs.length = 0; c.Store.docs.push(mk(100000)); c.Store.cur = 0;
+  const d = c.Store.docs[0];
+  for (let i = 0; i < 200; i++) { d.comps.custom_data.blob = 'y'.repeat(100000 - i); c.Store.set('custom_data', d.comps.custom_data, { structural: false, key: 'k' + i }); }
+  const total = d.hist.reduce((s, x) => s + x.snap.length, 0);
+  assert.ok(d.hist.length <= 200 && d.hist.length >= 20, '至少留 20 步: ' + d.hist.length);
+  assert.ok(total <= 3200000, '总体积有上限: ' + total);
+  c.Store.docs.length = 0;
+  const small = c.makeDoc({ id: 'minecraft:stick', comps: {} }); c.Store.docs.push(small);
+  for (let i = 0; i < 250; i++) c.Store.set('custom_data', { n: i }, { structural: false, key: 'z' + i });
+  assert.equal(small.hist.length, 200, '小物品仍是 200 步');
+  c.Store.docs.length = 0;
+}
+console.log('PASS undo history is bounded by size and by steps.');
