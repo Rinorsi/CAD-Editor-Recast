@@ -750,12 +750,21 @@ function paintProblems() {
     /* 按危险度排：错误在前，提醒在后；最多直接显示 2 条，其余折叠成一行「还有 N 条」 */
     var rank = { error: 0, warn: 1 };
     mine.sort(function (x, y) { return (rank[x.level] === undefined ? 2 : rank[x.level]) - (rank[y.level] === undefined ? 2 : rank[y.level]); });
-    var pkey = 'prob:' + (c.spec.id || c.spec.title), open = !!UIOpen[pkey], shown = open ? mine : mine.slice(0, 2);
-    var box = h('div', { class: 'k-probline' }, shown.map(function (p) { return h('div', { class: 'pl ' + p.level }, [uiIcon(p.level === 'error' ? 'close' : 'warning', 12), h('span', { text: p.msg })]); }));
+    var pkey = 'prob:' + (c.spec.id || c.spec.title), open = !!UIOpen[pkey], shown = mine.slice(0, 2);
+    function line(p) { return h('div', { class: 'pl ' + p.level }, [uiIcon(p.level === 'error' ? 'close' : 'warning', 12), h('span', { text: p.msg })]); }
+    var box = h('div', { class: 'k-probline' }, shown.map(line));
+    var extra = open && mine.length > 2 ? h('div', { class: 'pl-extra' }, mine.slice(2).map(line)) : null;
+    if (extra) box.appendChild(extra);
     if (mine.length > 2) {
       var hid = mine.slice(2), he = hid.filter(function (p) { return p.level === 'error'; }).length;
-      var tg = h('div', { class: 'pl more' }, [uiIcon(open ? 'up' : 'down', 8), h('span', { text: open ? '收起' : '还有 ' + hid.length + ' 条' + (he ? '（含 ' + he + ' 个错误）' : '提醒') })]);
-      activate(tg, function () { UIOpen[pkey] = !open; paintProblems(); });
+      var tg = h('div', { class: 'pl more' }, [foldArrow(open, 8), h('span', { text: open ? '收起' : '还有 ' + hid.length + ' 条' + (he ? '（含 ' + he + ' 个错误）' : '提醒') })]);
+      /* 展开 / 收起带滑动和箭头旋转：收起先滑出再重画，展开重画后滑入 */
+      activate(tg, function () {
+        if (open && extra) { foldArrowSet(tg.querySelector('.fold-arrow'), false); uiSlide(extra, false, function () { UIOpen[pkey] = false; paintProblems(); }); return; }
+        UIOpen[pkey] = true; paintProblems();
+        var ex2 = c.el.querySelector('.pl-extra'), ar2 = c.el.querySelector('.pl.more .fold-arrow');
+        if (ex2) uiSlide(ex2, true); foldArrowFrom(ar2, false, true);
+      });
       box.appendChild(tg);
     }
     c.el.insertBefore(box, c.el.querySelector('.k-cbody'));
