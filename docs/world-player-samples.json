@@ -1,0 +1,1936 @@
+{
+  "mode": "real dedicated ServerLevel / detached ServerPlayer / recording packet listener (no client)",
+  "before": {
+    "container": {
+      "size": 43,
+      "slots": [
+        {
+          "slot": 0,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 1,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 2,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 3,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 4,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 5,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 6,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 7,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 8,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 9,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 10,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 11,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 12,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 13,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 14,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 15,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 16,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 17,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 18,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 19,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 20,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 21,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 22,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 23,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 24,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 25,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 26,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 27,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 28,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 29,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 30,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 31,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 32,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 33,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 34,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 35,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 36,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 37,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 38,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 39,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 40,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 41,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 42,
+          "stack": {
+            "empty": true
+          }
+        }
+      ]
+    },
+    "ender": {
+      "size": 27,
+      "slots": [
+        {
+          "slot": 0,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 1,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 2,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 3,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 4,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 5,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 6,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 7,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 8,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 9,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 10,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 11,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 12,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 13,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 14,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 15,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 16,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 17,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 18,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 19,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 20,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 21,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 22,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 23,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 24,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 25,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 26,
+          "stack": {
+            "empty": true
+          }
+        }
+      ]
+    },
+    "SelectedItemSlot": 0,
+    "Health": 20.0,
+    "AbsorptionAmount": 0.0,
+    "food": {
+      "foodLevel": 20,
+      "saturation": 5.0
+    },
+    "experience": {
+      "XpLevel": 0,
+      "XpP": 0.0,
+      "XpTotal": 0
+    },
+    "playerGameType": "survival",
+    "abilities": {
+      "flying": false,
+      "mayfly": false,
+      "invulnerable": false,
+      "mayBuild": true,
+      "instabuild": false,
+      "walkSpeed": 0.1,
+      "flySpeed": 0.05
+    },
+    "attributes": [
+      {
+        "id": "minecraft:armor",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:armor_toughness",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:attack_damage",
+        "base": 1.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:attack_knockback",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:attack_speed",
+        "base": 4.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:block_break_speed",
+        "base": 1.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:block_interaction_range",
+        "base": 4.5,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:burning_time",
+        "base": 1.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:camera_distance",
+        "base": 4.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:explosion_knockback_resistance",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:entity_interaction_range",
+        "base": 3.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:fall_damage_multiplier",
+        "base": 1.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:gravity",
+        "base": 0.08,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:jump_strength",
+        "base": 0.41999998688697815,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:knockback_resistance",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:luck",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:max_absorption",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:max_health",
+        "base": 20.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:mining_efficiency",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:movement_efficiency",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:movement_speed",
+        "base": 0.10000000149011612,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:oxygen_bonus",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:safe_fall_distance",
+        "base": 3.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:scale",
+        "base": 1.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:sneaking_speed",
+        "base": 0.3,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:step_height",
+        "base": 0.6,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:submerged_mining_speed",
+        "base": 0.2,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:sweeping_damage_ratio",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:water_movement_efficiency",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:waypoint_transmit_range",
+        "base": 60000000.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:waypoint_receive_range",
+        "base": 60000000.0,
+        "modifiers": []
+      }
+    ],
+    "active_effects": [],
+    "Tags": [],
+    "CustomName": null
+  },
+  "after": {
+    "container": {
+      "size": 43,
+      "slots": [
+        {
+          "slot": 0,
+          "stack": {
+            "id": "minecraft:diamond",
+            "count": 3,
+            "comps": {},
+            "removed": {},
+            "slot": {},
+            "label": ""
+          }
+        },
+        {
+          "slot": 1,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 2,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 3,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 4,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 5,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 6,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 7,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 8,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 9,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 10,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 11,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 12,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 13,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 14,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 15,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 16,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 17,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 18,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 19,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 20,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 21,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 22,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 23,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 24,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 25,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 26,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 27,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 28,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 29,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 30,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 31,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 32,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 33,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 34,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 35,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 36,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 37,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 38,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 39,
+          "stack": {
+            "id": "minecraft:stone",
+            "count": 1,
+            "comps": {},
+            "removed": {},
+            "slot": {},
+            "label": ""
+          }
+        },
+        {
+          "slot": 40,
+          "stack": {
+            "id": "minecraft:stone",
+            "count": 1,
+            "comps": {},
+            "removed": {},
+            "slot": {},
+            "label": ""
+          }
+        },
+        {
+          "slot": 41,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 42,
+          "stack": {
+            "empty": true
+          }
+        }
+      ]
+    },
+    "ender": {
+      "size": 27,
+      "slots": [
+        {
+          "slot": 0,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 1,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 2,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 3,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 4,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 5,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 6,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 7,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 8,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 9,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 10,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 11,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 12,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 13,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 14,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 15,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 16,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 17,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 18,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 19,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 20,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 21,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 22,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 23,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 24,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 25,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 26,
+          "stack": {
+            "id": "minecraft:emerald",
+            "count": 2,
+            "comps": {},
+            "removed": {},
+            "slot": {},
+            "label": ""
+          }
+        }
+      ]
+    },
+    "SelectedItemSlot": 2,
+    "Health": 12.0,
+    "AbsorptionAmount": 2.0,
+    "food": {
+      "foodLevel": 15,
+      "saturation": 4.0
+    },
+    "experience": {
+      "XpLevel": 5,
+      "XpP": 0.47058824,
+      "XpTotal": 70
+    },
+    "playerGameType": "creative",
+    "abilities": {
+      "flying": true,
+      "mayfly": true,
+      "invulnerable": true,
+      "mayBuild": true,
+      "instabuild": true,
+      "walkSpeed": 0.2,
+      "flySpeed": 0.1
+    },
+    "attributes": [
+      {
+        "id": "minecraft:armor",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:armor_toughness",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:attack_damage",
+        "base": 1.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:attack_knockback",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:attack_speed",
+        "base": 4.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:block_break_speed",
+        "base": 1.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:block_interaction_range",
+        "base": 4.5,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:burning_time",
+        "base": 1.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:camera_distance",
+        "base": 4.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:explosion_knockback_resistance",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:entity_interaction_range",
+        "base": 3.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:fall_damage_multiplier",
+        "base": 1.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:gravity",
+        "base": 0.08,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:jump_strength",
+        "base": 0.41999998688697815,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:knockback_resistance",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:luck",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:max_absorption",
+        "base": 4.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:max_health",
+        "base": 24.0,
+        "modifiers": [
+          {
+            "id": "cadeditor:probe",
+            "amount": 2.0,
+            "operation": "add_value"
+          }
+        ]
+      },
+      {
+        "id": "minecraft:mining_efficiency",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:movement_efficiency",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:movement_speed",
+        "base": 0.10000000149011612,
+        "modifiers": [
+          {
+            "id": "minecraft:effect.speed",
+            "amount": 0.4000000059604645,
+            "operation": "add_multiplied_total"
+          }
+        ]
+      },
+      {
+        "id": "minecraft:oxygen_bonus",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:safe_fall_distance",
+        "base": 3.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:scale",
+        "base": 1.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:sneaking_speed",
+        "base": 0.3,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:step_height",
+        "base": 0.6,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:submerged_mining_speed",
+        "base": 0.2,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:sweeping_damage_ratio",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:water_movement_efficiency",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:waypoint_transmit_range",
+        "base": 60000000.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:waypoint_receive_range",
+        "base": 60000000.0,
+        "modifiers": []
+      }
+    ],
+    "active_effects": [
+      {
+        "id": "minecraft:speed",
+        "amplifier": 1,
+        "duration": 200,
+        "show_icon": true
+      }
+    ],
+    "Tags": [
+      "probe"
+    ],
+    "CustomName": "Player probe"
+  },
+  "undo": {
+    "container": {
+      "size": 43,
+      "slots": [
+        {
+          "slot": 0,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 1,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 2,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 3,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 4,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 5,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 6,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 7,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 8,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 9,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 10,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 11,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 12,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 13,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 14,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 15,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 16,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 17,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 18,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 19,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 20,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 21,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 22,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 23,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 24,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 25,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 26,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 27,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 28,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 29,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 30,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 31,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 32,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 33,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 34,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 35,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 36,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 37,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 38,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 39,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 40,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 41,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 42,
+          "stack": {
+            "empty": true
+          }
+        }
+      ]
+    },
+    "ender": {
+      "size": 27,
+      "slots": [
+        {
+          "slot": 0,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 1,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 2,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 3,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 4,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 5,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 6,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 7,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 8,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 9,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 10,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 11,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 12,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 13,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 14,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 15,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 16,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 17,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 18,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 19,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 20,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 21,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 22,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 23,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 24,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 25,
+          "stack": {
+            "empty": true
+          }
+        },
+        {
+          "slot": 26,
+          "stack": {
+            "empty": true
+          }
+        }
+      ]
+    },
+    "SelectedItemSlot": 0,
+    "Health": 20.0,
+    "AbsorptionAmount": 0.0,
+    "food": {
+      "foodLevel": 20,
+      "saturation": 5.0
+    },
+    "experience": {
+      "XpLevel": 0,
+      "XpP": 0.0,
+      "XpTotal": 0
+    },
+    "playerGameType": "survival",
+    "abilities": {
+      "flying": false,
+      "mayfly": false,
+      "invulnerable": false,
+      "mayBuild": true,
+      "instabuild": false,
+      "walkSpeed": 0.1,
+      "flySpeed": 0.05
+    },
+    "attributes": [
+      {
+        "id": "minecraft:armor",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:armor_toughness",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:attack_damage",
+        "base": 1.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:attack_knockback",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:attack_speed",
+        "base": 4.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:block_break_speed",
+        "base": 1.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:block_interaction_range",
+        "base": 4.5,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:burning_time",
+        "base": 1.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:camera_distance",
+        "base": 4.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:explosion_knockback_resistance",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:entity_interaction_range",
+        "base": 3.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:fall_damage_multiplier",
+        "base": 1.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:gravity",
+        "base": 0.08,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:jump_strength",
+        "base": 0.41999998688697815,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:knockback_resistance",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:luck",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:max_absorption",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:max_health",
+        "base": 20.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:mining_efficiency",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:movement_efficiency",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:movement_speed",
+        "base": 0.10000000149011612,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:oxygen_bonus",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:safe_fall_distance",
+        "base": 3.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:scale",
+        "base": 1.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:sneaking_speed",
+        "base": 0.3,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:step_height",
+        "base": 0.6,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:submerged_mining_speed",
+        "base": 0.2,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:sweeping_damage_ratio",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:water_movement_efficiency",
+        "base": 0.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:waypoint_transmit_range",
+        "base": 60000000.0,
+        "modifiers": []
+      },
+      {
+        "id": "minecraft:waypoint_receive_range",
+        "base": 60000000.0,
+        "modifiers": []
+      }
+    ],
+    "active_effects": [],
+    "Tags": [],
+    "CustomName": null
+  },
+  "checks": 53,
+  "passed": true,
+  "inventorySize": 43,
+  "enderSize": 27,
+  "packets": [
+    "ClientboundPlayerAbilitiesPacket",
+    "ClientboundGameEventPacket",
+    "ClientboundPlayerAbilitiesPacket",
+    "ClientboundSetPlayerInventoryPacket",
+    "ClientboundUpdateMobEffectPacket",
+    "ClientboundPlayerAbilitiesPacket",
+    "ClientboundSetHeldSlotPacket",
+    "ClientboundSetExperiencePacket",
+    "ClientboundSetHealthPacket",
+    "ClientboundUpdateAttributesPacket",
+    "ClientboundPlayerAbilitiesPacket",
+    "ClientboundSetHeldSlotPacket",
+    "ClientboundSetExperiencePacket",
+    "ClientboundSetHealthPacket",
+    "ClientboundUpdateAttributesPacket",
+    "ClientboundSetPlayerInventoryPacket",
+    "ClientboundSetPlayerInventoryPacket",
+    "ClientboundPlayerAbilitiesPacket",
+    "ClientboundSetHeldSlotPacket",
+    "ClientboundSetExperiencePacket",
+    "ClientboundSetHealthPacket",
+    "ClientboundUpdateAttributesPacket",
+    "ClientboundPlayerAbilitiesPacket",
+    "ClientboundSetHeldSlotPacket",
+    "ClientboundSetExperiencePacket",
+    "ClientboundSetHealthPacket",
+    "ClientboundUpdateAttributesPacket",
+    "ClientboundPlayerAbilitiesPacket",
+    "ClientboundSetHeldSlotPacket",
+    "ClientboundSetExperiencePacket",
+    "ClientboundSetHealthPacket",
+    "ClientboundUpdateAttributesPacket",
+    "ClientboundPlayerAbilitiesPacket",
+    "ClientboundGameEventPacket",
+    "ClientboundPlayerAbilitiesPacket",
+    "ClientboundSetPlayerInventoryPacket",
+    "ClientboundSetPlayerInventoryPacket",
+    "ClientboundSetPlayerInventoryPacket",
+    "ClientboundRemoveMobEffectPacket",
+    "ClientboundPlayerAbilitiesPacket",
+    "ClientboundSetHeldSlotPacket",
+    "ClientboundSetExperiencePacket",
+    "ClientboundSetHealthPacket",
+    "ClientboundUpdateAttributesPacket"
+  ]
+}

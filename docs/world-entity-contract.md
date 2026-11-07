@@ -81,25 +81,27 @@ remove从当前树查UUID，只解除骑乘，不删除实体；eject解除直�
 
 ## 动态字段与冲突
 
-revision保持类型保真canonical SHA-256，但实体预先剔除下表tick字段；以真实保存UUID/Pos识别实体。Passengers递归同样处理，类型/UUID/结构/非动态内容仍参与哈希。
+自2026-11-08采用 [world-merge-contract.md](world-merge-contract.md) 通用三方合并：全部字段均按 base/mine/current 路径比较，用户未改则保留 current。下表仅保留专门动态语义，不再是编辑活跃目标的白名单。
 
-骑乘目标的当前vehicle UUID也参与会话revision。它是服务端内部EntitySessionData标记，不向真实NBT杜撰RootVehicle，不出现在world.snbt/nbt；外部dismount/mount仍会target_changed。
+内部内容指纹仍保持类型保真canonical SHA-256并规范化下表字段；网络revision现在是仅open/成功保存时推进的不透明会话版本，见 [world-revision-contract.md](world-revision-contract.md)，不拿当前实体保存重新计算版本；以真实保存UUID/Pos识别实体。Passengers递归同样处理，类型/UUID/结构/非动态内容仍参与哈希。
+
+骑乘目标的当前vehicle UUID也参与会话revision。它是服务端内部EntitySessionData标记，不向真实NBT杜撰RootVehicle，不出现在world.snbt/nbt；外部dismount/mount 在用户未改关系时保留当前关系；riding 操作仍独立并执行原版动态检查。
 
 |字段|26.1.2依据与处理|
 |---|---|
 |Pos/Motion/Rotation|Entity.saveWithoutId 与移动/tick；取当前值，草稿相对打开时的主动修改仍protected_field|
 |Air/Fire/OnGround/fall_distance/PortalCooldown|Entity保存与baseTick/移动；取当前值。兼容旧FallDistance拼写，不宣称它是26.1.2实际保存名|
-|HurtTime/DeathTime/HurtByTimestamp|LivingEntity保存、伤害/死亡tick；取当前值；Health仍严格冲突|
+|HurtTime/DeathTime/HurtByTimestamp|LivingEntity保存、伤害/死亡tick；取当前值；Health仅双方修改且不同才冲突|
 |Brain（含memories）|LivingEntity Brain.Packed.CODEC与Brain tick；完整取当前值，禁止过时草稿改写|
 |FallFlying/current_impulse_context_reset_grace_time/current_explosion_impact_pos/last_hurt_by_player/last_hurt_by_player_memory_time/last_hurt_by_mob|Entity/LivingEntity移动、受击记忆保存；取当前值|
 |Age/ForcedAge|AgeableMob保存、aiStep朝零计数；Age哈希只保留baby/adult符号。未显式改Age时取当前，baby切换及其undo仍可写；ForcedAge取当前|
 |InWaterTime/DrownedConversionTime|Zombie保存与underwater转换tick；取当前|
-|active_effects[].duration/hidden_effect.duration|MobEffectInstance.tickDownDuration与Details Codec；哈希仅保留时长符号；未显式改duration时取当前。类型/放大级/结构等仍严格冲突|
-|attributes 中无永久modifier、且base精确等于实际DefaultAttributes supplier默认值的条目|真实ServerLevel僵尸走动后，AI首次读取movement_speed导致AttributeMap从空列表变成显式默认条目；两种表示在哈希中相同。非默认base、永久modifier和未知字段仍严格冲突；未编辑attributes时保留当前完整列表|
+|active_effects[].duration/hidden_effect.duration|MobEffectInstance.tickDownDuration与Details Codec；哈希仅保留时长符号；未显式改duration时取当前。类型/放大级/结构按稳定id逐路径三方合并|
+|attributes 中无永久modifier、且base精确等于实际DefaultAttributes supplier默认值的条目|真实ServerLevel僵尸走动后，AI首次读取movement_speed导致AttributeMap从空列表变成显式默认条目；两种表示在哈希中相同。非默认base、永久modifier和未知字段采用逐路径三方合并；未编辑attributes时保留当前完整列表|
 
-证据：logs/world-entity/bytecode.log、zombie-effects-bytecode.log、text-display-bytecode.log，均为实际26.1.2 javap -p -c。不是凭旧版本猜全量字段。不忽略Health、装备、交易uses/demand、属性、变种、自定义数据；未知模组timer仍可能target_changed。
+证据：logs/world-entity/bytecode.log、zombie-effects-bytecode.log、text-display-bytecode.log，均为实际26.1.2 javap -p -c。不是凭旧版本猜全量字段。Health、装备、交易uses/demand、属性、变种、自定义数据和未知模组timer均参与三方合并；用户未改就保留current。
 
-先检查当前/打开时稳定revision，再以打开数据检查只读字段防篡改，最后合并当前动态值；undo也不回退运动/Brain。实体走出当前交互距离仍out_of_reach，不因Pos忽略而绕过保护。
+先校验会话基线revision，再以打开副本生成mine并检查只读字段，最后逐路径合并current并经真实loader校验；undo也不回退运动/Brain。实体走出当前交互距离仍out_of_reach，不因Pos忽略而绕过保护。
 
 ## 验证与边界
 

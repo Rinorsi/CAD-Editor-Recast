@@ -8,7 +8,9 @@
 
 ## 入口及页面数据
 
-- 默认 O 键：编辑准星目标；I 键仍编辑物品。
+- 默认 I 键统一编辑目标，O 打开保险库；均在原版控制设置中可改键，语言键为 key.cadeditor.edit / key.cadeditor.vault。
+- I 顺序：容器界面悬停物品 → Shift 时主手物品／空手自己 → 距离内准星实体（包括玩家） → 带方块实体的方块 → 主手物品 → 空手时带状态属性的普通方块 → 自己。石头等无可编辑内容的普通方块不算目标。服务端拒绝后显示原因，不切换目标。
+- 在线玩家的精确接口、服务端原版权限与撤销见 [world-player-contract.md](world-player-contract.md)。
 - 客户端命令 /cadeditor block、/cadeditor entity：读取准星目标。/cadeditor block x y z 支持绝对整数坐标，仍受服务器交互距离限制。
 - 不解析相对坐标，不允许跨维度编辑，不提供移动目标操作。实体准星命中使用 UUID，网络实体 id 只是提示。
 - 网络 open 也可只给实体 id；服务端马上解析为 UUID，后续会话必须使用返回的规范化 slot，防止 id 重用。
@@ -38,7 +40,7 @@
 opened / saved：
 
 ```json
-{"status":"opened","requestId":"w1","world":{"kind":"block","type":"minecraft:chest","block":"minecraft:chest","block_state":{"facing":"north","type":"single","waterlogged":"false"},"slot":{"kind":"block","dim":"minecraft:overworld","x":0,"y":64,"z":0,"token":"服务端随机令牌"},"revision":"64位十六进制SHA256","snbt":"完整权威compound","nbt":{},"comps":{},"component_snbt":{},"container":{"size":27,"kind":"minecraft:chest","unresolved_loot":false,"slots":[{"slot":0,"stack":{"empty":true}}]},"views":{},"canUndo":false}}
+{"status":"opened","requestId":"w1","world":{"kind":"block","type":"minecraft:chest","block":"minecraft:chest","block_state":{"facing":"north","type":"single","waterlogged":"false"},"slot":{"kind":"block","dim":"minecraft:overworld","x":0,"y":64,"z":0,"token":"服务端随机令牌"},"revision":"64位十六进制不透明会话版本","snbt":"完整权威compound","nbt":{},"comps":{},"component_snbt":{},"container":{"size":27,"kind":"minecraft:chest","unresolved_loot":false,"slots":[{"slot":0,"stack":{"empty":true}}]},"views":{},"canUndo":false}}
 ```
 
 以上是**形状示例**，不是捕获数据。真实默认值、组件、字段大小写一律来自原版保存方法/Codec，不能照抄示例为选项表。真实 JVM 工厂捕获见 logs/world-edit/captured.json（每种测试方块原样 SNBT、revision、helper；测试模式不是实机网络回执）。
@@ -50,7 +52,7 @@ world 字段：
 |type|方块实体/实体注册表 ID；实体页面用它读取 entity_info / entity_schema，后端不复制该 schema|
 |snbt|权威完整保存 compound。byte/short/long/float/double、B/I/L数组保留类型|
 |nbt|用于只读展示的 JSON 投影；**不可将其 stringify 后当作 SNBT 写回**|
-|revision|稳定 NBT 的类型保真 SHA-256；方块还包含真实方块ID/状态。compound键排序；列表顺序/数值类型有意义；仅审计过的volatile路径排除|
+|revision|服务端生成的64位十六进制不透明会话版本；仅open或成功保存/undo推进，tick/拒绝/限流不变；客户端原样回传，不从NBT计算|
 |slot|服务端规范化目标，含随机 token；实体同时含 uuid 与 id|
 |comps / component_snbt|方块 collectComponents 的实时 Codec 视图及权威类型旁路；只读 helper，不直接作为世界 apply 输入|
 |container|运行时 Container 的 size / slots；另支持讲台书和营火实际 items 列表。空格明确为 stack:{empty:true}，非空与物品编辑 StackCodec.snapshot 格式一致|
@@ -80,7 +82,7 @@ world 字段：
 {"op":"apply","requestId":"w4","slot":{"kind":"block","dim":"minecraft:overworld","x":0,"y":64,"z":0,"token":"opened令牌"},"revision":"基线","container":{"slots":[{"slot":0,"stack":{"empty":true}},{"slot":1,"stack":{"id":"minecraft:paper","count":1,"comps":{},"removed":{}}}]}}
 ```
 
-页面发送同形状 apply 消息时可不带 op / revision，宿主自动补充；slot 必须与打开目标一致。建议不组合 snbt 与 container；组合时先加载完整 SNBT，再覆盖列出的格，且未列格必须仍与现实目标一致。
+页面发送同形状 apply 消息时可不带 op / revision，宿主自动补充；slot 必须与打开目标一致。建议不组合 snbt 与 container；组合时先加载完整 SNBT，再覆盖列出的格，未列格的游戏变化由三方合并保留。
 
 撤销：页面消息 undo，内容 {requestId,slot}；网络 op:undo，宿主补 revision。成功返回 saved 与 world。每次 apply 存前像一次，下一次 apply 替换该前像；undo 成功后清空前像，没有 redo。关闭、断线、重开或服务端重启会丢弃撤销缓存。
 
@@ -88,17 +90,21 @@ world 字段：
 
 全部校验和快照大小检查通过后，在服务器单线程加载现实目标；方块 setChanged + sendBlockUpdated + 比较器通知；实体通过原版 load 更新同步数据，设备同步仍走原版追踪。不 remove/replace 实体，不插入副本。实际写入抛异常时尝试恢复前像并记录回滚失败；这不是外部模组回调副作用的通用事务。
 
-身份/移动字段锁定：方块 id/x/y/z/keepPacked；实体字段以实体增量协议为准。不编辑玩家，禁止换方块实体类型。命令块 conditional/facing 使用 block_state；模式由同一 BE 类型的 block_type 操作切换；command/auto 可走规范化视图或 NBT，仍需原版管理员权限。
+身份/移动字段锁定：方块 id/x/y/z/keepPacked；实体字段以实体增量协议为准。玩家使用 world-player-contract.md 的在线授权逐项接口；禁止对玩家整份加载 NBT，禁止换方块实体类型。命令块 conditional/facing 使用 block_state；模式由同一 BE 类型的 block_type 操作切换；command/auto 可走规范化视图或 NBT，仍需原版管理员权限。
 
 ## 权限、保护和冲突
 
-- open 与 apply / undo 都要求存活非旁观，且通过同一 EditorPolicy（创造模式，或配置权限等级；creativeOnly 生效）。读世界 NBT 也不对无权限用户开放。
-- 服务器强制当前维度、已加载区块、动态 block/entityInteractionRange、world border、player.mayInteract、level.mayInteract、mayBuild。不会给目标加载区块或传送玩家。
-- 命令方块及 onlyOpCanSetNbt 实体追加 canUseGameMasterBlocks（原版创造+游戏管理员），普通创造权限不能借本编辑器改命令块。
-- 修改标牌文本且结果包含可执行命令时，同样需要 canUseGameMasterBlocks；不能用普通创造权限写入可执行命令标牌。
+会话版本、ACK更新点、stale诊断与retryAfterMs精确规则见 [world-revision-contract.md](world-revision-contract.md)。网络revision是冻结会话版本，不再计算实时NBT哈希。
+
+通用三方合并的完整规则、conflicts 回执、undo 与验证边界见 [world-merge-contract.md](world-merge-contract.md)，覆盖旧版全量冲突规则。
+
+- open 与 apply / undo 都要求存活；无 game master 权限者仍拒绝旁观，有 game master 权限者允许旁观/冒险及 mayBuild=false，且通过同一 EditorPolicy（创造模式或 game master 命令权限；有 game master 权限不受游戏模式影响，旧配置不能否决该权限）。读世界 NBT 也不对无权限用户开放。有权限玩家将自己改为旁观或 mayBuild=false 后，仍可继续编辑及 undo。原版出生点保护继续由 level.mayInteract 判定；DedicatedServer.isUnderSpawnProtection 本来就豁免 OP，本编辑器不额外绕过区域检查。
+- 服务器强制当前维度、已加载区块、动态 block/entityInteractionRange、world border、player.mayInteract、level.mayInteract；无 game master 权限时还要求 mayBuild。不会给目标加载区块或传送玩家。
+- 原版 GameMasterBlock 标记方块（含命令方块/结构方块/拼图方块）、onlyOpCanSetNbt 实体及新增此类乘客，额外要求 ServerPlayer.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)。生存模式有该权限允许；创造模式无该权限仍拒绝，不能借创造写命令块。
+- 修改标牌文本且结果包含可执行命令时，同样要求 COMMANDS_GAMEMASTER；生存模式有权限可写，创造无权限不可写。通过 EditorPolicy.gameMaster 复用真实 permission set 判断，不调用隐含创造要求的 Player.canUseGameMasterBlocks。距离/区域/存活等其他守卫仍适用。
 - 第三方领地插件若仅在交互/破坏事件拦截、未集成上述原版检查，尚未提供兼容适配；不得宣称适配了所有保护插件。
 - 每个玩家只保留一个世界会话；连接绑定，无编辑时长硬超时。打开/写入间隔至少 500ms，关闭不受限。
-- 修改前，客户端基线必须同时匹配会话和当前目标的稳定 revision，token 必须匹配。方块 ID/状态及非动态 NBT 保持严格；经目标版本真实类证明的 volatile 路径排除并以 CURRENT 三方合并，详见方块/实体增量协议。物品烧成、蜂离巢等有意义变化仍冲突，不自动覆盖。
+- 修改前，revision 匹配服务端会话基线、token 匹配即可；身份仍须匹配当前目标。base/mine/current 逐路径三方合并，用户未改的路径取 current；双方改同一路径且不同才 target_changed，并返回最多20项 conflicts:[{path:[字符串段]}]。完整 SNBT 由服务端自行 diff。
 - 逐次成功写入审计包含玩家 UUID、op、目标、前后 revision；拒绝包含 requestId/code/reason，前缀 [CAD-Editor-World]。不将完整自定义数据写入审计行。
 
 ## 限制与错误
@@ -115,9 +121,10 @@ rejected 沿用 {status:"rejected",requestId,code,reason}。
 |chunk_unloaded|方块/实体所在区块未加载|
 |out_of_reach|超出当前交互距离|
 |protected_area|原版保护/边界/建造限制|
-|player_target|玩家目标被拒绝|
+|player_target|不支持的玩家类型或通用实体 NBT 路径；在线玩家见专用协议|
+|player_forbidden / player_offline|缺少原版游戏管理员权限／玩家离线或不存在|
 |protected_field|试图修改身份、位置、关联字段|
-|target_changed|revision 已过期，草稿保留|
+|target_changed|旧页面版本附stale:client_revision，身份变化附stale:identity及conflicts；真正路径冲突附conflicts，旧会话分支至少附stale:session；草稿保留|
 |session_lost|缓存/token/目标不匹配，须重新打开|
 |invalid_nbt|SNBT/原版加载校验/被忽略编辑字段/未改格变化|
 |invalid_block_state|未知属性、非法值/组合、非法命令模式类型或环境使目标状态失效|
@@ -150,13 +157,13 @@ JVM覆盖：21种方块工厂/真实加载保存、容器实际格数及多格�
 |旗帜|patterns/组件helper、SNBT编辑|JVM实际旗帜图案组件往返|
 |命令方块|command/auto等规范化字段、block_state.conditional/facing、block_type模式|JVM实际Codec/模式副本NBT保真；执行/调度待实机|
 |刷怪笼|默认/字段helper、SNBT编辑及SpawnerData验证|JVM修改Delay往返|
-|试炼刷怪笼|默认/配置helper、SNBT编辑及SpawnerData验证|JVM修改required_player_range往返；动态激活状态可能持续造成revision冲突|
+|试炼刷怪笼|默认/配置helper、SNBT编辑及SpawnerData验证|JVM修改required_player_range往返；动态激活状态由逐路径三方合并保留；真实激活 tick 未专项验收|
 |蜂巢|bees组件/保存字段helper、SNBT编辑|JVM含实际Occupant的保存加载|
 |猪与其他生物|类型ID、设备helper、完整SNBT临时实体验证，variant路径由entity_schema提供|JVM猪实际variant、盔甲架装备及改名往返；其他生物未逐种验收|
 |物品展示框|displayed_item helper、SNBT验证及写入路径|JVM含附魔物品的展示框改名，物品数据保持|
 |画|通用实体路径及entity_schema，禁止变更悬挂定位字段|未做本轮画实体工厂/实机专项测试，标为partial|
 |普通已放置方块|支持状态/schema/revision/undo；无方块实体时不提供NBT编辑|真实属性遍历；实际setBlock待运行|
-|玩家、空气、未加载/跨维度/远距离目标|明确拒绝|守卫单测，实际ServerPlayer集成测试待运行|
+|空气、未加载/跨维度/远距离目标|明确拒绝|在线玩家的支持范围及真实专用服探针见 world-player-contract.md|
 
 当前不能宣称“世界编辑已实机通过”或“1.0验收完成”。前端接入、真实ServerPlayer/ServerLevel权限保护、网络与同步、多人冲突均须后续实机门禁。
 
