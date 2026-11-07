@@ -812,3 +812,32 @@ console.log('PASS block views, block state, command block mode, volatile-friendl
   c.WE.w = null;
 }
 console.log('PASS world entity: pose, frame, display, trades, riding.');
+
+// 长时间使用：反复开关物品 / 世界页 / 搜索 / 注册表推送后，各处缓存不会无限涨
+{
+  const size = o => Object.keys(o || {}).length;
+  const probe = () => ({ seen: c.NBT_SEEN_N, state: size(c.Valid.state), hv: size(c.Valid.hv), hvWait: size(c.Valid.hvWait), waiting: size(c.Valid.waiting), vaultWait: size(c.Vault.wait), uiopen: size(c.UIOpen),
+    docs: c.Store.docs.length, hist: c.Store.docs.reduce((n, d) => n + d.hist.length, 0), ents: size(c.Reg.eschema), defs: size(c.Reg.defs), kinds: size(c.Reg.kinds), comps: c.EDATA.comps.length });
+  const sent = []; c.oriel.send = (k, v) => { sent.push(k); return true; };
+  const once = round => {
+    // 开一个物品、改几次、再关
+    c.Store.docs.length = 0; const d = c.makeDoc({ id: 'minecraft:stick', comps: { custom_data: { n: round } } }); c.Store.docs.push(d); c.Store.cur = 0;
+    for (let i = 0; i < 40; i++) c.Store.set('custom_data', { n: round, i, blob: 'x'.repeat(200) }, { structural: false, key: 'k' + i });
+    c.Valid.touch && c.Valid.touch();
+    // 世界页：开 / 改 / 保存
+    const w = { kind: 'block', type: 'minecraft:furnace', block: 'minecraft:furnace', slot: { kind: 'block', dim: 'minecraft:overworld', x: round % 5, y: 64, z: 0, token: 't' }, revision: 'r' + round, canUndo: false, has_block_entity: true, snbt: '{id:"minecraft:furnace",x:0,y:64,z:0}', nbt: {},
+      views: { furnace: { value: { cooking_time_spent: 0, cooking_total_time: 0, lit_time_remaining: 0, lit_total_time: 0 }, schema: { fields: {} } } }, block_state_schema: [{ name: 'lit', type: 'boolean', values: ['true', 'false'], default: 'false', current: 'false' }] };
+    c.weOpen(w); c.weSetV('furnace', 'lit_time_remaining', round); c.WE.pending = null; c.weApply(); c.weSaved(w);
+    // 注册表推送：分页条目 + 模组组件
+    c.Reg.ingest('registry.items', { generation: round, offset: 0, total: 3, done: true, entries: [{ id: 'minecraft:a' + round, name: 'a' }, { id: 'minecraft:b', name: 'b' }, { id: 'minecraft:c', name: 'c' }] });
+    c.Reg.ingest('registry.data_component_types', { generation: 1, offset: 0, total: 1, done: true, entries: [{ id: 'mymod:soak', name: 'soak' }] });
+    c.Reg.ingest('registry.component_schema', { entries: [{ id: 'minecraft:use_cooldown', ranges_for_ui: [{ path: '$.seconds', min: 0, max: 1e39, min_exclusive: true }] }] });
+  };
+  for (let r = 0; r < 20; r++) once(r);
+  const warm = probe();
+  for (let r = 20; r < 420; r++) once(r);
+  const after = probe();
+  c.WE.w = null; c.Store.docs.length = 0;
+  for (const k of Object.keys(warm)) assert.ok(after[k] <= warm[k] + 3, '不应随使用时间增长：' + k + ' ' + warm[k] + ' → ' + after[k]);
+}
+console.log('PASS soak: caches stay bounded over 400 open/edit/save/registry cycles.');
