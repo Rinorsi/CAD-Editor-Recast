@@ -1,9 +1,10 @@
-param([string]$ClasspathFile, [string]$BaseJar, [string]$World, [switch]$UseReleaseJar, [switch]$CompileOnly, [switch]$WorldOnly, [string[]]$OnlyComponents)
+param([string]$ClasspathFile, [string]$BaseJar, [string]$World, [switch]$UseReleaseJar, [switch]$CompileOnly, [switch]$WorldOnly, [string[]]$OnlyComponents, [string]$EvidenceRoot)
 $ErrorActionPreference = 'Stop'
 $Root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 function Get-GameProcesses {
     @(Get-CimInstance Win32_Process -Filter "Name = 'java.exe' OR Name = 'javaw.exe'" | Where-Object {
         $command=$_.CommandLine
+        if ($command -match 'agent[.]jar|GradleDaemon') { return $false }
         $game=$command -match 'KnotClient|runClient|net.minecraft.client.main.Main'
         if(!$game -and $command -match '"@([^"]+)"|@"([^"]+)"|@([^ ]+)'){
             $argPath=if($Matches[1]){$Matches[1]}elseif($Matches[2]){$Matches[2]}else{$Matches[3]}
@@ -14,16 +15,18 @@ function Get-GameProcesses {
 }
 $Games=Get-GameProcesses
 if($Games.Count -and !$CompileOnly){
-    $LogRoot=Join-Path ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))) 'logs/accept'
+    $LogRoot=if($EvidenceRoot){Join-Path ([IO.Path]::GetFullPath($EvidenceRoot)) 'accept-blocked'}else{Join-Path $Root 'logs/accept'}
     New-Item -ItemType Directory -Force $LogRoot | Out-Null
     $Games | Select-Object ProcessId | ConvertTo-Json | Set-Content ($LogRoot+'/user-game-processes.json')
-    & ($Root+'/tools/accept/report.ps1') -Pending 'real-client run pending: user game running'
+    if($EvidenceRoot){ & ($Root+'/tools/accept/report.ps1') -Pending 'real-client run pending: user game running' -OutputDirectory (Join-Path $LogRoot 'report') }
+    else { & ($Root+'/tools/accept/report.ps1') -Pending 'real-client run pending: user game running' }
     Write-Output ('real-client run pending: user game running; PID='+($Games.ProcessId -join ',')+'; logs/accept/user-game-processes.json; 稍后运行 pwsh -NoProfile -File tools/accept/run.ps1')
     exit 2
 }
 $Root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $Workspace = [IO.Path]::GetFullPath((Join-Path $Root '../Oriel-UI-Workspace'))
 $Out = Join-Path $Root ('daily/' + (Get-Date -Format 'yyyy-MM-dd') + '/accept/'+(Get-Date -Format 'HHmmss')+'-'+[Guid]::NewGuid().ToString('N').Substring(0,8))
+if ($EvidenceRoot) { $Out = Join-Path ([IO.Path]::GetFullPath($EvidenceRoot)) ('accept/'+(Get-Date -Format 'HHmmss')+'-'+[Guid]::NewGuid().ToString('N').Substring(0,8)) }
 $Run = Join-Path $Out $(if ($UseReleaseJar) { 'run-release' } else { 'run' })
 $Classes = Join-Path $Out 'compiled'
 $Probe = Join-Path $Out 'probe'
@@ -39,10 +42,15 @@ $CompileMc = (Get-ChildItem ($Root+'/.gradle/loom-cache/minecraftMaven') -Recurs
 $Runtime = @(Get-Content $ClasspathFile | ConvertFrom-Json)
 $Cp = (@($BaseJar,$CompileMc,$Mc) + $Runtime) -join ';'
 $Sources = @(Get-ChildItem ($Root+'/fabric/src/main/java') -Recurse -Filter '*.java' | ForEach-Object FullName)
-# Existing interactive Gradle runClient processes remain untouched; compile the registry package directly.
+function Invoke-AcceptJava([string]$Tool, [string[]]$Arguments, [string]$Log) {
+    $ArgumentsFile = $Log + '.args'
+    [IO.File]::WriteAllLines($ArgumentsFile, @($Arguments | ForEach-Object { '"'+$_.Replace('\','\\').Replace('"','\"')+'"' }), [Text.UTF8Encoding]::new($false))
+    & ($JavaBin+'/'+$Tool+'.exe') ('@'+$ArgumentsFile) 2>&1 | Out-File $Log
+    if ($LASTEXITCODE) { throw ($Tool+' failed; see '+$Log) }
+}
+# Use argument files: the full source list and classpath exceed the Windows command-line limit.
 if (!$UseReleaseJar) {
-    & ($JavaBin+'/javac.exe') -proc:none -encoding UTF-8 -cp $Cp -d $Classes $Sources *> ($Out+'/compile.log')
-    if ($LASTEXITCODE) { throw ('注册表 javac 失败；查看 '+$Out+'/compile.log') }
+    Invoke-AcceptJava javac (@('-proc:none','-encoding','UTF-8','-cp',$Cp,'-d',$Classes)+$Sources) ($Out+'/compile.log')
 }
 $EditorJar = Join-Path $Run 'mods/editor-supplement-under-test.jar'
 Copy-Item -LiteralPath $BaseJar -Destination $EditorJar -Force
@@ -54,10 +62,8 @@ $Manifest=[ordered]@{baseJar=$BaseJar;baseSha256=(Get-FileHash -LiteralPath $Bas
 $Manifest | ConvertTo-Json -Depth 5 | Set-Content ($Out+'/build-manifest.json')
 $TestSources = @('registry/AcceptanceProbe.java', 'registry/AcceptanceWorldProbe.java', 'registry/AcceptanceCodecTest.java', 'accept/mixin/AcceptanceClientMixin.java', 'registry/supplementmixin/RegistrySupplementWindowMixin.java', 'probe/mixin/NoMouseCaptureMixin.java') | ForEach-Object { $Root+'/fabric/src/autotest/java/dev/rinorsi/editor/'+$_ }
 $ProbeCp = if ($UseReleaseJar) { $Cp } else { $Classes+';'+$Cp }
-& ($JavaBin+'/javac.exe') -proc:none -encoding UTF-8 -cp $ProbeCp -d $Probe $TestSources *> ($Out+'/probe-compile.log')
-if ($LASTEXITCODE) { throw ('探针 javac 失败；查看 '+$Out+'/probe-compile.log') }
-& ($JavaBin+'/java.exe') -Xmx1G -cp ($Probe+';'+$ProbeCp) dev.rinorsi.editor.registry.AcceptanceCodecTest *> ($Out+'/codec-boundaries.log')
-if($LASTEXITCODE){throw ('类型边界 JVM 检查失败；查看 '+$Out+'/codec-boundaries.log')}
+Invoke-AcceptJava javac (@('-proc:none','-encoding','UTF-8','-cp',$ProbeCp,'-d',$Probe)+$TestSources) ($Out+'/probe-compile.log')
+Invoke-AcceptJava java @('-Xmx1G','-cp',($Probe+';'+$ProbeCp),'dev.rinorsi.editor.registry.AcceptanceCodecTest') ($Out+'/codec-boundaries.log')
 $Utf8 = [Text.UTF8Encoding]::new($false)
 [IO.File]::WriteAllText(($Probe+'/fabric.mod.json'), '{"schemaVersion":1,"id":"editor_supplement_probe","version":"1.0.0","environment":"client","entrypoints":{"client":["dev.rinorsi.editor.registry.AcceptanceProbe"]},"mixins":["supplement-window.mixins.json","editor-probe.mixins.json","acceptance.mixins.json"],"depends":{"fabricloader":">=0.19.5","fabric-api":"*","minecraft":"26.1.2","cadeditor":"*"}}', $Utf8)
 [IO.File]::WriteAllText(($Probe+'/supplement-window.mixins.json'), '{"required":true,"package":"dev.rinorsi.editor.registry.supplementmixin","compatibilityLevel":"JAVA_25","client":["RegistrySupplementWindowMixin"],"injectors":{"defaultRequire":1}}', $Utf8)
@@ -106,7 +112,8 @@ if(Test-Path -LiteralPath $Receipt){
     $Evidence | Add-Member -NotePropertyName build -NotePropertyValue $Manifest -Force
     $Evidence | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $Receipt
 }
-& ($Root+'/tools/accept/report.ps1') -Receipt $Receipt
+if ($EvidenceRoot) { & ($Root+'/tools/accept/report.ps1') -Receipt $Receipt -OutputDirectory (Join-Path $Out 'report') }
+else { & ($Root+'/tools/accept/report.ps1') -Receipt $Receipt }
 if ($Code -ne 0 -or !(Test-Path $Receipt) -or (Get-Item $Receipt).LastWriteTimeUtc -lt $Started -or (Get-Content $Receipt | ConvertFrom-Json).status -ne 'COMPLETE') { throw ('注册表补全自测失败；查看 '+$Out+'/client.log 与 '+$Receipt) }
 $Result=Get-Content -LiteralPath $Receipt -Raw | ConvertFrom-Json
 $Failed=@($Result.attempts | Where-Object { !$_.applied_ok -or !$_.reopen_equal -or !$_.typed_fidelity -or !$_.validate_ok })

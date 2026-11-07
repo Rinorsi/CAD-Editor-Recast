@@ -21,6 +21,9 @@ with tempfile.TemporaryDirectory(prefix="cad-accept-report-") as d:
     checklist=(tmp/"docs/acceptance/CHECKLIST-for-user.md").read_text(encoding="utf-8")
     assert sum(line.startswith("|") for line in checklist.splitlines())==27
     assert "未验证" in (tmp/"docs/acceptance/perf.md").read_text(encoding="utf-8")
+    custom = tmp/"custom-output"
+    subprocess.run([sys.executable,str(root/"tools/accept/report.py"),"--root",str(tmp),"--receipt",str(receipt),"--output",str(custom)],check=True,capture_output=True)
+    assert json.loads((custom/"components.json").read_text(encoding="utf-8"))["summary"] == r["summary"]
     extra=tmp/"extra.json";extra.write_text(json.dumps({"status":"COMPLETE","attempts":[{"component":"minecraft:custom_data","round":1,"applied_ok":True,"typed_fidelity":True,"reopen_equal":True}]}),encoding="utf-8")
     subprocess.run([sys.executable,str(root/"tools/accept/report.py"),"--root",str(tmp),"--receipt",str(receipt),"--additional-receipt",str(extra)],check=True,capture_output=True)
     merged=json.loads((tmp/"docs/acceptance/components.json").read_text(encoding="utf-8"))

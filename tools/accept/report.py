@@ -3,8 +3,8 @@ import argparse, json, re
 from pathlib import Path
 from datetime import datetime, timezone
 
-p=argparse.ArgumentParser();p.add_argument("--root",type=Path,required=True);p.add_argument("--receipt",type=Path);p.add_argument("--pending");p.add_argument("--additional-receipt",type=Path);a=p.parse_args()
-out=a.root/"docs/acceptance";out.mkdir(parents=True,exist_ok=True)
+p=argparse.ArgumentParser();p.add_argument("--root",type=Path,required=True);p.add_argument("--receipt",type=Path);p.add_argument("--pending");p.add_argument("--additional-receipt",type=Path);p.add_argument("--output",type=Path);a=p.parse_args()
+out=a.output or a.root/"docs/acceptance";out.mkdir(parents=True,exist_ok=True)
 r=json.loads(a.receipt.read_text(encoding="utf-8-sig")) if a.receipt and a.receipt.exists() else {"status":"PENDING","reason":a.pending or "receipt missing","attempts":[]}
 r.setdefault("status","IN_PROGRESS")
 perf_attempts=list(r.get("attempts",[]))

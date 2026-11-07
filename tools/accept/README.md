@@ -4,6 +4,8 @@
 
 ```powershell
 pwsh -NoProfile -File tools/accept/run.ps1
+# Keep this run and its report separate from other verification sessions.
+pwsh -NoProfile -File tools/accept/run.ps1 -EvidenceRoot logs/live-test
 # 只编译，不启动游戏
 pwsh -NoProfile -File tools/accept/run.ps1 -CompileOnly
 # 不覆盖源码，仅测试明确指定的发行 jar
