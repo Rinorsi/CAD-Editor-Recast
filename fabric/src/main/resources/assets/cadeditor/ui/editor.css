@@ -538,7 +538,10 @@ textarea.ed-raw, textarea.ed-snbt, textarea.ed-out { width: 100%; color: var(--t
 @media (max-width: 540px), (max-height: 290px) {
   .eb .crumb, .k-search span, .k-search .k-kbd { display: none; }
   .ed-hero { width: 68px; padding: 6px 4px; gap: 4px; align-items: center; }
-  .ed-hero .ed-stagehead, .ed-hero .ed-tags, .ed-hero .ed-stats, .ed-hero .ed-tiphead, .ed-hero .k-scrollbox, .ed-hero .k-togrow, .ed-hero .k-note { display: none; }
+  .ed-hero:not(.pop) .ed-stagehead, .ed-hero:not(.pop) .ed-tags, .ed-hero:not(.pop) .ed-stats, .ed-hero:not(.pop) .ed-tiphead, .ed-hero:not(.pop) .k-scrollbox, .ed-hero:not(.pop) .k-togrow, .ed-hero:not(.pop) .k-note { display: none; }
+  .ed-hero { cursor: pointer; }
+  .ed-hero.pop { width: 200px; align-items: stretch; }
+  .ed-hero.pop .ed-name { font-size: 12px; line-height: 16px; }
   .ed-stage { height: 40px; } .ed-stage .plate { width: 44px; height: 44px; margin: -22px 0 0 -22px; }
   .ed-stage .k-ico { width: 32px !important; height: 32px !important; }
   .ed-name { font-size: 8px; line-height: 14px; }
@@ -830,7 +833,10 @@ textarea.ed-code-in { min-height: 56px; }
 /* 窗口被拖窄（不是屏幕小）时同样收成紧凑布局：由脚本按窗口宽度加 .narrow */
 .ew.narrow .eb .crumb, .ew.narrow .k-search span, .ew.narrow .k-search .k-kbd { display: none; }
 .ew.narrow .ed-hero { width: 68px; padding: 6px 4px; gap: 4px; align-items: center; }
-.ew.narrow .ed-hero .ed-stagehead, .ew.narrow .ed-hero .ed-tags, .ew.narrow .ed-hero .ed-stats, .ew.narrow .ed-hero .ed-tiphead, .ew.narrow .ed-hero .k-scrollbox, .ew.narrow .ed-hero .k-togrow, .ew.narrow .ed-hero .k-note { display: none; }
+.ew.narrow .ed-hero:not(.pop) .ed-stagehead, .ew.narrow .ed-hero:not(.pop) .ed-tags, .ew.narrow .ed-hero:not(.pop) .ed-stats, .ew.narrow .ed-hero:not(.pop) .ed-tiphead, .ew.narrow .ed-hero:not(.pop) .k-scrollbox, .ew.narrow .ed-hero:not(.pop) .k-togrow, .ew.narrow .ed-hero:not(.pop) .k-note { display: none; }
+.ew.narrow .ed-hero { cursor: pointer; }
+.ew.narrow .ed-hero.pop { width: 200px; align-items: stretch; }
+.ew.narrow .ed-hero.pop .ed-name { font-size: 12px; line-height: 16px; }
 .ew.narrow .ed-stage { height: 40px; } .ew.narrow .ed-stage .plate { width: 44px; height: 44px; margin: -22px 0 0 -22px; }
 .ew.narrow .ed-name { font-size: 8px; line-height: 14px; }
 .ew.narrow .ed-tip { display: none; }

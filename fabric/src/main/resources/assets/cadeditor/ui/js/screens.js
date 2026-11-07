@@ -178,7 +178,8 @@ function applyWinStyle() {
 /* 拖动时每帧都重排很贵：量尺寸的适配（顶栏收纳、提示框高度）合并成限频执行 */
 var fitT = null;
 function scheduleFit() { if (fitT) return; fitT = setTimeout(function () { fitT = null; var wn = $('win'); if (wn) { var ww = wn.getBoundingClientRect().width; if (ww > 100) { wn.classList.toggle('narrow', ww < 420); wn.classList.toggle('snug', ww >= 420 && ww < 680); } } fitTopbar(); fitTip(); }, UI.dragging ? 110 : 0); }
-if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', scheduleFit);
+/* 窗口几何有 280ms 的过渡：resize 触发时量到的是动画中间值，所以立即量一次之后，过渡结束再量一次，否则模式会停在旧的一档 */
+if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', function () { scheduleFit(); setTimeout(scheduleFit, 320); setTimeout(scheduleFit, 600); });
 function clampN(v, a, b) { return Math.max(a, Math.min(b, v)); }
 /* 调试开关（高级 → 设置）：打开后关键操作会弹提示，并写进游戏日志 latest.log（前缀 [CAD-Editor-Recast]） */
 function dbg(msg) {
@@ -210,7 +211,13 @@ function drawEdit() {
   var tabs = tabsOfKind(kind);
   if (!tabs.some(function (t) { return t.id === UI.tab; })) UI.tab = tabs[0].id;
   applyWinStyle();
-  var hero = h('aside', { class: 'ed-hero', id: 'hero' });
+  var hero = h('aside', { class: 'ed-hero' + (UI.heroPop ? ' pop' : ''), id: 'hero', title: '' });
+  /* 紧凑模式（窗口窄 / GUI 缩放大）下左栏收成一条，被隐藏的属性、标签、提示框预览不丢：点一下这条栏就展开，再点收回 */
+  hero.addEventListener('click', function (e) {
+    var wn = $('win'), compact = (wn && wn.classList.contains('narrow')) || window.innerWidth <= 540 || window.innerHeight <= 290;
+    if (!compact || (e.target.closest && e.target.closest('.k-btn, .k-mini, .k-seg, .ed-stagehead, .ed-tiphead, input, textarea'))) return;
+    UI.heroPop = !UI.heroPop; hero.classList.toggle('pop', UI.heroPop);
+  });
   var split = h('div', { class: 'ed-split', title: '拖动调整左栏宽度（双击恢复）' });
   split.addEventListener('mousedown', startSplit); split.addEventListener('dblclick', function () { UI.heroW = 0; applyWinStyle(); Prefs.set('heroWidth', 0); });
   var right = h('section', { class: 'ed-right' });
