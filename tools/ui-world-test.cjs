@@ -411,7 +411,7 @@ console.log('PASS tooltip preview: host lines, fallback.');
   // SNBT 文本改动：类型保真地发出（紧凑）
   c.WE.slots = {}; c.WE.text = c.WE.text.replace('lock: 5L', 'lock: 6L');
   assert.equal(c.weDirty(), true);
-  c.weApply(); const ap2 = sent.filter(x => x[0] === 'apply').pop()[1];
+  c.WE.lastSendAt = 0; c.weApply(); const ap2 = sent.filter(x => x[0] === 'apply').pop()[1];
   assert.ok(ap2.snbt.includes('lock:6L') && !ap2.snbt.includes('\n'), 'long 保留后缀、紧凑单行');
   // 打印 / 解析往返
   assert.equal(c.nbtPrint(c.nbtParse('{a:1b,b:[B;1b,2b],c:"x y",d:2.5f}'), false), '{a:1b,b:[B;1b,2b],c:"x y",d:2.5f}');
@@ -492,7 +492,10 @@ console.log('PASS world edit: container slots, typed SNBT apply, rejected keeps 
   const sz = row(p, '大小').querySelector('.k-numin'); assert.equal(sz.value, '1');
   sz.value = '5'; sz.fire('input'); sz.fire('change'); assert.equal(data.Size, 4);
   // 离线 / 读不到：说明原因，不画假选项
-  c.Reg.meta = null; p = panel('minecraft:cat'); assert.ok(/没有连接游戏/.test(p.textContent)); c.Reg.meta = {};
+  { const sendBak = c.oriel.send;
+    c.Reg.meta = null; c.oriel.send = undefined; p = panel('minecraft:cat'); assert.ok(/没有连接游戏/.test(p.textContent), '没有宿主才说没连接');
+    c.oriel.send = sendBak; c.Reg.esAt = {}; p = panel('minecraft:cat'); assert.ok(/正在向游戏读取/.test(p.textContent) && !/没有连接游戏/.test(p.textContent), '有宿主但注册表还没到：算正在读取，不说没连接');
+    c.Reg.meta = {}; }
   p = panel('mod:broken'); assert.ok(/工厂不可用/.test(p.textContent));
 
   // 刷怪蛋页：上面控件管的字段不在「其他数据」里重复，原始字段改不了它们
@@ -746,7 +749,7 @@ console.log('PASS live component ranges override hand-written ones.');
   ins[1].value = '你好'; ins[1].fire('change');
   assert.equal(c.weDirty(), true);
   c.WE.bstate.waterlogged = 'true';
-  c.WE.pending = null; c.weApply(); const ap = sent.filter(x => x[0] === 'apply').pop()[1];
+  c.WE.pending = null; c.WE.lastSendAt = 0; c.weApply(); const ap = sent.filter(x => x[0] === 'apply').pop()[1];
   assert.equal(ap.views.sign.front_text.messages[1], '你好'); assert.equal(ap.views.sign.front_text.messages[0], 'a', '其他行原样带上');
   assert.equal(ap.views.sign.is_waxed, false, '改字同时取消涂蜡'); assert.equal(ap.block_state.waterlogged, 'true');
   assert.equal(ap.block_state.rotation, undefined, '没改的属性不发'); assert.equal(ap.snbt, undefined);
@@ -758,17 +761,17 @@ console.log('PASS live component ranges override hand-written ones.');
     block_state_schema: [{ name: 'conditional', type: 'boolean', values: ['true', 'false'], default: 'false', current: 'false' }],
     views: { command_block: { value: { Command: '', TrackOutput: true, auto: false, powered: false }, schema: { fields: {} } } } });
   c.weOpen(cb); c.WE.btype = 'minecraft:repeating_command_block'; c.WE.upd = false; c.weSetV('command_block', 'Command', 'say hi');
-  c.WE.pending = null; c.weApply(); const ap2 = sent.filter(x => x[0] === 'apply').pop()[1];
+  c.WE.pending = null; c.WE.lastSendAt = 0; c.weApply(); const ap2 = sent.filter(x => x[0] === 'apply').pop()[1];
   assert.equal(ap2.block_type, 'minecraft:repeating_command_block'); assert.equal(ap2.updateNeighbors, false); assert.equal(ap2.views.command_block.Command, 'say hi');
   c.WE.upd = true;
   // 没有方块实体的普通方块：只有状态页，不给数据页
   const door = mk('minecraft:oak_door', { has_block_entity: false, block_state_schema: [{ name: 'open', type: 'boolean', values: ['true', 'false'], default: 'false', current: 'false' }] });
   c.weOpen(door); assert.equal(JSON.stringify(c.weTabs().map(t => t.id)), '["state"]');
   c.WE.tab = 'state'; c.weRender();
-  c.WE.pending = null; c.weApply(); assert.equal(sent.filter(x => x[0] === 'apply').pop()[1], ap2, '没改就不发');
+  c.WE.pending = null; c.WE.lastSendAt = 0; c.weApply(); assert.equal(sent.filter(x => x[0] === 'apply').pop()[1], ap2, '没改就不发');
   // 熔炉：只发改过的进度字段
   const fu = mk('minecraft:furnace', { views: { furnace: { value: { cooking_time_spent: 0, cooking_total_time: 0, lit_time_remaining: 0, lit_total_time: 0 }, schema: { fields: { cooking_time_spent: { min: -32768, max: 32767 } } } } } });
-  c.weOpen(fu); c.weSetV('furnace', 'lit_time_remaining', 100); c.WE.pending = null; c.weApply();
+  c.weOpen(fu); c.weSetV('furnace', 'lit_time_remaining', 100); c.WE.pending = null; c.WE.lastSendAt = 0; c.weApply();
   const ap3 = sent.filter(x => x[0] === 'apply').pop()[1]; assert.equal(JSON.stringify(ap3.views), '{"furnace":{"lit_time_remaining":100}}');
   c.WE.w = null;
 }
@@ -785,29 +788,29 @@ console.log('PASS block views, block state, command block mode, volatile-friendl
   c.WE.tab = 'pose'; c.weRender();
   assert.equal(c.evVal('pose').Head[1], 20); assert.equal(c.evVal('pose').schema, undefined, 'schema 不当数据');
   c.evSet('pose', 'Head', [10, 45, 30]); c.evSet('pose', 'ShowArms', true);
-  c.WE.pending = null; c.weApply(); const ap = last();
+  c.WE.pending = null; c.WE.lastSendAt = 0; c.weApply(); const ap = last();
   assert.equal(JSON.stringify(ap.entity.pose), '{"Head":[10,45,30],"ShowArms":true}', '只发改过的'); assert.equal(ap.snbt, undefined);
   c.evSet('pose', 'Head', [10, 20, 30]); c.evSet('pose', 'ShowArms', false); assert.equal(c.weDirty(), false, '改回原值不算改');
   // 乘客：独立 apply.riding，别的修改没提交时拒绝
   c.WE.tab = 'riding'; c.weRender();
-  c.WE.pending = null; c.evRideSend({ action: 'remove', uuid: 'cat-1' }); assert.deepEqual(JSON.parse(JSON.stringify(last().riding)), { action: 'remove', uuid: 'cat-1' }); assert.equal(last().entity, undefined);
-  const n0 = sent.length; c.evSet('pose', 'Small', true); c.WE.pending = null; c.evRideSend({ action: 'eject' }); assert.equal(sent.length, n0, '有草稿时不发乘客操作');
+  c.WE.pending = null; c.WE.lastSendAt = 0; c.evRideSend({ action: 'remove', uuid: 'cat-1' }); assert.deepEqual(JSON.parse(JSON.stringify(last().riding)), { action: 'remove', uuid: 'cat-1' }); assert.equal(last().entity, undefined);
+  const n0 = sent.length; c.evSet('pose', 'Small', true); c.WE.pending = null; c.WE.lastSendAt = 0; c.evRideSend({ action: 'eject' }); assert.equal(sent.length, n0, '有草稿时不发乘客操作');
   // 展示框
   const fr = mk('minecraft:item_frame', { item_frame: { Fixed: false, Invisible: false, ItemDropChance: 1, ItemRotation: 0, item: { empty: true }, schema: { fields: { ItemRotation: { max: 7 } } } }, riding });
   c.weOpen(fr); assert.equal(c.weTabs()[0].id, 'frame'); c.evSet('item_frame', 'ItemRotation', 3); c.evSet('item_frame', 'item', { id: 'minecraft:diamond', count: 1, comps: {}, removed: {} });
-  c.WE.pending = null; c.weApply(); assert.equal(last().entity.item_frame.ItemRotation, 3); assert.equal(last().entity.item_frame.item.id, 'minecraft:diamond');
+  c.WE.pending = null; c.WE.lastSendAt = 0; c.weApply(); assert.equal(last().entity.item_frame.ItemRotation, 3); assert.equal(last().entity.item_frame.item.id, 'minecraft:diamond');
   // 文字展示：不透明度按 0..255 显示、有符号 byte 提交
   const td = mk('minecraft:text_display', { display: { billboard: 'fixed', text: 'hi', text_opacity: -1, alignment: 'center', line_width: 200, transformation: { translation: [0, 0, 0], scale: [1, 1, 1], left_rotation: [0, 0, 0, 1], right_rotation: [0, 0, 0, 1] }, schema: { fields: {} } }, riding });
   c.weOpen(td); c.WE.tab = 'display'; c.weRender();
   c.evSet('display', 'text_opacity', 100 > 127 ? 100 - 256 : 100); c.evSet('display', 'text', c.textMsg('{"text":"x","bold":true}'));
   const t = JSON.parse(JSON.stringify(c.evGet('display', 'transformation'))); t.scale = [2, 2, 2]; c.evSet('display', 'transformation', t);
-  c.WE.pending = null; c.weApply(); const ad = last().entity.display;
+  c.WE.pending = null; c.WE.lastSendAt = 0; c.weApply(); const ad = last().entity.display;
   assert.equal(ad.text_opacity, 100); assert.equal(ad.text.bold, true); assert.equal(JSON.stringify(ad.transformation.scale), '[2,2,2]'); assert.equal(Object.keys(ad).length, 3);
   // 交易
   const vi = mk('minecraft:villager', { trades: { available: true, offers: [{ buy: { id: 'minecraft:emerald', count: 2, comps: {}, removed: {}, cost_predicate_snbt: '{}' }, sell: { id: 'minecraft:bread', count: 3, comps: {}, removed: {} }, uses: 3, maxUses: 12, rewardExp: true, xp: 5, priceMultiplier: 0.05, demand: 0, specialPrice: 0 }] }, riding });
   c.weOpen(vi); c.WE.tab = 'trades'; c.weRender(); assert.equal(c.weDirty(), false, '只是看不算改');
   c.evOffers()[0].uses = 0; assert.equal(c.weDirty(), true);
-  c.WE.pending = null; c.weApply(); const ao = last().entity.offers; assert.equal(ao.length, 1); assert.equal(ao[0].uses, 0); assert.equal(ao[0].buy.cost_predicate_snbt, '{}', '谓词旁路原样带回');
+  c.WE.pending = null; c.WE.lastSendAt = 0; c.weApply(); const ao = last().entity.offers; assert.equal(ao.length, 1); assert.equal(ao[0].uses, 0); assert.equal(ao[0].buy.cost_predicate_snbt, '{}', '谓词旁路原样带回');
   const noSrv = mk('minecraft:villager', { trades: { available: false, reason: '没有服务器' }, riding }); c.weOpen(noSrv); c.WE.tab = 'trades'; c.weRender();
   c.WE.w = null;
 }
@@ -827,7 +830,7 @@ console.log('PASS world entity: pose, frame, display, trades, riding.');
     // 世界页：开 / 改 / 保存
     const w = { kind: 'block', type: 'minecraft:furnace', block: 'minecraft:furnace', slot: { kind: 'block', dim: 'minecraft:overworld', x: round % 5, y: 64, z: 0, token: 't' }, revision: 'r' + round, canUndo: false, has_block_entity: true, snbt: '{id:"minecraft:furnace",x:0,y:64,z:0}', nbt: {},
       views: { furnace: { value: { cooking_time_spent: 0, cooking_total_time: 0, lit_time_remaining: 0, lit_total_time: 0 }, schema: { fields: {} } } }, block_state_schema: [{ name: 'lit', type: 'boolean', values: ['true', 'false'], default: 'false', current: 'false' }] };
-    c.weOpen(w); c.weSetV('furnace', 'lit_time_remaining', round); c.WE.pending = null; c.weApply(); c.weSaved(w);
+    c.weOpen(w); c.weSetV('furnace', 'lit_time_remaining', round); c.WE.pending = null; c.WE.lastSendAt = 0; c.weApply(); c.weSaved(w);
     // 注册表推送：分页条目 + 模组组件
     c.Reg.ingest('registry.items', { generation: round, offset: 0, total: 3, done: true, entries: [{ id: 'minecraft:a' + round, name: 'a' }, { id: 'minecraft:b', name: 'b' }, { id: 'minecraft:c', name: 'c' }] });
     c.Reg.ingest('registry.data_component_types', { generation: 1, offset: 0, total: 1, done: true, entries: [{ id: 'mymod:soak', name: 'soak' }] });
@@ -858,7 +861,7 @@ console.log('PASS soak: caches stay bounded over 400 open/edit/save/registry cyc
   c.wpSetSlot('container', 5, { id: 'minecraft:apple', count: 1, comps: {}, removed: {} }); c.wpSetSlot('ender', 2, { id: 'minecraft:diamond', count: 2, comps: {}, removed: {} });
   c.evSet('player', 'playerGameType', 'creative'); c.evSet('player', 'food', { foodLevel: 10, saturation: 5 }); c.evSet('player', 'SelectedItemSlot', 4);
   assert.equal(c.weDirty(), true);
-  c.WE.pending = null; c.weApply(); const ap = sent.filter(x => x[0] === 'apply').pop()[1];
+  c.WE.pending = null; c.WE.lastSendAt = 0; c.weApply(); const ap = sent.filter(x => x[0] === 'apply').pop()[1];
   assert.equal(ap.snbt, undefined, '玩家不提交原始 SNBT'); const pp = ap.entity.player;
   assert.equal(pp.playerGameType, 'creative'); assert.equal(pp.food.foodLevel, 10); assert.equal(pp.SelectedItemSlot, 4);
   assert.equal(JSON.stringify(pp.container.slots.map(s => s.slot)), '[5]'); assert.equal(pp.ender.slots[0].stack.id, 'minecraft:diamond'); assert.equal(pp.abilities, undefined);

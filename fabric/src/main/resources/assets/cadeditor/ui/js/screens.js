@@ -30,12 +30,22 @@ var Prefs = {
   }
 };
 
-function toast(text, kind) {
-  if (kind === 'ok') snd('minecraft:entity.experience_orb.pickup', 0.35, 1.3); else if (kind === 'error') snd('minecraft:block.note_block.bass', 0.6, 0.7);
-  var t = h('div', { class: 'k-toast ' + (kind || 'info') }, [uiIcon(kind === 'error' ? 'warning' : kind === 'ok' ? 'check' : 'info', 14), text]);
-  $('toasts').appendChild(t);
-  setTimeout(function () { t.classList.add('out'); }, 2400);
-  setTimeout(function () { t.remove(); }, 2900);
+/* 提示：同一个 key（默认用文字本身）的提示只留一条、刷新计时；最多同时 3 条；时间按文字长短 */
+var TOAST_LIVE = {};
+function toastDismiss(key) { var t = TOAST_LIVE[key]; if (t) { delete TOAST_LIVE[key]; clearTimeout(t._t1); clearTimeout(t._t2); t.remove(); } }
+function toast(text, kind, key) {
+  key = key || String(text);
+  var box = $('toasts'); if (!box) return;
+  var old = TOAST_LIVE[key]; if (old) { clearTimeout(old._t1); clearTimeout(old._t2); old.remove(); delete TOAST_LIVE[key]; }
+  else if (kind === 'ok') snd('minecraft:entity.experience_orb.pickup', 0.35, 1.3);
+  else if (kind === 'error') snd('minecraft:block.note_block.bass', 0.6, 0.7);
+  var icn = kind === 'error' || kind === 'warn' ? 'warning' : kind === 'ok' ? 'check' : 'info';
+  var t = h('div', { class: 'k-toast ' + (kind || 'info') }, [uiIcon(icn, 14), String(text)]);
+  box.appendChild(t); TOAST_LIVE[key] = t;
+  while (box.children.length > 3) { var first = box.children[0]; Object.keys(TOAST_LIVE).forEach(function (k) { if (TOAST_LIVE[k] === first) delete TOAST_LIVE[k]; }); first.remove(); }
+  var ms = Math.max(2400, Math.min(8000, 1500 + String(text).length * 70));
+  t._t1 = setTimeout(function () { t.classList.add('out'); }, ms);
+  t._t2 = setTimeout(function () { t.remove(); if (TOAST_LIVE[key] === t) delete TOAST_LIVE[key]; }, ms + 500);
 }
 var ModalParents = [];
 var VaultOnly = false, ModalSwap = false;   // 独立保险库页（主菜单打开，没有物品）：最后一个窗口关掉就关页面

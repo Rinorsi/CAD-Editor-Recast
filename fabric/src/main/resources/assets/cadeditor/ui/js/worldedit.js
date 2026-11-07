@@ -213,7 +213,8 @@ function weDataTab(body) {
 
 /* ---------- 应用 / 撤销 / 回执 ---------- */
 function weApply() {
-  if (WE.pending) { toast('上一笔修改还没有回执', 'info'); return; }
+  if (WE.pending) { toast('上一笔修改还没有回执', 'info', 'we-wait'); return; }
+  if (Date.now() - (WE.lastSendAt || 0) < 650) return;   // 服务器 500ms 限流：连点不重复提交
   var w = WE.w, msg = { requestId: 'w-' + Date.now() + '-' + (++WE.seq), slot: clone(w.slot) };
   if (weDirtyText()) {
     try { msg.snbt = nbtPrint(nbtParse(WE.text), false); } catch (e) { toast('SNBT 有误，没有提交：' + (e.message || e), 'error'); return; }
@@ -232,20 +233,26 @@ function weUndo() {
 function weSend(op, msg, note) {
   var sent = (typeof oriel !== 'undefined' && oriel.send) ? oriel.send(op, msg) : false;
   if (!sent) { toast('宿主没有接受提交（未连接或限流）；修改已保留', 'error'); return; }
-  WE.pending = msg.requestId; toast(note, 'info');
+  WE.lastSendAt = Date.now(); WE.pending = msg.requestId; WE.lastMsg = { op: op, msg: msg, note: note }; toast(note, 'info', 'we-pending');
   clearTimeout(WE.timer);
   WE.timer = setTimeout(function () { if (WE.pending === msg.requestId) { WE.pending = null; toast('10 秒没有收到回执，结果未知；请关闭后重新打开核对', 'error'); } }, 12000);
 }
 var WE_CODE = { target_changed: '你改的内容和游戏在你编辑期间的改动撞在了同一个字段上，没有覆盖。没动过的字段（计时、进度、位置……）不会造成冲突；请重新打开，在最新数据上再改一次。', session_lost: '编辑会话已失效，请关闭后重新打开。', not_allowed: '没有权限。', out_of_reach: '离得太远了，走近一点。', chunk_unloaded: '所在区块没有加载。', protected_area: '这里受保护，不能修改。', invalid_nbt: '数据没有通过游戏的校验。', slot_invalid: '这个格子放不下这个物品。', unsupported_target: '这个目标暂时不能这样编辑。', rate_limited: '操作太快了，稍等一下。', payload_too_large: '数据太大。' };
 function weResult(r) {
   if (!r || r.requestId !== WE.pending) return;
-  clearTimeout(WE.timer); WE.pending = null;
+  clearTimeout(WE.timer); WE.pending = null; toastDismiss('we-pending');
   if (r.status !== 'saved') {
+    /* 提交太快被限流：不让用户一直点，按服务器给的等待时间自动重发一次（最多 2 次） */
+    if (r.code === 'rate_limited' && WE.lastMsg && (WE.lastMsg.tries || 0) < 2) {
+      var lm = WE.lastMsg, wait = Math.max(300, Math.min(2000, +r.retryAfterMs || 700)); lm.tries = (lm.tries || 0) + 1;
+      setTimeout(function () { if (WE.pending || !weActive()) return; var m2 = clone(lm.msg); m2.requestId = 'w-' + Date.now() + '-' + (++WE.seq); lm.msg = m2; weSend(lm.op, m2, lm.note); WE.lastMsg.tries = lm.tries; }, wait);
+      return;
+    }
     var hint = WE_CODE[r.code]; WE.err = r.reason || r.code || '失败';
     var cf = Array.isArray(r.conflicts) && r.conflicts.length ? String.fromCharCode(10) + '冲突的字段：' + r.conflicts.slice(0, 6).map(function (c) { return (c.path || []).join('.'); }).join('；') + (r.conflicts.length > 6 ? ' 等 ' + r.conflicts.length + ' 处' : '') : '';
-    toast((r.reason || r.code || '修改没有成功') + (hint ? String.fromCharCode(10) + hint : '') + cf, 'error'); drawWorldFoot(); return;
+    toast((hint || r.reason || r.code || '修改没有成功') + cf, 'error', 'we-error'); drawWorldFoot(); return;
   }
-  toast('游戏已确认修改', 'ok');
+  WE.lastMsg = null; toast('游戏已确认修改', 'ok', 'we-ok');
 }
 function weSaved(world) {
   if (!world) return;
