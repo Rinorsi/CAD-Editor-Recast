@@ -643,3 +643,35 @@ console.log('PASS vault: protocol, upload, export fallback, nested conversion, w
   c.nbtSeenClear(); assert.equal(Object.keys(c.NBT_FORCE).length, 0, '保存成功后清空');
 }
 console.log('PASS vault take-out into container keeps typed values.');
+
+// 生物属性 / 体型 / 效果 / 标签：来自真实 entity_schema，改默认值就不写
+{
+  const ex = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../docs/entity-schema-examples-26.1.2.json'), 'utf8'));
+  const z = ex.zombie.entries ? ex.zombie.entries[0] : ex.zombie;
+  assert.ok((z.attributes || []).some(a => a.id === 'minecraft:scale'), '例子里有体型属性');
+  let data = { id: 'minecraft:zombie', Health: 20 }; const writes = [];
+  const o = { get: () => data, set: v => { data = v; writes.push(v); }, redraw() {} };
+  const el = c.esAttrList(z, o);
+  const rows = el.querySelectorAll('.k-xrow'); const titles = rows.map(r => r.querySelector('.z').textContent);
+  assert.equal(titles[0], '体型', '体型排第一');
+  const inputOf = t => rows[titles.indexOf(t)].querySelector('.k-numin');
+  const sc = inputOf('体型'); sc.value = '2'; sc.fire('input'); sc.fire('change');
+  assert.deepEqual(JSON.parse(JSON.stringify(data.attributes)), [{ id: 'minecraft:scale', base: 2 }], '体型写成 attributes 里的一项');
+  sc.value = '1'; sc.fire('input'); sc.fire('change');
+  assert.equal(data.attributes, undefined, '改回默认就不写，整个 attributes 也去掉');
+  // 最大生命降到比当前生命低 → 生命一起压下来
+  const mh = titles.indexOf('最大生命值') >= 0 ? '最大生命值' : titles.find(t => /生命/.test(t));
+  if (mh) { const m = inputOf(mh); m.value = '8'; m.fire('input'); m.fire('change'); assert.equal(data.Health, 8, '生命不超过新的最大生命'); }
+  // 体型对预览的倍数
+  data = { attributes: [{ id: 'minecraft:scale', base: 4 }] }; assert.equal(c.esAttrScale(data, z), 4);
+  // 别的字段（modifiers）原样保留
+  data = { attributes: [{ id: 'minecraft:scale', base: 3, modifiers: [{ id: 'x', amount: 1, operation: 'add_value' }] }] };
+  const el2 = c.esAttrList(z, o); const r2 = el2.querySelectorAll('.k-xrow'); const i2 = r2.find(r => r.querySelector('.z').textContent === '体型').querySelector('.k-numin');
+  i2.value = '1'; i2.fire('input'); i2.fire('change');
+  assert.ok(data.attributes && data.attributes[0].modifiers && data.attributes[0].base === undefined, '改回默认只去掉 base，modifiers 保留');
+  assert.ok(c.esAttrBase({}, z.attributes[0]) === z.attributes[0].base);
+  // 标签
+  data = {}; const tr = c.esTagsRow(z, o);
+  if (tr) { const inp = tr.querySelector('input'); inp.value = 'a，b c'; inp.fire('change'); assert.deepEqual(JSON.parse(JSON.stringify(data.Tags)), ['a', 'b', 'c']); }
+}
+console.log('PASS entity attributes, scale, tags.');

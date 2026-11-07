@@ -64,6 +64,20 @@ CARDS.eggFlags = function () {
   var ok = esReady(id, card.body); if (ok) card.body.appendChild(esFlagList(ok, eggIo()));
   return card;
 };
+CARDS.eggAttrs = function () {
+  var id = eggCur(), s = id ? Reg.entitySchema(id) : null;
+  if (s && s.available && !(s.attributes || []).some(function (a) { return a.common; })) return null;
+  var card = eggCard('eggAttrs', 'sword', '属性', '体型、最大生命、速度、攻击力……来自这只生物在游戏里的真实属性');
+  var ok = esReady(id, card.body); if (ok) { var tr = esTagsRow(ok, eggIo()); card.body.appendChild(esAttrList(ok, eggIo())); if (tr) card.body.appendChild(tr); }
+  return card;
+};
+CARDS.eggEffects = function () {
+  var id = eggCur(), s = id ? Reg.entitySchema(id) : null;
+  if (s && s.available && !(s.effects && s.effects.common)) return null;
+  var card = eggCard('eggEffects', 'flask', '状态效果', '生成时身上带着的效果');
+  var ok = esReady(id, card.body); if (ok) card.body.appendChild(esEffects(ok, eggIo()));
+  return card;
+};
 CARDS.eggGear = function () {
   var id = eggCur(), card = eggCard('eggGear', 'helmet', '装备', '点格子放物品；有物品的格子点开可以改掉落概率');
   card.el.classList.add('es-open'); card.onHead = function () { return true; };   // 不折叠：装备直接摆在页面里

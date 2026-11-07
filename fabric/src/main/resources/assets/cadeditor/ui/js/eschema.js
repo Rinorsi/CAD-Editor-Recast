@@ -8,8 +8,8 @@ var ES_VARIANT = { variant: '品种', sound_variant: '叫声', collar: '项圈�
 var ES_FLAG = { CustomName: ['名字', '头顶显示的名字'], CustomNameVisible: ['总是显示名字', '不用准星对着也显示'], Health: ['生命值', ''],
   Age: ['幼年', '生成为幼年个体'], IsBaby: ['幼年', '生成为幼年个体'], NoAI: ['没有 AI', '不会自己移动和攻击'], Silent: ['静音', '不发出声音'],
   Invulnerable: ['无敌', '不受伤害（创造模式玩家除外）'], NoGravity: ['无重力', '不会下落'], Glowing: ['发光轮廓', '隔着方块也能看到轮廓'],
-  PersistenceRequired: ['不会消失', '玩家走远也不会自然消失'], ShowArms: ['显示手臂', '手臂可以拿东西'] };
-var ES_FLAG_ORDER = ['CustomName', 'CustomNameVisible', 'Health', 'Age', 'IsBaby', 'ShowArms', 'NoAI', 'PersistenceRequired', 'Silent', 'Invulnerable', 'NoGravity', 'Glowing'];
+  PersistenceRequired: ['不会消失', '玩家走远也不会自然消失'], ShowArms: ['显示手臂', '手臂可以拿东西'], LeftHanded: ['左撇子', '主手和副手对调'], CanPickUpLoot: ['会捡东西', '会拾取地上的物品和装备'] };
+var ES_FLAG_ORDER = ['CustomName', 'CustomNameVisible', 'Health', 'Age', 'IsBaby', 'ShowArms', 'NoAI', 'PersistenceRequired', 'LeftHanded', 'CanPickUpLoot', 'Silent', 'Invulnerable', 'NoGravity', 'Glowing'];
 var ES_SLOT = { mainhand: ['主手', 'sword'], offhand: ['副手', 'shield'], head: ['头部', 'helmet'], chest: ['胸部', 'chestplate'], legs: ['腿部', 'leggings'], feet: ['脚部', 'boots'], body: ['身体', 'shield'], saddle: ['鞍', 'cart'] };
 
 function esGet(o, p) { for (var i = 0; i < p.length; i++) { if (!isObj(o)) return undefined; o = o[p[i]]; } return o; }
@@ -50,6 +50,9 @@ function esOwnedKeys(s) {
   if (!s || !s.available) return k;
   (s.variants || []).forEach(function (v) { if (v.nbt && v.nbt.path && v.nbt.path.length) k[v.nbt.path[0]] = 1; });
   (s.flags || []).forEach(function (f) { if (f.common) k[f.key] = 1; });
+  if ((s.attributes || []).some(function (a) { return a.common; })) k.attributes = 1;
+  if (s.effects && s.effects.common) k.active_effects = 1;
+  if ((s.extras || []).some(function (x) { return x.key === 'Tags'; })) k.Tags = 1;
   return k;
 }
 
@@ -221,7 +224,9 @@ function esPanel(o) {
     var s = esReady(o.type, box); if (!s) return;
     var oo = { get: o.get, set: o.set, redraw: draw };
     if ((s.variants || []).length) { box.appendChild(xSec('paw', '外观')); box.appendChild(esVariantList(s, oo)); }
-    box.appendChild(xSec('sliders', '常用设置')); box.appendChild(esFlagList(s, oo));
+    box.appendChild(xSec('sliders', '常用设置')); box.appendChild(esFlagList(s, oo)); var tr = esTagsRow(s, oo); if (tr) box.appendChild(tr);
+    if ((s.attributes || []).some(function (a) { return a.common; })) { box.appendChild(xSec('sword', '属性')); box.appendChild(esAttrList(s, oo)); }
+    if (s.effects && s.effects.common) { box.appendChild(xSec('flask', '状态效果')); box.appendChild(esEffects(s, oo)); }
     box.appendChild(xSec('helmet', '装备')); box.appendChild(esGearGrid(s, oo, o.type));
     (s.warnings || []).forEach(function (w) { box.appendChild(h('div', { class: 'k-sub', text: '游戏提示：' + w })); });
   }
@@ -242,6 +247,7 @@ function heroEntity(type, data, old) {
     if (pa[k] === undefined) { if (el.getAttribute(k) !== null) el.removeAttribute(k); }
     else if (el.getAttribute(k) !== pa[k]) el.setAttribute(k, pa[k]);
   });
+  v.scale = esAttrScale(data, Reg.entitySchema(full));
   esEntPaint(el);
   if (!el._esBound) {
     el._esBound = true;
@@ -265,7 +271,7 @@ function heroEntity(type, data, old) {
 var ES_BOX = 3;
 function esEntPaint(el) {
   var w = UI.entView || { s: 1, x: 0, y: 0 };
-  el.setAttribute('style', '-mc-model-scale:' + (+(w.s / ES_BOX).toFixed(4)) + ';margin-left:' + Math.round(w.x) + 'px;margin-top:' + Math.round(w.y) + 'px');
+  el.setAttribute('style', '-mc-model-scale:' + (+(w.s * (w.scale || 1) / ES_BOX).toFixed(4)) + ';margin-left:' + Math.round(w.x) + 'px;margin-top:' + Math.round(w.y) + 'px');
 }
 document.addEventListener('mousemove', function (e) {
   if (!ES_PAN) return;
@@ -279,3 +285,66 @@ document.addEventListener('mousemove', function (e) {
   esEntPaint(ES_PAN.el);
 });
 document.addEventListener('mouseup', function (e) { if (ES_PAN && (e.button === 1 || e.button === 2)) ES_PAN = null; });
+
+/* ---------- 属性（体型、最大生命、移动速度……）：来自游戏里这只生物真实的属性表，范围是游戏的属性上下限 ----------
+   NBT 里是 attributes:[{id, base}]；等于默认值的不写，改回默认就把那一项删掉（别的字段如 modifiers 原样保留） */
+var ES_ATTR_ORDER = ['scale', 'max_health', 'movement_speed', 'attack_damage', 'follow_range', 'armor', 'armor_toughness', 'knockback_resistance', 'step_height', 'gravity', 'jump_strength'];
+function esAttrBase(data, a) {
+  var arr = isObj(data) && Array.isArray(data.attributes) ? data.attributes : [];
+  for (var i = 0; i < arr.length; i++) if (isObj(arr[i]) && Reg.full(arr[i].id) === a.id && typeof arr[i].base === 'number') return arr[i].base;
+  return a.base;
+}
+function esAttrSet(obj, a, v) {
+  var arr = Array.isArray(obj.attributes) ? obj.attributes.slice() : [], at = -1, i;
+  for (i = 0; i < arr.length; i++) if (isObj(arr[i]) && Reg.full(arr[i].id) === a.id) at = i;
+  if (v === a.base) {
+    if (at >= 0) { var e = clone(arr[at]); delete e.base; if (Object.keys(e).length <= 1) arr.splice(at, 1); else arr[at] = e; }   // 只剩 id 就整项删掉
+  } else if (at >= 0) { var e2 = clone(arr[at]); e2.base = v; arr[at] = e2; } else arr.push({ id: a.id, base: v });
+  if (arr.length) obj.attributes = arr; else delete obj.attributes;
+  /* 最大生命降到比当前生命还低，游戏会拒绝：顺手把生命压到上限 */
+  if (a.id === 'minecraft:max_health' && typeof obj.Health === 'number' && obj.Health > v) obj.Health = v;
+}
+function esAttrScale(data, s) {
+  var a = s && (s.attributes || []).filter(function (x) { return x.id === 'minecraft:scale'; })[0];
+  return a ? esAttrBase(data, a) / (a.base || 1) : 1;
+}
+function esAttrList(s, o) {
+  var edit = esEditor(o), list = h('div', { class: 'x-list' });
+  var attrs = (s.attributes || []).filter(function (a) { return a.common; });
+  if (!attrs.length) return xEmpty('这只生物没有可以改的属性');
+  attrs.sort(function (a, b) { var i = ES_ATTR_ORDER.indexOf(shortId(a.id)), j = ES_ATTR_ORDER.indexOf(shortId(b.id)); return (i < 0 ? 99 : i) - (j < 0 ? 99 : j) || (a.id < b.id ? -1 : 1); });
+  var main = attrs.filter(function (a) { return ES_ATTR_ORDER.indexOf(shortId(a.id)) >= 0 && ES_ATTR_ORDER.indexOf(shortId(a.id)) < 6; }), rest = attrs.filter(function (a) { return main.indexOf(a) < 0; });
+  function row(a) {
+    var isScale = a.id === 'minecraft:scale', nm = Reg.nameOf2('attribute', a.id) || humanId(shortId(a.id));
+    var step = isScale ? 0.25 : (a.max - a.min > 50 ? 1 : 0.1);
+    var num = kNumber(esAttrBase(o.get(), a), { min: a.min, max: a.max, softMax: isScale ? 4 : undefined, step: step, dec: 3, noSlider: !isScale,
+      presets: isScale ? [{ v: 0.5, label: '0.5' }, { v: 1, label: '1' }, { v: 2, label: '2' }, { v: 4, label: '4' }] : undefined,
+      onChange: function (v) { edit(function (obj) { esAttrSet(obj, a, v); }, isScale); } });
+    num.el.classList.add('k-xnum');
+    return xRow({ icon: false, title: isScale ? '体型' : nm, sub: (isScale ? '大小倍数，1 是原样；' : '') + '默认 ' + fmtNum(a.base) + ' · 范围 ' + fmtNum(a.min) + ' ~ ' + fmtNum(a.max), tip: a.id, right: num.el });
+  }
+  main.forEach(function (a) { list.appendChild(row(a)); });
+  if (rest.length) {
+    var open = !!UIOpen['es:attrs:more'];
+    if (open) rest.forEach(function (a) { list.appendChild(row(a)); });
+    var tg = h('div', { class: 'k-add' }, [foldArrow(open, 8), h('span', { text: open ? '收起其他属性' : '其他属性（' + rest.length + '）' })]);
+    activate(tg, function () { UIOpen['es:attrs:more'] = !open; if (o.redraw) o.redraw(); });
+    list.appendChild(tg);
+  }
+  return list;
+}
+/* ---------- 状态效果：生成时身上带着的药水效果 ---------- */
+function esEffects(s, o) {
+  var edit = esEditor(o);
+  var fx = kEffectList(function () { var v = esGet(o.get(), ['active_effects']); return Array.isArray(v) ? clone(v) : []; },
+    function (l) { edit(function (obj) { if (l.length) obj.active_effects = l; else delete obj.active_effects; }); }, { empty: '没有效果' });
+  return fx.el;
+}
+/* ---------- 标签（/tag 命令用的）：逗号隔开 ---------- */
+function esTagsRow(s, o) {
+  if (!(s.extras || []).some(function (x) { return x.key === 'Tags'; })) return null;
+  var edit = esEditor(o), cur = esGet(o.get(), ['Tags']);
+  var inp = kInput(Array.isArray(cur) ? cur.join('，') : '', function () {}, { placeholder: '标签，用逗号隔开' }); inp.setAttribute('style', 'width:170px');
+  inp.addEventListener('change', function () { var t = inp.value.split(/[,，\s]+/).filter(function (x) { return x; }); edit(function (obj) { if (t.length) obj.Tags = t; else delete obj.Tags; }); });
+  return xRow({ icon: false, title: '标签', sub: '给 /tag 和选择器用的标签', tip: 'Tags', right: inp });
+}
