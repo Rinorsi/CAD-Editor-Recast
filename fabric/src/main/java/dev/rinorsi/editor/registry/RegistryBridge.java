@@ -50,6 +50,7 @@ public final class RegistryBridge {
         DOCUMENTS.put(driver, new State());
         SearchChannel.attach(driver);
         TooltipChannel.attach(driver);
+        VaultChannel.attach(driver);
         DraftChannel.attach(driver);
         ComponentValidationChannel.attach(driver);
         ComponentSchemaChannel.attach(driver);

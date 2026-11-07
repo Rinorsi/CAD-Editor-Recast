@@ -12,6 +12,7 @@ gradle.projectsEvaluated {
         'dev.rinorsi.editor.registry.ResourceIdsTest',
         'dev.rinorsi.editor.registry.EntityDataTest',
         'dev.rinorsi.editor.registry.EntitySchemaTest',
+        'dev.rinorsi.editor.registry.EntitySchemaDetailsTest',
         'dev.rinorsi.editor.registry.RegistryStressTest',
         'dev.rinorsi.editor.registry.DraftUtf8CounterTest',
         'dev.rinorsi.editor.registry.RegistryPagesTest',

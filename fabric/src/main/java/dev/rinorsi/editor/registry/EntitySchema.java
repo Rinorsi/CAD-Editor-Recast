@@ -39,7 +39,13 @@ public final class EntitySchema {
     }
     public static Entity load(EntityType<?> type,Level level,HolderLookup.Provider lookup,CompoundTag tag) {
         Entity e=create(type,level);Problems problems=new Problems();
-        e.load(TagValueInput.create(problems,lookup,tag));problems.check();return e;
+        // Vanilla skips attributes on ClientLevel (normally synchronized by the server). These
+        // detached preview/validation entities need the same Packed codec + AttributeMap.apply
+        // before load so Health and dimensions see the authoritative bases, without world mutation.
+        if(level.isClientSide()&&e instanceof LivingEntity living&&tag.contains("attributes"))
+            living.getAttributes().apply(net.minecraft.world.entity.ai.attributes.AttributeInstance.Packed.LIST_CODEC.parse(lookup.createSerializationContext(NbtOps.INSTANCE),tag.get("attributes")).getOrThrow());
+        e.load(TagValueInput.create(problems,lookup,tag));problems.check();
+        e.refreshDimensions();return e;
     }
     public static JsonObject describe(EntityType<?> type,Level level,HolderLookup.Provider lookup) {
         JsonObject out=new JsonObject();out.addProperty("id",BuiltInRegistries.ENTITY_TYPE.getKey(type).toString());
@@ -60,6 +66,8 @@ public final class EntitySchema {
         common(e,lookup,level,flags,warnings,"custom_name_visible",x->x.setCustomNameVisible(!x.isCustomNameVisible()));
         common(e,lookup,level,flags,warnings,"custom_name",x->x.setCustomName(Component.literal("schema probe")));
         if(e instanceof Mob) {
+            common(e,lookup,level,flags,warnings,"left_handed",x->((Mob)x).setLeftHanded(!((Mob)x).isLeftHanded()));
+            common(e,lookup,level,flags,warnings,"can_pick_up_loot",x->((Mob)x).setCanPickUpLoot(!((Mob)x).canPickUpLoot()));
             common(e,lookup,level,flags,warnings,"no_ai",x->{Mob m=(Mob)x;m.setNoAi(!m.isNoAi());});
             common(e,lookup,level,flags,warnings,"persistence",x->((Mob)x).setPersistenceRequired());
         }
@@ -86,7 +94,8 @@ public final class EntitySchema {
         if(e instanceof net.minecraft.world.entity.decoration.ArmorStand)common(e,lookup,level,flags,warnings,"show_arms",x->((net.minecraft.world.entity.decoration.ArmorStand)x).setShowArms(true));
         // Preserve generic fields from mod/default saves without claiming unknown semantics.
         Set<String> commonKeys=new HashSet<>();for(var f:flags)commonKeys.add(f.getAsJsonObject().get("key").getAsString());
-        for(String key:baseline.keySet())if(!commonKeys.contains(key)){JsonObject f=field(key,baseline.get(key),true);f.addProperty("common",false);flags.add(f);}
+        for(String key:baseline.keySet())if(!commonKeys.contains(key)){JsonObject f=field(key,baseline.get(key),true);f.addProperty("common",false);f.addProperty("advanced",true);flags.add(f);}
+        EntitySchemaDetails.describe(e,level,lookup,out);
         return out;
     }
     private static <T> void component(Entity e,DataComponentType<T> component,HolderLookup.Provider lookup,Level level,JsonArray out){
@@ -122,13 +131,16 @@ public final class EntitySchema {
         if(e instanceof VillagerDataHolder){List<Choice> choices=new ArrayList<>();for(int i=VillagerData.MIN_VILLAGER_LEVEL;i<=VillagerData.MAX_VILLAGER_LEVEL;i++){int n=i;choices.add(new Choice(Integer.toString(n),x->{var v=(VillagerDataHolder)x;v.setVillagerData(v.getVillagerData().withLevel(n));}));}add(out,variant(e,lookup,level,"villager/level","int",choices));}
         if(e instanceof Llama)bounded(e,lookup,level,out,"llama/strength",x->((Llama)x).getStrength(),(x,n)->{try{var m=Llama.class.getDeclaredMethod("setStrength",int.class);m.setAccessible(true);m.invoke(x,n);}catch(ReflectiveOperationException ex){throw new IllegalStateException(ex);}});
         if(e instanceof net.minecraft.world.entity.monster.Slime)bounded(e,lookup,level,out,"slime/size",x->((net.minecraft.world.entity.monster.Slime)x).getSize(),(x,n)->((net.minecraft.world.entity.monster.Slime)x).setSize(n,false));
+        if(e instanceof net.minecraft.world.entity.monster.Phantom)bounded(e,lookup,level,out,"phantom/size",x->((net.minecraft.world.entity.monster.Phantom)x).getPhantomSize(),(x,n)->((net.minecraft.world.entity.monster.Phantom)x).setPhantomSize(n));
     }
     private static void bounded(Entity e,HolderLookup.Provider lookup,Level level,JsonArray out,String id,java.util.function.ToIntFunction<Entity> getter,java.util.function.ObjIntConsumer<Entity> setter){
         Entity low=create(e.getType(),level),high=create(e.getType(),level);setter.accept(low,Integer.MIN_VALUE);setter.accept(high,Integer.MAX_VALUE);int min=getter.applyAsInt(low),max=getter.applyAsInt(high);
         if(min>max||(long)max-min>256)return;List<Choice> choices=new ArrayList<>();for(int i=min;i<=max;i++){int value=i;choices.add(new Choice(Integer.toString(i),x->setter.accept(x,value)));}
         // Size may also change health. The persisted size path is the one varying across all choices;
         // omit unrelated transient health when selecting the empirical field.
-        JsonObject row=variant(e,lookup,level,id,"int",choices);if(row!=null){row.addProperty("semanticMin",min);row.addProperty("semanticMax",max);var values=row.getAsJsonArray("options").asList().stream().mapToInt(v->v.getAsJsonObject().get("value").getAsInt()).summaryStatistics();row.addProperty("min",values.getMin());row.addProperty("max",values.getMax());out.add(row);}
+        JsonObject row=variant(e,lookup,level,id,"int",choices);if(row!=null){row.addProperty("semanticMin",min);row.addProperty("semanticMax",max);var values=row.getAsJsonArray("options").asList().stream().mapToInt(v->v.getAsJsonObject().get("value").getAsInt()).summaryStatistics();row.addProperty("min",values.getMin());row.addProperty("max",values.getMax());
+            List<String> path=EntitySchemaValidation.path(row.getAsJsonObject("nbt").getAsJsonArray("path"));JsonArray probes=new JsonArray();
+            for(int n:new int[]{Integer.MIN_VALUE,-1,0,1,Integer.MAX_VALUE}){CompoundTag input=save(e,lookup);put(input,path,IntTag.valueOf(n));JsonObject probe=new JsonObject();probe.addProperty("input",n);try{Tag saved=get(loadSave(e.getType(),level,lookup,input),path);probe.add("saved",saved==null?JsonNull.INSTANCE:json(saved));}catch(RuntimeException ex){probe.addProperty("error",ex.getMessage());}probes.add(probe);}row.add("loaderProbes",probes);out.add(row);}
     }
     private static void add(JsonArray array,JsonObject row){if(row!=null)array.add(row);}
     private static void common(Entity e,HolderLookup.Provider lookup,Level level,JsonArray flags,JsonArray warnings,String id,Consumer<Entity> setter){

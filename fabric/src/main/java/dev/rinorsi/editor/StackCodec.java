@@ -132,7 +132,9 @@ public final class StackCodec {
             var nbt = registries.createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE);
             var tag = net.minecraft.nbt.TagParser.create(net.minecraft.nbt.NbtOps.INSTANCE).parseFully(text);
             T typed = type.codec().parse(nbt, tag).getOrThrow();
-            return sameJson(type.codec().encodeStart(registries.createSerializationContext(JsonOps.INSTANCE), typed).getOrThrow(), json)
+            // Browser JSON numbers have already passed through IEEE754. Preserve a
+            // matching typed sidecar there too; exact numeric edits use explicit SNBT.
+            return samePageJson(type.codec().encodeStart(registries.createSerializationContext(JsonOps.INSTANCE), typed).getOrThrow(), json)
                     ? type.codec().encodeStart(nbt, typed).getOrThrow() : null;
         } catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) { throw new IllegalArgumentException("组件 SNBT 快照无效", e); }
     }

@@ -190,3 +190,26 @@ tasks.register('worldEditTest', JavaExec) {
     args rootProject.file('logs/final-gate/world-edit').absolutePath
 }
 tasks.named('check') { dependsOn('worldEditTest') }
+
+// Local vault persistence and typed stack round trips; no client window.
+tasks.register('vaultTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.vault.VaultTest'
+    workingDir = rootProject.projectDir
+    maxHeapSize = '2G'
+}
+tasks.named('check') { dependsOn('vaultTest') }
+
+// Entity attributes/effects use the same detached real-game JVM fixtures as the base schema.
+['entitySchemaDetailsTest': true, 'entitySchemaDetailsServerTest': false].each { taskName, clientSide ->
+    tasks.register(taskName, JavaExec) {
+        dependsOn codecVerificationClasses
+        classpath = sourceSets.codecVerification.runtimeClasspath
+        mainClass = 'dev.rinorsi.editor.registry.EntitySchemaDetailsTest'
+        workingDir = rootProject.projectDir
+        jvmArgs '-Djava.awt.headless=true', '-Dcadeditor.schema.client=' + clientSide
+        args rootProject.file('logs/entity-schema/details-' + (clientSide ? 'client' : 'server') + '.json').absolutePath
+    }
+    tasks.named('check') { dependsOn(taskName) }
+}
