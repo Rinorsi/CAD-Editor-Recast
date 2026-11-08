@@ -42,6 +42,7 @@ public final class EntityWorldSchema {
             section.addProperty("write","entity.display");out.add("display",section);
         }
         if(source instanceof AbstractVillager){var section=new JsonObject();section.addProperty("write","entity.offers");section.addProperty("serverOnly",true);section.addProperty("codec","MerchantOffers.CODEC");section.addProperty("maxEntries",256);section.addProperty("stackFormat","StackCodec");section.addProperty("fields","buy,buyB?,sell,uses,maxUses,rewardExp,xp,priceMultiplier,demand,specialPrice");out.add("trades",section);}
+        EntityViewsVehicle.schema(out,source,access);
         EntityViewsSimple.schema(out,source,access);
         var ride=EntityWorldEdit.rideCheck();ride.remove("reason");out.add("riding",ride);return out;
     }
