@@ -18,11 +18,11 @@ var Tr = {
     if (!q.length || typeof oriel === 'undefined' || !oriel.send) return;
     for (var i = 0; i < q.length; i += 200) oriel.send('registry', { name: 'translate', keys: q.slice(i, i + 200) });
   },
-  /* 回复形状见 docs/registry-contract.md：{map:{键:译文}}（也认 translations / 键值数组） */
+  /* 回复形状见 docs/registry-contract.md：每页 {map:{键:译文}, entries:[{id:键, name:译文}]}，多页累积 */
   accept: function (v) {
     var m = v && (v.map || v.translations), n = 0, k;
     if (m && typeof m === 'object') for (k in m) if (typeof m[k] === 'string') { this.map[k] = m[k]; n++; }
-    if (v && Array.isArray(v.entries)) v.entries.forEach(function (e) { if (e && typeof e.key === 'string' && typeof e.text === 'string') { Tr.map[e.key] = e.text; n++; } });
+    if (v && Array.isArray(v.entries)) v.entries.forEach(function (e) { if (e && typeof e.id === 'string' && typeof e.name === 'string') { Tr.map[e.id] = e.name; n++; } else if (e && typeof e.key === 'string' && typeof e.text === 'string') { Tr.map[e.key] = e.text; n++; } });
     if (!n) return;
     if (this.redraw !== null) clearTimeout(this.redraw);
     this.redraw = setTimeout(function () { Tr.redraw = null; if (typeof weActive === 'function' && weActive() && typeof weRedrawBody === 'function' && !$('modal')) weRedrawBody(); }, 80);

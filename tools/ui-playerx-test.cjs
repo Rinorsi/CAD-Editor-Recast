@@ -150,3 +150,8 @@ function opened(req, view, value, schema, extra) {
   assert.equal(redraws, before, '陌生回执不重画');
 }
 console.log('PASS player extension: position / respawn / recipes / advancements / stats / offline read, draft, apply, receipt.');
+// ---- Tr 接收宿主翻译页：map 和 entries 两种形状，多页累积
+{
+  c.Tr.accept({ map: { 'a.b': '甲' } }); c.Tr.accept({ entries: [{ id: 'c.d', name: '乙' }] });
+  assert.equal(c.Tr.get('a.b'), '甲'); assert.equal(c.Tr.get('c.d'), '乙');
+}
