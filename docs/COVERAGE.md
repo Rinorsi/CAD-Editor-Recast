@@ -92,7 +92,7 @@ component_schema来源只说明独立JVM核验的宿主Codec结构；full不代�
 | `minecraft:entity_data` | 实体数据 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:lock` | 容器锁 | 专用表单 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:pot_decorations` | 陶罐装饰 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
-| `minecraft:profile` | 头颅档案 | 专用表单 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:profile` | 头颅档案 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:lodestone_tracker` | 磁石追踪 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:map_color` | 地图颜色 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:map_decorations` | 地图标记 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |

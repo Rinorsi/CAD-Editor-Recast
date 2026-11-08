@@ -177,6 +177,27 @@ public final class ComponentSchema {
         Inspector(RegistryAccess access) { ops = access.createSerializationContext(JsonOps.INSTANCE); }
 
         Node inspect(Codec<?> outer, String path, int depth, Set<Object> ancestors) {
+            Node n = inspectRaw(outer, path, depth, ancestors);
+            if (outer == net.minecraft.util.ExtraCodecs.PROPERTY_MAP) {
+                for (Node branch : n.alternatives) if (branch.json.get("kind").getAsString().equals("map")) {
+                    var probe = new JsonObject();
+                    for (int size = 0; size <= 64; size++) {
+                        if (!safeParse(branch.codec, probe, ops)) {
+                            if (size > 0) {
+                                branch.json.addProperty("max_size", size - 1);
+                                branch.json.addProperty("constraint_source", "official_property_map_codec_boundary_decode");
+                                branch.json.remove("unknown"); branch.json.remove("reason");
+                            }
+                            break;
+                        }
+                        probe.add("property_" + size, new JsonArray());
+                    }
+                }
+            }
+            return n;
+        }
+
+        Node inspectRaw(Codec<?> outer, String path, int depth, Set<Object> ancestors) {
             Node n = new Node(outer, path);
             if (ancestors.contains(outer)) { n.type("recursive_ref"); n.json.addProperty("ref_path", firstPaths.get(outer)); return n; }
             if (depth > MAX_DEPTH || ++nodes > MAX_NODES) { n.type("object"); n.unknown("schema_depth_or_node_budget"); return n; }
@@ -416,6 +437,11 @@ public final class ComponentSchema {
                     out.putIfAbsent(field, new FieldInfo(codec, optional, unresolved, def));
                 }
                 return;
+            }
+            // ResolvableProfile accepts either a stored profile or the partial profile.
+            // The latter has the same value codecs and also admits omitted name/id.
+            if (current instanceof EitherMapCodec<?, ?> && member(current, "first") == net.minecraft.util.ExtraCodecs.STORED_GAME_PROFILE) {
+                collectFields(member(current, "second"), null, out, seen, depth + 1); return;
             }
             if (current instanceof RecordCodecBuilder<?, ?>) { collectFields(member(current, "decoder"), context, out, seen, depth + 1); return; }
             if (!(current instanceof MapDecoder<?>) && !(current instanceof Codec<?>)) return;

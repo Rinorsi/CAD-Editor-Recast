@@ -13123,18 +13123,8 @@
               "kind": "object",
               "fields": [
                 {
-                  "path": "$.id",
-                  "optional": false,
-                  "type": "uuid",
-                  "kind": "uuid",
-                  "shapes": [
-                    "four_int_array"
-                  ],
-                  "name": "id"
-                },
-                {
                   "path": "$.name",
-                  "optional": false,
+                  "optional": true,
                   "type": "string",
                   "kind": "string",
                   "length_probes": [
@@ -13154,7 +13144,19 @@
                   "min_length": 0,
                   "max_length": 16,
                   "constraint_source": "captured_string_length_validator_and_boundary_decode",
-                  "name": "name"
+                  "name": "name",
+                  "default_absent": true
+                },
+                {
+                  "path": "$.id",
+                  "optional": true,
+                  "type": "uuid",
+                  "kind": "uuid",
+                  "shapes": [
+                    "four_int_array"
+                  ],
+                  "name": "id",
+                  "default_absent": true
                 },
                 {
                   "path": "$.properties",
@@ -13170,8 +13172,8 @@
                       "optional": false,
                       "type": "map",
                       "kind": "map",
-                      "unknown": true,
-                      "reason": "outer_mapping_or_cross_field_constraint",
+                      "max_size": 16,
+                      "constraint_source": "official_property_map_codec_boundary_decode",
                       "element": {
                         "path": "$.properties{value}",
                         "optional": false,
@@ -13348,16 +13350,9 @@
           ]
         }
       ],
-      "coverage": "partial",
-      "unknown_paths": [
-        "$.properties"
-      ],
-      "unknown_details": [
-        {
-          "path": "$.properties",
-          "reason": "outer_mapping_or_cross_field_constraint"
-        }
-      ],
+      "coverage": "full",
+      "unknown_paths": [],
+      "unknown_details": [],
       "editable": "structured",
       "editable_reason": "derived_shape_with_whole_codec_validation",
       "validator_route": "component_validate",

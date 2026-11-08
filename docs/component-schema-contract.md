@@ -42,6 +42,8 @@ RGB 是显示语义：potion_contents.custom_color 真实字段使用 Codec.INT�
 - `trim`：对象，必填 `material`（holder，`minecraft:trim_material`）与 `pattern`（holder，`minecraft:trim_pattern`）；均允许实时动态注册表 ID 或 Codec 内联对象。材料内联含必填 `asset_name:resource_path`、`description:text_component`，`override_armor_assets` 为装备资产 ID 到资源路径的映射（默认 `{}`）。图案内联字段按导出的 fields 渲染。示例 `{"material":"minecraft:quartz","pattern":"minecraft:sentry"}` 仅用于说明语法，候选必须实时查询。
 - `provides_trim_material`：与上述 `material` 相同的 holder，示例 `"minecraft:quartz"`；内联资源路径使用官方 `MaterialAssetGroup.AssetInfo.CODEC`，不再误标为未知字符串约束。两项无通用组件默认值，必填字段不能填 JSON null；可省略字段以 `optional/default/default_absent` 为准。
 
+- `profile`：联合为玩家名字字符串（0..16 字符）或对象；对象的 `name`（0..16）、`id`（UUID 四整数数组）、`texture`/`cape`/`elytra`（identifier）、`model`（真实枚举 slim/wide）均可省略，不能用 null 代替省略。`properties` 默认 `[]`，接受属性名到字符串列表的映射（最多 16 个键，值列表无该项数限制），或最多 16 项的 `{name,value,signature?}` 列表（长度上限分别 64、32767、1024）。例如 `{"properties":[{"name":"textures","value":"<base64>"}]}`；纹理 payload 是不透明字符串，Codec 不验证其 Base64 内容或网络可用性。profile 不来自注册表，不应伪造玩家/皮肤候选目录。
+
 ## ranges_for_ui
 
 每个条目含数值字段列表；[完整机器汇总与前端差异](component-schema-ui-ranges-26.1.2.json) 按组件 ID 索引。
@@ -56,7 +58,7 @@ path 使用 $、.field、[]、{value}。min/max/default 的 null 表示没有已
 |---|---:|---:|---:|---:|
 | 旧快照 | 12 | 32 | 12 | 56 |
 | 同一旧范围更新后 | 52 | 4 | 0 | 56 |
-| 当前全部持久组件 | 103 | 4 | 0 | 107 |
+| 当前全部持久组件 | 104 | 3 | 0 | 107 |
 
 ## 全集结构覆盖与剩余未知
 
@@ -136,7 +138,7 @@ path 使用 $、.field、[]、{value}。min/max/default 的 null 表示没有已
 | minecraft:pot_decorations | full | — |
 | minecraft:potion_contents | full | — |
 | minecraft:potion_duration_scale | full | — |
-| minecraft:profile | partial | $.properties: outer_mapping_or_cross_field_constraint |
+| minecraft:profile | full | — |
 | minecraft:provides_banner_patterns | full | — |
 | minecraft:provides_trim_material | full | — |
 | minecraft:rabbit/variant | full | — |

@@ -148,11 +148,32 @@ public final class ComponentSchemaTest {
         System.out.println("PASS ComponentSchemaTest " + checks + " checks; " + persistent.size() + " live component schemas, real defaults/ranges/path diagnostics and snapshot drift");
     }
     private static void complexComponents(RegistryAccess access) {
-        for (String id : List.of("trim", "provides_trim_material")) {
+        for (String id : List.of("trim", "provides_trim_material", "profile")) {
             var schema = ComponentSchema.derive(id, access);
             check(schema.entry().get("coverage").getAsString().equals("full"), "complete complex schema " + id);
             JsonElement sample = sample(schema.root(), access);
             check(schema.root().codec.parse(access.createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE), sample).isSuccess(), "schema-generated sample parses " + id + ": " + sample);
+        }
+        var profile = ComponentSchema.derive("profile", access).root();
+        var object = profile.alternatives.stream().filter(n -> n.json.get("kind").getAsString().equals("object")).findFirst().orElseThrow();
+        check(object.fields.get("name").json.get("optional").getAsBoolean() && object.fields.get("id").json.get("optional").getAsBoolean(), "profile partial identity fields may be omitted");
+        var properties = object.fields.get("properties");
+        for (var branch : properties.alternatives) {
+            JsonElement value;
+            if (branch.json.get("kind").getAsString().equals("map")) {
+                var map = new JsonObject(); var textures = new JsonArray(); textures.add("texture-payload"); map.add("textures", textures); value = map;
+                int max = branch.json.get("max_size").getAsInt();
+                var boundary = new JsonObject();
+                for (int i = 0; i < max; i++) boundary.add("key" + i, new JsonArray());
+                check(branch.codec.parse(access.createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE), boundary).isSuccess(), "profile map exported size accepted");
+                boundary.add("overflow", new JsonArray());
+                check(!branch.codec.parse(access.createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE), boundary).isSuccess(), "profile map overflow rejected");
+            } else {
+                var list = new JsonArray(); var property = sample(branch.element, access).getAsJsonObject();
+                property.addProperty("name", "textures"); list.add(property); value = list;
+            }
+            var input = new JsonObject(); input.add("properties", value);
+            check(profile.codec.parse(access.createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE), input).isSuccess(), "profile textures schema sample " + input);
         }
     }
     private static JsonElement sample(ComponentSchema.Node node, RegistryAccess access) {
@@ -166,6 +187,7 @@ public final class ComponentSchemaTest {
             var lookup = fixtureLookup.lookupOrThrow(key);
             return new JsonPrimitive(lookup.listElements().findFirst().orElseThrow().key().identifier().toString());
         }
+        if (kind.equals("string")) return new JsonPrimitive("a".repeat(node.json.has("min_length") ? node.json.get("min_length").getAsInt() : 0));
         if (kind.equals("union")) return sample(node.alternatives.getFirst(), access);
         if (kind.equals("object")) {
             var result = new JsonObject();
