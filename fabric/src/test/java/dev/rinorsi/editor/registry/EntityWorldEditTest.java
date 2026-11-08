@@ -65,6 +65,7 @@ public final class EntityWorldEditTest {
         capture("cat_riding_zombie",mount,WorldTarget.saveEntity(mount,access));reject(()->EntityRiding.tryRide(mount,cat),"cycle guard");var other=create(EntityType.CAT);reject(()->EntityRiding.tryRide(other,mount),"canAddPassenger capacity");cat.stopRiding();check(cat.getVehicle()==null,"dismount");EntityRiding.tryRide(other,mount);mount.ejectPassengers();check(other.getVehicle()==null,"eject");
         ownerViews();
         droppedItemViews();
+        fallingAndExplosiveViews();
         var offers=new MerchantOffers();offers.add(new MerchantOffer(new ItemCost(Items.EMERALD,2),new ItemStack(Items.BREAD,3),12,5,0.05f));
         var raw=MerchantOffers.CODEC.encodeStart(access.createSerializationContext(NbtOps.INSTANCE),offers).getOrThrow();var normalized=EntityWorldEdit.offers(offers,access);var roundtrip=EntityWorldEdit.decodeOffers(normalized,access,raw);check(raw.equals(MerchantOffers.CODEC.encodeStart(access.createSerializationContext(NbtOps.INSTANCE),roundtrip).getOrThrow()),"trade cost predicate exact roundtrip");
         normalized.get(0).getAsJsonObject().addProperty("uses",2);var updated=EntityWorldEdit.decodeOffers(normalized,access,raw);check(updated.get(0).getUses()==2,"offer uses codec");normalized.get(0).getAsJsonObject().getAsJsonObject("buy").addProperty("count",0);reject(()->EntityWorldEdit.decodeOffers(normalized,access,raw),"trade stack guard");
@@ -101,6 +102,20 @@ public final class EntityWorldEditTest {
         for(String bad:List.of("{PickupDelay:32768}","{Age:1.5}","{Age:null}","{Item:{empty:true}}","{Item:{id:'missing:item',count:1,comps:{},removed:{}}}","{UUID:'bad'}"))reject(()->edit(item,"{dropped_item:"+bad+"}"),"drop rejects "+bad);
         reject(()->edit(create(EntityType.ZOMBIE),"{dropped_item:{Age:1}}"),"drop target guard");
         check(WorldTarget.saveEntity(item,access).equals(before),"drop validation leaves source untouched");
+    }
+    private static void fallingAndExplosiveViews(){
+        var falling=create(EntityType.FALLING_BLOCK);var saved=edit(falling,"{falling_block:{BlockState:{Name:'minecraft:oak_log',Properties:{axis:'x'}},Time:12,DropItem:false,HurtEntities:true,FallHurtAmount:2.5,FallHurtMax:40,CancelDrop:true}}");
+        var copy=create(EntityType.FALLING_BLOCK);EntityWorldEdit.load(copy,saved,access);var view=EntityWorldEdit.views(copy,saved,access).getAsJsonObject("falling_block");
+        check(view.get("Time").getAsInt()==12&&!view.get("DropItem").getAsBoolean(),"falling read and boolean write");
+        check(view.getAsJsonObject("BlockState").getAsJsonObject("Properties").get("axis").getAsString().equals("x"),"falling state codec");
+        for(String bad:List.of("{BlockState:{Name:'missing:block'}}","{BlockState:{Name:'minecraft:oak_log',Properties:{axis:'bad'}}}","{DropItem:1}","{Time:1.5}","{Time:null}","{Pos:[0,0,0]}"))reject(()->edit(falling,"{falling_block:"+bad+"}"),"falling rejects "+bad);
+        var tnt=create(EntityType.TNT);var primed=edit(tnt,"{tnt:{fuse:120}}");check(primed.getShort("fuse").orElseThrow()==120,"TNT fuse");
+        EntityWorldEdit.load(tnt,primed,access);check(EntityWorldEdit.views(tnt,primed,access).getAsJsonObject("tnt").get("fuse").getAsInt()==120,"TNT fuse read");
+        reject(()->edit(tnt,"{tnt:{fuse:32768}}"),"TNT short bound");reject(()->edit(tnt,"{tnt:{Fuse:1}}"),"TNT case-sensitive path");
+        var creeper=create(EntityType.CREEPER);var creeperNbt=edit(creeper,"{creeper:{Fuse:50,ExplosionRadius:5}}");EntityWorldEdit.load(creeper,creeperNbt,access);
+        var creeperView=EntityWorldEdit.views(creeper,creeperNbt,access).getAsJsonObject("creeper");check(creeperView.get("Fuse").getAsInt()==50&&creeperView.get("ExplosionRadius").getAsInt()==5,"creeper fuse and radius read/write");
+        reject(()->edit(creeper,"{creeper:{ExplosionRadius:128}}"),"creeper byte bound");reject(()->edit(creeper,"{creeper:{Fuse:'50'}}"),"creeper strict integer");
+        for(String section:List.of("falling_block","tnt","creeper"))reject(()->edit(create(EntityType.ZOMBIE),"{"+section+":{}}"),"simple target guard "+section);
     }
     private static Entity create(EntityType<?> type){return EntitySchema.create(type,level);}
     private static CompoundTag edit(Entity e,String json){return EntityWorldEdit.prepare(e,WorldTarget.saveEntity(e,access),JsonParser.parseString(json).getAsJsonObject(),level,access);}

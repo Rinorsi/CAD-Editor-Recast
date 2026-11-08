@@ -7,7 +7,9 @@ import java.util.*;
 import net.minecraft.core.*;
 import net.minecraft.nbt.*;
 import net.minecraft.world.entity.*;
-import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.item.*;
+import net.minecraft.world.entity.monster.Creeper;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
@@ -20,7 +22,16 @@ final class EntityViewsSimple {
         if(entity instanceof ItemEntity) {
             var fields=primitives(saved,"PickupDelay","Age");fields.put("Item",new Field(ItemStack.CODEC,"stack",false));sections.put("dropped_item",fields);
         }
+        if(entity instanceof FallingBlockEntity) {
+            var fields=primitives(saved,"Time","FallHurtAmount","FallHurtMax");
+            booleans(fields,"DropItem","HurtEntities","CancelDrop");fields.put("BlockState",new Field(BlockState.CODEC,"BlockState.CODEC",false));sections.put("falling_block",fields);
+        }
+        if(entity instanceof PrimedTnt)sections.put("tnt",primitives(saved,"fuse"));
+        if(entity instanceof Creeper)sections.put("creeper",primitives(saved,"Fuse","ExplosionRadius"));
         return sections;
+    }
+    private static void booleans(Map<String,Field> fields,String... names) {
+        for(String key:names)fields.put(key,new Field(Codec.BOOL,"boolean",false));
     }
     private static LinkedHashMap<String,Field> primitives(CompoundTag saved,String... names) {
         var fields=new LinkedHashMap<String,Field>();
@@ -36,13 +47,14 @@ final class EntityViewsSimple {
         }
         return fields;
     }
-    static boolean supports(String section) { return Set.of("owner","dropped_item").contains(section); }
+    static boolean supports(String section) { return Set.of("owner","dropped_item","falling_block","tnt","creeper").contains(section); }
     static void views(JsonObject out, Entity entity, CompoundTag saved, RegistryAccess access) {
         for(var section:sections(entity,saved).entrySet()) {
             var view=new JsonObject();
             for(var field:section.getValue().entrySet()) {
                 String key=field.getKey();
                 if(field.getValue().type.equals("stack"))view.add(key,EntityWorldEdit.stack(((ItemEntity)entity).getItem(),access));
+                else if(field.getValue().codec==Codec.BOOL)view.addProperty(key,saved.getBoolean(key).orElseThrow());
                 else view.add(key,saved.contains(key)?EntityWorldEdit.json(saved.get(key)):JsonNull.INSTANCE);
             }
             out.add(section.getKey(),view);
@@ -68,6 +80,7 @@ final class EntityViewsSimple {
                 if(spec.codec==Codec.SHORT){field.addProperty("min",Short.MIN_VALUE);field.addProperty("max",Short.MAX_VALUE);}
                 if(spec.codec==Codec.BYTE){field.addProperty("min",Byte.MIN_VALUE);field.addProperty("max",Byte.MAX_VALUE);}
                 if(spec.codec==Codec.INT){field.addProperty("min",Integer.MIN_VALUE);field.addProperty("max",Integer.MAX_VALUE);}
+                if(spec.codec==BlockState.CODEC){field.addProperty("registry","minecraft:block");field.addProperty("properties","live Block StateDefinition; block_properties registry channel");}
                 fields.add(key,field);
             }
             schema.add("fields",fields);out.add(section.getKey(),schema);
@@ -112,6 +125,13 @@ final class EntityViewsSimple {
     }
     private static Tag encode(Field field,JsonElement value,RegistryAccess access) {
         var codec=field.codec;
+        if(codec==Codec.BOOL)require(value.isJsonPrimitive()&&value.getAsJsonPrimitive().isBoolean(),"Field requires boolean");
+        if(codec==BlockState.CODEC) {
+            var wire=value.getAsJsonObject();require(Set.of("Name","Properties").containsAll(wire.keySet()),"Unknown block state field");
+            var state=BlockState.CODEC.parse(access.createSerializationContext(JsonOps.INSTANCE),wire).getOrThrow();
+            require(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString().equals(net.minecraft.resources.Identifier.parse(wire.get("Name").getAsString()).toString()),"Unknown block state ID");
+            if(wire.has("Properties"))BlockStateEdit.prepare(state,wire.getAsJsonObject("Properties"));
+        }
         if(codec==Codec.BYTE||codec==Codec.SHORT||codec==Codec.INT||codec==Codec.FLOAT||codec==Codec.DOUBLE) {
             require(value.isJsonPrimitive()&&value.getAsJsonPrimitive().isNumber(),"Field requires a number");
             if(codec==Codec.FLOAT)require(Float.isFinite(value.getAsFloat()),"Float must be finite");

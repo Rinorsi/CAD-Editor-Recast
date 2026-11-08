@@ -57,6 +57,38 @@ Edits 示例：
 {"entity":{"dropped_item":{"Item":{"id":"minecraft:diamond","count":2,"comps":{},"removed":{}},"PickupDelay":100,"Age":-100}}}
 ```
 
+## P2-3 下落方块与引信
+
+新增视图和对应 `entity.<视图名>` 写入：
+
+|视图|适用实体|字段与类型、范围|
+|---|---|---|
+|falling_block|FallingBlockEntity|BlockState：BlockState.CODEC 的 `{Name,Properties?}`；Time/FallHurtMax：保存类型 int；FallHurtAmount：有限 float；DropItem/HurtEntities/CancelDrop：严格 boolean|
+|tnt|PrimedTnt|fuse：实际保存 short（-32768..32767），不是旧版本的 Fuse|
+|creeper|Creeper|Fuse：short；ExplosionRadius：保存 byte（-128..127）|
+
+int 范围为 Java signed int。存储范围由实时 save 的 Tag 类型决定；不将倒计时伪装为只能非负。所有字段拒绝 null；未提交字段不变。方块与属性候选来自实时 block 注册表及 StateDefinition（复用 block_properties），拒绝未知块、属性、属性值，不手写目录。实体必须匹配视图，未知字段/错误类型/越界/原版未保留值均拒绝。`powered` 已被 entity_schema.extras 覆盖，不在 creeper 视图重复提供；可沿原始验证路径设置 byte-bool。
+
+各视图与 edits 示例：
+```json
+{"falling_block":{"BlockState":{"Name":"minecraft:sand"},"Time":0,"DropItem":true,"HurtEntities":false,"FallHurtAmount":0,"FallHurtMax":40,"CancelDrop":false}}
+```
+```json
+{"entity":{"falling_block":{"BlockState":{"Name":"minecraft:oak_log","Properties":{"axis":"x"}},"Time":12,"DropItem":false}}}
+```
+```json
+{"tnt":{"fuse":80}}
+```
+```json
+{"entity":{"tnt":{"fuse":120}}}
+```
+```json
+{"creeper":{"Fuse":30,"ExplosionRadius":3}}
+```
+```json
+{"entity":{"creeper":{"Fuse":50,"ExplosionRadius":5}}}
+```
+
 ## 展示实体字段
 
 |entity.display字段|格式与校验|
