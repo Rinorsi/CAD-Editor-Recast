@@ -37,6 +37,7 @@ public final class EntitySchemaTest {
     public static void main(String[] args)throws Exception{
         SharedConstants.tryDetectVersion();Bootstrap.bootStrap();var access=access();var level=new EntitySchemaTestLevel(access,Boolean.parseBoolean(System.getProperty("cadeditor.schema.client","true")));
         JsonObject captured=new JsonObject();
+        soundChecks(level, access);
         for(String id:List.of("cat","wolf","horse","llama","parrot","rabbit","fox","axolotl","sheep","villager","zombie_villager","slime","creeper","armor_stand","tropical_fish","pig","chicken","frog","zombie","mooshroom","item")){
             EntityType<?> type=BuiltInRegistries.ENTITY_TYPE.getOptional(Identifier.parse("minecraft:"+id)).orElseThrow();
             if(!level.isClientSide()&&type==net.minecraft.world.entity.EntityTypes.VILLAGER){System.out.println("SKIP server-side villager: trade offer generation needs an actual ServerLevel, client-side factory covered separately");continue;}
@@ -59,6 +60,36 @@ public final class EntitySchemaTest {
         System.out.println("PASS "+assertions+" assertions; "+options+" empirical variant option egg load/save checks; "+captured.size()+" entity factories; level.isClientSide="+level.isClientSide()+"; no client/server started");
     }
     static void check(boolean b,String label){assertions++;if(!b)throw new AssertionError(label);}
+    private static void soundChecks(EntitySchemaTestLevel level, RegistryAccess access) {
+        for (String id : List.of("pig", "cow", "wolf", "cat", "zombie", "armor_stand", "item_frame", "item")) {
+            var type = BuiltInRegistries.ENTITY_TYPE.getOptional(Identifier.parse("minecraft:" + id)).orElseThrow();
+            var entity = type.create(level, EntitySpawnReason.LOAD);
+            check(entity != null, "sound factory " + id);
+            var row = EntityDefaults.describe(type, entity, access);
+            check(row.has("sounds"), "sound metadata available " + id);
+            var sounds = row.getAsJsonObject("sounds");
+            check(sounds.size() == 3, "three sound fields " + id);
+            for (String kind : List.of("ambient", "hurt", "death")) {
+                var value = sounds.get(kind);
+                // ArmorStand IS a LivingEntity: preserve its real hurt/death sounds.
+                if (!(entity instanceof LivingEntity) || (kind.equals("ambient") && !(entity instanceof Mob))) {
+                    check(value.isJsonNull(), "no invented sound " + id + "/" + kind);
+                } else {
+                    check(!value.isJsonNull(), "real sound present " + id + "/" + kind);
+                    check(BuiltInRegistries.SOUND_EVENT.getOptional(Identifier.parse(value.getAsString())).isPresent(), "registered sound " + id + "/" + kind);
+                }
+            }
+            System.out.println("entity_info sounds " + id + " = " + sounds);
+        }
+        var unavailable = EntityDefaults.describe(net.minecraft.world.entity.EntityTypes.PIG, null, access);
+        check(!unavailable.has("sounds"), "factory unavailable omits sounds");
+        var broken = new Mob(net.minecraft.world.entity.EntityTypes.PIG, level) {
+            @Override protected net.minecraft.sounds.SoundEvent getAmbientSound() { throw new IllegalStateException("test sound override"); }
+        };
+        var row = new JsonObject(); row.addProperty("id", "test:broken_sound");
+        EntityDefaults.addSounds(row, broken);
+        check(!row.has("sounds") && row.has("id"), "throwing sound override leaves other metadata intact");
+    }
     private static void applyChecks(EntitySchemaTestLevel level,RegistryAccess access){
         for(String snbt:List.of("{id:'minecraft:cat',variant:'minecraft:tabby',CollarColor:5,NoAI:1,Silent:1}","{id:'minecraft:sheep',Color:14,Age:-24000,Health:4f}","{id:'minecraft:zombie',IsBaby:1,equipment:{mainhand:{id:'minecraft:diamond_sword',count:1}}}","{id:'minecraft:armor_stand',NoGravity:1,CustomName:{text:'Hello'},ShowArms:1,equipment:{offhand:{id:'minecraft:stick',count:1}}}","{id:'minecraft:slime',Size:4,Health:20f}")){apply(snbt,level,access);assertions++;System.out.println("apply "+snbt+" -> accepted; real load/save stable");}
         for(String snbt:List.of("{id:'minecraft:cat',variant:'cadeditor:missing'}","{id:'minecraft:sheep',Color:400}","{id:'minecraft:zombie',NoAI:7}","{id:'minecraft:cat',Health:99999f}","{id:'minecraft:zombie',equipment:{mainhand:{id:'cadeditor:missing',count:1}}}")){try{apply(snbt,level,access);}catch(RuntimeException expected){assertions++;check(expected.getMessage()!=null&&!expected.getMessage().isBlank(),"readable invalid_request");System.out.println("apply "+snbt+" -> invalid_request: "+expected.getMessage());continue;}throw new AssertionError("accepted invalid payload "+snbt);}

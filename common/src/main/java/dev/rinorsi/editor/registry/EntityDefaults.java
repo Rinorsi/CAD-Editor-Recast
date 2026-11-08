@@ -12,6 +12,9 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.DefaultAttributes;
 import net.minecraft.world.entity.player.Player;
@@ -59,7 +62,33 @@ public final class EntityDefaults {
         JsonArray sources = new JsonArray();
         if (entity != null) BuiltInRegistries.DATA_COMPONENT_TYPE.forEach(typeComponent -> addSource(entity, typeComponent, lookup, sources));
         row.add("variant_sources", sources);
+        addSounds(row, entity);
         return row;
+    }
+    /** Calls the real virtual methods on the detached default instance, including variant overrides. */
+    static void addSounds(JsonObject row, Entity entity) {
+        if (entity == null) return;
+        try {
+            JsonObject sounds = new JsonObject();
+            sounds.addProperty("ambient", entity instanceof Mob
+                    ? soundId(Mob.class.getDeclaredMethod("getAmbientSound"), entity) : null);
+            sounds.addProperty("hurt", entity instanceof LivingEntity
+                    ? soundId(LivingEntity.class.getDeclaredMethod("getHurtSound", DamageSource.class), entity, entity.level().damageSources().generic()) : null);
+            sounds.addProperty("death", entity instanceof LivingEntity
+                    ? soundId(LivingEntity.class.getDeclaredMethod("getDeathSound"), entity) : null);
+            // Publish atomically: unavailable methods or a modded override throwing omit the entire field.
+            row.add("sounds", sounds);
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            // Sound metadata is optional and must not prevent the rest of entity_info from loading.
+        }
+    }
+    private static String soundId(java.lang.reflect.Method method, Entity entity, Object... args) throws ReflectiveOperationException {
+        // These protected methods have no public read-only equivalent. Reflection also works in the
+        // standalone vanilla JVM checks, without requiring loader access transformations.
+        method.setAccessible(true);
+        SoundEvent sound = (SoundEvent) method.invoke(entity, args);
+        var id = sound == null ? null : BuiltInRegistries.SOUND_EVENT.getKey(sound);
+        return id == null ? null : id.toString();
     }
     private static <T> void addSource(Entity entity, DataComponentType<T> type, HolderLookup.Provider lookup, JsonArray sources) {
         T value = entity.get(type);

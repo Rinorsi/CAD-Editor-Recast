@@ -85,6 +85,9 @@ stonecutter.properties.toml   每个游戏版本的 MC / 加载器 / API / Oriel
 | 30 | 26.2 / NeoForge | GLFW 创建时隐藏即足够 | 26.2 Minecraft 构造器额外 glfwShowWindow；测试 mixin 拦截它。NeoForge 独立测试 config/fml.toml 关闭 earlyWindowControl，避免加载器先打开窗口；26.3 另拦截 EarlyWindowHandoff 的显示调用 |
 | 31 | 多模块构建 | 初始化脚本默认只作用于主构建 | Gradle -I 同时作用于 included build-logic；六个探针 init 脚本用 findProject 检查目标存在后才配置，避免初始化失败 |
 | 32 | 26.1 / 26.2+ | BlockEntityType 的二参数构造器及 supplier 在 26.1 非公开，26.2 起公开 | testFixtures 用 Stonecutter：26.1 反射访问实际私有构造器，26.2+ 调用公开构造器；生产统一使用注册表中类型的 create/isValid，无运行时版本分派、无 access widening |
+| 33 | 26.1.2 / 26.2 / 26.3 | entity_info 未暴露默认实体叫声 | 三版解析 jar 的 Mob.getAmbientSound()、LivingEntity.getHurtSound(DamageSource)、getDeathSound() 签名与 protected 可见性一致；common 反射调用真实虚方法（generic 伤害源），取得 SOUND_EVENT 注册 ID，无新增 Stonecutter 分支或加载器 import。反射避免为仅只读元数据扩大生产访问权限，也兼容 NeoForge 的 vanilla JVM 验证运行时；失败只省略 sounds。ArmorStand 实际继承 LivingEntity，保留其真实 hurt/death，ambient 为 null；ItemFrame/Item 全 null |
+
+2026-11-09 entity_info 叫声数据：六目标 `compileJava` / 完整 `codecVerification` 通过（14m 7s，214 tasks）。日志：`Oriel-UI-Workspace/daily/2026-11-09/logs/entity-sounds/matrix.log`。每目标的 client/server 两个 EntitySchemaTest 各增加 67 项声音断言，覆盖 pig/cow/wolf/cat/zombie 注册声音、ArmorStand 真实 hit/break、ItemFrame/Item 全 null、缺实例和声音方法抛异常；均为不启动游戏的 JVM 工厂测试，未运行客户端或最终实机验收。
 
 ## 实施约定
 
