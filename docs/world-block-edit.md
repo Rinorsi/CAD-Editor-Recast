@@ -49,11 +49,25 @@ world.views.GROUP 返回 {value,snbt,schema}。value 为真实 Codec JSON，snbt
 |brewing_stand|BrewTime、Fuel|实际 short/byte|
 |campfire|CookingTimes、CookingTotalTimes|真实 int 数组 Codec，不能保留/被截断的编辑由加载保存检查拒绝|
 
-Book、RecordItem、书架 Items 内容确实变化时，从副本自动更新 has_book / has_record / slot_*_occupied；单独状态编辑不强行覆盖用户值。Book、RecordItem、头颅组件可 null，其他字段不允许 null。空旗帜图案/默认陶罐装饰按原版稀疏保存省略。
+Book、RecordItem、书架 Items 内容确实变化时，从副本自动更新 has_book / has_record / slot_*_occupied；单独状态编辑不强行覆盖用户值。Book、RecordItem、头颅组件及 nameable.CustomName 可 null，其他字段不允许 null。空旗帜图案/默认陶罐装饰按原版稀疏保存省略。
 
 蜡封标牌改文字须同一笔最终结果 is_waxed:false，否则 sign_waxed；完整 SNBT 同样受限。修改后含可执行命令的文本要求 ServerPlayer.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)，与创造/生存无关。命令方块、结构方块、拼图方块依据原版 GameMasterBlock 标记要求同一权限；有权限+生存允许，无权限+创造拒绝。其他权限/距离/区域保护守卫不变。
 
 end_gateway / structure_block 返回 views.unsupported:{supported:false,reason}，无安全的专用 normalized 写入；保留旧完整 SNBT 及身份保护，不声称已验证传送/结构副作用。
+
+## nameable：自定义名称（P1-1）
+
+仅实际实现 `Nameable` 的 BE 返回此组，不硬编码方块名单。26.1.2 讲台不实现此接口，不返回此组。字段 `CustomName` 为原版 `ComponentSerialization.CODEC` JSON（字符串或文本组件对象），无手写候选；`schema.fields.CustomName.nullable:true`。`null` 删除保存键并恢复原版默认名称，空字符串仍是显式名称。未知组/字段为 `invalid_request`；非法组件或原版加载保存未保留为 `invalid_nbt`；可执行文本仍受现有权限校验。
+
+视图示例（省略运行时 codec 描述）：
+```json
+{"nameable":{"value":{"CustomName":null},"snbt":"{}","schema":{"fields":{"CustomName":{"nullable":true,"authority":"vanilla_codec_and_loadWithComponents"}}}}}
+```
+
+edits 示例：
+```json
+{"views":{"nameable":{"CustomName":{"text":"工坊","color":"gold"}}}}
+```
 
 ## 动态字段白名单及来源
 

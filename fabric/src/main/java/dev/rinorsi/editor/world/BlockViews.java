@@ -16,6 +16,7 @@ public final class BlockViews {
     private record Field(String key, Codec<?> codec, boolean component) {}
     private static Map<String,List<Field>> fields(BlockEntity block) {
         var groups = new LinkedHashMap<String,List<Field>>();
+        if (block instanceof net.minecraft.world.Nameable) groups.put("nameable",List.of(f("CustomName",net.minecraft.network.chat.ComponentSerialization.CODEC)));
         if (block instanceof SignBlockEntity) groups.put("sign", List.of(f("front_text",SignText.DIRECT_CODEC), f("back_text",SignText.DIRECT_CODEC), f("is_waxed",Codec.BOOL)));
         if (block instanceof BannerBlockEntity) groups.put("banner",List.of(f("patterns",BannerPatternLayers.CODEC)));
         if (block instanceof BeehiveBlockEntity) groups.put("beehive",List.of(f("bees",BeehiveBlockEntity.Occupant.LIST_CODEC)));
@@ -30,6 +31,7 @@ public final class BlockViews {
         if (block instanceof SkullBlockEntity) groups.put("skull",List.of(new Field("minecraft:profile",DataComponents.PROFILE.codec(),true),new Field("minecraft:custom_name",DataComponents.CUSTOM_NAME.codec(),true)));
         return groups;
     }
+    private static boolean nullable(Field field) { return field.component || field.codec == ItemStack.CODEC || field.key.equals("CustomName"); }
     private static Field f(String key,Codec<?> codec) { return new Field(key,codec,false); }
     private static void requireInteger(JsonElement value,long min,long max) {
         try {
@@ -83,7 +85,7 @@ public final class BlockViews {
                 if (tag == null && block instanceof DecoratedPotBlockEntity p && field.key.equals("sherds")) tag = encode(field.codec,PotDecorations.CODEC.encodeStart(access.createSerializationContext(JsonOps.INSTANCE),p.getDecorations()).getOrThrow(),access);
                 value.add(field.key,tag == null ? JsonNull.INSTANCE : decode(field.codec,tag,access));
                 if(tag != null) subset.put(field.key,tag.copy());
-                var schema = new JsonObject(); schema.addProperty("authority","vanilla_codec_and_loadWithComponents"); schema.addProperty("codec",field.codec.toString()); schema.addProperty("nullable",field.component || field.codec == ItemStack.CODEC);
+                var schema = new JsonObject(); schema.addProperty("authority","vanilla_codec_and_loadWithComponents"); schema.addProperty("codec",field.codec.toString()); schema.addProperty("nullable",nullable(field));
                 if(field.component) schema.addProperty("saved_path",field.key.substring(10));
                 if(field.codec == BeehiveBlockEntity.Occupant.LIST_CODEC) schema.addProperty("vanilla_max_occupants",BeehiveBlockEntity.MAX_OCCUPANTS);
                 if(field.codec == Codec.SHORT) {schema.addProperty("min",Short.MIN_VALUE);schema.addProperty("max",Short.MAX_VALUE);schema.addProperty("bounds","NBT short storage; vanilla loader validates semantics");}
@@ -112,7 +114,7 @@ public final class BlockViews {
                 var field=allowed.stream().filter(f->f.key.equals(entry.getKey())).findFirst().orElseThrow(()->new EditorSessions.Failure("invalid_request","未知视图字段："+entry.getKey()));
                 var json=entry.getValue();
                 if(json.isJsonNull()) {
-                    if(field.component || field.codec == ItemStack.CODEC) {put(result,field,null);continue;}
+                    if(nullable(field)) {put(result,field,null);continue;}
                     throw new EditorSessions.Failure("invalid_nbt","此字段不允许清空："+field.key);
                 }
                 // Sign sides accept a partial object; unedited lines/filtered messages remain intact.

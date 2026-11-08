@@ -20,6 +20,7 @@ public final class BlockWorldEditTest {
         run(EntitySchemaTest.access(),Path.of("logs/block-edit"));
     }
     public static void run(RegistryAccess access,Path output) throws Exception {
+        nameableViews(access);
         var samples=new JsonObject();var metadata=new JsonObject();metadata.addProperty("mode","pure-jvm-real-factories-and-codecs-not-live-ticks");metadata.add("command_block_types",BlockStateEdit.commandTypes());samples.add("capture_metadata",metadata);
         for(var block:List.of(Blocks.CHEST,Blocks.FURNACE,Blocks.OAK_DOOR,Blocks.STONE_SLAB,Blocks.OAK_STAIRS,Blocks.REPEATER,Blocks.COMMAND_BLOCK,Blocks.REDSTONE_WIRE)) {
             var state=block.defaultBlockState();var states=new JsonArray();
@@ -163,6 +164,29 @@ public final class BlockWorldEditTest {
         check(!new EditorPolicy(2,false).allows(false,false),"state envelope permission guard");reject("out_of_reach",()->WorldAccess.reach(false));reject("protected_area",()->WorldAccess.area(false));
         Files.createDirectories(output);Files.writeString(output.resolve("block-captured.json"),new GsonBuilder().setPrettyPrinting().create().toJson(samples));
         System.out.println("PASS BlockWorldEditTest "+checks+" checks; factory/codec/state data; real-client run pending");
+    }
+    private static void nameableViews(RegistryAccess access) {
+        for(var block:net.minecraft.core.registries.BuiltInRegistries.BLOCK) {
+            if(!(block instanceof EntityBlock factory))continue;
+            var be=factory.newBlockEntity(BlockPos.ZERO,block.defaultBlockState());
+            if(be==null)continue;
+            var before=be.saveWithFullMetadata(access);var views=new JsonObject();BlockViews.add(views,be,access,before);
+            check(views.has("nameable")== (be instanceof net.minecraft.world.Nameable),"Nameable detection "+block);
+            if(!(be instanceof net.minecraft.world.Nameable))continue;
+            check(views.getAsJsonObject("nameable").getAsJsonObject("schema").getAsJsonObject("fields").getAsJsonObject("CustomName").get("nullable").getAsBoolean(),"name nullable");
+            var named=roundtrip(be,before,"{nameable:{CustomName:{text:'Workshop',color:'gold'}}}",access);
+            var copy=WorldTarget.copyBlock(be,named,access);
+            check(((net.minecraft.world.Nameable)copy).getCustomName().getString().equals("Workshop"),"name read back "+block);
+            var cleared=roundtrip(copy,named,"{nameable:{CustomName:null}}",access);
+            check(!cleared.contains("CustomName"),"name removed "+block);
+            reject("invalid_nbt",()->BlockViews.apply(be,before,JsonParser.parseString("{nameable:{CustomName:{text:[]}}}").getAsJsonObject(),access));
+        }
+    }
+    private static CompoundTag roundtrip(BlockEntity be,CompoundTag before,String json,RegistryAccess access) {
+        var edited=BlockViews.apply(be,before,JsonParser.parseString(json).getAsJsonObject(),access);
+        var saved=WorldTarget.copyBlock(be,edited,access).saveWithFullMetadata(access);
+        WorldNbt.requireEditedFieldsRetained(before,edited,saved);checks++;
+        return saved;
     }
     @SuppressWarnings({"rawtypes","unchecked"}) private static String propertyName(net.minecraft.world.level.block.state.properties.Property property,Object value){return property.getName((Comparable)value);}
     private static void check(boolean ok,String message){if(!ok)throw new AssertionError(message);checks++;}
