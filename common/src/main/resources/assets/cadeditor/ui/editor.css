@@ -1632,7 +1632,7 @@ body.vault-only .ew { display: none; }
 [data-theme=light] .kc-r.bad { background: rgba(220, 40, 40, 0.18); }
 
 /* 工具行里的搜索框和按钮（标签页通过 WE.toolsExtra 放进来，滚动时一直在） */
-.ed-tsearch { flex: 1 1 140px; max-width: 320px; min-width: 100px; display: flex; align-items: center; gap: 4px; }
+.ed-tsearch { flex: 1 1 100px; max-width: 213px; min-width: 90px; display: flex; align-items: center; gap: 4px; }
 .ed-tsearch .k-input { flex: 1; min-width: 60px; }
 .ed-tools .k-btn { flex: none; }
 .px-id { color: var(--tx3); }
