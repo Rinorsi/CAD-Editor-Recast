@@ -76,7 +76,7 @@ export class PageProbe {
 export async function clickPage(mc, probe, locator) {
   // Move the in-game pointer first so an old tooltip cannot occlude the new target.
   await mc.call('hover', { x: 4, y: 4 });
-  await delay(80);
+  await delay(160); // The custom tooltip removes its fading node after 110ms.
   const r = await probe.inspect(locator);
   if (!r || r.error || r.disabled || !r.hit || r.w <= 0 || r.h <= 0 || r.x < 0 || r.y < 0 || r.x >= r.width || r.y >= r.height)
     throw new Error(`Unclickable control ${JSON.stringify(locator)}; actual=${JSON.stringify(r)}`);
