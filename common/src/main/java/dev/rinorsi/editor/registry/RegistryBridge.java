@@ -54,6 +54,7 @@ public final class RegistryBridge {
         DraftChannel.attach(driver);
         ComponentValidationChannel.attach(driver);
         ComponentSchemaChannel.attach(driver);
+        GenericSchemaChannel.attach(driver);
         driver.onMessage("registry", value -> request(driver, value));
         driver.onClose(() -> DOCUMENTS.remove(driver));
     }
@@ -233,6 +234,11 @@ public final class RegistryBridge {
         if (!request.has("name") || !request.get("name").isJsonPrimitive() || !request.getAsJsonPrimitive("name").isString()) return;
         String raw = request.get("name").getAsString();
         if (raw.length() > 247) return;
+        if (raw.equals("generic_schema")) {
+            GenericSchemaChannel.request(driver,request,Long.toString(GENERATION.get()),
+                    (pages,context) -> queuePages(driver,"registry.generic_schema",pages,context));
+            return;
+        }
         if (ComponentSchemaChannel.supports(raw)) {
             ComponentSchemaChannel.request(request, raw, Long.toString(GENERATION.get()),
                     (pages, context) -> queuePages(driver, "registry." + raw, pages, context));

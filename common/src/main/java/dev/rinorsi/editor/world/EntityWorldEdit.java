@@ -36,6 +36,11 @@ public final class EntityWorldEdit {
         return value.has("empty")&&value.get("empty").getAsBoolean()?ItemStack.EMPTY:StackCodec.decode(value,access,original);
     }
     public static JsonObject views(Entity entity, CompoundTag saved, RegistryAccess access) {
+        var out = specializedViews(entity,saved,access);
+        if (!GenericSchema.specialized(out)) out.add("generic",GenericSchema.view("entity",BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString(),saved,access));
+        return out;
+    }
+    static JsonObject specializedViews(Entity entity, CompoundTag saved, RegistryAccess access) {
         var out=new JsonObject();
         if(entity instanceof ArmorStand stand){
             var pose=new JsonObject();
@@ -83,6 +88,12 @@ public final class EntityWorldEdit {
 
     /** The returned compound remains identity protected and contains current runtime state. */
     public static CompoundTag prepare(Entity source, CompoundTag input, JsonObject edit, Level level, RegistryAccess access) {
+        if (edit.has("generic")) {
+            require(edit.size()==1 && !GenericSchema.specialized(source,input,access),"已有专用视图，或不能混合通用与专用字段");
+            var next=GenericSchema.apply("entity",BuiltInRegistries.ENTITY_TYPE.getKey(source.getType()).toString(),input,edit.getAsJsonObject("generic"),access);
+            var detached=source.getType().create(level,EntitySpawnReason.LOAD);require(detached!=null,"实体工厂不能创建校验副本");
+            load(detached,next,access);GenericSchema.requireRetained(next,WorldTarget.saveEntity(detached,access));return next;
+        }
         var nbt=input.copy();
         for(String key:edit.keySet())if(!Set.of("pose","equipment","item_frame","painting","display","offers").contains(key)&&!EntityViewsSimple.supports(key)&&!EntityViewsVehicle.supports(key)&&!EntityViewsVillager.supports(key)&&!EntityViewsHorse.supports(key))throw new IllegalArgumentException("未知实体编辑区段："+key);
         EntityViewsVehicle.apply(source,nbt,edit,access);

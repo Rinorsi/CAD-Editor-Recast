@@ -79,8 +79,12 @@ public final class WorldEditor {
             var preview = result("saved",id); preview.add("world",DoubleChestEdit.preview(target,plan,state.slot,!op.equals("undo"))); checkSize(preview);
             final String replyId=id;final boolean undoing=op.equals("undo");
             var capturedAfter=new net.minecraft.nbt.CompoundTag[1];var capturedReply=new JsonObject[1];var capturedWorld=new JsonObject[1];
+            // Keep an independent expectation: a mod loader may mutate the input tag while loading.
+            var genericExpected=GenericSchema.hasEdits(request)?prepared.copy():null;
             DoubleChestEdit.write(target,plan,updateNeighbors,()->{
-                capturedAfter[0]=target.sessionData();capturedWorld[0]=target.snapshot(state.slot,!undoing,capturedAfter[0]);capturedReply[0]=result("saved",replyId);capturedReply[0].add("world",capturedWorld[0]);checkSize(capturedReply[0]);
+                capturedAfter[0]=target.sessionData();
+                if(genericExpected!=null)GenericSchema.requireRetained(genericExpected,target.entity!=null?EntitySessionData.data(capturedAfter[0]):BlockSessionData.data(capturedAfter[0]));
+                capturedWorld[0]=target.snapshot(state.slot,!undoing,capturedAfter[0]);capturedReply[0]=result("saved",replyId);capturedReply[0].add("world",capturedWorld[0]);checkSize(capturedReply[0]);
             });
             var after=capturedAfter[0];var world=capturedWorld[0];var reply=capturedReply[0];
             state.saved(beforeSession,after,op.equals("undo"));world.addProperty("revision",state.revision);

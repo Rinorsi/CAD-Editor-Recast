@@ -97,6 +97,16 @@ tasks.register('componentSchemaTest', JavaExec) {
 }
 tasks.named('check') { dependsOn('componentSchemaTest') }
 
+tasks.register('genericSchemaTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.registry.GenericSchemaTest'
+    workingDir = rootProject.projectDir
+    jvmArgs '-Djava.awt.headless=true'
+    args new File(daily, 'logs/p4-generic/' + project.parent.name + '-' + project.name + '-evidence.json').absolutePath
+}
+tasks.named('check') { dependsOn('genericSchemaTest') }
+
 // World/editor schema checks use real factories in a non-ticking JVM level.
 ['entitySchemaTest': true, 'entitySchemaServerTest': false].each { taskName, clientSide ->
     tasks.register(taskName, JavaExec) {

@@ -19,7 +19,7 @@ import net.minecraft.world.level.storage.TagValueOutput;
 public final class EntityRegistryChannel {
     private static final AtomicLong GENERATION = new AtomicLong();
     private static final AtomicLong SCHEMA_GENERATION = new AtomicLong();
-    public static void invalidateSchemas() { SCHEMA_GENERATION.incrementAndGet(); EntitySchemaValidation.invalidate(); }
+    public static void invalidateSchemas() { SCHEMA_GENERATION.incrementAndGet(); EntitySchemaValidation.invalidate(); GenericSchemaChannel.invalidate(); }
     private EntityRegistryChannel() {}
     public static boolean supports(String name) {
         return name.equals("entity_info") || name.startsWith("entity_info:") || name.equals("entity_schema") || name.startsWith("entity_schema:")

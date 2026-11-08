@@ -35,6 +35,7 @@ public record WorldMergePlan(CompoundTag nbt,BlockState blockState,CompoundTag p
         if(target.block instanceof net.minecraft.world.level.block.entity.ChestBlockEntity)
             mergedData.getList("Items").ifPresent(items->items.sort(java.util.Comparator.comparingInt(item->((CompoundTag)item).getByte("Slot").orElse((byte)0)&255)));
         var next=target.prepare(mergedData,new JsonObject());WorldNbt.requireEditedFieldsRetained(current,mergedData,next);
+        if (GenericSchema.hasEdits(request)) GenericSchema.requireRetained(mergedData,next);
         var nextState=state(merged,target.blockState());
         if(target.block!=null)nextState=BlockViews.contentState(target.block,current,next,nextState,target.level.registryAccess());
         return new WorldMergePlan(next,nextState);

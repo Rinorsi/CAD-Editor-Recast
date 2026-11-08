@@ -84,6 +84,7 @@ stonecutter.properties.toml   每个游戏版本的 MC / 加载器 / API / Oriel
 | 29 | NeoForge | 模组构造时立即初始化 HUD | 此时 Minecraft singleton 尚未建立；通过 ClientStartedEvent / Fabric CLIENT_STARTED 平台回调初始化 HUD |
 | 30 | 26.2 / NeoForge | GLFW 创建时隐藏即足够 | 26.2 Minecraft 构造器额外 glfwShowWindow；测试 mixin 拦截它。NeoForge 独立测试 config/fml.toml 关闭 earlyWindowControl，避免加载器先打开窗口；26.3 另拦截 EarlyWindowHandoff 的显示调用 |
 | 31 | 多模块构建 | 初始化脚本默认只作用于主构建 | Gradle -I 同时作用于 included build-logic；六个探针 init 脚本用 findProject 检查目标存在后才配置，避免初始化失败 |
+| 32 | 26.1 / 26.2+ | BlockEntityType 的二参数构造器及 supplier 在 26.1 非公开，26.2 起公开 | 仅隔离 testFixtures 通过实际构造器反射注册测试方块实体；生产统一调用注册表中类型的 create/isValid，无新版本分支、无 access widening |
 
 ## 实施约定
 

@@ -234,6 +234,13 @@ public final class WorldTarget {
             return nbt.copy();
         }
         if (request.has("entity")) {
+            if (StackCodec.object(request,"entity").has("generic")) {
+                // Generic edits must compare against the original typed data, before a loader
+                // can normalize or discard an unknown field in the detached baseline.
+                WorldAccess.nonPlayer(entity instanceof Player);
+                WorldNbt.protect(before,nbt,true);
+                return EntityWorldEdit.prepare(entity,nbt,StackCodec.object(request,"entity"),level,level.registryAccess());
+            }
             var raw = copyEntity(entity,nbt,level,level.registryAccess(),before);
             WorldNbt.requireEditedFieldsRetained(before,nbt,raw);
             return EntityWorldEdit.prepare(entity,raw,StackCodec.object(request,"entity"),level,level.registryAccess());

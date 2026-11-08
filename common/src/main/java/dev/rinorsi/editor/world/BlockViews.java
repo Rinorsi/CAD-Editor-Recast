@@ -20,6 +20,11 @@ import net.minecraft.world.level.block.entity.*;
 /** Normalized fields use vanilla codecs, then the existing detached loadWithComponents gate. */
 public final class BlockViews {
     private BlockViews() {}
+    public static boolean hasSpecialized(BlockEntity block) {
+        return !fields(block).isEmpty() || WorldTarget.inventory(block) != null
+                || block instanceof SpawnerBlockEntity || block instanceof TrialSpawnerBlockEntity
+                || block instanceof SculkCatalystBlockEntity || block instanceof BellBlockEntity || block instanceof ConduitBlockEntity;
+    }
     private static final Codec<Boolean> CRAFTER_TRIGGERED = Codec.BOOL;
     private record Field(String key, Codec<?> codec, boolean component) {}
     private static Map<String,List<Field>> fields(BlockEntity block) {
@@ -122,6 +127,7 @@ public final class BlockViews {
         return codec.encodeStart(access.createSerializationContext(JsonOps.INSTANCE),value).getOrThrow();
     }
     public static void add(JsonObject views,BlockEntity block,RegistryAccess access,CompoundTag nbt) {
+        if (!hasSpecialized(block)) views.add("generic", GenericSchema.view("block_entity",net.minecraft.core.registries.BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(block.getType()).toString(),nbt,access));
         fields(block).forEach((group,fields) -> {
             var value = new JsonObject(); var subset = new CompoundTag(); var properties = new JsonObject();
             for (var field : fields) {
@@ -202,6 +208,12 @@ public final class BlockViews {
         schema.add("candidates",candidates);schema.addProperty("candidate_source","runtime vanilla enum + saving codec");
     }
     public static CompoundTag apply(BlockEntity block,CompoundTag nbt,JsonObject edits,RegistryAccess access) {
+        if (edits.has("generic")) {
+            if (hasSpecialized(block) || edits.size() != 1) throw new IllegalArgumentException("已有专用视图，或不能混合通用与专用字段");
+            var next = GenericSchema.apply("block_entity",net.minecraft.core.registries.BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(block.getType()).toString(),nbt,edits.getAsJsonObject("generic"),access);
+            GenericSchema.requireRetained(next,GenericSchema.saveBlock(WorldTarget.copyBlock(block,next,access),access));
+            return next;
+        }
         var result = nbt.copy();var groups=fields(block);
         for(var group:edits.entrySet()) {
             var allowed=groups.get(group.getKey());
