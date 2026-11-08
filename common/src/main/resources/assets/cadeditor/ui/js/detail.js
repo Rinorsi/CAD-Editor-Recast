@@ -102,6 +102,6 @@ function detailize(card, o) {
   function on() { return always || (!!cid && Ctx.has(cid)); }
   function paint() { card.el.classList.toggle('det-on', on()); if (sum) sum.textContent = ''; }
   card.live.push(paint); paint();
-  if (chev) { chev.title = '在独立窗口中编辑'; chev.classList.remove('up'); chev.classList.add('det'); clear(chev); chev.appendChild(uiIcon('external', 14)); card.el.classList.add('det-card'); }
+  if (chev) { setTip(chev, '在独立窗口中编辑'); chev.classList.remove('up'); chev.classList.add('det'); clear(chev); chev.appendChild(uiIcon('external', 14)); card.el.classList.add('det-card'); }
   card.onHead = function (e) { if (!on()) return false; openDetail(o); return true; };
 }

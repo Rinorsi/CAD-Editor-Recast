@@ -163,7 +163,7 @@ function openVault(opts) {
   }
   function paintState() {
     stat.textContent = (Vault.st.entries === null ? '' : '共 ' + Vault.st.entries + ' 条') + (Vault.st.persisted ? '' : ' · 正在保存…');
-    stat.setAttribute('title', Vault.st.storage ? '保存在：' + Vault.st.storage + '（这台电脑上所有存档和服务器共用）' : '');
+    setTip(stat, Vault.st.storage ? '保存在：' + Vault.st.storage + '（这台电脑上所有存档和服务器共用）' : '');
     clear(warn);
     var w = Vault.st.storageError ? '保存到磁盘失败（' + Vault.st.storageError + '），修改保留在内存里，会自动重试' : Vault.st.readOnly ? '保险库文件版本比这个模组新，只读，不会被改动' : Vault.st.warning ? '保险库文件有问题：' + Vault.st.warning + '（原文件已另存，没有丢数据）' : '';
     if (w) warn.appendChild(h('div', { class: 'vt-msg bad', text: w }));

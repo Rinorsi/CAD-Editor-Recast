@@ -89,7 +89,8 @@ function serialize(el, depth, out, o) {
   if (el.tagName === 'TEXT') { const t = el.textContent.trim(); if (t) out.push(pad + '"' + t + '"'); return; }
   const keep = ['title', 'role', 'placeholder', 'src', 'item', 'type', 'data-card', 'data-src', 'aria-expanded', 'data-ed-open'];
   let line = pad + el.tagName.toLowerCase() + el.className.split(' ').filter(Boolean).sort().map(x => '.' + x).join('');
-  const attrs = keep.filter(k => el.attrs[k] !== undefined && el.attrs[k] !== '').map(k => k + '=' + JSON.stringify(String(el.attrs[k])));
+  // 悬停提示现在存在 data-tip 里（原生 title 不进 DOM）：快照仍照旧格式把它打印成 title=，提示文字继续被基线覆盖
+  const attrs = keep.map(k => [k, k === 'title' ? (el.attrs['data-tip'] !== undefined ? el.attrs['data-tip'] : el.attrs.title) : el.attrs[k]]).filter(p => p[1] !== undefined && p[1] !== '').map(p => p[0] + '=' + JSON.stringify(String(p[1])));
   if (el.value) attrs.push('value=' + JSON.stringify(String(el.value)));
   const st = Object.keys(el.style || {}).filter(k => typeof el.style[k] !== 'function' && el.style[k] !== '').sort().map(k => k + ':' + el.style[k]);
   if (st.length) attrs.push('style=' + JSON.stringify(st.join(';')));

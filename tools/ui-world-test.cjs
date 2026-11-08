@@ -445,7 +445,7 @@ console.log('PASS world edit: container slots, typed SNBT apply, rejected keeps 
   // 猫：品种 / 项圈 / 幼年 / 没有 AI / 生命值
   let p = panel('minecraft:cat');
   for (const t of ['品种', '项圈颜色', '叫声', '没有 AI', '幼年', '生命值']) assert.ok(row(p, t), '有「' + t + '」');
-  const gear = (el, slot) => el.querySelectorAll('.es-slot').find(x => (x.getAttribute('title') || '').indexOf(slot + '：') === 0);
+  const gear = (el, slot) => el.querySelectorAll('.es-slot').find(x => (x.getAttribute('data-tip') || '').indexOf(slot + '：') === 0);
   assert.ok(gear(p, '主手') && gear(p, '头部'), '装备是格子');
   row(p, '没有 AI').querySelector('.k-toggle').fire('click');
   assert.equal(data.NoAI, 1);
@@ -461,7 +461,7 @@ console.log('PASS world edit: container slots, typed SNBT apply, rejected keeps 
   // 项圈颜色：16 种染料 → 色块；点橙色写回游戏给的数值 1
   assert.ok(!row(p, '项圈颜色').querySelector('.k-sel'), '颜色不用下拉');
   row(p, '项圈颜色').querySelector('.k-btn').fire('click');
-  overlays.querySelectorAll('.ed-dye').find(x => /^orange /.test(x.getAttribute('title'))).fire('click');
+  overlays.querySelectorAll('.ed-dye').find(x => /^orange /.test(x.getAttribute('data-tip'))).fire('click');
   assert.equal(data.CollarColor, 1);
   // 名字：文本组件，清空就删掉
   const nameIn = row(p, '名字').querySelector('input'); nameIn.value = '小黑'; nameIn.fire('input');
@@ -474,10 +474,10 @@ console.log('PASS world edit: container slots, typed SNBT apply, rejected keeps 
   c.pickItem = (a, fn) => fn('diamond_sword');
   gear(p, '主手').fire('click');
   assert.deepEqual(data.equipment.mainhand, { id: 'minecraft:diamond_sword', count: 1 });
-  assert.ok(/钻石剑|Diamond Sword/.test(gear(p, '主手').getAttribute('title')), '格子显示放进去的物品');
+  assert.ok(/钻石剑|Diamond Sword/.test(gear(p, '主手').getAttribute('data-tip')), '格子显示放进去的物品');
   // 盔甲架：手持槽需要先显示手臂，选物品时一并写上
   data = {}; p = panel('minecraft:armor_stand');
-  assert.ok(/显示手臂/.test(gear(p, '主手').getAttribute('title')));
+  assert.ok(/显示手臂/.test(gear(p, '主手').getAttribute('data-tip')));
   gear(p, '主手').fire('click');
   assert.equal(data.ShowArms, 1); assert.equal(data.equipment.mainhand.id, 'minecraft:diamond_sword');
   // 共用整数的变种按 mask 合并（马的毛色与斑纹都在 Variant 里）

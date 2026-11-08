@@ -218,7 +218,7 @@ function esGearLayout(cfg) {
     var meta = ES_SLOT[slot] || [humanId(slot), 'shield'], st = cfg.stackOf(slot);
     var cell = h('div', { class: 'slot s34 es-slot' + (st ? ' on' : '') }, [st ? itemIcon(st.id, 26) : uiIcon(meta[1], 16, 'es-ghost')]);
     if (st && (st.count || 1) > 1) cell.appendChild(h('span', { class: 'cnt', text: String(st.count) }));
-    cell.setAttribute('title', meta[0] + '：' + (st ? nameOfItem(st.id) : (cfg.emptyHint ? cfg.emptyHint(slot) : '空')));
+    setTip(cell, meta[0] + '：' + (st ? nameOfItem(st.id) : (cfg.emptyHint ? cfg.emptyHint(slot) : '空')));
     var open = function () { if (st) cfg.onFilled(slot, cell, st); else cfg.onEmpty(slot, cell); };
     if (cfg.bind) cfg.bind(slot, cell, open); else cell.addEventListener('click', open);
     return h('div', { class: 'es-gear' }, [cell, h('span', { class: 'es-gearl', text: meta[0] })]);

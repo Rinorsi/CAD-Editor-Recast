@@ -266,7 +266,7 @@ function kRich(value, o) {
   drawRuns(); renderRuns(prev, base, runs, o.def);
   function sync() { edit.style.display = open ? 'flex' : 'none'; wrap.classList.toggle('open', open); }
   if (o.compact) {
-    prev.classList.add('click'); prev.setAttribute('title', '点击展开编辑');
+    prev.classList.add('click'); setTip(prev, '点击展开编辑');
     prev.addEventListener('click', function () { open = !open; UIOpen[openKey] = open; sync(); });
   }
   wrap.appendChild(prev); wrap.appendChild(edit); sync();

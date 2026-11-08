@@ -25,7 +25,7 @@ const zombie = (eq) => ({ data: { entity: { id: 'minecraft:zombie', equipment: {
   const items = [zombie({ loot_table: 'minecraft:equipment/trial_chamber', slot_drop_chances: { head: 2.5, chest: 0.5 } })], p = pool(items);
   const txt = p.box().textContent; assert.ok(/不覆盖/.test(txt) && /统一/.test(txt) && /按部位/.test(txt));
   assert.ok(/头盔/.test(txt) && /胸甲/.test(txt), '已有的部位都列出来');
-  const trash = qa(p.box(), '.k-btn').filter(b => b.getAttribute('title') === '去掉这个部位的覆盖');
+  const trash = qa(p.box(), '.k-btn').filter(b => b.getAttribute('data-tip') === '去掉这个部位的覆盖');
   assert.equal(trash.length, 2); trash[1].fire('click');
   assert.equal(json(items[0].data.equipment.slot_drop_chances), json({ head: 2.5 }), '大于 1 的值还在，只去掉了胸甲');
   assert.ok(p.changes() >= 1);

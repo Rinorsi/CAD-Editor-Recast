@@ -22,7 +22,7 @@ function kSlotPaint(cell, st, title, o) {
   o = o || {};
   clear(cell);
   cell.classList.remove('fl', 'r-uncommon', 'r-rare', 'r-epic', 'r-ench');
-  if (!st || st.empty) { cell.setAttribute('title', title || '空格子'); return; }
+  if (!st || st.empty) { setTip(cell, title || '空格子'); return; }
   if (!o.plain) {
     cell.classList.add('fl');
     var cp = st.comps || {}, rar = cp.rarity || cp['minecraft:rarity'];
@@ -33,7 +33,7 @@ function kSlotPaint(cell, st, title, o) {
   if ((st.count || 1) > 1) cell.appendChild(h('span', { class: 'cnt', text: String(st.count) }));
   var marked = st.marked !== undefined ? st.marked : !!((st.comps && Object.keys(st.comps).length) || st.component_snbt);
   if (marked) cell.appendChild(h('i', { class: 'mk', title: o.markTitle || '这个物品带有自己的组件数据，会原样保留' }));
-  cell.setAttribute('title', nameOfItem(st.id) + ' × ' + (st.count || 1) + (title && !o.noSuffix ? '（' + title + '）' : ''));
+  setTip(cell, nameOfItem(st.id) + ' × ' + (st.count || 1) + (title && !o.noSuffix ? '（' + title + '）' : ''));
 }
 
 /* 点开格子后的小窗。cur = 视图或 null。

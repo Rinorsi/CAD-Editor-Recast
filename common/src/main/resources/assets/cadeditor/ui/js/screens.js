@@ -122,7 +122,7 @@ function edApplyBtn(o) {
 /* 全屏 / 还原按钮 */
 function edMaxBtn() {
   var mx = h('div', { class: 'k-ibtn', title: UI.maxed ? '还原窗口' : '全屏' }, [uiIcon(UI.maxed ? 'restore' : 'maximize', 14)]);
-  activate(mx, function () { UI.maxed = !UI.maxed; applyWinStyle(); Prefs.set('windowMax', UI.maxed); mx.title = UI.maxed ? '还原窗口' : '全屏'; mx.firstChild.src = 'oriel:textures/icons/' + (UI.maxed ? 'restore' : 'maximize') + '.png'; });
+  activate(mx, function () { UI.maxed = !UI.maxed; applyWinStyle(); Prefs.set('windowMax', UI.maxed); setTip(mx, UI.maxed ? '还原窗口' : '全屏'); mx.firstChild.src = 'oriel:textures/icons/' + (UI.maxed ? 'restore' : 'maximize') + '.png'; });
   return mx;
 }
 function edCloseBtn(title, onClick) { var cl = h('div', { class: 'k-ibtn', title: title }, [uiIcon('close', 14)]); activate(cl, onClick); return cl; }

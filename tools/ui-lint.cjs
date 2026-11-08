@@ -31,6 +31,11 @@ for (const f of order) src[f].forEach((line, i) => {
   if (m && m[1] === m[3] && m[2].trim() === m[4].trim()) errors.push('函数直接调用自己（无限递归）' + m[1] + '：' + where(f, i));
 });
 
+// 2c：不要直接写原生 title：Oriel 会把它画成原版提示框，和 tip.js 的自绘提示同时出现。用 h() 的 title 参数或 setTip()
+for (const f of order) { if (f === 'forms.js') continue; src[f].forEach((line, i) => {
+  if (/setAttribute\(\s*['"]title['"]/.test(line) || /\b(el|btn|cell|row|chev|mx|b|node|e)\.title\s*=[^=]/.test(line)) errors.push('直接写了原生 title（请用 h() 的 title 参数或 setTip）：' + where(f, i));
+}); }
+
 // 3：AUTO_BODY 键
 const bodies = {};
 for (const f of order) src[f].forEach((line, i) => {

@@ -108,4 +108,14 @@ assert.deepEqual(Array.from(c.splitTags('a，b, c  d,,')), ['a', 'b', 'c', 'd'])
   assert.equal(c.varEntityIcon('horse/variant', 7), null, '值不是字符串就不猜');
   assert.equal(c.varEntityIcon('cat/variant', ''), null);
 }
-console.log('PASS components: xNum/xToggle/xText/xSeg/xSelect, kInput onCommit, xList extras, modalShell, kColorPop, combo, variant preview, labels / names.');
+// ---- 悬停提示：原生 title 不进 DOM（否则 Oriel 的原版提示框会和 tip.js 的自绘提示同时出现）
+{
+  const b = c.h('div', { class: 'k-btn', title: '提示文字' });
+  assert.equal(b.getAttribute('title'), null, '没有原生 title'); assert.equal(b.getAttribute('data-tip'), '提示文字');
+  assert.equal(c.h('div', { title: '' }).getAttribute('data-tip'), null, '空提示不写');
+  const el = c.h('div'); c.setTip(el, 'a'); assert.equal(el.getAttribute('data-tip'), 'a'); c.setTip(el, ''); assert.equal(el.getAttribute('data-tip'), null, '空文字 = 去掉');
+  assert.equal(c.kBtn('按钮', () => {}, { title: '说明' }).getAttribute('title'), null, '公共按钮也不带原生 title');
+  const tab = c.h('div', { class: 'ed-tab', title: '成就' }, [c.h('span', { text: '成就' })]);
+  assert.equal(tab.getAttribute('title'), null, '页签重画后鼠标不动，也不会有原生提示');
+}
+console.log('PASS components: xNum/xToggle/xText/xSeg/xSelect, kInput onCommit, xList extras, modalShell, kColorPop, combo, variant preview, tooltips, labels / names.');

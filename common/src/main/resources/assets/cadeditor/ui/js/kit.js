@@ -297,7 +297,7 @@ function kNumber(value, o) {
     var t = smax > smin ? Math.max(0, Math.min(1, (cur - smin) / (smax - smin))) : 0;
     fl.style.width = (t * 100) + '%'; th.style.left = (t * 100) + '%';
     track.classList.toggle('over', cur > smax0);
-    track.setAttribute('title', cur > smax0 ? '数值已超出常规滑块范围，滑块已自动放大到 ' + fmtInt(smax) + '，也可直接在输入框修改' : '');
+    setTip(track, cur > smax0 ? '数值已超出常规滑块范围，滑块已自动放大到 ' + fmtInt(smax) + '，也可直接在输入框修改' : '');
   }
   function paintWarn() {
     var w = '';

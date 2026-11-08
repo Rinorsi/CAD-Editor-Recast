@@ -11,12 +11,15 @@ function h(tag, props, kids) {
     if (k === 'class') el.className = v;
     else if (k === 'text') el.textContent = v;
     else if (k === 'style') el.setAttribute('style', v);
+    else if (k === 'title') { if (v !== '') el.setAttribute('data-tip', String(v)); }   // 原生 title 由 Oriel 自己画，会和 tip.js 的自绘提示叠在一起；一律写成 data-tip
     else if (k.indexOf('on') === 0 && typeof v === 'function') el.addEventListener(k.substring(2), v);
     else el.setAttribute(k, v === true ? '' : String(v));
   }
   if (kids) for (var i = 0; i < kids.length; i++) { var c = kids[i]; if (c === null || c === undefined || c === false) continue; el.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); }
   return el;
 }
+/* 悬停提示一律走这里（或 h() 的 title 参数），不要直接写原生的 title 属性：Oriel 会把它画成原版提示框，和自绘提示同时出现。空文字 = 去掉提示 */
+function setTip(el, text) { if (text === undefined || text === null || text === '') el.removeAttribute('data-tip'); else el.setAttribute('data-tip', String(text)); }
 function icon(name, extra) { return h('img', { class: 'o-ico' + (extra ? ' ' + extra : ''), src: 'oriel:textures/icons/' + name + '.png', alt: '' }); }
 function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); return el; }
 function onKey(el, map) {
@@ -790,7 +793,7 @@ function soundUnionRow(label, hint, val, set) {
     if (id) {
       var pr = row.querySelector(".pr-r");
       var choose = pr != null ? pr.querySelector(".k-btn") : null;
-      if (choose != null) choose.setAttribute("title", "选择声音");
+      if (choose != null) setTip(choose, "选择声音");
       rangeBtn = kBtn(rangeCaption(), function () { rangeOpen = !rangeOpen; draw(); });
       rangeBtn.classList.add("snd-range-btn");
       rangeBtn.setAttribute("data-tip", "传播范围：" + (range === undefined ? "自动" : fmtNum(range) + " 格"));

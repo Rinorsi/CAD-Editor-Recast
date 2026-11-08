@@ -336,7 +336,7 @@ div
             div.k-cval
             div.k-reset [title="放弃这里的修改，使用物品原本的值"] "恢复默认"
             span.k-swph
-            div.det.k-chev [title="折叠 / 展开"]
+            div.det.k-chev [title="在独立窗口中编辑"]
               img.o-ico [src="oriel:textures/icons/external.png" style="height:16px;width:16px"]
           div.k-cbody
             div.k-sub "单击编辑 · 双击拿起，点别格放下"

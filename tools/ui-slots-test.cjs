@@ -24,7 +24,7 @@ const flushTimers = () => { while (t.timers.length) t.timers.shift().fn(); };
 {
   const { d, card } = openCard('minecraft:shulker_box', { container: [{ slot: 0, item: { id: 'minecraft:diamond', count: 5 } }, { slot: 3, item: { id: 'minecraft:stick', count: 1, components: { custom_name: 'x' } } }] }, 'container');
   let cells = cellsOf(card); assert.equal(cells.length, 27);
-  assert.equal(cells[0].getAttribute('title'), '钻石 × 5'.replace('钻石', c.nameOfItem('minecraft:diamond')));
+  assert.equal(cells[0].getAttribute('data-tip'), '钻石 × 5'.replace('钻石', c.nameOfItem('minecraft:diamond')));
   assert.equal(cells[3].querySelectorAll('.mk').length, 1, '带组件的格子有小黄点');
   dblclick(cells[0]); assert.ok(c.WE_DND.carry, '双击后拿起'); assert.ok(cells[0].classList.contains('carried'));
   cells[7].fire('click');
