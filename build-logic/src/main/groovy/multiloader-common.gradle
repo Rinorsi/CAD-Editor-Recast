@@ -6,7 +6,7 @@ layout.buildDirectory.set(rootProject.file('../Oriel-UI-Workspace/daily/' + java
 repositories { mavenCentral() }
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
 processResources {
-    def properties = [version: project.version, minecraft_version: minecraft_version, minecraft_version_range: minecraft_version_range,
+    def properties = [version: project.version, modrinth_id: providers.gradleProperty('modrinth_id').getOrElse(''), curseforge_id: providers.gradleProperty('curseforge_id').getOrElse(''), minecraft_version: minecraft_version, minecraft_version_range: minecraft_version_range,
         fabric_minecraft_version: fabric_minecraft_version, fabric_loader_version: fabric_loader_version,
         neoforge_version: neoforge_version, neoforge_loader_version_range: neoforge_loader_version_range]
     inputs.properties(properties)

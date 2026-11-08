@@ -24,3 +24,7 @@ type="required"
 versionRange="[0.11.0,0.12.0)"
 ordering="AFTER"
 side="BOTH"
+
+[modproperties.cadeditor]
+modrinthProjectId="${modrinth_id}"
+curseforgeProjectId="${curseforge_id}"

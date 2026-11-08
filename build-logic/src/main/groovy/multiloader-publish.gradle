@@ -1,3 +1,56 @@
-// Local publication only. Distribution is assembled by tools/build-all.ps1.
-plugins { id 'maven-publish' }
+// Follows Oriel UI's convention; destinations are independently optional.
+import me.modmuss50.mpp.ReleaseType
+plugins { id 'maven-publish'; id 'me.modmuss50.mod-publish-plugin' }
 publishing { publications { mavenJava(MavenPublication) { from components.java; artifactId = base.archivesName.get() } } }
+def loader = project.parent.name
+def modVersion = project.version.toString()
+def dry = providers.gradleProperty('publishDryRun').isPresent() || providers.environmentVariable('PUBLISH_DRY_RUN').getOrElse('false') == 'true'
+def ready = { String site, String token ->
+    def configured = findProperty(site + '_id')?.toString()?.trim() && findProperty('oriel_' + site + '_id')?.toString()?.trim()
+    def enabled = configured && (dry || providers.environmentVariable(token).getOrNull())
+    if (!enabled) logger.lifecycle("Skipping ${site} upload for ${project.path}: configure project / Oriel ids and ${token}.")
+    enabled
+}
+def release = modVersion.contains('-alpha') ? 'alpha' : modVersion.contains('-beta') ? 'beta' : findProperty('release_type').toString()
+def notes = providers.fileContents(rootProject.layout.projectDirectory.file('CHANGELOG.md')).asText.map { text ->
+    def lines = text.readLines()
+    def start = lines.findIndexOf { it ==~ /##\s+\[?${java.util.regex.Pattern.quote(modVersion)}\]?(\s.*)?/ }
+    if (start < 0) throw new GradleException("Missing CHANGELOG section for ${modVersion}")
+    def rest = lines.drop(start + 1)
+    def end = rest.findIndexOf { it.startsWith('## ') }
+    def body = (end < 0 ? rest : rest.take(end)).join('\n').trim()
+    if (!body) throw new GradleException("Empty CHANGELOG section for ${modVersion}")
+    body
+}
+publishMods {
+    def artifactDirectory = providers.gradleProperty('publishArtifactDir').getOrNull()
+    file = (artifactDirectory
+        ? rootProject.layout.projectDirectory.file(artifactDirectory + '/cadeditor-' + loader + '-' + minecraft_version + '-' + modVersion + '.jar')
+        : tasks.named('jar', Jar).flatMap { it.archiveFile })
+    modLoaders.add(loader)
+    version = "${modVersion}+${loader}-${minecraft_version}"
+    displayName = "CAD Editor ${modVersion} (${loader} ${minecraft_version})"
+    type = ReleaseType.of(release == 'release' ? 'stable' : release)
+    changelog = notes
+    dryRun = dry
+    if (ready('modrinth', 'MODRINTH_TOKEN')) {
+        modrinth {
+            projectId = findProperty('modrinth_id').toString()
+            accessToken = providers.environmentVariable('MODRINTH_TOKEN').getOrElse('dry-run')
+            minecraftVersions.add(minecraft_version.toString())
+            requires(findProperty('oriel_modrinth_id').toString())
+            if (loader == 'fabric') requires('fabric-api')
+        }
+    }
+    if (ready('curseforge', 'CURSEFORGE_TOKEN')) {
+        curseforge {
+            projectId = findProperty('curseforge_id').toString()
+            accessToken = providers.environmentVariable('CURSEFORGE_TOKEN').getOrElse('dry-run')
+            minecraftVersions.add(minecraft_version.toString())
+            client = true
+            server = true
+            requires(findProperty('oriel_curseforge_id').toString())
+            if (loader == 'fabric') requires('fabric-api')
+        }
+    }
+}

@@ -13,6 +13,20 @@ CAD Editor（Component And Data Editor）的换代重写，界面基于 [Oriel U
 
 按键都在“控制”设置里（分类：物品栏），可以改：编辑 = I，保险库 = O。按住 Shift 再按 I：只改手里的物品，空手就改自己。
 
+当前版本：<!-- editor-version -->0.99.2<!-- /editor-version --> · [更新日志](CHANGELOG.md) · [发版清单](docs/RELEASE.md)
+
+## 下载
+
+从本仓库 GitHub **Releases** 获取附件；尚未公开的版本以维护者本地分发为准。每版提供六个 jar 与 `SHA256SUMS.txt`，只安装一个匹配目标的 jar。Modrinth / CurseForge 项目待维护者填写 ID 后启用。
+
+## 支持的版本
+
+| Minecraft | Fabric | NeoForge | Java / 前置 |
+|---|---|---|---|
+| 26.1.2 | `cadeditor-fabric-26.1.2-<版本>.jar` | `cadeditor-neoforge-26.1.2-<版本>.jar` | Java 25 / Oriel UI 0.11.x |
+| 26.2 | `cadeditor-fabric-26.2-<版本>.jar` | `cadeditor-neoforge-26.2-<版本>.jar` | 同上 |
+| 26.3 | `cadeditor-fabric-26.3-<版本>.jar` | `cadeditor-neoforge-26.3-<版本>.jar` | 同上 |
+
 ## 要求
 
 Minecraft 26.1.2 / 26.2 / 26.3 · Fabric 或 NeoForge · Java 25 · **对应版本的 Oriel UI 0.11.x（前置模组）**。Fabric 需 Loader ≥ 0.19.5 与匹配游戏版本的 Fabric API。
@@ -21,7 +35,12 @@ Minecraft 26.1.2 / 26.2 / 26.3 · Fabric 或 NeoForge · Java 25 · **对应版�
 
 `mods/` 里放 与加载器及游戏版本匹配的 CAD Editor 和 Oriel UI；Fabric 还需 Fabric API。创造模式直接写回；非创造模式，或要改容器里的物品，需要服务端也装本模组并授予权限。
 
-## 开发
+| 安装位置 | 必需文件 |
+|---|---|
+| 客户端 `mods/` | 一个匹配目标的 CAD Editor jar、对应 Oriel UI；Fabric 另放 Fabric API |
+| 需要服务端写回的服务器 `mods/` | 相同游戏版本与加载器的 CAD Editor、Oriel UI 和对应依赖；管理员授予写入权限 |
+
+## 从源码构建
 
 **1. 仓库放在哪**
 
@@ -38,6 +57,13 @@ Mods/
 
 - JDK 25、Git Bash、Node.js 18+
 - 把 Oriel UI 0.11.0 的六个发布 jar 放进 libs/（文件名保留加载器和游戏版本，不进 git；详见 docs/MULTIVERSION.md）
+
+| 目标 | 命令 |
+|---|---|
+| 单目标与检查 | `./gradlew :fabric:26.1:build :fabric:26.1:check -PmcTest=false` |
+| 六目标与检查 | `./gradlew build -PmcTest=false` |
+| 本地发行目录（六 jar + SHA256） | `pwsh -File tools/build-all.ps1` |
+| 版本同步预览 | `pwsh -File tools/bump-version.ps1 -Version <新版本> -DryRun` |
 
 **3. 常用命令**（Git Bash，仓库根目录）
 

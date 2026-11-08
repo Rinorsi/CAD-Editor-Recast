@@ -1,0 +1,130 @@
+name: Build and release
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        loader: [fabric, neoforge]
+        mc: ['26.1', '26.2', '26.3']
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: Editor
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+      - uses: gradle/actions/setup-gradle@v5
+      - name: Read mod version and validate release tag
+        working-directory: Editor
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^version=//p' gradle.properties | tr -d '\r')
+          test -n "$version"
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then test "$GITHUB_REF_NAME" = "v$version"; fi
+          echo "EDITOR_VERSION=$version" >> "$GITHUB_ENV"
+      - name: Check out pinned Oriel source dependency
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ vars.ORIEL_REPOSITORY || 'Rinorsi/Oriel-UI' }}
+          ref: ${{ vars.ORIEL_REF || '92542786d57ddcadabbca6cfecde863969fd51f5' }}
+          token: ${{ secrets.ORIEL_READ_TOKEN || github.token }}
+          path: Oriel-UI
+          persist-credentials: false
+      - name: Build Oriel dependency jars
+        working-directory: Oriel-UI
+        shell: bash
+        run: |
+          chmod +x gradlew
+          ./gradlew :fabric:${{ matrix.mc }}:jar :neoforge:${{ matrix.mc }}:jar -Poriel_release --console=plain --stacktrace
+          mkdir -p ../Editor/libs
+          for loader in fabric neoforge; do
+            find "$loader/versions/${{ matrix.mc }}/build/libs" -maxdepth 1 -name 'oriel-*.jar' ! -name '*-sources.jar' ! -name '*-javadoc.jar' ! -name '*-dev.jar' -exec cp {} ../Editor/libs/ \;
+          done
+      - name: Matrix build and check including codecVerification
+        working-directory: Editor
+        shell: bash
+        run: |
+          chmod +x gradlew
+          ./gradlew :${{ matrix.loader }}:${{ matrix.mc }}:build :${{ matrix.loader }}:${{ matrix.mc }}:check :${{ matrix.loader }}:${{ matrix.mc }}:codecVerificationClasses -PmcTest=false --console=plain --max-workers=2 --stacktrace
+      - name: Collect exactly one release jar
+        working-directory: Editor
+        shell: bash
+        run: |
+          set -euo pipefail
+          mc='${{ matrix.mc }}'
+          if [[ "$mc" == 26.1 ]]; then mc=26.1.2; fi
+          name="cadeditor-${{ matrix.loader }}-$mc-$EDITOR_VERSION.jar"
+          mapfile -t jars < <(find ../Oriel-UI-Workspace/daily -type f -path "*/${{ matrix.loader }}-$mc/libs/$name")
+          test "${#jars[@]}" -eq 1
+          mkdir -p release
+          cp "${jars[0]}" release/
+      - uses: actions/upload-artifact@v5
+        with:
+          name: jar-${{ matrix.loader }}-${{ matrix.mc }}
+          path: Editor/release/*.jar
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v5
+        if: failure()
+        with:
+          name: reports-${{ matrix.loader }}-${{ matrix.mc }}
+          path: Oriel-UI-Workspace/daily/**/build/**/reports/
+          if-no-files-found: ignore
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: jar-*
+          merge-multiple: true
+          path: release
+      - name: Verify six targets, write and check SHA256 sums
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^version=//p' gradle.properties | tr -d '\r')
+          test "$GITHUB_REF_NAME" = "v$version"
+          test "$(find release -maxdepth 1 -name '*.jar' | wc -l)" -eq 6
+          for loader in fabric neoforge; do
+            for mc in 26.1.2 26.2 26.3; do test -s "release/cadeditor-$loader-$mc-$version.jar"; done
+          done
+          (cd release && sha256sum *.jar > SHA256SUMS.txt && sha256sum -c SHA256SUMS.txt)
+          python3 tools/release-notes.py "$version" > release-notes.md
+      - name: Publish GitHub release attachments
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" release/*.jar release/SHA256SUMS.txt --title "CAD Editor $GITHUB_REF_NAME" --notes-file release-notes.md --verify-tag --prerelease
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v5
+      - name: Optional platform uploads of the verified Release attachments
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+        run: |
+          chmod +x gradlew
+          ./gradlew publishMods -PpublishArtifactDir=release -PmcTest=false --console=plain --stacktrace

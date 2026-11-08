@@ -6,8 +6,12 @@
   "description": "CAD Editor (Recast): visual item component and data editor for Minecraft, built on Oriel UI.",
   "environment": "*",
   "entrypoints": {
-    "main": ["dev.rinorsi.editor.fabric.FabricEditor"],
-    "client": ["dev.rinorsi.editor.fabric.FabricEditorClient"]
+    "main": [
+      "dev.rinorsi.editor.fabric.FabricEditor"
+    ],
+    "client": [
+      "dev.rinorsi.editor.fabric.FabricEditorClient"
+    ]
   },
   "accessWidener": "cadeditor.accesswidener",
   "depends": {
@@ -16,5 +20,13 @@
     "minecraft": "${fabric_minecraft_version}",
     "java": ">=25",
     "oriel": ">=0.11.0 <0.12.0"
+  },
+  "custom": {
+    "modrinth": {
+      "project-id": "${modrinth_id}"
+    },
+    "curseforge": {
+      "project-id": "${curseforge_id}"
+    }
   }
 }

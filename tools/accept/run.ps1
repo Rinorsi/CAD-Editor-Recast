@@ -33,7 +33,7 @@ $Classes = Join-Path $Out 'compiled'
 $Probe = Join-Path $Out 'probe'
 New-Item -ItemType Directory -Force $Run,$Classes,$Probe,(Join-Path $Run 'mods'),(Join-Path $Run 'saves') | Out-Null
 if (!$ClasspathFile) { $ClasspathFile = (Get-ChildItem ($Workspace+'/daily/*/scratch/editor-mod/runtime-classpath.json') | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).FullName }
-if (!$BaseJar) { $BaseJar = (Get-ChildItem ($Workspace+'/daily/*/scratch/editor-mod/build/fabric-26.1.2/libs/cadeditor-fabric-26.1.2-0.99.2.jar') | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).FullName }
+if (!$BaseJar) { $ModVersion=((Get-Content ($Root+'/gradle.properties') | Where-Object { $_ -match '^version=' }) -split '=',2)[1].Trim(); $BaseJar = (Get-ChildItem ($Workspace+'/daily/*/scratch/editor-mod/build/fabric-26.1.2/libs/cadeditor-fabric-26.1.2-'+$ModVersion+'.jar') | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).FullName }
 if (!$World) { $World = (Get-ChildItem ($Workspace+'/daily/*/run/editor-autotest-client/saves/Editor-release-test/level.dat') | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).Directory.FullName }
 if (!$ClasspathFile -or !$BaseJar -or !$World) { throw '缺少已构建的基础 jar、runtime-classpath.json 或独立测试世界；请先按 TESTING.md 准备。' }
 $JavaBin = Join-Path $env:USERPROFILE '.jdks/jdk-25.0.5+8/bin'

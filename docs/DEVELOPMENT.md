@@ -70,3 +70,7 @@ MCTest 让 agent 通过 MCP / 本机 WebSocket 驱动真实 Minecraft 客户端�
 默认启用，控制地址为 `127.0.0.1:25599`；`-PmcTest=false` 从开发运行类路径移除 MCTest，`-PmcTestPort=25600` 为客户端添加 `-Dmctest.port=25600`（不改变启停状态）。例如 `./gradlew :fabric:26.1:runClient -PmcTestPort=25600`。
 日常 `启动物品工坊预览.bat` / `tools/preview/start.ps1` 固定传入 `-PmcTest=false`，不开控制端口；自动化 `tools/live-test` 不传该开关，保持默认启用。
 不要把控制端口转发到外网。构建通过不代表客户端交互已验收。
+
+## 版本与分发
+
+当前版本：<!-- editor-version -->0.99.2<!-- /editor-version -->。版本唯一来源是根目录 gradle.properties；使用 tools/bump-version.ps1 的 -DryRun 先预览同步，再正式更新。不要手改模组元数据版本模板，不重写历史验收记录中的旧版本。六目标构建、SHA256、tag 发布与可选内存采样见 [RELEASE.md](RELEASE.md)。
