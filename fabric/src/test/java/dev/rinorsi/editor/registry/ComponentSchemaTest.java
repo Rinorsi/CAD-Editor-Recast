@@ -154,6 +154,18 @@ public final class ComponentSchemaTest {
             JsonElement sample = sample(schema.root(), access);
             check(schema.root().codec.parse(access.createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE), sample).isSuccess(), "schema-generated sample parses " + id + ": " + sample);
         }
+        var lock = ComponentSchema.derive("lock", access);
+        check(lock.entry().get("coverage").getAsString().equals("partial"), "lock explicitly retains advanced predicate fallback");
+        check(lock.entry().getAsJsonArray("unknown_paths").toString().equals("[\"$.predicates\"]"), "lock only advanced predicate values remain unknown");
+        var lockInput = new JsonObject(); lockInput.add("items", sample(lock.root().fields.get("items"), access));
+        lockInput.add("count", JsonParser.parseString("{\"min\":1,\"max\":2}"));
+        var exact = lock.root().fields.get("components");
+        check(exact.json.get("value_schema_route").getAsString().equals("component_schema:<component-id>") && !exact.json.get("allow_removal").getAsBoolean(), "exact component maps use component schemas without removals");
+        var values = new JsonObject(); var valueSchema = ComponentSchema.derive("damage", access);
+        values.add(valueSchema.id(), sample(valueSchema.root(), access)); lockInput.add("components", values);
+        check(lock.root().codec.parse(access.createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE), lockInput).isSuccess(), "lock schema-built nonempty sample " + lockInput);
+        lockInput.add("count", JsonParser.parseString("{\"min\":2,\"max\":1}"));
+        check(!lock.root().codec.parse(access.createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE), lockInput).isSuccess(), "lock inverted inclusive bounds rejected");
         var profile = ComponentSchema.derive("profile", access).root();
         var object = profile.alternatives.stream().filter(n -> n.json.get("kind").getAsString().equals("object")).findFirst().orElseThrow();
         check(object.fields.get("name").json.get("optional").getAsBoolean() && object.fields.get("id").json.get("optional").getAsBoolean(), "profile partial identity fields may be omitted");
@@ -187,6 +199,7 @@ public final class ComponentSchemaTest {
             var lookup = fixtureLookup.lookupOrThrow(key);
             return new JsonPrimitive(lookup.listElements().findFirst().orElseThrow().key().identifier().toString());
         }
+        if (kind.equals("int")) return new JsonPrimitive(node.json.has("min") ? node.json.get("min").getAsInt() : 0);
         if (kind.equals("string")) return new JsonPrimitive("a".repeat(node.json.has("min_length") ? node.json.get("min_length").getAsInt() : 0));
         if (kind.equals("union")) return sample(node.alternatives.getFirst(), access);
         if (kind.equals("object")) {

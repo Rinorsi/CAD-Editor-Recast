@@ -44,6 +44,8 @@ RGB 是显示语义：potion_contents.custom_color 真实字段使用 Codec.INT�
 
 - `profile`：联合为玩家名字字符串（0..16 字符）或对象；对象的 `name`（0..16）、`id`（UUID 四整数数组）、`texture`/`cape`/`elytra`（identifier）、`model`（真实枚举 slim/wide）均可省略，不能用 null 代替省略。`properties` 默认 `[]`，接受属性名到字符串列表的映射（最多 16 个键，值列表无该项数限制），或最多 16 项的 `{name,value,signature?}` 列表（长度上限分别 64、32767、1024）。例如 `{"properties":[{"name":"textures","value":"<base64>"}]}`；纹理 payload 是不透明字符串，Codec 不验证其 Base64 内容或网络可用性。profile 不来自注册表，不应伪造玩家/皮肤候选目录。
 
+- `lock`：物品谓词对象；可省略 `items:holder_set`（实时 `minecraft:item` 与 `tags:minecraft:item`）、`count`（整数精确值或 `{min?,max?}`，含端点，默认 `{}`，min ≤ max）、`components`（默认 `{}`，组件 ID → 精确值）、`predicates`（默认 `{}`，高级谓词映射）。`components.value_schema_route` 指向既有 `component_schema:<component-id>`，键来自持久组件注册表，禁止 `!id` 删除语法。示例 `{"items":"minecraft:tripwire_hook","count":{"min":1},"components":{"minecraft:damage":0}}`。`predicates` 保留局部 `editable:snbt_only` 与 unknown 原因：键依赖运行时 `data_component_predicate_type` 的专用 Codec，也接受持久 `data_component_type` 的精确匹配回退；值不是普通 ID，也不能当任意 NBT 直接放行。该子树提交仍由完整组件 Codec 校验，因此本组件保持 partial，而其余字段可结构化编辑。
+
 ## ranges_for_ui
 
 每个条目含数值字段列表；[完整机器汇总与前端差异](component-schema-ui-ranges-26.1.2.json) 按组件 ID 索引。
@@ -76,8 +78,8 @@ path 使用 $、.field、[]、{value}。min/max/default 的 null 表示没有已
 | minecraft:break_sound | full | — |
 | minecraft:bucket_entity_data | full | — |
 | minecraft:bundle_contents | full | — |
-| minecraft:can_break | partial | $: outer_mapping_or_cross_field_constraint; $[].state{value}: string_mapping_constraints_not_exported; $[].nbt: string_mapping_constraints_not_exported; $[].components: unsupported_codec_wrapper; $.state{value}: string_mapping_constraints_not_exported; $.nbt: string_mapping_constraints_not_exported; $.components: unsupported_codec_wrapper |
-| minecraft:can_place_on | partial | $: outer_mapping_or_cross_field_constraint; $[].state{value}: string_mapping_constraints_not_exported; $[].nbt: string_mapping_constraints_not_exported; $[].components: unsupported_codec_wrapper; $.state{value}: string_mapping_constraints_not_exported; $.nbt: string_mapping_constraints_not_exported; $.components: unsupported_codec_wrapper |
+| minecraft:can_break | partial | $: outer_mapping_or_cross_field_constraint; $[].state{value}: string_mapping_constraints_not_exported; $[].nbt: string_mapping_constraints_not_exported; $[].predicates: dependent_component_predicate_value_schemas_not_exported; $.state{value}: string_mapping_constraints_not_exported; $.nbt: string_mapping_constraints_not_exported; $.predicates: dependent_component_predicate_value_schemas_not_exported |
+| minecraft:can_place_on | partial | $: outer_mapping_or_cross_field_constraint; $[].state{value}: string_mapping_constraints_not_exported; $[].nbt: string_mapping_constraints_not_exported; $[].predicates: dependent_component_predicate_value_schemas_not_exported; $.state{value}: string_mapping_constraints_not_exported; $.nbt: string_mapping_constraints_not_exported; $.predicates: dependent_component_predicate_value_schemas_not_exported |
 | minecraft:cat/collar | full | — |
 | minecraft:cat/sound_variant | full | — |
 | minecraft:cat/variant | full | — |
@@ -118,7 +120,7 @@ path 使用 $、.field、[]、{value}。min/max/default 的 null 表示没有已
 | minecraft:jukebox_playable | full | — |
 | minecraft:kinetic_weapon | full | — |
 | minecraft:llama/variant | full | — |
-| minecraft:lock | partial | $.count: outer_mapping_or_cross_field_constraint; $.components: unsupported_codec_wrapper |
+| minecraft:lock | partial | $.predicates: dependent_component_predicate_value_schemas_not_exported |
 | minecraft:lodestone_tracker | full | — |
 | minecraft:lore | full | — |
 | minecraft:map_color | full | — |

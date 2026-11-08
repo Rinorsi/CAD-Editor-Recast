@@ -2559,23 +2559,55 @@
                   {
                     "path": "$[].components",
                     "optional": true,
-                    "type": "object",
-                    "kind": "object",
-                    "unknown": true,
-                    "reason": "unsupported_codec_wrapper",
+                    "type": "map",
+                    "kind": "map",
+                    "value_schema_route": "component_schema:<component-id>",
+                    "constraint_notes": "Exact component values keyed by persistent component ID; unlike component_patch, !id removals are not accepted",
+                    "allow_removal": false,
                     "name": "components",
                     "default": {},
-                    "default_source": "optional_field_decode_empty_map"
+                    "default_source": "optional_field_decode_empty_map",
+                    "key": {
+                      "path": "$[].components{key}",
+                      "optional": false,
+                      "type": "identifier",
+                      "kind": "identifier"
+                    }
                   },
                   {
                     "path": "$[].predicates",
                     "optional": true,
-                    "type": "registry",
-                    "kind": "registry",
-                    "registry": "minecraft:data_component_predicate_type",
+                    "type": "map",
+                    "kind": "map",
+                    "editable": "snbt_only",
+                    "constraint_notes": "Object keys select runtime data_component_predicate_type codecs, with persistent data_component_type IDs as exact-match fallback; values are decoded by the selected codec, not plain IDs or arbitrary NBT",
+                    "unknown": true,
+                    "reason": "dependent_component_predicate_value_schemas_not_exported",
                     "name": "predicates",
                     "default": {},
-                    "default_source": "optional_field_decode_empty_map"
+                    "default_source": "optional_field_decode_empty_map",
+                    "key": {
+                      "path": "$[].predicates{key}",
+                      "optional": false,
+                      "type": "union",
+                      "kind": "union",
+                      "alternatives": [
+                        {
+                          "path": "$[].predicates{key}",
+                          "optional": false,
+                          "type": "registry",
+                          "kind": "registry",
+                          "registry": "minecraft:data_component_predicate_type"
+                        },
+                        {
+                          "path": "$[].predicates{key}",
+                          "optional": false,
+                          "type": "registry",
+                          "kind": "registry",
+                          "registry": "minecraft:data_component_type"
+                        }
+                      ]
+                    }
                   }
                 ]
               }
@@ -2711,23 +2743,55 @@
                 {
                   "path": "$.components",
                   "optional": true,
-                  "type": "object",
-                  "kind": "object",
-                  "unknown": true,
-                  "reason": "unsupported_codec_wrapper",
+                  "type": "map",
+                  "kind": "map",
+                  "value_schema_route": "component_schema:<component-id>",
+                  "constraint_notes": "Exact component values keyed by persistent component ID; unlike component_patch, !id removals are not accepted",
+                  "allow_removal": false,
                   "name": "components",
                   "default": {},
-                  "default_source": "optional_field_decode_empty_map"
+                  "default_source": "optional_field_decode_empty_map",
+                  "key": {
+                    "path": "$.components{key}",
+                    "optional": false,
+                    "type": "identifier",
+                    "kind": "identifier"
+                  }
                 },
                 {
                   "path": "$.predicates",
                   "optional": true,
-                  "type": "registry",
-                  "kind": "registry",
-                  "registry": "minecraft:data_component_predicate_type",
+                  "type": "map",
+                  "kind": "map",
+                  "editable": "snbt_only",
+                  "constraint_notes": "Object keys select runtime data_component_predicate_type codecs, with persistent data_component_type IDs as exact-match fallback; values are decoded by the selected codec, not plain IDs or arbitrary NBT",
+                  "unknown": true,
+                  "reason": "dependent_component_predicate_value_schemas_not_exported",
                   "name": "predicates",
                   "default": {},
-                  "default_source": "optional_field_decode_empty_map"
+                  "default_source": "optional_field_decode_empty_map",
+                  "key": {
+                    "path": "$.predicates{key}",
+                    "optional": false,
+                    "type": "union",
+                    "kind": "union",
+                    "alternatives": [
+                      {
+                        "path": "$.predicates{key}",
+                        "optional": false,
+                        "type": "registry",
+                        "kind": "registry",
+                        "registry": "minecraft:data_component_predicate_type"
+                      },
+                      {
+                        "path": "$.predicates{key}",
+                        "optional": false,
+                        "type": "registry",
+                        "kind": "registry",
+                        "registry": "minecraft:data_component_type"
+                      }
+                    ]
+                  }
                 }
               ]
             }
@@ -2739,10 +2803,10 @@
         "$",
         "$[].state{value}",
         "$[].nbt",
-        "$[].components",
+        "$[].predicates",
         "$.state{value}",
         "$.nbt",
-        "$.components"
+        "$.predicates"
       ],
       "unknown_details": [
         {
@@ -2758,8 +2822,8 @@
           "reason": "string_mapping_constraints_not_exported"
         },
         {
-          "path": "$[].components",
-          "reason": "unsupported_codec_wrapper"
+          "path": "$[].predicates",
+          "reason": "dependent_component_predicate_value_schemas_not_exported"
         },
         {
           "path": "$.state{value}",
@@ -2770,8 +2834,8 @@
           "reason": "string_mapping_constraints_not_exported"
         },
         {
-          "path": "$.components",
-          "reason": "unsupported_codec_wrapper"
+          "path": "$.predicates",
+          "reason": "dependent_component_predicate_value_schemas_not_exported"
         }
       ],
       "editable": "structured",
@@ -2988,23 +3052,55 @@
                   {
                     "path": "$[].components",
                     "optional": true,
-                    "type": "object",
-                    "kind": "object",
-                    "unknown": true,
-                    "reason": "unsupported_codec_wrapper",
+                    "type": "map",
+                    "kind": "map",
+                    "value_schema_route": "component_schema:<component-id>",
+                    "constraint_notes": "Exact component values keyed by persistent component ID; unlike component_patch, !id removals are not accepted",
+                    "allow_removal": false,
                     "name": "components",
                     "default": {},
-                    "default_source": "optional_field_decode_empty_map"
+                    "default_source": "optional_field_decode_empty_map",
+                    "key": {
+                      "path": "$[].components{key}",
+                      "optional": false,
+                      "type": "identifier",
+                      "kind": "identifier"
+                    }
                   },
                   {
                     "path": "$[].predicates",
                     "optional": true,
-                    "type": "registry",
-                    "kind": "registry",
-                    "registry": "minecraft:data_component_predicate_type",
+                    "type": "map",
+                    "kind": "map",
+                    "editable": "snbt_only",
+                    "constraint_notes": "Object keys select runtime data_component_predicate_type codecs, with persistent data_component_type IDs as exact-match fallback; values are decoded by the selected codec, not plain IDs or arbitrary NBT",
+                    "unknown": true,
+                    "reason": "dependent_component_predicate_value_schemas_not_exported",
                     "name": "predicates",
                     "default": {},
-                    "default_source": "optional_field_decode_empty_map"
+                    "default_source": "optional_field_decode_empty_map",
+                    "key": {
+                      "path": "$[].predicates{key}",
+                      "optional": false,
+                      "type": "union",
+                      "kind": "union",
+                      "alternatives": [
+                        {
+                          "path": "$[].predicates{key}",
+                          "optional": false,
+                          "type": "registry",
+                          "kind": "registry",
+                          "registry": "minecraft:data_component_predicate_type"
+                        },
+                        {
+                          "path": "$[].predicates{key}",
+                          "optional": false,
+                          "type": "registry",
+                          "kind": "registry",
+                          "registry": "minecraft:data_component_type"
+                        }
+                      ]
+                    }
                   }
                 ]
               }
@@ -3140,23 +3236,55 @@
                 {
                   "path": "$.components",
                   "optional": true,
-                  "type": "object",
-                  "kind": "object",
-                  "unknown": true,
-                  "reason": "unsupported_codec_wrapper",
+                  "type": "map",
+                  "kind": "map",
+                  "value_schema_route": "component_schema:<component-id>",
+                  "constraint_notes": "Exact component values keyed by persistent component ID; unlike component_patch, !id removals are not accepted",
+                  "allow_removal": false,
                   "name": "components",
                   "default": {},
-                  "default_source": "optional_field_decode_empty_map"
+                  "default_source": "optional_field_decode_empty_map",
+                  "key": {
+                    "path": "$.components{key}",
+                    "optional": false,
+                    "type": "identifier",
+                    "kind": "identifier"
+                  }
                 },
                 {
                   "path": "$.predicates",
                   "optional": true,
-                  "type": "registry",
-                  "kind": "registry",
-                  "registry": "minecraft:data_component_predicate_type",
+                  "type": "map",
+                  "kind": "map",
+                  "editable": "snbt_only",
+                  "constraint_notes": "Object keys select runtime data_component_predicate_type codecs, with persistent data_component_type IDs as exact-match fallback; values are decoded by the selected codec, not plain IDs or arbitrary NBT",
+                  "unknown": true,
+                  "reason": "dependent_component_predicate_value_schemas_not_exported",
                   "name": "predicates",
                   "default": {},
-                  "default_source": "optional_field_decode_empty_map"
+                  "default_source": "optional_field_decode_empty_map",
+                  "key": {
+                    "path": "$.predicates{key}",
+                    "optional": false,
+                    "type": "union",
+                    "kind": "union",
+                    "alternatives": [
+                      {
+                        "path": "$.predicates{key}",
+                        "optional": false,
+                        "type": "registry",
+                        "kind": "registry",
+                        "registry": "minecraft:data_component_predicate_type"
+                      },
+                      {
+                        "path": "$.predicates{key}",
+                        "optional": false,
+                        "type": "registry",
+                        "kind": "registry",
+                        "registry": "minecraft:data_component_type"
+                      }
+                    ]
+                  }
                 }
               ]
             }
@@ -3168,10 +3296,10 @@
         "$",
         "$[].state{value}",
         "$[].nbt",
-        "$[].components",
+        "$[].predicates",
         "$.state{value}",
         "$.nbt",
-        "$.components"
+        "$.predicates"
       ],
       "unknown_details": [
         {
@@ -3187,8 +3315,8 @@
           "reason": "string_mapping_constraints_not_exported"
         },
         {
-          "path": "$[].components",
-          "reason": "unsupported_codec_wrapper"
+          "path": "$[].predicates",
+          "reason": "dependent_component_predicate_value_schemas_not_exported"
         },
         {
           "path": "$.state{value}",
@@ -3199,8 +3327,8 @@
           "reason": "string_mapping_constraints_not_exported"
         },
         {
-          "path": "$.components",
-          "reason": "unsupported_codec_wrapper"
+          "path": "$.predicates",
+          "reason": "dependent_component_predicate_value_schemas_not_exported"
         }
       ],
       "editable": "structured",
@@ -10246,15 +10374,18 @@
               ],
               "constraint_notes": "RegistryOps lookup; homogeneous holders; runtime tag membership",
               "name": "items",
-              "default_absent": true
+              "default_absent": true,
+              "candidate_source": "runtime_registry",
+              "candidate_route": "minecraft:item",
+              "allow_manual_id": true,
+              "tag_candidate_route": "tags:minecraft:item"
             },
             {
               "path": "$.count",
               "optional": true,
               "type": "union",
               "kind": "union",
-              "unknown": true,
-              "reason": "outer_mapping_or_cross_field_constraint",
+              "constraint_notes": "Integer exact value or inclusive min/max object; omitted bounds are unbounded; min must be <= max; validated by MinMaxBounds.Ints.CODEC",
               "name": "count",
               "default": {},
               "default_source": "optional_field_decode_empty_map",
@@ -10378,40 +10509,73 @@
             {
               "path": "$.components",
               "optional": true,
-              "type": "object",
-              "kind": "object",
-              "unknown": true,
-              "reason": "unsupported_codec_wrapper",
+              "type": "map",
+              "kind": "map",
+              "value_schema_route": "component_schema:<component-id>",
+              "constraint_notes": "Exact component values keyed by persistent component ID; unlike component_patch, !id removals are not accepted",
+              "allow_removal": false,
               "name": "components",
               "default": {},
-              "default_source": "optional_field_decode_empty_map"
+              "default_source": "optional_field_decode_empty_map",
+              "key": {
+                "path": "$.components{key}",
+                "optional": false,
+                "type": "identifier",
+                "kind": "identifier"
+              }
             },
             {
               "path": "$.predicates",
               "optional": true,
-              "type": "registry",
-              "kind": "registry",
-              "registry": "minecraft:data_component_predicate_type",
+              "type": "map",
+              "kind": "map",
+              "editable": "snbt_only",
+              "constraint_notes": "Object keys select runtime data_component_predicate_type codecs, with persistent data_component_type IDs as exact-match fallback; values are decoded by the selected codec, not plain IDs or arbitrary NBT",
+              "unknown": true,
+              "reason": "dependent_component_predicate_value_schemas_not_exported",
               "name": "predicates",
               "default": {},
-              "default_source": "optional_field_decode_empty_map"
+              "default_source": "optional_field_decode_empty_map",
+              "key": {
+                "path": "$.predicates{key}",
+                "optional": false,
+                "type": "union",
+                "kind": "union",
+                "alternatives": [
+                  {
+                    "path": "$.predicates{key}",
+                    "optional": false,
+                    "type": "registry",
+                    "kind": "registry",
+                    "registry": "minecraft:data_component_predicate_type",
+                    "candidate_source": "runtime_registry",
+                    "candidate_route": "minecraft:data_component_predicate_type",
+                    "allow_manual_id": true
+                  },
+                  {
+                    "path": "$.predicates{key}",
+                    "optional": false,
+                    "type": "registry",
+                    "kind": "registry",
+                    "registry": "minecraft:data_component_type",
+                    "candidate_source": "runtime_registry",
+                    "candidate_route": "minecraft:data_component_type",
+                    "allow_manual_id": true
+                  }
+                ]
+              }
             }
           ]
         }
       ],
       "coverage": "partial",
       "unknown_paths": [
-        "$.count",
-        "$.components"
+        "$.predicates"
       ],
       "unknown_details": [
         {
-          "path": "$.count",
-          "reason": "outer_mapping_or_cross_field_constraint"
-        },
-        {
-          "path": "$.components",
-          "reason": "unsupported_codec_wrapper"
+          "path": "$.predicates",
+          "reason": "dependent_component_predicate_value_schemas_not_exported"
         }
       ],
       "editable": "structured",
@@ -13144,6 +13308,8 @@
                   "min_length": 0,
                   "max_length": 16,
                   "constraint_source": "captured_string_length_validator_and_boundary_decode",
+                  "format": "player_name",
+                  "constraint_notes": "ExtraCodecs.PLAYER_NAME also applies StringUtil.isValidPlayerName; the length range alone does not authorize arbitrary characters",
                   "name": "name",
                   "default_absent": true
                 },
@@ -13345,7 +13511,9 @@
               ],
               "min_length": 0,
               "max_length": 16,
-              "constraint_source": "captured_string_length_validator_and_boundary_decode"
+              "constraint_source": "captured_string_length_validator_and_boundary_decode",
+              "format": "player_name",
+              "constraint_notes": "ExtraCodecs.PLAYER_NAME also applies StringUtil.isValidPlayerName; the length range alone does not authorize arbitrary characters"
             }
           ]
         }

@@ -56,7 +56,7 @@ public final class ComponentSchema {
             root.json.addProperty("constraint_source", "int_storage_domain_boundary_probed_json_narrowing_allowed");
             root.json.addProperty("storage_boundary_probes_ok", safeParse(codec, new JsonPrimitive(Integer.MIN_VALUE), inspector.ops) && safeParse(codec, new JsonPrimitive(Integer.MAX_VALUE), inspector.ops));
         }
-        if (codec == net.minecraft.core.component.DataComponents.TRIM.codec() || codec == net.minecraft.core.component.DataComponents.PROVIDES_TRIM_MATERIAL.codec()) annotateCandidates(root);
+        if (codec == net.minecraft.core.component.DataComponents.TRIM.codec() || codec == net.minecraft.core.component.DataComponents.PROVIDES_TRIM_MATERIAL.codec() || codec == net.minecraft.core.component.DataComponents.LOCK.codec()) annotateCandidates(root);
         if (codec == net.minecraft.core.component.DataComponents.POTION_CONTENTS.codec()) annotateColor(root);
         // Observation matrix, not inferred limits: absence of a counterexample proves no new bound.
         var inputProbes = new JsonArray();
@@ -178,6 +178,14 @@ public final class ComponentSchema {
 
         Node inspect(Codec<?> outer, String path, int depth, Set<Object> ancestors) {
             Node n = inspectRaw(outer, path, depth, ancestors);
+            if (outer == net.minecraft.util.ExtraCodecs.PLAYER_NAME) {
+                n.json.addProperty("format", "player_name");
+                n.json.addProperty("constraint_notes", "ExtraCodecs.PLAYER_NAME also applies StringUtil.isValidPlayerName; the length range alone does not authorize arbitrary characters");
+            }
+            if (outer == net.minecraft.advancements.criterion.MinMaxBounds.Ints.CODEC) {
+                n.json.remove("unknown"); n.json.remove("reason");
+                n.json.addProperty("constraint_notes", "Integer exact value or inclusive min/max object; omitted bounds are unbounded; min must be <= max; validated by MinMaxBounds.Ints.CODEC");
+            }
             if (outer == net.minecraft.util.ExtraCodecs.PROPERTY_MAP) {
                 for (Node branch : n.alternatives) if (branch.json.get("kind").getAsString().equals("map")) {
                     var probe = new JsonObject();
@@ -209,6 +217,20 @@ public final class ComponentSchema {
                 n.json.addProperty("id_field", "id"); n.json.addProperty("additional_fields", "free_nbt");
                 Node id = inspect(typeCodec, path + ".id", depth + 1, next); id.json.addProperty("name", "id"); n.fields.put("id", id);
                 n.json.addProperty("shape_notes", "TypedEntityData.codec: required id plus remaining CompoundTag fields; original id stripped from free data"); return n;
+            }
+            if (outer == net.minecraft.core.component.DataComponentExactPredicate.CODEC) {
+                n.type("map");
+                n.key = inspect(net.minecraft.core.component.DataComponentType.PERSISTENT_CODEC, path + "{key}", depth + 1, next);
+                n.json.addProperty("value_schema_route", "component_schema:<component-id>");
+                n.json.addProperty("constraint_notes", "Exact component values keyed by persistent component ID; unlike component_patch, !id removals are not accepted");
+                n.json.addProperty("allow_removal", false); return n;
+            }
+            if (outer == net.minecraft.core.component.predicates.DataComponentPredicate.CODEC) {
+                n.type("map");
+                n.key = inspect(net.minecraft.core.component.predicates.DataComponentPredicate.Type.CODEC, path + "{key}", depth + 1, next);
+                n.json.addProperty("editable", "snbt_only");
+                n.json.addProperty("constraint_notes", "Object keys select runtime data_component_predicate_type codecs, with persistent data_component_type IDs as exact-match fallback; values are decoded by the selected codec, not plain IDs or arbitrary NBT");
+                n.unknown("dependent_component_predicate_value_schemas_not_exported"); return n;
             }
             if (outer == net.minecraft.core.component.DataComponentPatch.CODEC) {
                 n.type("component_patch"); n.json.addProperty("registry", "minecraft:data_component_type");
