@@ -10,4 +10,3 @@ var ORIEL_STACK = { id: 'minecraft:stone', count: 1, removed: {}, label: '数据
  lodestone_tracker:{target:{dimension:'minecraft:overworld',pos:[12,64,48]},tracked:true},
  debug_stick_state:{'minecraft:oak_log':'axis'}
 }};
-function applyToGame() {}
