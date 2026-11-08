@@ -1,5 +1,6 @@
 param([Parameter(Mandatory=$true)][string]$ClasspathJson, [Parameter(Mandatory=$true)][string]$TestWorld)
 $ErrorActionPreference='Stop'
+. (Join-Path $PSScriptRoot '../baseline-sources.ps1')
 $Editor=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $Work=Join-Path $Editor '.backend-b'
 $Log=Join-Path $Editor 'logs/backend-b'
@@ -12,14 +13,14 @@ $Mc=Get-ChildItem (Join-Path $Editor '.gradle/loom-cache/minecraftMaven/net/mine
 $Cp=@($Runtime | Where-Object {$_ -notmatch 'minecraft-merged'})+@($Mc.FullName)
 foreach($Dir in @('main','probe','test','jar-main','jar-probe','run/mods','run/saves')){New-Item -ItemType Directory -Force (Join-Path $Work $Dir) | Out-Null}
 New-Item -ItemType Directory -Force $Log | Out-Null
-$Sources=@(Get-ChildItem (Join-Path $Editor 'common/versions/26.1/build/generated/stonecutter/main/java'),(Join-Path $Editor 'fabric/versions/26.1/build/generated/stonecutter/main/java') -Recurse -Filter '*.java' | ForEach-Object FullName)
+$Sources=@(Get-ChildItem (Join-Path $Editor "${BaselineCommon}/main/java"),(Join-Path $Editor "${BaselineFabric}/main/java") -Recurse -Filter '*.java' | ForEach-Object FullName)
 & $Javac -proc:none -encoding UTF-8 -cp ($Cp -join ';') -d (Join-Path $Work 'main') @Sources *> (Join-Path $Log 'compile-all.log')
 if($LASTEXITCODE -ne 0){throw 'Java 编译失败：logs/backend-b/compile-all.log'}
-$Probe=@('BackendDataProbe.java','mixin/NoMouseCaptureMixin.java','mixin/BackendProbeWindowMixin.java') | ForEach-Object {Join-Path $Editor ('fabric/versions/26.1/build/generated/stonecutter/autotest/java/dev/rinorsi/editor/probe/'+$_)}
-$Probe+=@(Get-ChildItem (Join-Path $Editor 'common/versions/26.1/build/generated/stonecutter/testFixtures/java') -Recurse -Filter '*.java' | ForEach-Object FullName)
+$Probe=@('BackendDataProbe.java','mixin/NoMouseCaptureMixin.java','mixin/BackendProbeWindowMixin.java') | ForEach-Object {Join-Path $Editor ("${BaselineFabric}/autotest/java/dev/rinorsi/editor/probe/"+$_)}
+$Probe+=@(Get-ChildItem (Join-Path $Editor "${BaselineCommon}/testFixtures/java") -Recurse -Filter '*.java' | ForEach-Object FullName)
 & $Javac -proc:none -encoding UTF-8 -cp ((Join-Path $Work 'main')+';'+($Cp -join ';')) -d (Join-Path $Work 'probe') @Probe *> (Join-Path $Log 'compile-probe.log')
 if($LASTEXITCODE -ne 0){throw '探针编译失败：logs/backend-b/compile-probe.log'}
-& $Javac -proc:none -encoding UTF-8 -cp ((Join-Path $Work 'main')+';'+(Join-Path $Work 'probe')+';'+($Cp -join ';')) -d (Join-Path $Work 'test') (Join-Path $Editor 'common/versions/26.1/build/generated/stonecutter/test/java/dev/rinorsi/editor/BackendDataTest.java') (Join-Path $Editor 'common/versions/26.1/build/generated/stonecutter/test/java/dev/rinorsi/editor/ComplexStackRoundTripTest.java') *> (Join-Path $Log 'compile-test.log')
+& $Javac -proc:none -encoding UTF-8 -cp ((Join-Path $Work 'main')+';'+(Join-Path $Work 'probe')+';'+($Cp -join ';')) -d (Join-Path $Work 'test') (Join-Path $Editor "${BaselineCommon}/test/java/dev/rinorsi/editor/BackendDataTest.java") (Join-Path $Editor "${BaselineCommon}/test/java/dev/rinorsi/editor/ComplexStackRoundTripTest.java") *> (Join-Path $Log 'compile-test.log')
 if($LASTEXITCODE -ne 0){throw '测试编译失败：logs/backend-b/compile-test.log'}
 & $Java -cp ((Join-Path $Work 'test')+';'+(Join-Path $Work 'main')+';'+($Cp -join ';')) dev.rinorsi.editor.BackendDataTest $Log *> (Join-Path $Log 'codec.log')
 if($LASTEXITCODE -ne 0){throw 'Codec 测试失败：logs/backend-b/codec.log'}

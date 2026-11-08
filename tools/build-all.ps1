@@ -28,7 +28,7 @@ try {
     $Jars | Sort-Object Name | ForEach-Object {
         (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $Destination $_.Name)).Hash.ToLowerInvariant() + '  ' + $_.Name
     } | Set-Content -LiteralPath (Join-Path $Destination 'SHA256SUMS.txt') -Encoding utf8NoBOM
-    @('# CAD Editor ' + $Version, '',
+    @(('# CAD Editor ' + $Version), '',
       'Choose the jar matching both Minecraft and your loader. Install the corresponding Oriel 0.11.0 jar; Fabric also requires Fabric API.',
       '', 'Targets: Fabric / NeoForge x Minecraft 26.1.2, 26.2, 26.3.',
       'Build and headless checks passed. Runtime acceptance results are recorded separately in docs/MULTIVERSION.md.') |

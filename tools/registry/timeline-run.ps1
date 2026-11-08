@@ -1,5 +1,6 @@
 param([string]$ClasspathFile, [string]$BaseJar, [string]$World)
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot '../baseline-sources.ps1')
 $Root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $Workspace = [IO.Path]::GetFullPath((Join-Path $Root '../Oriel-UI-Workspace'))
 $Out = Join-Path $Root ('daily/' + (Get-Date -Format 'yyyy-MM-dd') + '/registry-timeline')
@@ -17,7 +18,7 @@ $Mc = Join-Path $Cache 'minecraftMaven/net/minecraft/minecraft-merged-deobf/26.1
 $Runtime = @(Get-Content $ClasspathFile | ConvertFrom-Json)
 $Cp = (@($BaseJar,$Mc) + $Runtime) -join ';'
 $Sources = @(Get-ChildItem ($Out+'/src/dev/rinorsi/editor/registry/*.java') | ForEach-Object FullName)
-$Sources += $Root+'/common/versions/26.1/build/generated/stonecutter/main/java/dev/rinorsi/editor/ComponentValidation.java'
+$Sources += $Root+"/${BaselineCommon}/main/java/dev/rinorsi/editor/ComponentValidation.java"
 # Existing interactive Gradle runClient processes remain untouched; compile the registry package directly.
 & ($JavaBin+'/javac.exe') -proc:none -encoding UTF-8 -cp $Cp -d $Classes $Sources *> ($Out+'/compile.log')
 if ($LASTEXITCODE) { throw ('注册表 javac 失败；查看 '+$Out+'/compile.log') }
@@ -25,7 +26,7 @@ $EditorJar = Join-Path $Run 'mods/editor-supplement-under-test.jar'
 Copy-Item -LiteralPath $BaseJar -Destination $EditorJar -Force
 & ($JavaBin+'/jar.exe') uf $EditorJar -C $Classes . -C $Out assets
 if ($LASTEXITCODE) { throw '测试副本打包失败' }
-$TestSources = @(($Root+'/tools/registry/timeline/TimelineProbe.java'), ($Root+'/fabric/versions/26.1/build/generated/stonecutter/autotest/java/dev/rinorsi/editor/registry/supplementmixin/RegistrySupplementWindowMixin.java'), ($Root+'/fabric/versions/26.1/build/generated/stonecutter/autotest/java/dev/rinorsi/editor/probe/mixin/NoMouseCaptureMixin.java'))
+$TestSources = @(($Root+'/tools/registry/timeline/TimelineProbe.java'), ($Root+"/${BaselineFabric}/autotest/java/dev/rinorsi/editor/registry/supplementmixin/RegistrySupplementWindowMixin.java"), ($Root+"/${BaselineFabric}/autotest/java/dev/rinorsi/editor/probe/mixin/NoMouseCaptureMixin.java"))
 & ($JavaBin+'/javac.exe') -proc:none -encoding UTF-8 -cp ($Classes+';'+$Cp) -d $Probe $TestSources *> ($Out+'/probe-compile.log')
 if ($LASTEXITCODE) { throw ('探针 javac 失败；查看 '+$Out+'/probe-compile.log') }
 $Utf8 = [Text.UTF8Encoding]::new($false)

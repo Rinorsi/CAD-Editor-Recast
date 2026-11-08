@@ -16,7 +16,7 @@ Oriel 自己就是这个结构，照着做，不要另发明：
 common/            与加载器无关的全部代码和资源（现在的 fabric/src/main 里绝大部分搬到这里）
   src/main/java    编辑器逻辑：schema、注册表、世界编辑、保险库、网络载荷定义
   src/main/resources  assets/cadeditor/ui/**（HTML/JS/CSS）、语言文件、access widener
-  src/test, src/testFixtures, src/autotest
+  src/test, src/testFixtures, src/smoke
 fabric/            只放 Fabric 入口、事件、网络注册、按键、命令的薄层
 neoforge/          只放 NeoForge 入口，同上
 build-logic/       共用的 Gradle 约定插件（multiloader-common / -loader / -publish）
@@ -79,9 +79,8 @@ stonecutter.properties.toml   每个游戏版本的 MC / 加载器 / API / Oriel
 | 24 | 26.3 | GLFW 隐藏窗口 | SDL 创建前 HIDDEN / NOT_FOCUSABLE flags；独立 smoke mixin，禁止鼠标捕获 |
 | 25 | 26.3 | 测试注册表复制所有对象引用 | bootstrap 的 record 别名须复制为不同 identity；仅测试夹具按 record 实际构造器复制 |
 | 26 | 全部 | schema 单行预留固定 1024 字符 | 按真实分页信封长度预留；最大 24000 字符不变，不截断字段、不返回空页 |
-| 27 | 全部 | 原始源码直接用于基线 javac 探针 | 使用 Stonecutter 生成的 26.1 源码；先运行 :fabric:26.1:build / autotestClasses |
+| 27 | 全部 | 原始源码直接用于基线 javac 探针 | baseline-sources.ps1 按活动版本选择原始或 Stonecutter 生成的 26.1 源码；先运行 :fabric:26.1:build / autotestClasses，避免切换版本后误读旧生成物 |
 | 28 | NeoForge | 直接 JavaExec 启动 patched game 测试 | FML 未启动时 patched 类不可独立引导；Codec JVM 使用同版本 common NeoForm vanilla runtime，生产编译与客户端 smoke 使用真实 NeoForge |
-
 | 29 | NeoForge | 模组构造时立即初始化 HUD | 此时 Minecraft singleton 尚未建立；通过 ClientStartedEvent / Fabric CLIENT_STARTED 平台回调初始化 HUD |
 | 30 | 26.2 / NeoForge | GLFW 创建时隐藏即足够 | 26.2 Minecraft 构造器额外 glfwShowWindow；测试 mixin 拦截它。NeoForge 独立测试 config/fml.toml 关闭 earlyWindowControl，避免加载器先打开窗口；26.3 另拦截 EarlyWindowHandoff 的显示调用 |
 
@@ -103,4 +102,6 @@ stonecutter.properties.toml   每个游戏版本的 MC / 加载器 / API / Oriel
 - 新版及 NeoForge 的五目标隐藏客户端 smoke 全部通过：daily/2026-11-08/logs/editor-smoke-204031/results.json，各目标目录有 matrix-smoke.json、stdout.log、stderr.log。每个回执包含 hidden_unfocused、server_mod_channel、server_equal、reopen_equal，均为 true。
 - 发行 jar 不含 probe / smoke 类，包含 UI 和平台 services：daily/2026-11-08/logs/editor-jar-layout.json。
 - UI 全门禁通过：daily/2026-11-08/logs/editor-final-ui.log；PowerShell 解析通过，基线 acceptance standalone javac 通过：editor-accept-compile-only2.log。
-- 六目标最终 build/check、dist 和完整 Fabric 基线实机结果由收尾验收补录；以上 smoke 不替代完整基线门禁或人工视觉验收。
+- 六目标最终 build/check（含 codecVerification）全部通过：tools/build-all.ps1，BUILD SUCCESSFUL in 9m 33s，214 actionable tasks。完整日志在 Oriel-UI-Workspace/daily/2026-11-08/logs/editor-matrix/build-all.log，脚本回执 editor-distribution.log。
+- 发行目录：Oriel-UI-Workspace/dist/editor-0.99.2-20261108/；六个 cadeditor-<loader>-<mc>-0.99.2.jar、SHA256SUMS.txt、README.md。editor-jar-layout.json 已按发行目录重新校验全部六项 SHA256、UI、平台 services、metadata 和测试探针隔离。
+- 完整 Fabric 基线实机验收正在收尾；以上 smoke 不替代完整基线门禁或人工视觉验收。

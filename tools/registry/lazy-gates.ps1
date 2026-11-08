@@ -1,5 +1,6 @@
 param([switch]$Memory)
 $ErrorActionPreference='Stop'
+. (Join-Path $PSScriptRoot '../baseline-sources.ps1')
 $Root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $Workspace=[IO.Path]::GetFullPath((Join-Path $Root '../Oriel-UI-Workspace'))
 $Logs=Join-Path $Root 'logs/search/lazy'
@@ -11,10 +12,10 @@ $RuntimeFile=(Get-ChildItem ($Workspace+'/daily/*/scratch/editor-mod/runtime-cla
 $Runtime=@(Get-Content $RuntimeFile | ConvertFrom-Json)
 $Mc=(Get-ChildItem (Join-Path $Root '.gradle/loom-cache/minecraftMaven') -Recurse -Filter '*.jar' | Where-Object { $_.FullName -match '[\\/]26[.]1[.]2[\\/]' } | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).FullName
 $Cp=(@($Mc)+$Runtime) -join ';'
-$Sources=@(Get-ChildItem ($Root+'/common/versions/26.1/build/generated/stonecutter/main/java'),($Root+'/fabric/versions/26.1/build/generated/stonecutter/main/java') -Recurse -Filter '*.java' | ForEach-Object FullName)
+$Sources=@(Get-ChildItem ($Root+"/${BaselineCommon}/main/java"),($Root+"/${BaselineFabric}/main/java") -Recurse -Filter '*.java' | ForEach-Object FullName)
 & ($JavaBin+'/javac.exe') -proc:none -encoding UTF-8 -cp $Cp -d $Main $Sources *> ($Logs+'/compile-main.log')
 if($LASTEXITCODE){throw 'Java编译失败：logs/search/lazy/compile-main.log'}
-$TestSources=@(Get-ChildItem ($Root+'/common/versions/26.1/build/generated/stonecutter/test/java'),($Root+'/common/versions/26.1/build/generated/stonecutter/testFixtures/java') -Recurse -Filter '*.java' | Where-Object {$_.FullName -notmatch 'test[\\/]java[\\/]dev[\\/]rinorsi[\\/]editor[\\/]probe[\\/]'} | ForEach-Object FullName)
+$TestSources=@(Get-ChildItem ($Root+"/${BaselineCommon}/test/java"),($Root+"/${BaselineCommon}/testFixtures/java") -Recurse -Filter '*.java' | Where-Object {$_.FullName -notmatch 'test[\\/]java[\\/]dev[\\/]rinorsi[\\/]editor[\\/]probe[\\/]'} | ForEach-Object FullName)
 $TestCp=(@($Main,($Root+'/common/src/main/resources'))+$Runtime+@($Mc)) -join ';'
 & ($JavaBin+'/javac.exe') -proc:none -encoding UTF-8 -cp $TestCp -d $Tests $TestSources *> ($Logs+'/compile-tests.log')
 if($LASTEXITCODE){throw '测试编译失败：logs/search/lazy/compile-tests.log'}
