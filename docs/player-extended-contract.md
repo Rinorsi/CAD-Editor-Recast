@@ -26,6 +26,10 @@ recipes.value={entries:[{id:'minecraft:...',unlocked:false,highlighted:false}]}�
 
 advancements.value={entries:[{id:'minecraft:...',done:false,criteria:[{name:'...',done:false}]}]}，来自 ServerAdvancementManager / PlayerAdvancements。schema={source:'ServerAdvancementManager / PlayerAdvancements',manualId:true,selfOnly:true}。patch={entries:[{id,criteria:[{name,done}]}]}，最多64项，只改列出的条件，条件名来自实时定义。原版 award/revoke 可能触发奖励、公告或后续成就，不可撤销。
 
+成就显示元数据补充：每个 advancements entry 有 has_display:boolean，严格表示定义是否有 DisplayInfo（不判断玩家已解锁或原版隐藏条件）。有 DisplayInfo 时，标题/描述组件直接 contents 为 TranslatableContents，则分别提供 title_key / description_key；否则提供组件 getString() 的 title / description。无显示信息时省略对应字段；同一字段不同时返回 key 和字面值。客户端可用 registry.translate 查询当前语言，服务端不解析为服务器语言。
+
+advancements 的 read / apply 请求可选 displayed:true，仅返回 has_display=true 的条目；默认或 false 保留全部条目，包括 minecraft:recipes/... 内部成就。仅 advancements 支持此字段，且必须为布尔值。它与 query 叠加，在 offset / limit 分页前执行，total 和 nextOffset 都基于过滤后的结果。只影响回执投影，完整会话基线和写入条件校验保持原行为。
+
 ## 统计
 
 stats.value={entries:[{type:'minecraft:custom',id:'minecraft:jump',value:0}]}，遍历 BuiltInRegistries.STAT_TYPE 及 StatType.getRegistry，包括未发生的统计。schema={source:'BuiltInRegistries.STAT_TYPE / StatType.getRegistry',manualId:true,min:0,max:2147483647}。query 匹配 type 或 id。patch={entries:[{type,id,value}]}，最多64项，type/id 不重复，value 非负整数。用 ServerStatsCounter.setValue/sendStats，不直接改文件。

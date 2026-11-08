@@ -234,6 +234,16 @@ public final class RegistryBridge {
         if (!request.has("name") || !request.get("name").isJsonPrimitive() || !request.getAsJsonPrimitive("name").isString()) return;
         String raw = request.get("name").getAsString();
         if (raw.length() > 247) return;
+        if (raw.equals("translate")) {
+            Object document=driver.document();
+            Minecraft.getInstance().execute(() -> {
+                if (!DOCUMENTS.containsKey(driver) || driver.document()!=document) return;
+                var pages=TranslateChannel.pages(request,net.minecraft.locale.Language.getInstance());
+                JsonObject context=new JsonObject();context.add("generation",pages.getFirst().get("generation"));
+                queuePages(driver,"registry.translate",pages.stream().map(Object::toString).toList(),context);
+            });
+            return;
+        }
         if (raw.equals("generic_schema")) {
             GenericSchemaChannel.request(driver,request,Long.toString(GENERATION.get()),
                     (pages,context) -> queuePages(driver,"registry.generic_schema",pages,context));

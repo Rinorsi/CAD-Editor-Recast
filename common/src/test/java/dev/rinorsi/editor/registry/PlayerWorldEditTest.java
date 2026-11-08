@@ -32,9 +32,36 @@ public final class PlayerWorldEditTest {
         check(wire(large).equals(large),"compressed player request does not require legacy slot");
         var reply=JsonParser.parseString("{status:'saved',requestId:'null-roundtrip',playerExtended:{value:null,nextOffset:null}}").getAsJsonObject();
         check(wire(reply).equals(reply)&&wire(reply).getAsJsonObject("playerExtended").get("value").isJsonNull(),"respawn reply preserves null value and pagination end");
+        advancementDisplay();
         System.out.println("PlayerWorldEditTest: "+checks+" checks passed");
     }
     private static JsonObject wire(JsonObject value){return WorldWire.decode(JsonParser.parseString(WorldWire.encode(value)).getAsJsonObject());}
+    private static void advancementDisplay(){
+        var builder=net.minecraft.advancements.Advancement.Builder.advancement();
+        builder.display(new net.minecraft.advancements.DisplayInfo(new net.minecraft.world.item.ItemStackTemplate(net.minecraft.world.item.Items.STONE),net.minecraft.network.chat.Component.translatable("advancements.story.root.title"),net.minecraft.network.chat.Component.literal("Literal description"),Optional.empty(),net.minecraft.advancements.AdvancementType.TASK,true,true,false));
+        var row=new JsonObject();row.addProperty("id","minecraft:story/root");
+        PlayerExtendedEditor.advancementDisplay(row,builder.build(net.minecraft.resources.Identifier.parse("test:display")).value());
+        check(row.get("has_display").getAsBoolean(),"DisplayInfo flag");
+        check(row.get("title_key").getAsString().equals("advancements.story.root.title")&&!row.has("title"),"translatable title key");
+        check(row.get("description").getAsString().equals("Literal description")&&!row.has("description_key"),"literal description string");
+        var hidden=new JsonObject();hidden.addProperty("id","minecraft:recipes/test");
+        PlayerExtendedEditor.advancementDisplay(hidden,net.minecraft.advancements.Advancement.Builder.recipeAdvancement().build(net.minecraft.resources.Identifier.parse("test:recipe")).value());
+        check(!hidden.get("has_display").getAsBoolean()&&!hidden.has("title_key")&&!hidden.has("description"),"internal recipe metadata absent");
+        var entries=new JsonArray();entries.add(hidden);entries.add(row);var value=new JsonObject();value.add("entries",entries);
+        try{
+            var method=PlayerExtendedEditor.class.getDeclaredMethod("envelope",UUID.class,boolean.class,String.class,JsonElement.class,JsonObject.class,JsonObject.class,String.class);method.setAccessible(true);
+            var request=new JsonObject();request.addProperty("displayed",true);request.addProperty("limit",1);
+            var page=(JsonObject)method.invoke(null,UUID.randomUUID(),false,"advancements",value,new JsonObject(),request,"test");
+            check(page.get("total").getAsInt()==1&&page.get("nextOffset").isJsonNull(),"displayed total and pagination filtered first");
+            check(page.getAsJsonObject("value").getAsJsonArray("entries").get(0).equals(row),"displayed excludes recipe entry");
+            request.addProperty("query","recipes/");page=(JsonObject)method.invoke(null,UUID.randomUUID(),false,"advancements",value,new JsonObject(),request,"test");
+            check(page.get("total").getAsInt()==0,"query stacks with displayed");
+            request.addProperty("displayed",false);request.remove("query");page=(JsonObject)method.invoke(null,UUID.randomUUID(),false,"advancements",value,new JsonObject(),request,"test");
+            check(page.get("total").getAsInt()==2&&page.get("nextOffset").getAsInt()==1,"false keeps full list");
+            request.remove("displayed");page=(JsonObject)method.invoke(null,UUID.randomUUID(),false,"advancements",value,new JsonObject(),request,"test");
+            check(page.get("total").getAsInt()==2,"omitted default keeps full list");
+        }catch(ReflectiveOperationException e){throw new AssertionError(e);}
+    }
     private static void reject(Runnable r,String code){try{r.run();throw new AssertionError("expected "+code);}catch(EditorSessions.Failure f){check(f.code.equals(code),"error code "+code);}}
     private static void check(boolean b,String message){if(!b)throw new AssertionError(message);checks++;}
 }

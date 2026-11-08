@@ -179,7 +179,8 @@ tasks.register('entityHorseViewTest', JavaExec) {
 }
 tasks.named('check') { dependsOn('entityHorseViewTest') }
 
-['playerWorldEditTest': 'dev.rinorsi.editor.registry.PlayerWorldEditTest',
+['translateTest': 'dev.rinorsi.editor.registry.TranslateTest',
+ 'playerWorldEditTest': 'dev.rinorsi.editor.registry.PlayerWorldEditTest',
  'editDispatchTest': 'dev.rinorsi.editor.registry.EditDispatchTest'].each { taskName, entry ->
     tasks.register(taskName, JavaExec) {
         dependsOn codecVerificationClasses

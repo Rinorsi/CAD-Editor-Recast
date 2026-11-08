@@ -34,12 +34,13 @@ public final class PlayerExtendedEditor {
             if(!server.isSameThread())fail("invalid_request","玩家编辑必须在服务端线程执行");
             id=StackCodec.string(request,"requestId");if(id.length()>80)fail("invalid_request","requestId 过长");
             policy.get().requirePlayerEdit(actor);
-            keys(request,Set.of("op","requestId","action","target","view","offset","limit","query","revision","patch"));
+            keys(request,Set.of("op","requestId","action","target","view","offset","limit","query","displayed","revision","patch"));
             var target=StackCodec.object(request,"target");keys(target,Set.of("uuid","offline"));
             boolean offline=target.has("offline")&&bool(target,"offline");
             uuid=target.has("uuid")?UUID.fromString(StackCodec.string(target,"uuid")):actor.getUUID();
             view=StackCodec.string(request,"view");action=StackCodec.string(request,"action");
             if(!Set.of("position","respawn","recipes","advancements","stats","offline").contains(view)||offline!=view.equals("offline"))fail("invalid_request","玩家视图与在线状态不匹配");
+            if(request.has("displayed")){bool(request,"displayed");if(!view.equals("advancements"))fail("invalid_request","displayed 仅适用于成就视图");}
             if(offline&&!target.has("uuid"))fail("invalid_request","离线玩家必须指定 UUID");
             if(view.equals("advancements")&&!uuid.equals(actor.getUUID()))fail("advancement_self_only","成就只能读取或修改自己的数据");
             if(!action.equals("read")&&!action.equals("apply"))fail("invalid_request","未知玩家扩展操作");
@@ -105,7 +106,8 @@ public final class PlayerExtendedEditor {
         var data=new JsonObject();var target=new JsonObject();target.addProperty("uuid",id.toString());target.addProperty("offline",offline);data.add("target",target);data.addProperty("view",view);data.addProperty("revision",revision);data.add("schema",schema);
         data.addProperty("offset",offset);data.addProperty("total",1);data.add("nextOffset",JsonNull.INSTANCE);
         if(value.isJsonObject()&&value.getAsJsonObject().has("entries")){
-            var matches=new ArrayList<JsonElement>();for(var raw:value.getAsJsonObject().getAsJsonArray("entries")){var row=raw.getAsJsonObject();if(query.isEmpty()||row.get("id").getAsString().toLowerCase(Locale.ROOT).contains(query)||(row.has("type")&&row.get("type").getAsString().contains(query)))matches.add(raw);}
+            boolean displayed=view.equals("advancements")&&req.has("displayed")&&bool(req,"displayed");
+            var matches=new ArrayList<JsonElement>();for(var raw:value.getAsJsonObject().getAsJsonArray("entries")){var row=raw.getAsJsonObject();if(displayed&&!row.get("has_display").getAsBoolean())continue;if(query.isEmpty()||row.get("id").getAsString().toLowerCase(Locale.ROOT).contains(query)||(row.has("type")&&row.get("type").getAsString().contains(query)))matches.add(raw);}
             var entries=new JsonArray();int end=Math.min(offset,matches.size());int chars=0;
             while(end<matches.size()&&entries.size()<limit){var row=matches.get(end);int size=row.toString().length();if(chars+size>18000&&entries.size()>0)break;if(size>18000)fail("payload_too_large","单个玩家条目超过页面上限");entries.add(row);chars+=size;end++;}
             var page=new JsonObject();page.add("entries",entries);data.add("value",page);data.addProperty("total",matches.size());if(end<matches.size())data.addProperty("nextOffset",end);
@@ -119,10 +121,25 @@ public final class PlayerExtendedEditor {
         var entries=new JsonArray();out.add("entries",entries);
         switch(view){
             case "recipes" -> {var packed=p.getRecipeBook().pack();var known=new HashSet<>(packed.known());var highlighted=new HashSet<>(packed.highlight());for(var recipe:server.getRecipeManager().getRecipes().stream().sorted(Comparator.comparing(r->r.id().identifier().toString())).toList()){var row=new JsonObject();row.addProperty("id",recipe.id().identifier().toString());row.addProperty("unlocked",known.contains(recipe.id()));row.addProperty("highlighted",highlighted.contains(recipe.id()));entries.add(row);}}
-            case "advancements" -> {for(var a:server.getAdvancements().getAllAdvancements().stream().sorted(Comparator.comparing(a->a.id().toString())).toList()){var progress=p.getAdvancements().getOrStartProgress(a);var row=new JsonObject();row.addProperty("id",a.id().toString());row.addProperty("done",progress.isDone());var criteria=new JsonArray();for(String name:new TreeSet<>(a.value().criteria().keySet())){var c=new JsonObject();c.addProperty("name",name);c.addProperty("done",progress.getCriterion(name)!=null&&progress.getCriterion(name).isDone());criteria.add(c);}row.add("criteria",criteria);entries.add(row);}}
+            case "advancements" -> {for(var a:server.getAdvancements().getAllAdvancements().stream().sorted(Comparator.comparing(a->a.id().toString())).toList()){var progress=p.getAdvancements().getOrStartProgress(a);var row=new JsonObject();row.addProperty("id",a.id().toString());row.addProperty("done",progress.isDone());advancementDisplay(row,a.value());var criteria=new JsonArray();for(String name:new TreeSet<>(a.value().criteria().keySet())){var c=new JsonObject();c.addProperty("name",name);c.addProperty("done",progress.getCriterion(name)!=null&&progress.getCriterion(name).isDone());criteria.add(c);}row.add("criteria",criteria);entries.add(row);}}
             case "stats" -> {for(var type:BuiltInRegistries.STAT_TYPE.stream().sorted(Comparator.comparing(t->BuiltInRegistries.STAT_TYPE.getKey(t).toString())).toList())statRows(p,type,entries);}
             default -> fail("invalid_request","未知玩家视图");
         }return out;
+    }
+    /** Display metadata stays untranslated on the server; the client resolves language keys. */
+    public static void advancementDisplay(JsonObject row, net.minecraft.advancements.Advancement advancement){
+        var display=advancement.display();row.addProperty("has_display",display.isPresent());
+        // 26.3 makes DisplayInfo a record and renames its component accessors.
+        //? if >=26.3 {
+        display.ifPresent(info->{displayText(row,"title",info.title());displayText(row,"description",info.description());});
+        //?} else {
+        /*display.ifPresent(info->{displayText(row,"title",info.getTitle());displayText(row,"description",info.getDescription());});
+        *///?}
+    }
+    private static void displayText(JsonObject row,String field,net.minecraft.network.chat.Component component){
+        if(component==null)return;
+        if(component.getContents() instanceof net.minecraft.network.chat.contents.TranslatableContents translated)row.addProperty(field+"_key",translated.getKey());
+        else row.addProperty(field,component.getString());
     }
     private static <T> void statRows(ServerPlayer p,StatType<T> type,JsonArray rows){for(var id:new TreeSet<>(type.getRegistry().keySet())){var row=new JsonObject();row.addProperty("type",BuiltInRegistries.STAT_TYPE.getKey(type).toString());row.addProperty("id",id.toString());row.addProperty("value",p.getStats().getValue(type.get(type.getRegistry().getValue(id))));rows.add(row);}}
     private static ServerLevel level(ServerPlayer p,JsonObject patch){var key=ResourceKey.create(Registries.DIMENSION,Identifier.parse(StackCodec.string(patch,"dimension")));var level=p.level().getServer().getLevel(key);if(level==null)fail("unknown_dimension","维度不在当前服务器中："+key.identifier());return level;}

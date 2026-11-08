@@ -1,5 +1,15 @@
 # 实时注册表合同 v1
 
+## 2026-11-09：按需客户端翻译
+
+本地页面发送 oriel.send('registry',{name:'translate',keys:['advancements.story.root.title'],requestId:'optional-id'})，回复顶层字面键 registry.translate。每页为既有 version/generation/name/offset/total/entries/done 信封，加 map:{翻译键:当前语言译文}；entries 同时保留 {id:翻译键,name:译文}，map 只覆盖本页，按 generation 累积至 done。total 是实际有译文的去重键数量，缺键不占 total。不支持服务端页面，不自动推送字典。
+
+查询使用客户端线程上的 Language.getInstance().has/getOrDefault；不存在、返回键自身的值不进入 map。这是当前语言与资源包的文本，不保证一定为中文，不执行翻译格式参数替换。换语言后再次请求即可读到当前 Language，无长期翻译缓存。
+
+请求 JSON 最多 8192 字符，keys 必须是最多 200 项的数组；超过数组上限或格式错误回复空 map/entries 和 error（总请求超长沿用 RegistryBridge 拒绝、不回复的保护）。每键最多 256 字符，只接受非空 A-Z/a-z/0-9/下划线/点/冒号/斜杠/连字符，其余项（含非字符串）跳过；重复键只查询一次。译文超过 4096 字符或单行 JSON 超过 9000 字符时跳过，防止资源包异常长文本突破消息限制。每个完整回复页仍不超过 24000 字符，不截断译文。
+
+requestId 可选，字符串最多 80 字符；合法值逐页原样回显。每笔请求分配唯一 translate-* generation，同一连接下相同/不同 keys 均独立排队，页面以 requestId（若提供）和 generation 区分并发批次，不能把交错页面直接合入一个临时 map。页面替换/关闭时取消旧文档的待发送响应；队列仍沿用 RegistryBridge 64 批上限及 tick 预算。
+
 ## 2026-11-07：协商式惰性目录
 
 本地Document第一条registry消息可发{name:"client_features",features:["lazy-catalog-v1"]}。回复顶层字面键registry.client_features，形状{accepted:["lazy-catalog-v1"],lazy:{items:{count:N},...}}；registry.meta新增同形lazy。协商页面不再自动接收items/blocks/sounds、全部tags目录、loot/recipe、五类资源ID以及其它超过600行的目录；未协商页面保留旧信封和全部推送。显式{name:"items"}仍能读取全目录。新search/lookup行保留旧字段并加namespace，协议、固定kind别名、真实回执与内存边界见[search-contract.md](search-contract.md#lazy-catalog-v12026-11-07)。阈值唯一常量LazyCatalog.THRESHOLD=600。按ID defaults、元信息、实体及方块属性接口不受影响。

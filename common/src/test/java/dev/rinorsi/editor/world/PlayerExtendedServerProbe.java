@@ -48,6 +48,7 @@ public final class PlayerExtendedServerProbe {
             var recipes=read(p,"recipes");var recipePatch=entries(json("{id:'"+recipeId+"',unlocked:true,highlighted:true}"));saved(apply(p,"recipes",recipes,recipePatch));check(p.getRecipeBook().contains(recipe.id())&&p.getRecipeBook().pack().highlight().contains(recipe.id()),"recipe unlock highlight");
             recipes=read(p,"recipes");recipePatch=entries(json("{id:'"+recipeId+"',unlocked:false,highlighted:false}"));saved(apply(p,"recipes",recipes,recipePatch));check(!p.getRecipeBook().contains(recipe.id())&&!p.getRecipeBook().pack().highlight().contains(recipe.id()),"recipe revoke clears native book");
             recipes=read(p,"recipes");var badBatch=entries(json("{id:'"+recipeId+"',unlocked:true,highlighted:true}"),json("{id:'cadeditor:missing',unlocked:true,highlighted:false}"));code(apply(p,"recipes",recipes,badBatch),"unknown_recipe");check(!p.getRecipeBook().contains(recipe.id()),"invalid batch changes no recipe");
+            displayMetadata(p);
             var a=server.getAdvancements().getAllAdvancements().stream().filter(h->!h.value().criteria().isEmpty()).findFirst().orElseThrow();var criterion=a.value().criteria().keySet().iterator().next();
             var advancements=read(p,"advancements");var ap=entries(json("{id:'"+a.id()+"',criteria:[{name:'"+criterion+"',done:true}]}"));saved(apply(p,"advancements",advancements,ap));check(p.getAdvancements().getOrStartProgress(a).getCriterion(criterion).isDone(),"native award criterion");
             advancements=read(p,"advancements");ap.getAsJsonArray("entries").get(0).getAsJsonObject().getAsJsonArray("criteria").get(0).getAsJsonObject().addProperty("done",false);saved(apply(p,"advancements",advancements,ap));check(!p.getAdvancements().getOrStartProgress(a).getCriterion(criterion).isDone(),"native revoke criterion");
@@ -73,6 +74,30 @@ public final class PlayerExtendedServerProbe {
             check(packets.contains("ClientboundRecipeBookAddPacket")&&packets.contains("ClientboundAwardStatsPacket")&&packets.contains("ClientboundUpdateAdvancementsPacket"),"vanilla synchronization packets sent");
             var result=new JsonObject();result.addProperty("passed",true);result.addProperty("checks",checks);result.add("evidence",evidence);var sent=new JsonArray();packets.forEach(sent::add);result.add("packets",sent);return result;
         }finally{for(var player:List.of(p,other)){online.remove(player.getUUID());server.getPlayerList().getPlayers().remove(player);player.discard();}PlayerExtendedEditor.clear();}
+    }
+    private static void displayMetadata(ServerPlayer p)throws Exception{
+        var full=PlayerExtendedEditor.value(p,"advancements").getAsJsonObject().getAsJsonArray("entries");
+        JsonObject root=null,recipe=null;int displayed=0;
+        for(var raw:full){var row=raw.getAsJsonObject();String id=row.get("id").getAsString();
+            if(id.equals("minecraft:story/root"))root=row;
+            if(id.startsWith("minecraft:recipes/"))recipe=row;
+            if(row.get("has_display").getAsBoolean())displayed++;
+        }
+        check(root!=null&&root.get("has_display").getAsBoolean()&&root.get("title_key").getAsString().equals("advancements.story.root.title"),"vanilla root display title key");
+        check(root.get("description_key").getAsString().equals("advancements.story.root.description"),"vanilla root description key");
+        check(recipe!=null&&!recipe.get("has_display").getAsBoolean()&&!recipe.has("title_key"),"internal recipe advancement has no display");
+        var request=request(p,"read","advancements");request.addProperty("displayed",true);request.addProperty("limit",64);
+        int count=0;var seen=new HashSet<String>();
+        while(true){var page=opened(call(p,request));check(page.get("total").getAsInt()==displayed,"displayed total matches native definitions");
+            for(var raw:page.getAsJsonObject("value").getAsJsonArray("entries")){var row=raw.getAsJsonObject();String id=row.get("id").getAsString();check(row.get("has_display").getAsBoolean()&&!id.startsWith("minecraft:recipes/")&&seen.add(id),"displayed page excludes internal recipes and duplicates");count++;}
+            if(page.get("nextOffset").isJsonNull())break;request.add("offset",page.get("nextOffset"));
+        }
+        check(count==displayed,"displayed pagination total is exact");
+        request.remove("offset");request.addProperty("query","recipes/");var page=opened(call(p,request));check(page.get("total").getAsInt()==0&&page.getAsJsonObject("value").getAsJsonArray("entries").isEmpty(),"displayed and query filters stack");
+        request.addProperty("query","minecraft:story/root");page=opened(call(p,request));check(page.get("total").getAsInt()==1,"displayed root search");
+        request.addProperty("displayed",false);request.remove("query");page=opened(call(p,request));check(page.get("total").getAsInt()==full.size(),"displayed false retains all native advancements");
+        request.addProperty("query","recipes/");page=opened(call(p,request));check(page.get("total").getAsInt()>0&&!page.getAsJsonObject("value").getAsJsonArray("entries").get(0).getAsJsonObject().get("has_display").getAsBoolean(),"recipe advancement visible in default unfiltered protocol");
+        request.addProperty("displayed","true");code(call(p,request),"invalid_request");
     }
     private static ServerPlayer player(MinecraftServer s,String name){var profile=new GameProfile(UUID.randomUUID(),name);var p=new ServerPlayer(s,s.overworld(),profile,ClientInformation.createDefault());p.connection=new Listener(s,p,profile);p.setPos(0.5,65,0.5);online.put(p.getUUID(),p);s.getPlayerList().getPlayers().add(p);return p;}
     private static JsonObject json(String s){return JsonParser.parseString(s).getAsJsonObject();}

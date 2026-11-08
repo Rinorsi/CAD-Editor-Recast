@@ -86,6 +86,7 @@ stonecutter.properties.toml   每个游戏版本的 MC / 加载器 / API / Oriel
 | 31 | 多模块构建 | 初始化脚本默认只作用于主构建 | Gradle -I 同时作用于 included build-logic；六个探针 init 脚本用 findProject 检查目标存在后才配置，避免初始化失败 |
 | 32 | 26.1 / 26.2+ | BlockEntityType 的二参数构造器及 supplier 在 26.1 非公开，26.2 起公开 | testFixtures 用 Stonecutter：26.1 反射访问实际私有构造器，26.2+ 调用公开构造器；生产统一使用注册表中类型的 create/isValid，无运行时版本分派、无 access widening |
 | 33 | 26.1.2 / 26.2 / 26.3 | entity_info 未暴露默认实体叫声 | 三版解析 jar 的 Mob.getAmbientSound()、LivingEntity.getHurtSound(DamageSource)、getDeathSound() 签名与 protected 可见性一致；common 反射调用真实虚方法（generic 伤害源），取得 SOUND_EVENT 注册 ID，无新增 Stonecutter 分支或加载器 import。反射避免为仅只读元数据扩大生产访问权限，也兼容 NeoForge 的 vanilla JVM 验证运行时；失败只省略 sounds。ArmorStand 实际继承 LivingEntity，保留其真实 hurt/death，ambient 为 null；ItemFrame/Item 全 null |
+| 34 | 26.3 | DisplayInfo.getTitle()/getDescription() | DisplayInfo 改为 record，使用 title()/description()；common PlayerExtendedEditor 通过 Stonecutter 条件分支，26.1.2 / 26.2 保留 getter。Language.has/getOrDefault 与 Advancement.display 在三版相同，翻译通道没有加载器分支 |
 
 2026-11-09 entity_info 叫声数据：六目标 `compileJava` / 完整 `codecVerification` 通过（14m 7s，214 tasks）。日志：`Oriel-UI-Workspace/daily/2026-11-09/logs/entity-sounds/matrix.log`。每目标的 client/server 两个 EntitySchemaTest 各增加 67 项声音断言，覆盖 pig/cow/wolf/cat/zombie 注册声音、ArmorStand 真实 hit/break、ItemFrame/Item 全 null、缺实例和声音方法抛异常；均为不启动游戏的 JVM 工厂测试，未运行客户端或最终实机验收。
 
@@ -150,3 +151,11 @@ VaultTemplates 的 BlockStateEdit、WorldNbt、Inventory.EQUIPMENT_SLOT_MAPPING 
 生产 GenericSchema / GenericSchemaChannel 与世界编辑接入全部在 common，无加载器 import、无运行时版本识别。实体/方块实体 create、save/load、NBT Tag 类型、RegistryLookup 和实际 Codec 在三个版本共用；常量重命名沿用已有 Stonecutter replacements。测试构造器可见性差异见上表 #32，26.1 私有访问只存在于隔离测试分支；26.2+ 使用公开 API。26.3 BlockState 的字符串/对象表示由实际 Codec 识别，不复制序列化字段表。
 
 六目标 compileJava / codecVerificationClasses / 完整 codecVerification 通过：`daily/2026-11-08/logs/p4-generic/matrix-reviewed.log`；GenericSchemaTest 每目标 97 项，新增测试接入 check/codecVerification。公共构造器分支补充矩阵见 `fixture-stonecutter.log`。真实注册的测试组件、方块实体、实体覆盖读/改/保存/新实例回读与拒绝/回滚；按版本捕获的完整证据在同目录 `fabric-26.1-evidence.json` 至 `neoforge-26.3-evidence.json`。本轮不启动客户端/专服，不代替最终整合包和页面实机验收。
+
+
+### 玩家成就显示元数据与客户端翻译（2026-11-09）
+
+- common 的 RegistryBridge / TranslateChannel 查询当前客户端 Language，PlayerExtendedEditor 返回 DisplayInfo 标记及组件翻译键/字面量；无加载器 import。26.3 DisplayInfo record accessor 与旧版 getter 的 Stonecutter 分支见差异 #34；26.1.2 / 26.2 的解析 jar 仍使用 getter。
+- 六目标 compileJava + playerWorldEditTest + translateTest 通过：PlayerWorldEditTest 每目标 30 项，TranslateTest 每目标 36 项；新任务接入 check / codecVerification。矩阵日志：Oriel-UI-Workspace/daily/2026-11-09/logs/player-display-translate/matrix.log（BUILD SUCCESSFUL in 1m 5s，75 tasks）。NeoForge JVM 继续使用同版本 common NeoForm vanilla runtime。
+- Fabric 26.1.2 隔离专服 JVM 探针 369 项通过：真实 minecraft:story/root 的 has_display/title_key/description_key、内部 recipes 成就无 DisplayInfo、displayed:true 全分页 125 项且 total 精确、query 叠加、默认完整列表、非法布尔值拒绝；server-receipt.json / server.log / probe-run.log 位于同一目录。脚本也重新独立断言回执中的 root/recipes/分页总数。
+- 没有启动或操作用户客户端，没有执行前端 JS/CSS 改动或可见客户端翻译消息链验收。此处 JVM 结果不代表客户端画面验收。
