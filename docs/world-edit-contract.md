@@ -21,6 +21,18 @@
 
 ## 沿用网络包和 envelope
 
+### 页面内切换在线玩家（2026-11-09）
+
+已打开世界编辑页可发 oriel.send('open_world', {uuid:'目标玩家UUID'})，或 {self:true} 返回自己；二者互斥，不接受页面提供 dim/slot。宿主使用客户端当前维度构造 {kind:'entity',player:'online',uuid,dim} 或 {kind:'entity',player:'self',dim}，沿用现有网络 open、权限和交互距离检查，不需要准星。
+
+仅 opened 成功后在当前 screen patch 'world'（不新开 OrielScreen），页面可用 weSaved(world) 整体换页；宿主同时切换规范化 slot/token/revision，清除旧扩展视图基线。apply/undo 只能使用新目标的 slot，旧目标或旧 token 即使 UUID 相同也拒绝；revision 始终由宿主绑定。切换期间禁止 apply/undo/玩家扩展请求；已有写回或扩展请求尚未完成时，先提示等待，不发送切换请求。页面负责在主动导航前处理自己的未保存草稿。
+
+离线、距离、权限或格式拒绝通过现有 message(...) 提示，不 patch world，不修改原页面/宿主基线。服务端只有每位请求者一份世界会话，成功 open 自然替换旧会话，失败保留；不在请求前 close 旧目标。页面关闭仍发送当前规范化 slot 的 close；若切换回执晚于关页/超时，宿主按回执 slot 关闭新会话，不重开页面，也不覆盖后来已打开的会话。
+
+定向验证（2026-11-09）：Fabric/NeoForge × 26.1/26.2/26.3 compileJava + playerWorldEditTest 全部通过，每目标 47 项；日志 logs/player-extended/open-world-matrix.log。纯 JVM 覆盖 UUID/self 选择器、非法/混合字段、宿主 slot/revision 同步绑定、旧目标与同 UUID 旧 token 拒绝、undo、数据副本隔离、服务端会话替换与旧 close 不误关新会话。
+
+Fabric 26.1.2 隔离专服扩展探针 472 项/97 笔消息通过，其中新增导航相关 9 笔真实往返：打开自己→另一在线玩家→新目标 apply/undo→返回自己；旧会话写入拒绝，远距离/离线目标拒绝后原会话仍可保存。证据 logs/player-extended/open-world-server-receipt.json、open-world-navigation.json、open-world-probe-run.log；机器摘要 open-world-summary.json。本次无新增版本 API 差异，未执行全量验收或客户端实机点击；真实 Oriel 页面 patch 与 Toast 画面由最终集成验收覆盖。
+
 物品的 cadeditor:request / cadeditor:reply 自定义 payload 不变，按 slot.kind 路由。世界数据独立于 ItemStack 会话缓存；复用现有的错误类型、连接寿命、requestId/result 模式，但不把世界 NBT 假装成 ItemStack。为避免重构影响既有物品提交，仅在 EditorMod/EditorClient 添加路由。
 
 所有例子为展开后的 JSON。requestId 最长 80 字符。
