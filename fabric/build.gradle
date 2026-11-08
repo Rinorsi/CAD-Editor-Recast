@@ -80,6 +80,13 @@ if (providers.gradleProperty('editorUiApproved').orNull == 'true') {
 }
 
 apply from: rootProject.file('gradle/verification.gradle')
+tasks.register('clipboardHostTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.client.EditorClipboardHostTest'
+    doFirst { args configurations.commonJava.files.find { new File(it, 'dev/rinorsi/editor/client/EditorClient.java').exists() }.absolutePath }
+}
+tasks.named('check') { dependsOn('clipboardHostTest') }
 if (project.name == '26.1') apply from: rootProject.file('gradle/fabric-autotest.gradle')
 
 apply from: rootProject.file('gradle/smoke.gradle')

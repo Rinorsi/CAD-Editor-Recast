@@ -6,7 +6,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.oriel.mod.client.OrielScreen;
-import dev.oriel.mod.client.OrielScreens;
 import dev.rinorsi.editor.EditorPackets;
 import dev.rinorsi.editor.EditorSessions;
 import dev.rinorsi.editor.StackCodec;
@@ -26,7 +25,6 @@ public final class EditorClient  {
     private KeyMapping key;
     private OrielScreen screen;
     private EditorSoundPreview soundPreview;
-    private final EditorClipboard clipboard = new EditorClipboard(System::nanoTime);
     private final EditorUiLog uiLog = EditorUiLog.live();
     private JsonObject slot;
     private ItemStack original;
@@ -136,11 +134,8 @@ public final class EditorClient  {
         JsonObject data = new JsonObject();
         data.add("stack", item);
         data.add("prefs", EditorPrefs.read());
-        data.addProperty("hostPrefs", true);
-        data.addProperty("hostClip", true);
         data.addProperty("hostAudio", true);
-        screen = OrielScreens.open(PAGE, data);
-        dev.rinorsi.editor.registry.RegistryBridge.attach(screen.driver());
+        screen = EditorPageHost.open(PAGE, data);
         OrielScreen owner = screen;
         EditorSoundPreview preview = new EditorSoundPreview(state -> owner.driver().patch("sound_preview", state));
         soundPreview = preview;
@@ -149,12 +144,7 @@ public final class EditorClient  {
             mc.execute(() -> { if (screen == owner && mc.gui.screen() == owner) preview.accept(value); });
         });
         screen.driver().onMessage("log", uiLog::accept);
-        screen.driver().onMessage("clipboard", value -> {
-            var mc = Minecraft.getInstance();
-            clipboard.accept(value, mc::execute, () -> screen == owner && mc.gui.screen() == owner,
-                    text -> mc.keyboardHandler.setClipboard(text));
-        });
-        screen.driver().onMessage("prefs", EditorPrefs::accept).onMessage("apply", this::apply).onClose(() -> {
+        screen.driver().onMessage("apply", this::apply).onClose(() -> {
             preview.stop();
             if (soundPreview == preview) soundPreview = null;
             EditorPrefs.flush();

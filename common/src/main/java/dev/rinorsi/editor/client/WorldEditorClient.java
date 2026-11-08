@@ -151,14 +151,12 @@ public final class WorldEditorClient {
     }
     private static void show(JsonObject world) {
         binding=WorldPageTarget.Binding.opened(world);
-        var data = new JsonObject(); data.add("world", world); data.add("prefs", EditorPrefs.read()); data.addProperty("hostPrefs",true);
-        screen = OrielScreens.open("cadeditor:ui/index.html", data); var owner = screen;
+        var data = new JsonObject(); data.add("world", world); data.add("prefs", EditorPrefs.read());
+        screen = EditorPageHost.open("cadeditor:ui/index.html", data); var owner = screen;
         PlayerExtendedClient.attach(owner);
-        dev.rinorsi.editor.registry.RegistryBridge.attach(owner.driver());
         owner.driver().onMessage("apply", value -> Minecraft.getInstance().execute(() -> apply(owner, value, false)));
         owner.driver().onMessage("undo", value -> Minecraft.getInstance().execute(() -> apply(owner, value, true)));
         owner.driver().onMessage("open_world",value->Minecraft.getInstance().schedule(()->openFromPage(owner,value)));
-        owner.driver().onMessage("prefs", EditorPrefs::accept);
         owner.driver().onClose(() -> {
             if (screen != owner) return;
             try{if(binding!=null)closeTarget(binding.slot());}finally{screen=null;binding=null;pending=null;}

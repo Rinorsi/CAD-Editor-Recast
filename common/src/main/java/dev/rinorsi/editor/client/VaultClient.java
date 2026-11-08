@@ -6,7 +6,6 @@ import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import dev.oriel.mod.client.OrielScreen;
-import dev.rinorsi.editor.registry.RegistryBridge;
 import java.util.function.BooleanSupplier;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -55,7 +54,6 @@ public final class VaultClient {
         data.add("world", JsonNull.INSTANCE);
         data.add("stack", JsonNull.INSTANCE);
         data.add("prefs", EditorPrefs.read());
-        data.addProperty("hostPrefs", true);
         return data;
     }
 
@@ -63,10 +61,8 @@ public final class VaultClient {
         var mc = Minecraft.getInstance();
         if (busy.getAsBoolean() || mc.gui.screen() instanceof OrielScreen) return;
         var screen = new VaultScreen(mc.gui.screen());
-        // Same public OrielScreen/DocumentDriver path as OrielScreens.open; subclass restores the parent.
-        screen.driver().pushData(initialData().toString());
-        RegistryBridge.attach(screen.driver());
-        screen.driver().onMessage("prefs", EditorPrefs::accept).onClose(EditorPrefs::flush);
+        EditorPageHost.attachCommon(screen, initialData());
+        screen.driver().onClose(EditorPrefs::flush);
         mc.gui.setScreen(screen);
     }
 

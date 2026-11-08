@@ -1,5 +1,8 @@
 # P4-1 玩家扩展协议
 
+所有页面入口（物品页、世界/实体/玩家页、独立保险库窗口）必须经过 `EditorPageHost.open(page, data)`；自定义 `OrielScreen` 子类使用 `EditorPageHost.attachCommon(screen, data)`。
+统一宿主负责 `hostClip` / `hostPrefs` 声明、clipboard / prefs 消息和 RegistryBridge；剪贴板仅在主线程且该屏幕仍为当前屏幕时写入，共享每秒 4 次、最多 32767 字符的只写策略。同屏 `open_world` 只 patch 数据，不重复接线。
+
 ## 存档玩家档案（2026-11-09）
 
 本轮后端证据：[player-profiles-verification.md](player-profiles-verification.md)。
