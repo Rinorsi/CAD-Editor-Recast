@@ -1,6 +1,15 @@
-param([ValidateSet('new','old')][string]$InputEngine='new', [string]$EvidenceRoot, [ValidateSet('smoke','pages')][string]$Driver='smoke')
+param([ValidateSet('new','old')][string]$InputEngine='new', [string]$EvidenceRoot, [ValidateSet('smoke','pages','memory')][string]$Driver='smoke',
+ [ValidateRange(0.05,120)][double]$MemoryMinutes=3,
+ [ValidateRange(1,60)][int]$MemoryIntervalSeconds=5,
+ [ValidateRange(0,10000)][double]$MemoryGrowthPercent=30,
+ [ValidateRange(0,100000)][double]$MemoryGrowthMB=200,
+ [switch]$DryRun)
 $ErrorActionPreference='Stop'
 $Root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
+if($DryRun){
+ Write-Output ('DRY RUN: driver='+$Driver+'; hidden isolated client; memory minutes='+$MemoryMinutes+'; interval seconds='+$MemoryIntervalSeconds+'; warning growth >'+$MemoryGrowthPercent+'% AND >'+$MemoryGrowthMB+' MiB; no process, lock or filesystem operations')
+ exit 0
+}
 Set-Location $Root
 $Out=if($EvidenceRoot){[IO.Path]::GetFullPath($EvidenceRoot)}else{Join-Path $Root 'logs/live-test'}
 New-Item -ItemType Directory -Force $Out | Out-Null
@@ -51,8 +60,20 @@ try {
     $NodeInfo.FileName=(Get-Command node).Source;$NodeInfo.Arguments='tools/live-test/'+$Driver+'.mjs';$NodeInfo.WorkingDirectory=$Root
     $NodeInfo.UseShellExecute=$false;$NodeInfo.CreateNoWindow=$true
     $NodeInfo.Environment['EDITOR_LIVE_TEST_EVIDENCE']=$Out
+    if($Driver -eq 'memory'){
+        $Jcmd=Get-Command jcmd -ErrorAction SilentlyContinue
+        $JcmdPath=if($Jcmd){$Jcmd.Source}elseif($env:JAVA_HOME -and (Test-Path ($env:JAVA_HOME+'/bin/jcmd.exe'))){$env:JAVA_HOME+'/bin/jcmd.exe'}else{
+            (Get-ChildItem ($env:USERPROFILE+'/.jdks/*/bin/jcmd.exe') -ErrorAction SilentlyContinue | Sort-Object FullName -Descending | Select-Object -First 1).FullName
+        }
+        if(!$JcmdPath){throw '缺少 JDK jcmd，请配置 JAVA_HOME 或将 jcmd 加入 PATH'}
+        $NodeInfo.Environment['EDITOR_MEMORY_JCMD']=$JcmdPath
+        $NodeInfo.Environment['EDITOR_MEMORY_MINUTES']=$MemoryMinutes.ToString([Globalization.CultureInfo]::InvariantCulture)
+        $NodeInfo.Environment['EDITOR_MEMORY_INTERVAL']=$MemoryIntervalSeconds.ToString()
+        $NodeInfo.Environment['EDITOR_MEMORY_PERCENT']=$MemoryGrowthPercent.ToString([Globalization.CultureInfo]::InvariantCulture)
+        $NodeInfo.Environment['EDITOR_MEMORY_MB']=$MemoryGrowthMB.ToString([Globalization.CultureInfo]::InvariantCulture)
+    }
     $Node=[Diagnostics.Process]::Start($NodeInfo)
-    $Deadline=(Get-Date).AddMinutes(15)
+    $Deadline=(Get-Date).AddMinutes($(if($Driver -eq 'memory'){15+$MemoryMinutes}else{15}))
     while(!$Process.WaitForExit(1000)){
         if($Held -and (Test-Path ($Out+'/mctest-ready.json'))){Release-OwnedLock;Write-Output 'Released build lock after client readiness'}
         if((Get-Date)-gt $Deadline){throw 'Owned client timed out'}
