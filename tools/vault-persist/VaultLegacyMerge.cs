@@ -19,17 +19,21 @@ public static class VaultLegacyMerge {
     var unique=new Dictionary<string,JsonObject>(StringComparer.Ordinal);
     foreach(var path in paths){var file=new FileInfo(path);if(file.Length>MaxFileBytes)throw new InvalidDataException("源文件超过8MiB："+path);
       var root=JsonNode.Parse(File.ReadAllText(path),null,new JsonDocumentOptions{MaxDepth=96}) as JsonObject ?? throw new InvalidDataException("文件必须为JSON对象");
-      if(!new long[]{1,2}.Contains(N(root,"version"))||root["entries"] is not JsonArray entries||entries.Count>MaxEntries)throw new InvalidDataException("不支持的文件版本/条目数");
+      if(!new long[]{1,2,3}.Contains(N(root,"version"))||root["entries"] is not JsonArray entries||entries.Count>MaxEntries)throw new InvalidDataException("不支持的文件版本/条目数");
       foreach(var value in entries){var e=value?.DeepClone() as JsonObject??throw new InvalidDataException("条目必须为对象");
         string entryId=S(e,"id",36);if(!Guid.TryParseExact(entryId,"D",out var guid)||guid.ToString()!=entryId)throw new InvalidDataException("条目UUID无效");
         S(e,"name",256);S(e,"note",200);N(e,"created");N(e,"updated");if(N(e,"mcDataVersion")>Int32.MaxValue)throw new InvalidDataException("mcDataVersion超出范围");S(e,"modVersion",128);
         if(e["tags"] is not JsonArray tags||tags.Count>8)throw new InvalidDataException("标签超限");
         foreach(var t in tags){if(t is not JsonValue tv||!tv.TryGetValue<string>(out var tag)||String.IsNullOrWhiteSpace(tag)||tag.Length>24)throw new InvalidDataException("无效标签");}
         string kind=e.ContainsKey("kind")?S(e,"kind",16):"item";
-        if(kind!="item"&&kind!="entity")throw new InvalidDataException("kind必须为item或entity");
+        if(kind!="item"&&kind!="entity"&&kind!="block"&&kind!="player_preset")throw new InvalidDataException("未知保险库kind");
         e["kind"]=kind;
         JsonNode payload;
-        if(kind=="entity"){
+        if(kind=="block"||kind=="player_preset"){
+          if(e["template"] is not JsonObject template)throw new InvalidDataException("缺少template");
+          ValidateTemplate(kind,template);
+          payload=Sorted(template);e.Remove("stack");e.Remove("snbt");
+        }else if(kind=="entity"){
           // VaultEntities already canonicalizes stored SNBT; preserve it as typed, opaque text offline.
           string snbt=S(e,"snbt",MaxEntryBytes);
           if(Bytes(snbt)>MaxEntryBytes||!snbt.StartsWith("{")||!snbt.EndsWith("}"))throw new InvalidDataException("无效生物SNBT结构");
@@ -52,8 +56,27 @@ public static class VaultLegacyMerge {
       }
     }
     if(unique.Count>MaxEntries)throw new InvalidDataException("合并超过2000条");
-    var ids=new HashSet<string>(StringComparer.Ordinal);var output=new JsonArray();foreach(var e in unique.Values.OrderByDescending(e=>N(e,"updated"))){string id=S(e,"id",36);if(!ids.Add(id)){id=Guid.NewGuid().ToString();e["id"]=id;ids.Add(id);}if(Bytes(e.ToJsonString(Options))>MaxEntryBytes)throw new InvalidDataException("合并条目超过64KiB");output.Add(e);}
-    string result=new JsonObject{["version"]=2,["entries"]=output}.ToJsonString(Options);if(Bytes(result)>MaxFileBytes)throw new InvalidDataException("合并文件超过8MiB");return result;
+    var names=new HashSet<string>(StringComparer.Ordinal);var ids=new HashSet<string>(StringComparer.Ordinal);var output=new JsonArray();foreach(var e in unique.Values.OrderByDescending(e=>N(e,"updated"))){string id=S(e,"id",36);if(!ids.Add(id)){id=Guid.NewGuid().ToString();e["id"]=id;ids.Add(id);}string name=S(e,"name",256);if(S(e,"kind",16) is "block" or "player_preset"){string original=name;int number=2;while(names.Contains(name)){string suffix=" ("+(number++)+")";int length=Math.Min(original.Length,256-suffix.Length);if(length>0&&Char.IsHighSurrogate(original[length-1]))length--;name=original.Substring(0,length)+suffix;}e["name"]=name;}names.Add(name);if(Bytes(e.ToJsonString(Options))>MaxEntryBytes)throw new InvalidDataException("合并条目超过64KiB");output.Add(e);}
+    string result=new JsonObject{["version"]=3,["entries"]=output}.ToJsonString(Options);if(Bytes(result)>MaxFileBytes)throw new InvalidDataException("合并文件超过8MiB");return result;
+  }
+  static void Keys(JsonObject obj,params string[] keys){foreach(var key in obj.Select(p=>p.Key))if(!keys.Contains(key,StringComparer.Ordinal))throw new InvalidDataException("未知模板字段："+key);}
+  static void ValidateTemplate(string kind,JsonObject template){
+    if(kind=="block"){
+      Keys(template,"block","block_state","snbt");
+      if(!System.Text.RegularExpressions.Regex.IsMatch(S(template,"block",256),"^[a-z0-9_.-]+:[a-z0-9_./-]+$"))throw new InvalidDataException("无效方块ID");
+      if(template["block_state"] is not JsonObject state)throw new InvalidDataException("缺少方块状态");foreach(var key in state.Select(p=>p.Key))S(state,key,256);
+      string snbt=S(template,"snbt",24000);if(!snbt.StartsWith("{")||!snbt.EndsWith("}"))throw new InvalidDataException("无效方块SNBT结构");
+      // No offline NBT parser: retain opaque typed text; Minecraft validates before application.
+    }else{
+      Keys(template,"sections");if(template["sections"] is not JsonObject sections||sections.Count==0)throw new InvalidDataException("预设缺少分区");
+      Keys(sections,"inventory","equipment","ender","attributes","effects","game_mode");
+      foreach(var pair in sections){
+        if(pair.Key=="game_mode"){S(sections,pair.Key,128);continue;}
+        if(pair.Key=="attributes"||pair.Key=="effects"){if(pair.Value is not JsonArray)throw new InvalidDataException("属性/效果必须为数组");continue;}
+        if(pair.Value is not JsonObject container||container["slots"] is not JsonArray slots)throw new InvalidDataException("容器缺少slots");Keys(container,"slots");var seen=new HashSet<long>();
+        foreach(var value in slots){if(value is not JsonObject row||row["stack"] is not JsonObject stack)throw new InvalidDataException("无效容器槽位");Keys(row,"slot","stack");if(!seen.Add(N(row,"slot")))throw new InvalidDataException("槽位重复");if(stack.ContainsKey("empty")){Keys(stack,"empty");if(stack["empty"] is not JsonValue empty||!empty.TryGetValue<bool>(out var b)||!b)throw new InvalidDataException("无效空槽");}else{S(stack,"id",256);N(stack,"count");if(stack["comps"] is not JsonObject||stack["removed"] is not JsonObject)throw new InvalidDataException("无效物品栈");}}
+      }
+    }
   }
   public static string Merge(string output,string[] paths){
     Directory.CreateDirectory(Path.GetDirectoryName(output));

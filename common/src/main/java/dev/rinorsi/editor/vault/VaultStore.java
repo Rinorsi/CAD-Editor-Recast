@@ -251,13 +251,13 @@ public final class VaultStore implements AutoCloseable {
 
   public synchronized JsonObject stack(String id) {
     JsonObject e = require(id);
-    if (kind(e).equals("entity")) throw fail("wrong_kind", "生物条目不能作为物品取出");
+    if (!kind(e).equals("item")) throw fail("wrong_kind", "该条目不能作为物品取出");
     return object(e, "stack").deepCopy();
   }
 
   private JsonObject envelope(Collection<JsonObject> values) {
     JsonObject out = new JsonObject();
-    out.addProperty("version", 2);
+    out.addProperty("version", 3);
     JsonArray a = new JsonArray();
     values.forEach(a::add);
     out.add("entries", a);
@@ -344,7 +344,7 @@ public final class VaultStore implements AutoCloseable {
   private void readFile(Path source) throws IOException {
     if (Files.size(source) > MAX_FILE_BYTES) throw fail("FILE_LIMIT", "文件过大");
     JsonObject root = parse(Files.readString(source));
-    if (!Set.of(1, 2).contains(integer(root, "version", 0, 0, Integer.MAX_VALUE)))
+    if (!Set.of(1, 2, 3).contains(integer(root, "version", 0, 0, Integer.MAX_VALUE)))
       throw fail("SCHEMA_VERSION", "不支持的保险库文件版本");
     if (!root.has("entries") || !root.get("entries").isJsonArray())
       throw fail("BAD_REQUEST", "缺少 entries");
@@ -379,6 +379,11 @@ public final class VaultStore implements AutoCloseable {
     e.addProperty("kind", kind(e));
     text(e, "modVersion", "", 128);
     integer(e, "mcDataVersion", 0, 0, Integer.MAX_VALUE);
+    if (VaultTemplates.supported(kind(e))) {
+      e.add("template", VaultTemplates.validate(kind(e), object(e, "template")));
+      e.remove("stack"); e.remove("snbt"); e.remove("hash");
+      return;
+    }
     if (kind(e).equals("entity")) {
       var valid = VaultEntities.validate(text(e, "snbt", "", MAX_FILE_BYTES));
       e.addProperty("snbt", valid.snbt());
@@ -617,7 +622,7 @@ public final class VaultStore implements AutoCloseable {
 
   private static String kind(JsonObject e) {
     String k = text(e, "kind", "item", 16);
-    if (!Set.of("item", "entity").contains(k)) throw fail("BAD_REQUEST", "kind必须为item或entity");
+    if (!Set.of("item", "entity", "block", "player_preset").contains(k)) throw fail("BAD_REQUEST", "未知保险库类别");
     return k;
   }
 
@@ -635,10 +640,23 @@ public final class VaultStore implements AutoCloseable {
         .forEach(
             e -> {
               if (!e.getKey().equals("hash")
-                  && (full || (!e.getKey().equals("stack") && !e.getKey().equals("snbt"))))
+                  && (full || (!e.getKey().equals("stack") && !e.getKey().equals("snbt") && !e.getKey().equals("template"))))
                 out.add(e.getKey(), e.getValue().deepCopy());
             });
     out.addProperty("kind", kind(stored));
+    if (VaultTemplates.supported(kind(stored))) {
+      String entryId = stored.get("id").getAsString();
+      Cached cached = cachedRows.get(entryId);
+      if (cached == null || cached.source() != stored || cached.validator() != validator) {
+        var fields = new JsonObject();
+        fields.add("summary", VaultTemplates.describe(kind(stored), object(stored, "template")));
+        fields.addProperty("compatibilityUnknown", true); // Target codecs validate on apply.
+        cached = new Cached(stored, validator, fields);
+        cachedRows.put(entryId, cached);
+      }
+      cached.fields().entrySet().forEach(e -> out.add(e.getKey(), e.getValue().deepCopy()));
+      return out;
+    }
     if (kind(stored).equals("entity")) {
       String entryId = stored.get("id").getAsString();
       Cached cached = cachedRows.get(entryId);
@@ -736,7 +754,46 @@ public final class VaultStore implements AutoCloseable {
     return out;
   }
 
+  private String uniqueName(String wanted, String exceptId) {
+    String candidate = wanted;
+    for (int number = 2; ; number++) {
+      boolean taken = false;
+      for (var e : entries.values())
+        if (!e.get("id").getAsString().equals(exceptId) && e.get("name").getAsString().equals(candidate)) { taken = true; break; }
+      if (!taken) return candidate;
+      String suffix = " (" + number + ")";
+      int end = Math.min(wanted.length(), 256 - suffix.length());
+      if (end > 0 && Character.isHighSurrogate(wanted.charAt(end - 1))) end--;
+      candidate = wanted.substring(0, end) + suffix;
+    }
+  }
+
+  private JsonObject saveTemplate(JsonObject request, Validator validator) {
+    String kind = kind(request);
+    JsonObject template = VaultTemplates.capture(kind, request);
+    var e = new JsonObject();
+    e.addProperty("id", UUID.randomUUID().toString()); e.addProperty("kind", kind); e.add("template", template);
+    String fallback = kind.equals("block") ? template.get("block").getAsString() : "玩家预设";
+    String name = text(request, "name", fallback, 256).strip();
+    e.addProperty("name", uniqueName(name.isEmpty() ? fallback : name, ""));
+    e.add("tags", tags(request)); e.addProperty("note", text(request, "note", "", 200));
+    e.addProperty("created", clock.getAsLong()); e.addProperty("updated", clock.getAsLong());
+    e.addProperty("mcDataVersion", dataVersion); e.addProperty("modVersion", modVersion);
+    put(e);
+    var out = new JsonObject(); out.add("entry", row(e, validator, false)); out.addProperty("duplicate", false); return out;
+  }
+
+  private static String searchableId(JsonObject e) {
+    return switch (kind(e)) {
+      case "block" -> object(e, "summary").get("block").getAsString();
+      case "player_preset" -> "minecraft:player";
+      case "entity" -> object(e, "entity").get("id").getAsString();
+      default -> object(e, "item").get("id").getAsString();
+    };
+  }
+
   private JsonObject save(JsonObject request, Validator validator) {
+    if (VaultTemplates.supported(kind(request))) return saveTemplate(request, validator);
     if (kind(request).equals("entity")) return saveEntity(request, validator);
     if (bytes(object(request, "stack").toString()) > MAX_ENTRY_BYTES)
       throw fail("ENTRY_TOO_LARGE", "单个条目最多64KiB");
@@ -782,10 +839,11 @@ public final class VaultStore implements AutoCloseable {
           lockUnavailable ? "STORAGE_LOCKED" : "STORAGE_READ_ONLY", "保险库只读：其他实例占用、目录权限不足或文件版本较新");
     switch (op) {
       case "save" -> out = save(request, validator);
+      case "preview" -> out = VaultTemplates.preview(require(text(request, "id", "", 36)), request);
       case "list" -> {
         String filter = text(request, "kind", "item", 16);
-        if (!Set.of("item", "entity", "all").contains(filter))
-          throw fail("BAD_REQUEST", "kind必须为item、entity或all");
+        if (!Set.of("item", "entity", "block", "player_preset", "all").contains(filter))
+          throw fail("BAD_REQUEST", "未知保险库类别");
         String query = text(request, "query", "", 128).toLowerCase(Locale.ROOT).strip();
         JsonArray wanted = tags(request);
         int offset = integer(request, "offset", 0, 0, MAX_ENTRIES),
@@ -810,9 +868,7 @@ public final class VaultStore implements AutoCloseable {
                       + " "
                       + e.get("tags")
                       + " "
-                      + (kind(e).equals("entity")
-                          ? r.getAsJsonObject("entity").get("id").getAsString()
-                          : object(e, "stack").get("id").getAsString())
+                      + searchableId(r)
                       + " "
                       + text(r, "translatedName", "", 256))
                   .toLowerCase(Locale.ROOT);
@@ -828,9 +884,7 @@ public final class VaultStore implements AutoCloseable {
               case "item" ->
                   Comparator.comparing(
                       e ->
-                          e.getAsJsonObject(kind(e).equals("entity") ? "entity" : "item")
-                              .get("id")
-                              .getAsString());
+                          searchableId(e));
               default ->
                   Comparator.<JsonObject>comparingLong(e -> e.get("updated").getAsLong())
                       .reversed();
@@ -867,7 +921,7 @@ public final class VaultStore implements AutoCloseable {
         if (request.has("name")) {
           String n = text(request, "name", "", 256).strip();
           if (n.isEmpty()) throw fail("BAD_REQUEST", "名称不能为空");
-          e.addProperty("name", n);
+          e.addProperty("name", VaultTemplates.supported(kind(e)) ? uniqueName(n, e.get("id").getAsString()) : n);
         }
         if (request.has("tags")) e.add("tags", tags(request));
         if (request.has("note")) e.addProperty("note", text(request, "note", "", 200));
@@ -909,6 +963,7 @@ public final class VaultStore implements AutoCloseable {
       case "duplicate" -> {
         JsonObject e = require(text(request, "id", "", 36)).deepCopy();
         e.addProperty("id", UUID.randomUUID().toString());
+        if (VaultTemplates.supported(kind(e))) e.addProperty("name", uniqueName(e.get("name").getAsString(), ""));
         long now = clock.getAsLong();
         e.addProperty("created", now);
         e.addProperty("updated", now);
@@ -918,7 +973,7 @@ public final class VaultStore implements AutoCloseable {
       case "import" -> {
         JsonObject root =
             request.has("text") ? parse(text(request, "text", "", MAX_FILE_BYTES)) : request;
-        if (!Set.of(1, 2).contains(integer(root, "version", 1, 1, Integer.MAX_VALUE)))
+        if (!Set.of(1, 2, 3).contains(integer(root, "version", 1, 1, Integer.MAX_VALUE)))
           throw fail("SCHEMA_VERSION", "导入版本不支持");
         if (!root.has("entries") || !root.get("entries").isJsonArray())
           throw fail("BAD_REQUEST", "缺少 entries");
@@ -957,6 +1012,7 @@ public final class VaultStore implements AutoCloseable {
               result.addProperty("reason", bad.getMessage());
               e.remove("hash");
             }
+            if (VaultTemplates.supported(kind(e))) e.addProperty("name", uniqueName(e.get("name").getAsString(), ""));
             put(e);
             result.addProperty("ok", true);
             result.addProperty("id", id);
@@ -1045,7 +1101,9 @@ public final class VaultStore implements AutoCloseable {
         out.addProperty("entries", entries.size());
         long entities = entries.values().stream().filter(e -> kind(e).equals("entity")).count();
         out.addProperty("entities", entities);
-        out.addProperty("items", entries.size() - entities);
+        out.addProperty("items", entries.values().stream().filter(e -> kind(e).equals("item")).count());
+        out.addProperty("blocks", entries.values().stream().filter(e -> kind(e).equals("block")).count());
+        out.addProperty("playerPresets", entries.values().stream().filter(e -> kind(e).equals("player_preset")).count());
         out.addProperty("bytes", bytes(envelope(entries.values()).toString()));
         out.addProperty("maxEntries", MAX_ENTRIES);
         out.addProperty("maxEntryBytes", MAX_ENTRY_BYTES);

@@ -129,6 +129,18 @@ tasks.register('vaultTest', JavaExec) {
 }
 tasks.named('check') { dependsOn('vaultTest') }
 
+// Portable block/player templates use native NBT/item codecs and isolated persistence files.
+tasks.register('vaultTemplateTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.vault.VaultTemplateTest'
+    workingDir = rootProject.projectDir
+    maxHeapSize = '2G'
+    jvmArgs '-Djava.awt.headless=true'
+}
+tasks.named('check') { dependsOn('vaultTemplateTest') }
+
+
 // Entity attributes/effects use the same detached real-game JVM fixtures as the base schema.
 tasks.register('entityWorldEditTest', JavaExec) {
     dependsOn codecVerificationClasses

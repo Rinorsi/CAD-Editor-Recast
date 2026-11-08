@@ -23,7 +23,7 @@ try {
   $Original=[IO.File]::ReadAllText($Output)
   $Text=[VaultLegacyMerge]::Merge($Output,[string[]]@($Source))
   $Root=$Text | ConvertFrom-Json -AsHashtable
-  Assert ($Root.version -eq 2) 'Output must use schema 2'
+  Assert ($Root.version -eq 3) 'Output must use schema 3'
   Assert ($Root.entries.Count -eq 3) 'Expected one item and two typed-distinct entities'
   Assert (@($Root.entries | Where-Object kind -eq 'item').Count -eq 1) 'Legacy kind must default to item'
   Assert (@($Root.entries.id | Select-Object -Unique).Count -eq 3) 'Different payloads sharing UUID need new IDs'

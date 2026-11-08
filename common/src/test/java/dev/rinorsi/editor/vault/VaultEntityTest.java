@@ -191,7 +191,7 @@ public final class VaultEntityTest {
       export.addProperty("all", true);
       String text = run(s, export).get("text").getAsString();
       check(
-          JsonParser.parseString(text).getAsJsonObject().get("version").getAsInt() == 2,
+          JsonParser.parseString(text).getAsJsonObject().get("version").getAsInt() == 3,
           "schema v2 export");
       try (var other = open(dir.resolve("import/vault.json"))) {
         var imp = req("import");
@@ -304,7 +304,7 @@ public final class VaultEntityTest {
       check(total(s, "entity") == 3 && s.flushNow(), "v2 entities migrate to global path");
     }
     var future = dir.resolve("future.json");
-    Files.writeString(future, "{\"version\":3,\"entries\":[]}");
+    Files.writeString(future, "{\"version\":99,\"entries\":[]}");
     try (var s = open(future)) {
       check(run(s, req("stats")).get("readOnly").getAsBoolean(), "future schema read only");
       rejects("STORAGE_READ_ONLY", () -> run(s, save("{id:'minecraft:pig'}")));

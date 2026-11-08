@@ -1,0 +1,26 @@
+gradle.projectsEvaluated {
+    allprojects { p ->
+        if (!(p.parent?.name in ['fabric','neoforge']) || !p.tasks.findByName('codecVerificationClasses')) return
+        if (p.parent.name == 'fabric' && p.name == '26.1') {
+            ['vaultEntityRegression':'VaultEntityTest','vaultPersistenceRegression':'VaultPersistenceTest','vaultGlobalRegression':'VaultGlobalTest'].each { name, entry ->
+                p.tasks.register(name, JavaExec) {
+                    dependsOn p.tasks.named('codecVerificationClasses')
+                    classpath = p.sourceSets.codecVerification.runtimeClasspath
+                    mainClass = 'dev.rinorsi.editor.vault.' + entry
+                    workingDir = p.rootProject.projectDir
+                    maxHeapSize = '2G'
+                    jvmArgs '-Djava.awt.headless=true'
+                }
+            }
+        }
+        if (p.parent.name == 'fabric' && p.name == '26.1') p.tasks.register('exportVaultProbeClasspath') {
+            dependsOn p.tasks.named('codecVerificationClasses')
+            doLast {
+                def path = p.rootProject.file('../Oriel-UI-Workspace/daily/' + java.time.LocalDate.now() + '/logs/vault-templates/probe-classpath.json')
+                path.parentFile.mkdirs()
+                path.text = groovy.json.JsonOutput.toJson([runtime:p.sourceSets.codecVerification.runtimeClasspath.files.collect { it.absolutePath }, main:p.sourceSets.main.output.classesDirs.singleFile.absolutePath, tests:p.sourceSets.codecVerification.output.classesDirs.singleFile.absolutePath])
+            }
+        }
+
+    }
+}

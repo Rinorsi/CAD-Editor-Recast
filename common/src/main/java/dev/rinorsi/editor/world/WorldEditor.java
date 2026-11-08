@@ -52,6 +52,7 @@ public final class WorldEditor {
             SESSIONS.rateLimit(player.getUUID());
             var beforeSession = target.sessionData(); var before = target.entity!=null?EntitySessionData.data(beforeSession):BlockSessionData.data(beforeSession);
             var state = SESSIONS.require(player.getUUID(), slot, StackCodec.string(request, "revision"), beforeSession);
+            if (request.has("vault_template")) request = dev.rinorsi.editor.vault.VaultTemplateApply.expand(target, state, request);
             if(target.entity instanceof ServerPlayer && request.has("riding"))EditorSessions.fail("protected_field","玩家不支持 riding 编辑");
             if (request.has("riding")) {
                 if (target.entity == null || !op.equals("apply") || request.has("snbt") || request.has("entity") || request.has("container") || request.has("views") || request.has("block_state") || request.has("block_type"))
@@ -86,7 +87,7 @@ public final class WorldEditor {
             LOG.info("[CAD-Editor-World] audit player={} op={} target={} before={} after={}", player.getUUID(), op, slot, WorldNbt.revision(beforeSession), WorldNbt.revision(state.baseline));
             replySink.accept(reply);
         } catch (RuntimeException e) {
-            String code = e instanceof WorldEditError error?error.code:e instanceof WorldMerge.Conflict ? "target_changed" : e instanceof EditorSessions.Failure f ? f.code : "invalid_request";
+            String code = e instanceof WorldEditError error?error.code:e instanceof WorldMerge.Conflict ? "target_changed" : e instanceof EditorSessions.Failure f ? f.code : e instanceof dev.rinorsi.editor.vault.VaultStore.Failure f ? f.code : "invalid_request";
             LOG.warn("[CAD-Editor-World] denied player={} op={} request={} code={} target={} reason={}", player.getUUID(), op, id, code, slot, e.getMessage());
             var reply = result("rejected", id); reply.addProperty("code", code); String reason = e.getMessage() == null ? "世界编辑失败" : e.getMessage();
             reply.addProperty("reason", reason.substring(0, Math.min(1200, reason.length())));WorldEditError.annotate(reply,e);replySink.accept(reply);

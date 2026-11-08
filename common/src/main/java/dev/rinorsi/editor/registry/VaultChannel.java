@@ -252,8 +252,8 @@ public final class VaultChannel {
       remember(s, pageId, result);
     } else {
       if (r.has("uploadToken")) {
-        if (!Set.of("save", "import").contains(op))
-          throw new VaultStore.Failure("BAD_REQUEST", "上传仅支持 save/import");
+        if (!Set.of("save", "import", "preview").contains(op))
+          throw new VaultStore.Failure("BAD_REQUEST", "上传仅支持 save/import/preview");
         String token = VaultStore.text(r, "uploadToken", "", 36);
         if (!token.equals(s.uploadToken)
             || s.upload == null
@@ -261,7 +261,9 @@ public final class VaultChannel {
           throw new VaultStore.Failure("UPLOAD_EXPIRED", "上传已过期");
         JsonObject payload = VaultStore.parse(s.upload.toString());
         r = r.deepCopy();
-        if (op.equals("save")) {
+        if (op.equals("preview") || (op.equals("save") && VaultTemplates.supported(VaultStore.text(r, "kind", "item", 16)))) {
+          for (String key : List.of("world", "template", "sections")) if (payload.has(key)) r.add(key, payload.get(key));
+        } else if (op.equals("save")) {
           if (VaultStore.text(r, "kind", "item", 16).equals("entity"))
             r.addProperty("snbt", VaultStore.text(payload, "snbt", "", VaultStore.MAX_FILE_BYTES));
           else r.add("stack", payload);
@@ -272,7 +274,7 @@ public final class VaultChannel {
         s.uploadUntil = System.currentTimeMillis() + 30000;
       }
       if (op.equals("save")
-          && !VaultStore.text(r, "kind", "item", 16).equals("entity")
+          && VaultStore.text(r, "kind", "item", 16).equals("item")
           && Minecraft.getInstance().level == null)
         throw new VaultStore.Failure("UNAVAILABLE", "保存需要进入世界以严格验证组件");
       result = store.join().execute(r, validator());
