@@ -142,7 +142,7 @@ VaultStore.flushNow()是同步有界落盘屏障，返回boolean。写屏障等�
 
     & ./tools/vault-persist/merge-legacy.ps1 -Paths @('C:\old-day1\vault.json','C:\old-day2\vault.json')
 
-默认写到上述用户级全局目录。若游戏使用-Dcadeditor.vault.dir，自行给工具同一个-OutputDirectory目录。现有全局文件也参与合并；所有输入完整结构/配额校验成功后才写，写前原全局文件原子备份为vault.json.bak。工具不执行当前世界Codec（离线可能缺mod），保留typed SNBT字符串和大整数JSON词法值。按完整stack内容的规范键序SHA256去重，不按UUID去重；同栈保留updated最新名称与版本元数据，created取最早，tags并集，note按行去重合并。合并超8个标签/200字符note或其它配额会拒绝，绝不截断。不同栈撞UUID则为后一个生成新UUID。输入旧文件始终原样保留。工具返回的目标路径仅在用户本机终端显示，不通过页面泄露用户名。
+默认写到上述用户级全局目录。若游戏使用-Dcadeditor.vault.dir，自行给工具同一个-OutputDirectory目录。现有全局文件也参与合并；所有输入完整结构/配额校验成功后才写，写前原全局文件原子备份为vault.json.bak。工具不执行当前世界Codec（离线可能缺mod），保留typed SNBT字符串和大整数JSON词法值。按条目类型与完整内容SHA256去重，不按UUID去重：物品仍使用完整stack的规范JSON键序；生物使用VaultEntities已规范化的typed SNBT原文，不跨类型去重。离线工具把SNBT作为不透明文本保存，不重新解析NBT、不剔除字段、不执行DataFixer；手写的语义等价但文本不同的SNBT不会合并，需先经游戏内import/export规范化。同内容保留updated最新名称与版本元数据（时间相同保留先读条目，已有目标优先，避免重跑改变冲突UUID），created取最早，tags并集，note按行去重合并。合并超8个标签/200字符note或其它配额会拒绝，绝不截断。不同栈撞UUID则为后一个生成新UUID。输入旧文件始终原样保留。工具返回的目标路径仅在用户本机终端显示，不通过页面泄露用户名。
 
 本轮仅在随机临时目录演示核心合并（3条源记录合成2条，验证名称、tags/note、typed SNBT、大整数、幂等、备份、锁及校验失败回滚）；没有对用户真实旧库或全局库执行合并。游戏运行时完整脚本拒绝分支已测；游戏关闭后的完整脚本写入尚待用户协调执行，不能把核心演示冒充实际迁移用户数据。
 
@@ -193,7 +193,7 @@ WRITE_FAILED在成功回执的storageError中，不表示内存修改撤回。
 
 同一vault通道同时保存物品和生物。kind为item/entity；缺省item，包括旧文件和旧导出。list的kind允许item/entity/all，缺省item；标签、分页、排序与搜索规则相同，sort:item按类型ID排序。标签计数跨两类共享。stats新增items/entities，entries是两类总数。两类合计2000项/8MiB；单条含元数据的JSON最多64KiB，实体SNBT输入本身UTF-8也不超过64KiB，嵌套最多96层。没有spawn操作。
 
-磁盘与导出统一写version:2，读取/导入接受1、2。旧版本程序发现2应走已有SCHEMA_VERSION只读逻辑，不回退空库覆盖；使用新程序即可继续读取。未知未来版本仍只读，包括备份文件。旧merge-legacy.ps1离线合并器仅接受schema1，不能用于schema2；它会拒绝较新版本，使用游戏内export/import迁移schema2。
+磁盘与导出统一写version:2，读取/导入接受1、2。旧版本程序发现2应走已有SCHEMA_VERSION只读逻辑，不回退空库覆盖；使用新程序即可继续读取。未知未来版本仍只读，包括备份文件。离线 `merge-legacy.ps1` 接受schema 1/2，混合合并物品和生物，统一输出schema 2；未知未来版本仍拒绝，校验失败不改目标或备份。用 `pwsh -NoProfile -File tools/vault-persist/merge-test.ps1` 和 `pwsh -NoProfile -File tools/vault-persist/merge-entity-test.ps1` 运行临时目录回归测试，不访问用户库。
 
 公共id始终是保险库条目的UUID，生物类型ID位于entity.id和summary.id，避免两种ID混淆。生物get完整字段：
 

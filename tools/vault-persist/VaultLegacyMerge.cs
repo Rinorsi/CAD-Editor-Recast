@@ -19,19 +19,31 @@ public static class VaultLegacyMerge {
     var unique=new Dictionary<string,JsonObject>(StringComparer.Ordinal);
     foreach(var path in paths){var file=new FileInfo(path);if(file.Length>MaxFileBytes)throw new InvalidDataException("源文件超过8MiB："+path);
       var root=JsonNode.Parse(File.ReadAllText(path),null,new JsonDocumentOptions{MaxDepth=96}) as JsonObject ?? throw new InvalidDataException("文件必须为JSON对象");
-      if(N(root,"version")!=1||root["entries"] is not JsonArray entries||entries.Count>MaxEntries)throw new InvalidDataException("不支持的文件版本/条目数");
+      if(!new long[]{1,2}.Contains(N(root,"version"))||root["entries"] is not JsonArray entries||entries.Count>MaxEntries)throw new InvalidDataException("不支持的文件版本/条目数");
       foreach(var value in entries){var e=value?.DeepClone() as JsonObject??throw new InvalidDataException("条目必须为对象");
         string entryId=S(e,"id",36);if(!Guid.TryParseExact(entryId,"D",out var guid)||guid.ToString()!=entryId)throw new InvalidDataException("条目UUID无效");
         S(e,"name",256);S(e,"note",200);N(e,"created");N(e,"updated");if(N(e,"mcDataVersion")>Int32.MaxValue)throw new InvalidDataException("mcDataVersion超出范围");S(e,"modVersion",128);
         if(e["tags"] is not JsonArray tags||tags.Count>8)throw new InvalidDataException("标签超限");
         foreach(var t in tags){if(t is not JsonValue tv||!tv.TryGetValue<string>(out var tag)||String.IsNullOrWhiteSpace(tag)||tag.Length>24)throw new InvalidDataException("无效标签");}
-        if(e["stack"] is not JsonObject stack||stack["comps"] is not JsonObject||stack["removed"] is not JsonObject)throw new InvalidDataException("无效stack结构");
-        if(!System.Text.RegularExpressions.Regex.IsMatch(S(stack,"id",256),"^[a-z0-9_.-]+:[a-z0-9_./-]+$"))throw new InvalidDataException("无效物品ID");var count=N(stack,"count");if(count<1||count>99)throw new InvalidDataException("stack数量超限");
-        foreach(var key in new[]{"component_snbt","component_formats"})if(stack[key]!=null){if(stack[key] is not JsonObject side)throw new InvalidDataException("无效typed sidecar");foreach(var kv in side)S(side,kv.Key,MaxEntryBytes);}
+        string kind=e.ContainsKey("kind")?S(e,"kind",16):"item";
+        if(kind!="item"&&kind!="entity")throw new InvalidDataException("kind必须为item或entity");
+        e["kind"]=kind;
+        JsonNode payload;
+        if(kind=="entity"){
+          // VaultEntities already canonicalizes stored SNBT; preserve it as typed, opaque text offline.
+          string snbt=S(e,"snbt",MaxEntryBytes);
+          if(Bytes(snbt)>MaxEntryBytes||!snbt.StartsWith("{")||!snbt.EndsWith("}"))throw new InvalidDataException("无效生物SNBT结构");
+          payload=JsonValue.Create(snbt);e.Remove("stack");
+        }else{
+          if(e["stack"] is not JsonObject stack||stack["comps"] is not JsonObject||stack["removed"] is not JsonObject)throw new InvalidDataException("无效stack结构");
+          if(!System.Text.RegularExpressions.Regex.IsMatch(S(stack,"id",256),"^[a-z0-9_.-]+:[a-z0-9_./-]+$"))throw new InvalidDataException("无效物品ID");var count=N(stack,"count");if(count<1||count>99)throw new InvalidDataException("stack数量超限");
+          foreach(var key in new[]{"component_snbt","component_formats"})if(stack[key]!=null){if(stack[key] is not JsonObject side)throw new InvalidDataException("无效typed sidecar");foreach(var kv in side)S(side,kv.Key,MaxEntryBytes);}
+          payload=Sorted(stack);
+        }
         e.Remove("hash");if(Bytes(e.ToJsonString(Options))>MaxEntryBytes)throw new InvalidDataException("条目超过64KiB");
-        string digest=Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Sorted(stack).ToJsonString(Options))));
+        string digest=kind+":"+Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload.ToJsonString(Options))));
         if(!unique.TryGetValue(digest,out var old)){unique[digest]=e;continue;}
-        var newest=N(e,"updated")>=N(old,"updated")?e:old;var other=ReferenceEquals(newest,e)?old:e;
+        var newest=N(e,"updated")>N(old,"updated")?e:old;var other=ReferenceEquals(newest,e)?old:e;
         var merged=(JsonObject)newest.DeepClone();var union=new List<string>();foreach(var arr in new[]{(JsonArray)newest["tags"],(JsonArray)other["tags"]})foreach(var t in arr){var tag=t.GetValue<string>();if(!union.Contains(tag))union.Add(tag);}
         if(union.Count>8)throw new InvalidDataException("同栈合并后标签超过8个，拒绝丢弃标签");
         var tagArray=new JsonArray();foreach(var tag in union)tagArray.Add(tag);merged["tags"]=tagArray;
@@ -41,7 +53,7 @@ public static class VaultLegacyMerge {
     }
     if(unique.Count>MaxEntries)throw new InvalidDataException("合并超过2000条");
     var ids=new HashSet<string>(StringComparer.Ordinal);var output=new JsonArray();foreach(var e in unique.Values.OrderByDescending(e=>N(e,"updated"))){string id=S(e,"id",36);if(!ids.Add(id)){id=Guid.NewGuid().ToString();e["id"]=id;ids.Add(id);}if(Bytes(e.ToJsonString(Options))>MaxEntryBytes)throw new InvalidDataException("合并条目超过64KiB");output.Add(e);}
-    string result=new JsonObject{["version"]=1,["entries"]=output}.ToJsonString(Options);if(Bytes(result)>MaxFileBytes)throw new InvalidDataException("合并文件超过8MiB");return result;
+    string result=new JsonObject{["version"]=2,["entries"]=output}.ToJsonString(Options);if(Bytes(result)>MaxFileBytes)throw new InvalidDataException("合并文件超过8MiB");return result;
   }
   public static string Merge(string output,string[] paths){
     Directory.CreateDirectory(Path.GetDirectoryName(output));
