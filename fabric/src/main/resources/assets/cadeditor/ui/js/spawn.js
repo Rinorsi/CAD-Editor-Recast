@@ -134,6 +134,39 @@ function spNumRow(o) {
 }
 
 /* 带权重的实体池（SpawnPotentials / spawn_potentials）：[{data:{entity:{id}}, weight}] */
+/* 池条目的「装备战利品表」：SpawnData.equipment = { loot_table, slot_drop_chances? }。
+   和上面装备格里直接放的物品（entity.equipment）是两回事；没有表就不能有 slot_drop_chances（游戏会拒绝）。掠落概率不是 0..1 的限制，已有的大于 1 的值原样保留。
+   数据结构见 docs/registry-contract.md「SpawnData 装备」。 */
+var SP_DROP_DEFAULT = 0.085;   // 原版装备默认掉落概率
+function spEquipTable(it, onChange, redraw) {
+  var box = h('div', { class: 'sp-equip' });
+  function eq() { return it.data && isObj(it.data.equipment) ? it.data.equipment : null; }
+  function put(e) { it.data = it.data || {}; if (e) it.data.equipment = e; else delete it.data.equipment; onChange(); }
+  var cur = eq(), table = cur && typeof cur.loot_table === 'string' ? cur.loot_table : '';
+  var sel = kRegSelect({ reg: 'loot_table', value: table, title: '选择战利品表', empty: '（无）', allowClear: true,
+    onChange: function (id) { if (!id) put(null); else { var e = clone(eq() || {}); e.loot_table = id; put(e); } redraw(); } });
+  box.appendChild(xSec('helmet', '装备战利品表'));
+  box.appendChild(xRow({ icon: false, title: '战利品表', sub: '生成时按这张表给装备', right: sel.el }));
+  if (!table) return box;
+  var dc = cur.slot_drop_chances, mode = typeof dc === 'number' ? 'all' : isObj(dc) && Object.keys(dc).length ? 'slot' : 'none';
+  var info = typeof spInfo === 'function' ? spInfo('minecraft:trial_spawner') : null, sch = info && info.spawn_data_schema && info.spawn_data_schema.equipment && info.spawn_data_schema.equipment.slot_drop_chances;
+  var slots = (sch && sch.slots) || ['mainhand', 'offhand', 'feet', 'legs', 'chest', 'head', 'body', 'saddle'];
+  function setDc(v) { var e = clone(eq() || {}); if (v === undefined) delete e.slot_drop_chances; else e.slot_drop_chances = v; put(e); }
+  box.appendChild(xSeg({ title: '掉落概率', sub: '覆盖这张表给的装备掉落的概率', options: [{ v: 'none', label: '不覆盖' }, { v: 'all', label: '统一' }, { v: 'slot', label: '按部位' }], value: mode,
+    onChange: function (m) { if (m === 'none') setDc(undefined); else if (m === 'all') setDc(typeof dc === 'number' ? dc : SP_DROP_DEFAULT); else setDc(isObj(dc) && Object.keys(dc).length ? dc : (function () { var o = {}; o[slots.indexOf('head') >= 0 ? 'head' : slots[0]] = SP_DROP_DEFAULT; return o; })()); redraw(); } }));
+  if (mode === 'all') box.appendChild(xNum({ icon: false, title: '统一概率', value: dc, step: 0.05, dec: 3, noSlider: true, onChange: function (x) { setDc(x); } }));
+  if (mode === 'slot') {
+    function cmap() { var e = eq(); return e && isObj(e.slot_drop_chances) ? clone(e.slot_drop_chances) : {}; }
+    Object.keys(dc).forEach(function (s) {
+      var rm = kBtn('', function () { var m = cmap(); delete m[s]; setDc(Object.keys(m).length ? m : undefined); redraw(); }, { icon: 'trash', title: '去掉这个部位的覆盖' });
+      var n = xNumCtl(dc[s], { step: 0.05, dec: 3, noSlider: true, onChange: function (x) { var m = cmap(); m[s] = x; setDc(m); } }, true);
+      box.appendChild(xRow({ icon: false, title: Labels.slotEquip[s] || s, tip: s, right: h('div', { class: 'k-row' }, [n.el, rm]) }));
+    });
+    var rest = slots.filter(function (s) { return dc[s] === undefined; });
+    if (rest.length) box.appendChild(xRow({ icon: false, title: '添加部位', right: combo({ value: '', options: rest.map(function (s) { return { v: s, label: Labels.slotEquip[s] || s }; }), reset: true, placeholder: '选择部位…', onPick: function (s) { var m = cmap(); m[s] = SP_DROP_DEFAULT; setDc(m); redraw(); } }) }));
+  }
+  return box;
+}
 function spPool(arr, onChange, emptyText) {
   var xl = xList({
     items: function () { return arr; }, empty: emptyText,
@@ -146,6 +179,8 @@ function spPool(arr, onChange, emptyText) {
           esEntityHeader({ id: eid, empty: '（未选择）',
             onPick: function (x) { it.data = it.data || {}; it.data.entity = it.data.entity || {}; it.data.entity.id = Reg.full(x); onChange(); xl.draw(); },
             onEntityNbt: function (snbt) { it.data = it.data || {}; it.data.entity = vaultEntityObj(snbt); NBT_FORCE.block_entity_data = true; onChange(); xl.draw(); } }),
+          eid ? esPanel({ type: Reg.full(eid), get: function () { return (it.data && it.data.entity) || { id: eid }; }, set: function (e) { it.data = it.data || {}; it.data.entity = e; onChange(); } }) : null,
+          eid ? spEquipTable(it, onChange, function () { xl.draw(); }) : null,
           xFoot('右上角的数字是权重：越大越容易被选中', function () { arr.splice(i, 1); onChange(); xl.select(-1); })
         ];
       } };
