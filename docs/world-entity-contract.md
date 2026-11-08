@@ -44,6 +44,19 @@ Edits 示例（UUID 须替换为当前在线候选；null 可直接清除）：
 {"entity":{"owner":{"Owner":null}}}
 ```
 
+## P2-2 掉落物
+
+`world.views.dropped_item` / `entity_schema.views.dropped_item` 仅 ItemEntity；写入 `entity.dropped_item`。字段 `Item` 是完整 StackCodec 对象（保留组件及移除 patch），必须非空；`PickupDelay`、`Age` 是实际保存类型 short，范围为 Java Short.MIN_VALUE..MAX_VALUE（-32768..32767），只接受整数，不额外杜撰游戏计时范围。未提交字段保持原值；所有字段拒绝 null。物品候选来自实时 item/component 注册表，栈经 ItemStack.CODEC，数量遵守 StackCodec 的实际堆叠限制。未知字段/物品、空栈、数值截断、错误实体类型和 loader 未保留值拒绝。
+
+视图示例：
+```json
+{"dropped_item":{"Item":{"id":"minecraft:stick","count":1,"comps":{},"removed":{}},"PickupDelay":0,"Age":0}}
+```
+Edits 示例：
+```json
+{"entity":{"dropped_item":{"Item":{"id":"minecraft:diamond","count":2,"comps":{},"removed":{}},"PickupDelay":100,"Age":-100}}}
+```
+
 ## 展示实体字段
 
 |entity.display字段|格式与校验|

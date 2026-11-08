@@ -64,6 +64,7 @@ public final class EntityWorldEditTest {
         var mounted=EntitySessionData.pack(WorldTarget.saveEntity(cat,access),cat);check(!WorldNbt.revision(unmounted).equals(WorldNbt.revision(mounted)),"vehicle relationship participates in rider revision without forged NBT");check(EntitySessionData.data(mounted).equals(WorldTarget.saveEntity(cat,access)),"internal relationship marker excluded from wire SNBT");
         capture("cat_riding_zombie",mount,WorldTarget.saveEntity(mount,access));reject(()->EntityRiding.tryRide(mount,cat),"cycle guard");var other=create(EntityType.CAT);reject(()->EntityRiding.tryRide(other,mount),"canAddPassenger capacity");cat.stopRiding();check(cat.getVehicle()==null,"dismount");EntityRiding.tryRide(other,mount);mount.ejectPassengers();check(other.getVehicle()==null,"eject");
         ownerViews();
+        droppedItemViews();
         var offers=new MerchantOffers();offers.add(new MerchantOffer(new ItemCost(Items.EMERALD,2),new ItemStack(Items.BREAD,3),12,5,0.05f));
         var raw=MerchantOffers.CODEC.encodeStart(access.createSerializationContext(NbtOps.INSTANCE),offers).getOrThrow();var normalized=EntityWorldEdit.offers(offers,access);var roundtrip=EntityWorldEdit.decodeOffers(normalized,access,raw);check(raw.equals(MerchantOffers.CODEC.encodeStart(access.createSerializationContext(NbtOps.INSTANCE),roundtrip).getOrThrow()),"trade cost predicate exact roundtrip");
         normalized.get(0).getAsJsonObject().addProperty("uses",2);var updated=EntityWorldEdit.decodeOffers(normalized,access,raw);check(updated.get(0).getUses()==2,"offer uses codec");normalized.get(0).getAsJsonObject().getAsJsonObject("buy").addProperty("count",0);reject(()->EntityWorldEdit.decodeOffers(normalized,access,raw),"trade stack guard");
@@ -88,6 +89,18 @@ public final class EntityWorldEditTest {
             reject(()->edit(tame,"{owner:{UUID:null}}"),"identity cannot masquerade as owner");
         }
         reject(()->edit(create(EntityType.ZOMBIE),"{owner:{Owner:null}}"),"owner target guard");
+    }
+    private static void droppedItemViews(){
+        var item=(net.minecraft.world.entity.item.ItemEntity)create(EntityType.ITEM);item.setItem(new ItemStack(Items.STICK));
+        var before=WorldTarget.saveEntity(item,access);var views=EntityWorldEdit.views(item,before,access);
+        check(views.getAsJsonObject("dropped_item").getAsJsonObject("Item").get("id").getAsString().equals("minecraft:stick"),"dropped item read");
+        var saved=edit(item,"{dropped_item:{Item:{id:'minecraft:diamond',count:2,comps:{custom_name:{text:'Drop'}},removed:{}},PickupDelay:100,Age:-100}}");
+        check(saved.getShort("PickupDelay").orElseThrow()==100&&saved.getShort("Age").orElseThrow()==-100,"drop counters typed short");
+        var copy=(net.minecraft.world.entity.item.ItemEntity)create(EntityType.ITEM);EntityWorldEdit.load(copy,saved,access);
+        check(copy.getItem().getCount()==2&&copy.getItem().getHoverName().getString().equals("Drop"),"drop full stack roundtrip");
+        for(String bad:List.of("{PickupDelay:32768}","{Age:1.5}","{Age:null}","{Item:{empty:true}}","{Item:{id:'missing:item',count:1,comps:{},removed:{}}}","{UUID:'bad'}"))reject(()->edit(item,"{dropped_item:"+bad+"}"),"drop rejects "+bad);
+        reject(()->edit(create(EntityType.ZOMBIE),"{dropped_item:{Age:1}}"),"drop target guard");
+        check(WorldTarget.saveEntity(item,access).equals(before),"drop validation leaves source untouched");
     }
     private static Entity create(EntityType<?> type){return EntitySchema.create(type,level);}
     private static CompoundTag edit(Entity e,String json){return EntityWorldEdit.prepare(e,WorldTarget.saveEntity(e,access),JsonParser.parseString(json).getAsJsonObject(),level,access);}
