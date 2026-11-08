@@ -42,6 +42,10 @@ final class PlayerPresetHash {
         rows.sort(numeric?Comparator.comparingInt(r->r.get(field).getAsInt()):Comparator.comparing(r->r.get(field).getAsString()));
         var result=new JsonArray();rows.forEach(result::add);return result;
     }
+    static String template(JsonObject value){
+        try{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(sorted(value).toString().getBytes(StandardCharsets.UTF_8)));}
+        catch(java.security.NoSuchAlgorithmException e){throw new IllegalStateException(e);}
+    }
     private static JsonElement sorted(JsonElement value) {
         if(value.isJsonObject()){var o=new JsonObject();for(String key:new TreeSet<>(value.getAsJsonObject().keySet()))o.add(key,sorted(value.getAsJsonObject().get(key)));return o;}
         if(value.isJsonArray()){var a=new JsonArray();value.getAsJsonArray().forEach(v->a.add(sorted(v)));return a;}

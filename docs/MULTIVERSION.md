@@ -140,7 +140,7 @@ stonecutter.properties.toml   每个游戏版本的 MC / 加载器 / API / Oriel
 
 差异 #35：PlayerAdvancements 的无保存监听清理在 26.1.2 为 stopListening()，26.2 / 26.3 为 clearTriggers()；PlayerProfiles 使用 Stonecutter >=26.2 分支。ServerPlayer.load、ClientInformation、UUID 本地缓存 get(UUID)、WorldData.getSinglePlayerUUID 在三版共用。
 
-PlayerList 没有“不保存地移除构造缓存”的公开 API，remove 会保存玩家和统计；因此两加载器分别用现有 AW / AT 仅开放 stats、advancements Map。只在服务端线程以随机、不冲突 UUID 构造临时 ServerPlayer，finally 删除该 UUID 的缓存并清监听，不调用 remove/save。临时 load 后的真实玩家 UUID 不作为缓存删除键，不触碰目标的原缓存。纯 JVM 不需要加载此入口；隔离专服探针携带同一生产 AW。
+PlayerList 没有“不保存地移除构造缓存”的公开 API，remove 会保存玩家和统计；因此两加载器分别用现有 AW / AT 仅开放 stats、advancements Map。只在服务端线程以随机、不冲突 UUID 构造临时 ServerPlayer，finally 删除该 UUID 的缓存并清监听，不调用 remove/save。缓存删除始终使用构造用随机 UUID，不触碰档案目标的原缓存。Player.load 会恢复构造 GameProfile 的 UUID；完整离线编辑把档案路径 UUID 单独绑定到规范化会话投影，不修改临时对象 UUID。纯 JVM 不需要加载此入口；隔离专服探针携带同一生产 AW。
 
 构造前预放独立 ServerStatsCounter 和 PlayerAdvancements：前者使用不存在的只读路径，后者使用空 ServerAdvancementManager（仍是原版 API）。这样不会经过 locateStatsFile 的旧名字文件迁移，也不会执行真实数据包中无条件成就的 rewards。临时对象从不登录、tick 或调用 save；读取后缓存和监听全部清理。
 
@@ -171,3 +171,11 @@ VaultTemplates 的 BlockStateEdit、WorldNbt、Inventory.EQUIPMENT_SLOT_MAPPING 
 - 六目标 compileJava + playerWorldEditTest + translateTest 通过：PlayerWorldEditTest 每目标 30 项，TranslateTest 每目标 36 项；新任务接入 check / codecVerification。矩阵日志：Oriel-UI-Workspace/daily/2026-11-09/logs/player-display-translate/matrix.log（BUILD SUCCESSFUL in 1m 5s，75 tasks）。NeoForge JVM 继续使用同版本 common NeoForm vanilla runtime。
 - Fabric 26.1.2 隔离专服 JVM 探针 369 项通过：真实 minecraft:story/root 的 has_display/title_key/description_key、内部 recipes 成就无 DisplayInfo、displayed:true 全分页 125 项且 total 精确、query 叠加、默认完整列表、非法布尔值拒绝；server-receipt.json / server.log / probe-run.log 位于同一目录。脚本也重新独立断言回执中的 root/recipes/分页总数。
 - 没有启动或操作用户客户端，没有执行前端 JS/CSS 改动或可见客户端翻译消息链验收。此处 JVM 结果不代表客户端画面验收。
+
+### 完整存档玩家 / 预设编辑 API（2026-11-09）
+
+PlayerWorldEdit 的只读投影、schema、prepare 统一使用原版 Player；在线 write 仍接收 ServerPlayer 并发原版同步包。writeDetached 仅用于未连接的临时对象，不调用在线 setGameMode、效果回调、经验同步与广播。原版 MobEffect.addAttributeModifiers/removeAttributeModifiers + activeEffects Map 维护临时效果；实际存档仍通过 ServerPlayer.saveWithoutId/load 校验。
+
+ServerPlayerGameMode.setGameModeForPlayer(GameType,GameType) 在 26.1.2/26.2/26.3 均为 protected：common 的 AW 与 AT 同步开放此方法，只在隔离临时对象上更新模式/能力，不调用 changeGameModeForPlayer 的网络与世界广播。此项为跨版本相同的访问边界，无新增 Stonecutter 分支；临时 ServerPlayer 清理和空成就管理器沿用差异 #35/#36。
+
+完整离线编辑的原版往返比较先统一 float 精度、Component/MobEffect/AttributeModifier Codec 表示和无序 ID 列表，再比较重新加载的规范化值；仅表示差异不会误报保存失败，原版实际丢弃或钳制的修改仍拒绝落盘。

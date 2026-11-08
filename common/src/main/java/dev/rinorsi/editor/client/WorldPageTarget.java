@@ -12,7 +12,8 @@ public final class WorldPageTarget {
         var slot=new JsonObject();slot.addProperty("kind","entity");slot.addProperty("dim",dimension);
         if(message.size()==1&&message.has("self")&&message.get("self").isJsonPrimitive()&&message.getAsJsonPrimitive("self").isBoolean()&&message.get("self").getAsBoolean())slot.addProperty("player","self");
         else if(message.size()==1&&message.has("uuid")) {slot.addProperty("player","online");slot.addProperty("uuid",UUID.fromString(StackCodec.string(message,"uuid")).toString());}
-        else throw new IllegalArgumentException("请选择在线玩家 UUID，或使用 self:true 返回自己");
+        else if(message.size()==2&&message.has("uuid")&&message.has("offline")&&message.get("offline").isJsonPrimitive()&&message.getAsJsonPrimitive("offline").isBoolean()&&message.get("offline").getAsBoolean()){slot.addProperty("player","offline");slot.addProperty("uuid",UUID.fromString(StackCodec.string(message,"uuid")).toString());}
+        else throw new IllegalArgumentException("请选择玩家 UUID（离线时带 offline:true），或使用 self:true 返回自己");
         return slot;
     }
     public record Binding(JsonObject slot,String revision) {

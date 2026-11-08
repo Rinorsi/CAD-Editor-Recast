@@ -56,7 +56,10 @@ public final class WorldEditSessions {
     public static boolean sameTarget(JsonObject a, JsonObject b) {
         if (!Objects.equals(a.get("kind"), b.get("kind")) || !Objects.equals(a.get("dim"), b.get("dim"))) return false;
         String kind = a.get("kind").getAsString();
-        if (kind.equals("entity")) return Objects.equals(a.get("uuid"), b.get("uuid"));
+        if (kind.equals("entity")) {
+            for(String mode:List.of("offline","preset"))if(mode.equals(a.has("player")?a.get("player").getAsString():"")!=mode.equals(b.has("player")?b.get("player").getAsString():""))return false;
+            return Objects.equals(a.get("uuid"), b.get("uuid"));
+        }
         return kind.equals("block") && Objects.equals(a.get("x"), b.get("x")) && Objects.equals(a.get("y"), b.get("y")) && Objects.equals(a.get("z"), b.get("z"));
     }
 }

@@ -26,7 +26,7 @@ public final class OfflinePlayerEdit {
     public record Snapshot(Path path,String fingerprint,CompoundTag data,CompoundTag editable,JsonObject summary){
         public JsonObject value(){var v=new JsonObject();v.addProperty("snbt",editable.toString());v.add("summary",summary.deepCopy());return v;}
     }
-    private static void guard(MinecraftServer server,UUID uuid){
+    static void guard(MinecraftServer server,UUID uuid){
         if(!server.isSameThread())PlayerExtendedEditor.fail("invalid_request","离线编辑必须在服务端线程执行");
         if(server.getPlayerList().getPlayer(uuid)!=null)PlayerExtendedEditor.fail("player_online","目标玩家已上线，请重新打开在线玩家");
         var owner=server.getSingleplayerProfile();if(server.isSingleplayer()&&owner!=null&&owner.id().equals(uuid))PlayerExtendedEditor.fail("offline_owner_unsupported","单人世界所有者数据由 level.dat 管理，请进入世界后在线编辑");
@@ -45,6 +45,17 @@ public final class OfflinePlayerEdit {
             if(editable.toString().length()>WorldNbt.MAX_SNBT)PlayerExtendedEditor.fail("payload_too_large","离线玩家可编辑数据超过 24000 字符");
             var summary=PlayerProfiles.loaded(server,data,p->PlayerProfiles.summary(p,PlayerProfiles.name(server,uuid)));
             return new Snapshot(path,PlayerExtendedEditor.hash(bytes),data,editable,summary);
+        }catch(IOException e){throw io(e);}
+    }
+    /** Full editor baseline: no SNBT text projection or its 24K text limit. */
+    static Snapshot readFull(MinecraftServer server,UUID uuid){
+        guard(server,uuid);var path=server.getWorldPath(LevelResource.PLAYER_DATA_DIR).toAbsolutePath().normalize().resolve(uuid+".dat");
+        try {
+            if(!Files.isRegularFile(path,LinkOption.NOFOLLOW_LINKS))PlayerExtendedEditor.fail("offline_missing","没有找到此 UUID 的玩家存档");
+            var bytes=bytes(path);var raw=NbtIo.readCompressed(new ByteArrayInputStream(bytes),NbtAccounter.create(MAX_BYTES));
+            if(raw.getIntOr("DataVersion",-1)>SharedConstants.getCurrentVersion().dataVersion().version())PlayerExtendedEditor.fail("invalid_nbt","玩家文件来自更新的游戏版本，不能降级写入");
+            var data=DataFixTypes.PLAYER.updateToCurrentVersion(server.getFixerUpper(),raw,raw.getIntOr("DataVersion",-1));
+            return new Snapshot(path,PlayerExtendedEditor.hash(bytes),data,new CompoundTag(),new JsonObject());
         }catch(IOException e){throw io(e);}
     }
     private static byte[] bytes(Path path)throws IOException {if(Files.size(path)>MAX_BYTES)PlayerExtendedEditor.fail("payload_too_large","玩家文件超过安全读取上限");try(var input=Files.newInputStream(path)){var bytes=input.readNBytes((int)MAX_BYTES+1);if(bytes.length>MAX_BYTES)PlayerExtendedEditor.fail("payload_too_large","玩家文件超过安全读取上限");return bytes;}}
@@ -88,7 +99,7 @@ public final class OfflinePlayerEdit {
         for(String key:List.of("XpLevel","XpTotal","foodLevel","SelectedItemSlot"))if(data.contains(key)){int v=data.getInt(key).orElse(-1);int max=key.equals("foodLevel")?20:key.equals("SelectedItemSlot")?net.minecraft.world.entity.player.Inventory.getSelectionSize()-1:key.equals("XpLevel")?1000000:Integer.MAX_VALUE;if(v<0||v>max)PlayerExtendedEditor.fail("invalid_nbt",key+" 数值超出范围");}
         if(data.getFloatOr("foodSaturationLevel",0)>data.getIntOr("foodLevel",20))PlayerExtendedEditor.fail("invalid_nbt","饱和度不能超过饥饿值");
     }
-    private static void replace(MinecraftServer server,UUID uuid,Snapshot baseline,CompoundTag desired){
+    static void replace(MinecraftServer server,UUID uuid,Snapshot baseline,CompoundTag desired){
         Path temporary=null;
         try {
             guard(server,uuid);requireUnchanged(baseline);

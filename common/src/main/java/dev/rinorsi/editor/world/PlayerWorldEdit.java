@@ -27,7 +27,7 @@ public final class PlayerWorldEdit {
         if(!permissions.hasPermission(Permissions.COMMANDS_GAMEMASTER)) EditorSessions.fail("player_forbidden","编辑自己或其他玩家需要原版游戏管理员权限");
     }
     public static void requireOnline(boolean online) { if(!online) EditorSessions.fail("player_offline","目标玩家不在线或不存在"); }
-    public static JsonObject values(ServerPlayer p) {
+    public static JsonObject values(Player p) {
         var out=new JsonObject();var access=p.registryAccess();
         out.add("container",container(p.getInventory(),p));out.add("ender",container(p.getEnderChestInventory(),p));
         out.addProperty("SelectedItemSlot",p.getInventory().getSelectedSlot());out.addProperty("Health",p.getHealth());out.addProperty("AbsorptionAmount",p.getAbsorptionAmount());
@@ -35,17 +35,17 @@ public final class PlayerWorldEdit {
         var xp=new JsonObject();xp.addProperty("XpLevel",p.experienceLevel);xp.addProperty("XpP",p.experienceProgress);xp.addProperty("XpTotal",p.totalExperience);out.add("experience",xp);
         out.addProperty("playerGameType",p.gameMode().getName());var a=p.getAbilities();var abilities=new JsonObject();
         abilities.addProperty("flying",a.flying);abilities.addProperty("mayfly",a.mayfly);abilities.addProperty("invulnerable",a.invulnerable);abilities.addProperty("mayBuild",a.mayBuild);abilities.addProperty("instabuild",a.instabuild);abilities.addProperty("walkSpeed",a.getWalkingSpeed());abilities.addProperty("flySpeed",a.getFlyingSpeed());out.add("abilities",abilities);
-        var attrs=new JsonArray();for(var h:BuiltInRegistries.ATTRIBUTE.listElements().toList()) if(p.getAttributes().hasAttribute(h)){var row=new JsonObject();row.addProperty("id",h.key().identifier().toString());row.addProperty("base",p.getAttributeBaseValue(h));row.add("modifiers",AttributeModifier.CODEC.listOf().encodeStart(access.createSerializationContext(JsonOps.INSTANCE),new ArrayList<>(p.getAttribute(h).getPermanentModifiers())).getOrThrow());attrs.add(row);}out.add("attributes",attrs);
-        var effects=new JsonArray();for(var effect:p.getActiveEffects())effects.add(MobEffectInstance.CODEC.encodeStart(access.createSerializationContext(JsonOps.INSTANCE),effect).getOrThrow());out.add("active_effects",effects);
+        var attrs=new JsonArray();for(var h:BuiltInRegistries.ATTRIBUTE.listElements().toList()) if(p.getAttributes().hasAttribute(h)){var row=new JsonObject();row.addProperty("id",h.key().identifier().toString());row.addProperty("base",p.getAttributeBaseValue(h));row.add("modifiers",AttributeModifier.CODEC.listOf().encodeStart(access.createSerializationContext(JsonOps.INSTANCE),p.getAttribute(h).getPermanentModifiers().stream().sorted(Comparator.comparing(m->m.id().toString())).toList()).getOrThrow());attrs.add(row);}out.add("attributes",attrs);
+        var effects=new JsonArray();for(var effect:p.getActiveEffects())effects.add(MobEffectInstance.CODEC.encodeStart(access.createSerializationContext(JsonOps.INSTANCE),effect).getOrThrow());out.add("active_effects",sorted(effects));
         var tags=new JsonArray();new TreeSet<>(p.entityTags()).forEach(tags::add);out.add("Tags",tags);
         out.add("CustomName",p.getCustomName()==null?JsonNull.INSTANCE:ComponentSerialization.CODEC.encodeStart(access.createSerializationContext(JsonOps.INSTANCE),p.getCustomName()).getOrThrow());return out;
     }
-    private static JsonObject container(Container c,ServerPlayer p){var out=new JsonObject();out.addProperty("size",c.getContainerSize());var slots=new JsonArray();for(int i=0;i<c.getContainerSize();i++){var row=new JsonObject();row.addProperty("slot",i);row.add("stack",stack(c.getItem(i),p));slots.add(row);}out.add("slots",slots);return out;}
-    private static JsonObject stack(ItemStack s,ServerPlayer p){if(!s.isEmpty())return StackCodec.snapshot(s,p.registryAccess(),new JsonObject(),"");var e=new JsonObject();e.addProperty("empty",true);return e;}
-    public static CompoundTag save(ServerPlayer p){var out=new CompoundTag();out.putString("id","minecraft:player");out.putString("UUID",p.getStringUUID());var pos=new ListTag();pos.add(DoubleTag.valueOf(p.getX()));pos.add(DoubleTag.valueOf(p.getY()));pos.add(DoubleTag.valueOf(p.getZ()));out.put("Pos",pos);out.putString("cad_player",JSON.toJson(values(p)));return out;}
+    private static JsonObject container(Container c,Player p){var out=new JsonObject();out.addProperty("size",c.getContainerSize());var slots=new JsonArray();for(int i=0;i<c.getContainerSize();i++){var row=new JsonObject();row.addProperty("slot",i);row.add("stack",stack(c.getItem(i),p));slots.add(row);}out.add("slots",slots);return out;}
+    private static JsonObject stack(ItemStack s,Player p){if(!s.isEmpty())return StackCodec.snapshot(s,p.registryAccess(),new JsonObject(),"");var e=new JsonObject();e.addProperty("empty",true);return e;}
+    public static CompoundTag save(Player p){var out=new CompoundTag();out.putString("id","minecraft:player");out.putString("UUID",p.getStringUUID());var pos=new ListTag();pos.add(DoubleTag.valueOf(p.getX()));pos.add(DoubleTag.valueOf(p.getY()));pos.add(DoubleTag.valueOf(p.getZ()));out.put("Pos",pos);out.putString("cad_player",JSON.toJson(values(p)));return out;}
     public static JsonObject data(CompoundTag tag){return JsonParser.parseString(tag.getString("cad_player").orElseThrow()).getAsJsonObject();}
     public static CompoundTag with(CompoundTag tag,JsonObject data){var out=tag.copy();out.putString("cad_player",JSON.toJson(data));return out;}
-    public static CompoundTag prepare(ServerPlayer p,CompoundTag desired,JsonObject request){
+    public static CompoundTag prepare(Player p,CompoundTag desired,JsonObject request){
         var next=data(desired);
         if(!request.isEmpty()){
             for(String key:request.keySet())if(!key.equals("entity")&&!Set.of("op","slot","requestId","revision").contains(key))EditorSessions.fail("protected_field","玩家仅接受 entity.player 规范化编辑");
@@ -63,16 +63,29 @@ public final class PlayerWorldEdit {
             var explicit=request.getAsJsonObject("entity").getAsJsonObject("player").has("abilities")?request.getAsJsonObject("entity").getAsJsonObject("player").getAsJsonObject("abilities"):new JsonObject();
             if(!explicit.has("flying"))b.addProperty("flying",a.flying);if(!explicit.has("mayfly"))b.addProperty("mayfly",a.mayfly);if(!explicit.has("invulnerable"))b.addProperty("invulnerable",a.invulnerable);if(!explicit.has("mayBuild"))b.addProperty("mayBuild",a.mayBuild);if(!explicit.has("instabuild"))b.addProperty("instabuild",a.instabuild);
         }
-        validate(next,p);return with(desired,next);
+        validate(next,p);canonicalize(next,p);return with(desired,next);
     }
-    private static void patchContainer(JsonObject next,JsonObject patch,Container original,ServerPlayer p){keys(patch,Set.of("slots"));var seen=new HashSet<Integer>();for(var raw:patch.getAsJsonArray("slots")){var row=raw.getAsJsonObject();keys(row,Set.of("slot","stack"));int i=StackCodec.integer(row,"slot",0,original.getContainerSize()-1);if(!seen.add(i))fail("槽位重复");var baseline=decode(next.getAsJsonArray("slots").get(i).getAsJsonObject().getAsJsonObject("stack"),ItemStack.EMPTY,p);var item=decode(StackCodec.object(row,"stack"),baseline,p);next.getAsJsonArray("slots").get(i).getAsJsonObject().add("stack",stack(item,p));}}
-    private static ItemStack decode(JsonObject row,ItemStack original,ServerPlayer p){if(row.has("empty"))bool(row,"empty");var item=row.has("empty")&&row.get("empty").getAsBoolean()?ItemStack.EMPTY:StackCodec.decode(row,p.registryAccess(),original);if(!item.isEmpty()){ItemStack.validateStrict(item).getOrThrow();if(item.getCount()>item.getMaxStackSize())EditorSessions.fail("slot_invalid","物品数量超过堆叠上限");}return item;}
+    /** Normalize only native representations: float precision, Codec defaults and unordered IDs. */
+    private static void canonicalize(JsonObject n,Player p){
+        for(String key:List.of("Health","AbsorptionAmount"))n.addProperty(key,n.get(key).getAsFloat());
+        n.getAsJsonObject("food").addProperty("saturation",n.getAsJsonObject("food").get("saturation").getAsFloat());
+        n.getAsJsonObject("experience").addProperty("XpP",n.getAsJsonObject("experience").get("XpP").getAsFloat());
+        for(String key:List.of("walkSpeed","flySpeed"))n.getAsJsonObject("abilities").addProperty(key,n.getAsJsonObject("abilities").get(key).getAsFloat());
+        var ops=p.registryAccess().createSerializationContext(JsonOps.INSTANCE);var effects=new JsonArray();
+        for(var raw:n.getAsJsonArray("active_effects"))effects.add(MobEffectInstance.CODEC.encodeStart(ops,MobEffectInstance.CODEC.parse(ops,raw).getOrThrow()).getOrThrow());n.add("active_effects",sorted(effects));
+        for(var raw:n.getAsJsonArray("attributes")){var row=raw.getAsJsonObject();if(row.has("modifiers"))row.add("modifiers",AttributeModifier.CODEC.listOf().encodeStart(ops,AttributeModifier.CODEC.listOf().parse(ops,row.get("modifiers")).getOrThrow().stream().sorted(Comparator.comparing(m->m.id().toString())).toList()).getOrThrow());}
+        var tags=new TreeSet<String>();n.getAsJsonArray("Tags").forEach(v->tags.add(v.getAsString()));var array=new JsonArray();tags.forEach(array::add);n.add("Tags",array);
+        if(!n.get("CustomName").isJsonNull())n.add("CustomName",ComponentSerialization.CODEC.encodeStart(ops,ComponentSerialization.CODEC.parse(ops,n.get("CustomName")).getOrThrow()).getOrThrow());
+    }
+    private static JsonArray sorted(JsonArray rows){var list=new ArrayList<JsonElement>();rows.forEach(list::add);list.sort(Comparator.comparing(r->r.getAsJsonObject().get("id").getAsString()));var out=new JsonArray();list.forEach(out::add);return out;}
+    private static void patchContainer(JsonObject next,JsonObject patch,Container original,Player p){keys(patch,Set.of("slots"));var seen=new HashSet<Integer>();for(var raw:patch.getAsJsonArray("slots")){var row=raw.getAsJsonObject();keys(row,Set.of("slot","stack"));int i=StackCodec.integer(row,"slot",0,original.getContainerSize()-1);if(!seen.add(i))fail("槽位重复");var baseline=decode(next.getAsJsonArray("slots").get(i).getAsJsonObject().getAsJsonObject("stack"),ItemStack.EMPTY,p);var item=decode(StackCodec.object(row,"stack"),baseline,p);next.getAsJsonArray("slots").get(i).getAsJsonObject().add("stack",stack(item,p));}}
+    private static ItemStack decode(JsonObject row,ItemStack original,Player p){if(row.has("empty"))bool(row,"empty");var item=row.has("empty")&&row.get("empty").getAsBoolean()?ItemStack.EMPTY:StackCodec.decode(row,p.registryAccess(),original);if(!item.isEmpty()){ItemStack.validateStrict(item).getOrThrow();if(item.getCount()>item.getMaxStackSize())EditorSessions.fail("slot_invalid","物品数量超过堆叠上限");}return item;}
     public static double number(JsonObject o,String key,double min,double max){var v=o.get(key);if(v==null||!v.isJsonPrimitive()||!v.getAsJsonPrimitive().isNumber())throw new EditorSessions.Failure("invalid_request",key+" 必须为数字");double n=v.getAsDouble();if(!Double.isFinite(n)||n<min||n>max)fail(key+" 超出范围 ["+min+","+max+"]");return n;}
     private static boolean bool(JsonObject o,String key){var v=o.get(key);if(v==null||!v.isJsonPrimitive()||!v.getAsJsonPrimitive().isBoolean())fail(key+" 必须为布尔值");return v.getAsBoolean();}
     private static void keys(JsonObject o,Set<String> allowed){for(String key:o.keySet())if(!allowed.contains(key))EditorSessions.fail("protected_field","不支持的玩家字段："+key);}
     private static void fail(String message){EditorSessions.fail("invalid_request",message);}
     private static JsonObject find(JsonArray rows,String id){for(var raw:rows)if(raw.getAsJsonObject().get("id").getAsString().equals(id))return raw.getAsJsonObject();return null;}
-    private static void validate(JsonObject n,ServerPlayer p){
+    private static void validate(JsonObject n,Player p){
         keys(n,FIELDS);StackCodec.integer(n,"SelectedItemSlot",0,net.minecraft.world.entity.player.Inventory.getSelectionSize()-1);
         var attributes=n.getAsJsonArray("attributes");double max=p.getMaxHealth();for(var raw:attributes){var row=raw.getAsJsonObject();var h=BuiltInRegistries.ATTRIBUTE.get(Identifier.parse(StackCodec.string(row,"id"))).orElseThrow();if(!p.getAttributes().hasAttribute(h))fail("玩家不支持该属性");double base=number(row,"base",h.value() instanceof RangedAttribute r?r.getMinValue():-Double.MAX_VALUE,h.value() instanceof RangedAttribute r?r.getMaxValue():Double.MAX_VALUE);var preview=new AttributeInstance(h,x->{});preview.replaceFrom(p.getAttribute(h));preview.setBaseValue(base);if(row.has("modifiers")){for(var m:new ArrayList<>(preview.getPermanentModifiers()))preview.removeModifier(m);var mods=AttributeModifier.CODEC.listOf().parse(p.registryAccess().createSerializationContext(JsonOps.INSTANCE),row.get("modifiers")).getOrThrow();var ids=new HashSet<Identifier>();for(var m:mods){if(!Double.isFinite(m.amount())||!ids.add(m.id()))fail("属性修饰符重复或数值无效");preview.addPermanentModifier(m);}}if(h.is(Attributes.MAX_HEALTH))max=preview.getValue();if(h.is(Attributes.MAX_ABSORPTION))number(n,"AbsorptionAmount",0,preview.getValue());}
         number(n,"Health",0,max);number(n,"AbsorptionAmount",0,Float.MAX_VALUE);var food=n.getAsJsonObject("food");int level=StackCodec.integer(food,"foodLevel",0,20);number(food,"saturation",0,level);
@@ -99,6 +112,38 @@ public final class PlayerWorldEdit {
         p.connection.send(new ClientboundSetHeldSlotPacket(p.getInventory().getSelectedSlot()));p.connection.send(new ClientboundSetExperiencePacket(p.experienceProgress,p.totalExperience,p.experienceLevel));p.connection.send(new ClientboundSetHealthPacket(p.getHealth(),p.getFoodData().getFoodLevel(),p.getFoodData().getSaturationLevel()));
         var sync=new ArrayList<AttributeInstance>();for(var h:BuiltInRegistries.ATTRIBUTE.listElements().toList())if(h.value().isClientSyncable()&&p.getAttributes().hasAttribute(h))sync.add(p.getAttribute(h));p.connection.send(new ClientboundUpdateAttributesPacket(p.getId(),sync));
     }
+    public static void writeDetached(Player p,CompoundTag tag){
+        if(p instanceof ServerPlayer sp && sp.connection!=null)throw new IllegalArgumentException("仅可修改未连接的临时玩家");
+        var n=data(tag);validate(n,p);var old=values(p);
+        var mode=Arrays.stream(GameType.values()).filter(g->g.getName().equals(n.get("playerGameType").getAsString())).findFirst().orElseThrow();
+        if(p instanceof ServerPlayer sp){if(sp.gameMode()!=mode)sp.gameMode.setGameModeForPlayer(mode,sp.gameMode());}
+        else if(p instanceof ProjectionPlayer projection)projection.mode=mode;
+        else throw new IllegalArgumentException("需要独立玩家投影");
+        for(var raw:n.getAsJsonArray("attributes")){var row=raw.getAsJsonObject();var instance=p.getAttribute(BuiltInRegistries.ATTRIBUTE.get(Identifier.parse(row.get("id").getAsString())).orElseThrow());instance.setBaseValue(row.get("base").getAsDouble());if(row.has("modifiers")){for(var m:new ArrayList<>(instance.getPermanentModifiers()))instance.removeModifier(m);for(var m:AttributeModifier.CODEC.listOf().parse(p.registryAccess().createSerializationContext(JsonOps.INSTANCE),row.get("modifiers")).getOrThrow())instance.addPermanentModifier(m);}}
+        for(String key:List.of("container","ender")){Container c=key.equals("container")?p.getInventory():p.getEnderChestInventory();var rows=n.getAsJsonObject(key).getAsJsonArray("slots");for(int i=0;i<rows.size();i++){var next=decode(rows.get(i).getAsJsonObject().getAsJsonObject("stack"),c.getItem(i),p);if(!StackComparison.matches(next,c.getItem(i),p.registryAccess())){c.setItem(i,next);}}c.setChanged();}
+        p.getInventory().setSelectedSlot(n.get("SelectedItemSlot").getAsInt());
+        if(!n.get("active_effects").equals(old.get("active_effects"))){
+            for(var effect:p.getActiveEffects())effect.getEffect().value().removeAttributeModifiers(p.getAttributes());
+            p.getActiveEffectsMap().clear();
+            for(var raw:n.getAsJsonArray("active_effects")){var effect=MobEffectInstance.CODEC.parse(p.registryAccess().createSerializationContext(JsonOps.INSTANCE),raw).getOrThrow();p.getActiveEffectsMap().put(effect.getEffect(),effect);effect.getEffect().value().addAttributeModifiers(p.getAttributes(),effect.getAmplifier());}
+        }
+        p.setHealth(n.get("Health").getAsFloat());p.setAbsorptionAmount(n.get("AbsorptionAmount").getAsFloat());var food=n.getAsJsonObject("food");p.getFoodData().setFoodLevel(food.get("foodLevel").getAsInt());p.getFoodData().setSaturation(food.get("saturation").getAsFloat());
+        var xp=n.getAsJsonObject("experience");if(!xp.equals(old.get("experience"))){p.experienceLevel=xp.get("XpLevel").getAsInt();p.experienceProgress=xp.get("XpP").getAsFloat();p.totalExperience=xp.get("XpTotal").getAsInt();}
+        var a=p.getAbilities();var b=n.getAsJsonObject("abilities");a.flying=bool(b,"flying");a.mayfly=bool(b,"mayfly");a.invulnerable=bool(b,"invulnerable");a.mayBuild=bool(b,"mayBuild");a.instabuild=bool(b,"instabuild");a.setWalkingSpeed(b.get("walkSpeed").getAsFloat());a.setFlyingSpeed(b.get("flySpeed").getAsFloat());
+        for(String s:new HashSet<>(p.entityTags()))p.removeTag(s);for(var s:n.getAsJsonArray("Tags"))p.addTag(s.getAsString());p.setCustomName(n.get("CustomName").isJsonNull()?null:ComponentSerialization.CODEC.parse(p.registryAccess().createSerializationContext(JsonOps.INSTANCE),n.get("CustomName")).getOrThrow());
+    }
+    /** Never registered, ticked or connected; only native defaults and serialization. */
+    public static final class ProjectionPlayer extends Player {
+        private GameType mode=GameType.SURVIVAL;
+        public ProjectionPlayer(net.minecraft.world.level.Level level,UUID uuid){super(level,new com.mojang.authlib.GameProfile(uuid,"PresetEditor"));}
+        @Override public GameType gameMode(){return mode;}
+    }
+    public static JsonObject snapshot(Player p,CompoundTag nbt,JsonObject slot,JsonObject metadata,String revision){
+        var out=new JsonObject();out.add("slot",slot.deepCopy());out.addProperty("kind","entity");out.addProperty("type","minecraft:player");out.addProperty("canUndo",false);out.addProperty("revision",revision);
+        out.addProperty("snbt",nbt.toString());out.add("nbt",NbtOps.INSTANCE.convertTo(JsonOps.INSTANCE,nbt));out.add("player",metadata.deepCopy());
+        var values=data(nbt);values.add("schema",schema(p));var views=new JsonObject();views.add("player",values);out.add("views",views);
+        var equipment=new JsonArray();for(var e:net.minecraft.world.entity.EquipmentSlot.values()){var row=new JsonObject();row.addProperty("slot",e.getSerializedName());row.add("stack",stack(p.getItemBySlot(e),p));equipment.add(row);}out.add("equipment",equipment);return out;
+    }
     public static CompoundTag stable(CompoundTag tag){var data=data(tag);data.getAsJsonObject("experience").remove("XpP");for(var raw:data.getAsJsonArray("active_effects"))stableEffect(raw.getAsJsonObject());return with(tag,data);}
     private static void stableEffect(JsonObject e){if(e.has("duration"))e.addProperty("duration",Integer.signum(e.get("duration").getAsInt()));if(e.has("hidden_effect"))stableEffect(e.getAsJsonObject("hidden_effect"));}
     public static CompoundTag rebase(CompoundTag baseline,CompoundTag requested,CompoundTag current,boolean undo){var n=data(requested);var old=data(baseline);var live=data(current);
@@ -114,6 +159,6 @@ public final class PlayerWorldEdit {
         var bounds=new JsonObject();bounds.add("Health",range(0,Float.MAX_VALUE,"effective minecraft:max_health"));bounds.add("AbsorptionAmount",range(0,Float.MAX_VALUE,"effective minecraft:max_absorption"));bounds.add("food.foodLevel",range(0,20,"FoodData vanilla scale"));bounds.add("food.saturation",range(0,20,"<= requested foodLevel"));bounds.add("experience.XpLevel",range(0,1000000,"editor overflow safety limit"));bounds.add("experience.XpTotal",range(0,Integer.MAX_VALUE,"native integer range"));bounds.add("experience.XpP",range(0,Math.nextDown(1.0f),"native setExperiencePoints quantizes to whole points"));bounds.add("abilities.walkSpeed",range(0,1,"editor safety limit"));bounds.add("abilities.flySpeed",range(0,1,"editor safety limit"));out.add("bounds",bounds);
         var effects=new JsonObject();effects.addProperty("registry","minecraft:mob_effect");effects.addProperty("codec","MobEffectInstance.CODEC");effects.addProperty("shape","{id,amplifier?,duration?,ambient?,show_particles?,show_icon?,hidden_effect?}");effects.add("amplifier",range(MobEffectInstance.MIN_AMPLIFIER,MobEffectInstance.MAX_AMPLIFIER,"native codec"));effects.addProperty("infiniteDuration",MobEffectInstance.INFINITE_DURATION);out.add("effects",effects);return out;}
     private static JsonObject range(double min,double max,String source){var row=new JsonObject();row.addProperty("min",min);row.addProperty("max",max);row.addProperty("source",source);return row;}
-    public static JsonObject schema(ServerPlayer p){var out=schema();out.addProperty("inventorySize",p.getInventory().getContainerSize());out.addProperty("enderSize",p.getEnderChestInventory().getContainerSize());out.getAsJsonObject("bounds").add("Health",range(0,p.getMaxHealth(),"effective minecraft:max_health; recalculated during apply"));out.getAsJsonObject("bounds").add("AbsorptionAmount",range(0,p.getMaxAbsorption(),"effective minecraft:max_absorption; recalculated during apply"));return out;}
+    public static JsonObject schema(Player p){var out=schema();out.addProperty("inventorySize",p.getInventory().getContainerSize());out.addProperty("enderSize",p.getEnderChestInventory().getContainerSize());out.getAsJsonObject("bounds").add("Health",range(0,p.getMaxHealth(),"effective minecraft:max_health; recalculated during apply"));out.getAsJsonObject("bounds").add("AbsorptionAmount",range(0,p.getMaxAbsorption(),"effective minecraft:max_absorption; recalculated during apply"));return out;}
     public static JsonObject entitySchema(){var out=new JsonObject();out.addProperty("id","minecraft:player");out.addProperty("available",true);out.addProperty("canBePreviewed",false);out.addProperty("defaults_source","Player.createAttributes");for(String key:List.of("variants","equipment","flags","extras","warnings"))out.add(key,new JsonArray());var schema=schema();out.add("attributes",schema.get("attributes").deepCopy());out.add("effects",schema.get("effects").deepCopy());var views=new JsonObject();views.add("player",schema);out.add("views",views);return out;}
 }

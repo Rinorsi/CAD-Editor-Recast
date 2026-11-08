@@ -36,6 +36,9 @@ public final class WorldEditor {
             id = StackCodec.string(request, "requestId"); if (id.length() > 80) throw new IllegalArgumentException("requestId 过长");
             op = StackCodec.string(request, "op");
             if (op.equals("close")) { SESSIONS.close(player.getUUID(), slot); return true; }
+            if(kind.equals("entity")&&slot.has("player")&&slot.get("player").getAsString().equals("offline")){
+                OfflinePlayerWorld.route(player,request,policy.get(),SESSIONS,replySink);return true;
+            }
             if(op.equals("apply")||op.equals("undo"))SESSIONS.requireDoubleChestPresent(player.getUUID(),slot,player.level());
             var target = WorldTarget.resolve(player, slot);
             try { policy.get().require(player); } catch (RuntimeException e) { EditorSessions.fail("not_allowed", e.getMessage()); }

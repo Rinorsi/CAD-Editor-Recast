@@ -51,3 +51,8 @@
 | player_extended offline | 同上；目标不在线，单人 owner 拒绝；受限字段、原版加载/保存校验、文件指纹、备份、原子替换；落盘前再次查在线状态 | OfflinePlayerEdit.read/prepare/replace |
 
 扩展 read 同样需要 requirePlayerEdit，不允许通过只读接口泄露其他玩家数据。扩展目标为明确 UUID 的管理员操作，不使用准星距离门槛；不赋予非管理员任何跨维度/远程编辑能力。成就不可代改其他玩家。所有写操作保留请求者/目标/前后指纹审计；只支持当前视图独立提交，无 undo。
+
+### 完整离线玩家与本机预设编辑（2026-11-09）
+
+- world open/apply，slot.player=offline：每笔在 OfflinePlayerWorld.route 执行 EditorPolicy.requirePlayerEdit；仅 entity.player 规范化字段；共享 WorldEditSessions 的 token/revision 与三方合并。不检查准星距离（档案是管理员明确 UUID 操作），不注册临时实体。重新加载校验通过后，OfflinePlayerEdit.replace 再查未上线/非单人房主/文件指纹，先备份再原子替换，记录请求者与目标审计。undo 返回 undo_unavailable。
+- slot.player=preset 仅本机宿主拦截：PlayerPresetPage → VaultStore.update，同模板内容 revision CAS、原版 Codec、分区边界、64KiB/8MiB 配额和只读检查。不会发送世界写入包或写入 playerdata；与本机保险库 save/update 权限一致。把预设套用给真实玩家仍必须走原有服务端管理员检查。

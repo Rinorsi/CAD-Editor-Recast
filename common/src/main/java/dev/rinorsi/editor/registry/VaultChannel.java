@@ -39,9 +39,17 @@ public final class VaultChannel {
 
   private VaultChannel() {}
 
+  public static PlayerPresetPage openPlayerPreset(String id) {
+    var level=Minecraft.getInstance().level;
+    if(level==null)throw new VaultStore.Failure("UNAVAILABLE","请进入世界后编辑玩家预设");
+    if(store==null||!store.isDone())throw new VaultStore.Failure("NOT_READY","保险库仍在加载，请稍后重试");
+    return new PlayerPresetPage(store.join(),validator(),level,id);
+  }
+
   public static void attach(DocumentDriver driver) {
     if (driver.serverSession() || STATES.containsKey(driver)) return;
     STATES.put(driver, new State());
+    dev.rinorsi.editor.client.WorldEditorClient.attachNavigation(driver);
     driver.onMessage("vault", value -> accept(driver, value));
     driver.onClose(
         () -> {

@@ -101,16 +101,19 @@ public final class PlayerProfiles {
         UUID temporary;Path unused;var list=server.getPlayerList();
         do{temporary=UUID.randomUUID();unused=server.getWorldPath(LevelResource.PLAYER_DATA_DIR).resolve(".cadeditor-read-"+temporary);}while(list.stats.containsKey(temporary)||list.advancements.containsKey(temporary)||list.getPlayer(temporary)!=null||Files.exists(unused,LinkOption.NOFOLLOW_LINKS));
         try {
+            ServerPlayer player;
+            try {
             // Bypass locateStatsFile's legacy-name migration and automatic advancement rewards.
             // These native read-only instances have an absent path and an independent empty manager.
             list.stats.put(temporary,new net.minecraft.stats.ServerStatsCounter(server,unused));
             list.advancements.put(temporary,new net.minecraft.server.PlayerAdvancements(server.getFixerUpper(),list,emptyAdvancements(),unused,null));
-            var player=new ServerPlayer(server,level,new GameProfile(temporary,"ArchiveReader"),ClientInformation.createDefault());
+            player=new ServerPlayer(server,level,new GameProfile(temporary,"ArchiveReader"),ClientInformation.createDefault());
             player.load(input);
             if(!problems.isEmpty())PlayerExtendedEditor.fail("invalid_nbt","原版玩家加载校验失败："+problems.getReport());
+            }catch(EditorSessions.Failure e){throw e;}catch(RuntimeException e){throw new EditorSessions.Failure("invalid_nbt","原版玩家加载失败："+e.getMessage());}
+            // Projection/validation errors retain their own protocol code; they are not load errors.
             return projection.apply(player);
-        }catch(EditorSessions.Failure e){throw e;}catch(RuntimeException e){throw new EditorSessions.Failure("invalid_nbt","原版玩家加载失败："+e.getMessage());}
-        finally {
+        }finally {
             list.stats.remove(temporary);var advancements=list.advancements.remove(temporary);
             if(advancements!=null) {
                 //? if >=26.2 {

@@ -15,6 +15,7 @@ import net.minecraft.world.phys.*;
 public final class WorldEditorClient {
     private static OrielScreen screen;
     private static WorldPageTarget.Binding binding;
+    private static dev.rinorsi.editor.vault.PlayerPresetPage presetPage;
     private static OrielScreen openingOwner;
     private static final java.util.Set<String> abandonedOpens=new java.util.LinkedHashSet<>();
     private static String opening, pending, queued;
@@ -45,7 +46,7 @@ public final class WorldEditorClient {
                 reject(id, "request_timeout", "服务器未确认世界编辑结果；保留草稿，请重新读取目标核对");
             }
         });
-        ClientPlatform.get().onDisconnect(mc -> { PlayerExtendedClient.clear(); screen = null; binding = null; opening = null; openingOwner=null; abandonedOpens.clear(); pending = null; queued = null; queuedPos=null; });
+        ClientPlatform.get().onDisconnect(mc -> { PlayerExtendedClient.clear(); screen = null; binding = null; presetPage=null; opening = null; openingOwner=null; abandonedOpens.clear(); pending = null; queued = null; queuedPos=null; });
     }
     private static int queue(String kind, JsonObject pos) { queued = kind; queuedPos = pos; return 1; }
     public static void openSelf(){queue("player",null);}
@@ -113,14 +114,26 @@ public final class WorldEditorClient {
         try{send(request);}catch(RuntimeException e){abandon(opening);opening=null;openingOwner=null;throw e;}
     }
     private static void abandon(String id){abandonedOpens.add(id);while(abandonedOpens.size()>32)abandonedOpens.remove(abandonedOpens.iterator().next());}
+    public static void attachNavigation(DocumentDriver driver){
+        driver.onMessage("open_world",value->Minecraft.getInstance().schedule(()->{
+            if(Minecraft.getInstance().gui.screen() instanceof OrielScreen owner&&owner.driver()==driver)openFromPage(owner,value);
+        }));
+    }
     private static void openFromPage(OrielScreen owner,JsonElement value){
-        if(screen!=owner)return;
+        if(Minecraft.getInstance().gui.screen()!=owner)return;
         try{
             var mc=Minecraft.getInstance();if(mc.player==null||mc.level==null)throw new IllegalArgumentException("当前未进入世界");
             if(opening!=null||pending!=null||PlayerExtendedClient.busy())throw new IllegalArgumentException("上一笔编辑尚未收到回执，请稍后切换玩家");
+            var selector=value.getAsJsonObject();
+            if(selector.size()==1&&selector.has("vault_id")){
+                var page=dev.rinorsi.editor.registry.VaultChannel.openPlayerPreset(StackCodec.string(selector,"vault_id"));var world=page.world();
+                if(presetPage==null&&binding!=null)closeTarget(binding.slot());
+                if(screen!=owner){show(world);presetPage=page;}else{presetPage=page;binding=WorldPageTarget.Binding.opened(world);owner.driver().patch("world",world);}
+                queued=null;queuedPos=null;PlayerExtendedClient.resetViews();return;
+            }
             if(!ClientPlatform.get().canSend(EditorPackets.Request.TYPE))throw new IllegalArgumentException("服务器未安装物品工坊，无法读取或修改世界目标");
             beginOpen(WorldPageTarget.playerSlot(value.getAsJsonObject(),mc.level.dimension().identifier().toString()),owner);
-        }catch(RuntimeException e){message(e.getMessage());}
+        }catch(RuntimeException e){message("无法打开玩家数据："+e.getMessage());}
     }
     private static void closeTarget(JsonObject target){if(Minecraft.getInstance().getConnection()!=null){var close=request("close","world-close-"+UUID.randomUUID());close.add("slot",target);send(close);}}
     public static boolean receive(JsonObject result) {
@@ -132,8 +145,8 @@ public final class WorldEditorClient {
             if (!result.get("status").getAsString().equals("opened")) { message(result.get("reason").getAsString()); return true; }
             var world=result.getAsJsonObject("world");
             if(owner!=null){
-                if(screen!=owner){closeTarget(world.getAsJsonObject("slot"));return true;}
-                binding=WorldPageTarget.Binding.opened(world);pending=null;queued=null;queuedPos=null;PlayerExtendedClient.resetViews();
+                if(screen!=owner){if(Minecraft.getInstance().gui.screen()==owner)show(world);else closeTarget(world.getAsJsonObject("slot"));return true;}
+                presetPage=null;binding=WorldPageTarget.Binding.opened(world);pending=null;queued=null;queuedPos=null;PlayerExtendedClient.resetViews();
                 owner.driver().patch("world",world);
             }else show(world);
             return true;
@@ -150,16 +163,16 @@ public final class WorldEditorClient {
         return true;
     }
     private static void show(JsonObject world) {
+        presetPage=null;
         binding=WorldPageTarget.Binding.opened(world);
         var data = new JsonObject(); data.add("world", world); data.add("prefs", EditorPrefs.read());
         screen = EditorPageHost.open("cadeditor:ui/index.html", data); var owner = screen;
         PlayerExtendedClient.attach(owner);
         owner.driver().onMessage("apply", value -> Minecraft.getInstance().execute(() -> apply(owner, value, false)));
         owner.driver().onMessage("undo", value -> Minecraft.getInstance().execute(() -> apply(owner, value, true)));
-        owner.driver().onMessage("open_world",value->Minecraft.getInstance().schedule(()->openFromPage(owner,value)));
         owner.driver().onClose(() -> {
             if (screen != owner) return;
-            try{if(binding!=null)closeTarget(binding.slot());}finally{screen=null;binding=null;pending=null;}
+            try{if(binding!=null&&presetPage==null)closeTarget(binding.slot());}finally{screen=null;binding=null;presetPage=null;pending=null;}
         });
     }
     private static void apply(OrielScreen owner, JsonElement value, boolean undo) {
@@ -169,8 +182,9 @@ public final class WorldEditorClient {
             if (pending != null||opening!=null) throw new IllegalArgumentException("上一笔世界编辑或目标切换尚未收到回执");
             if(binding==null)throw new IllegalArgumentException("世界编辑会话已关闭");
             var request=binding.bind(edit,undo);
-            pending = id;reserved=true;deadline = System.nanoTime() + 10_000_000_000L;send(request);
-        } catch (RuntimeException e) {if(reserved&&id.equals(pending))pending=null;reject(id, "invalid_request",e.getMessage()); }
+            pending = id;reserved=true;deadline = System.nanoTime() + 10_000_000_000L;
+            if(presetPage!=null)receive(presetPage.apply(request));else send(request);
+        } catch (RuntimeException e) {if(reserved&&id.equals(pending))pending=null;reject(id,e instanceof EditorSessions.Failure f?f.code:e instanceof dev.rinorsi.editor.vault.VaultStore.Failure f?f.code:"invalid_request","玩家或世界数据保存失败："+e.getMessage()); }
     }
     private static JsonObject request(String op, String id) { var r = new JsonObject(); r.addProperty("op",op); r.addProperty("requestId",id); return r; }
     private static void send(JsonObject request) { ClientPlatform.get().send(new EditorPackets.Request(dev.rinorsi.editor.world.WorldWire.encode(request))); }

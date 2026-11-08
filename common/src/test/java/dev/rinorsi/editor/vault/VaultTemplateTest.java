@@ -61,6 +61,7 @@ public final class VaultTemplateTest {
             var list=request("list");list.addProperty("kind","all");list.addProperty("sort","item");check(store.execute(list,validator).get("total").getAsInt()==4,"mixed list/search/sort");
         }
         backupChecks(dir,playerWorld,playerTemplate,validator);
+        templateUpdateChecks(dir,playerTemplate,validator);
         try(var store=new VaultStore(dir.resolve("warm.json"),1,"test",null,System::currentTimeMillis)) {
             for(int i=0;i<12;i++){var save=request("save");save.addProperty("kind","block");save.add("world",world);store.execute(save,validator);}
             store.invalidateRows();check(!store.warm(validator,8),"first tick respects prewarm budget");check(store.warm(validator,8),"next tick completes template prewarm");
@@ -70,6 +71,20 @@ public final class VaultTemplateTest {
         var oldFile=dir.resolve("old.json");var legacy=new JsonObject();legacy.addProperty("id",UUID.randomUUID().toString());legacy.addProperty("name","legacy");legacy.add("tags",new JsonArray());legacy.addProperty("note","");legacy.addProperty("created",0);legacy.addProperty("updated",0);legacy.addProperty("mcDataVersion",1);legacy.addProperty("modVersion","old");legacy.add("stack",wire);var root=new JsonObject();root.addProperty("version",1);var entries=new JsonArray();entries.add(legacy);root.add("entries",entries);Files.writeString(oldFile,root.toString());
         try(var store=new VaultStore(oldFile,1,"test",null,System::currentTimeMillis)){check(ItemStack.matches(typed,StackCodec.decode(store.stack(legacy.get("id").getAsString()),access)),"v1 no-kind item remains exact");}
         System.out.println("VaultTemplateTest: "+checks+" checks passed; fixtures="+dir);
+    }
+    private static void templateUpdateChecks(Path dir,JsonObject template,VaultStore.Validator validator)throws Exception {
+        try(var store=new VaultStore(dir.resolve("template-updates.json"),1,"test",null,System::currentTimeMillis)){
+            var save=request("save");save.addProperty("kind","player_preset");save.addProperty("name","UpdateFixture");save.addProperty("note","keep note");save.add("tags",JsonParser.parseString("['tag']"));save.add("template",template);
+            String id=store.execute(save,validator).getAsJsonObject("entry").get("id").getAsString();var before=store.playerPreset(id);
+            var edit=request("update");edit.addProperty("id",id);edit.add("template",template.deepCopy());edit.getAsJsonObject("template").getAsJsonObject("sections").addProperty("game_mode","creative");
+            reject("target_changed",()->store.execute(edit,validator));edit.add("expectedTemplateRevision",before.get("templateRevision"));var result=store.execute(edit,validator);
+            var after=store.playerPreset(id);check(after.getAsJsonObject("template").getAsJsonObject("sections").get("game_mode").getAsString().equals("creative"),"template update modifies same entry");
+            check(after.get("name").equals(before.get("name"))&&after.get("tags").equals(before.get("tags"))&&after.get("note").equals(before.get("note")),"template update preserves name tags note");check(result.get("templateRevision").equals(after.get("templateRevision")),"template update returns current content revision");reject("target_changed",()->store.execute(edit,validator));
+            edit.add("expectedTemplateRevision",after.get("templateRevision"));edit.getAsJsonObject("template").getAsJsonObject("sections").addProperty("game_mode","missing");reject("BAD_REQUEST",()->store.execute(edit,validator));check(store.playerPreset(id).equals(after),"invalid template changes no entry");
+            var oversized=JsonParser.parseString("{sections:{attributes:[{id:'minecraft:max_health',base:20,modifiers:[]}]}}").getAsJsonObject();var modifier=JsonParser.parseString("{id:'probe:big',amount:0,operation:'add_value'}").getAsJsonObject();modifier.addProperty("id","probe:"+"a".repeat(70000));oversized.getAsJsonObject("sections").getAsJsonArray("attributes").get(0).getAsJsonObject().getAsJsonArray("modifiers").add(modifier);edit.add("template",oversized);
+            reject("ENTRY_TOO_LARGE",()->store.execute(edit,validator));check(store.playerPreset(id).equals(after),"overquota template keeps original entry intact");
+            check(store.flushNow(),"updated template flush");
+        }
     }
     private static void backupChecks(Path dir,JsonObject world,JsonObject template,VaultStore.Validator validator)throws Exception {
         var evidence=new JsonArray();int[] validations={0};VaultStore.Validator counted=s->{validations[0]++;return validator.validate(s);};

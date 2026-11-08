@@ -22,7 +22,7 @@ VaultStore 的 update 增加可选 template 与必需的 expectedTemplateRevisio
 
 也接受 template 代替 world。方块 template 为 `{block:"minecraft:chest",block_state:{facing:"north",type:"single",waterlogged:"false"},snbt:"{id:...}"}`；完整 typed SNBT 删除顶层 x/y/z，不保存位置或会话。玩家 template 为 `{sections:{effects:[],game_mode:"survival"}}`：inventory/equipment/ender 各为 `{slots:[{slot,stack}]}`，stack 保留完整 component_snbt、空槽为 `{empty:true}`；attributes 为原 player.attributes 数组，effects 为 player.active_effects 数组，game_mode 为 player.playerGameType 字符串。不保存玩家身份、位置、配方、成就或统计。
 
-两类 save 总是新增 UUID，duplicate:false；同名自动加 ` (2)`、` (3)`，不覆盖、不按内容去重。duplicate/import 同样给新增条目分配不冲突名称，import 同 UUID 仍拒绝。旧 item/entity 去重与读取不变。轻量行含 kind、summary（方块注册 ID/状态字段数/NBT字段数，或分区及槽位数），get/export 完整行含 template。update 仅改元数据。大模板用 upload 暂存 `{world,sections?}` 或 `{template}`，save 携带 kind/uploadToken。原配额不变。
+两类 save 总是新增 UUID，duplicate:false；同名自动加 ` (2)`、` (3)`，不覆盖、不按内容去重。duplicate/import 同样给新增条目分配不冲突名称，import 同 UUID 仍拒绝。旧 item/entity 去重与读取不变。轻量行含 kind、summary（方块注册 ID/状态字段数/NBT字段数，或分区及槽位数），get/export 完整行含 template。update 默认仅改元数据；player_preset 的 template + expectedTemplateRevision 更新见本文完整编辑页契约。大模板用 upload 暂存 `{world,sections?}` 或 `{template}`，save 携带 kind/uploadToken。原配额不变。
 
 套用步骤：
 

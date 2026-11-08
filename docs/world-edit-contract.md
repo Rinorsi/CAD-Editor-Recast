@@ -21,7 +21,7 @@
 
 ## 沿用网络包和 envelope
 
-### 页面内切换在线玩家（2026-11-09）
+### 页面内切换在线／离线玩家与本机预设（2026-11-09）
 
 补充：完整玩家编辑页支持三种来源。open_world 接受 {self:true}、{uuid}、{uuid,offline:true}、{vault_id:'保险库条目UUID'}，互斥。离线网络 slot 为 {kind:'entity',player:'offline',uuid,dim,token?}；预设 slot 为 {kind:'entity',player:'preset',uuid:条目UUID,vault_id,dim,token}，只在客户端本机处理，模板不上传服务器。所有来源的 world.views.player 与在线玩家同形，使用原有 apply 的 entity.player 规范化字段，不能以 snbt 替代完整编辑页。
 
@@ -29,13 +29,13 @@ world.player 统一提供 self/name/uuid；离线追加 offline:true；预设追
 
 离线 open/apply 需要实时游戏管理员权限，目标必须不在线且不是单人房主；用隔离 ServerPlayer 加载，复用 PlayerWorldEdit.prepare 和三方合并。写入沿用最新文件指纹校验、备份 5 份与 ATOMIC_MOVE；未知/未修改 NBT 字段保留。canUndo:false；undo 返回 undo_unavailable。上线竞争返回 player_online，文件写入竞争返回 target_changed，均不落盘。saved 返回同形新 world，不写连接中的玩家对象。
 
-预设编辑使用当前客户端世界的注册表/Codec和未注册的临时 Player，不需要在线编辑目标，也不写玩家存档。只修改选中的本机保险库条目；元数据保留，模板内容冲突/删除/超配额/校验失败拒绝，旧页面草稿保留。canUndo:false。saved 表示本机内存更新，world.vault.persisted/readOnly/storageError 与保险库既有持久化语义相同；关闭页面仍触发 flush。切换成功后旧远端会话关闭，切换失败不关闭旧目标。
+预设编辑使用当前客户端世界的注册表/Codec和未注册的临时 Player，不需要在线编辑目标，也不写玩家存档。只修改选中的本机保险库条目；元数据保留，模板内容冲突/删除/超配额/校验失败拒绝，旧页面草稿保留。canUndo:false。saved 表示本机内存更新，world.vault.persisted/readOnly/storageError 与保险库既有持久化语义相同；关闭页面仍触发 flush。切换成功后旧远端会话关闭，切换失败不关闭旧目标。普通物品页/独立保险库也接入 open_world：成功后创建世界编辑宿主页；已处于世界编辑页则复用原 screen 并 patch world。主菜单未进入世界时提示 UNAVAILABLE/当前未进入世界。
 
 已打开世界编辑页可发 oriel.send('open_world', {uuid:'目标玩家UUID'})，或 {self:true} 返回自己；二者互斥，不接受页面提供 dim/slot。宿主使用客户端当前维度构造 {kind:'entity',player:'online',uuid,dim} 或 {kind:'entity',player:'self',dim}，沿用现有网络 open、权限和交互距离检查，不需要准星。
 
 仅 opened 成功后在当前 screen patch 'world'（不新开 OrielScreen），页面可用 weSaved(world) 整体换页；宿主同时切换规范化 slot/token/revision，清除旧扩展视图基线。apply/undo 只能使用新目标的 slot，旧目标或旧 token 即使 UUID 相同也拒绝；revision 始终由宿主绑定。切换期间禁止 apply/undo/玩家扩展请求；已有写回或扩展请求尚未完成时，先提示等待，不发送切换请求。页面负责在主动导航前处理自己的未保存草稿。
 
-离线、距离、权限或格式拒绝通过现有 message(...) 提示，不 patch world，不修改原页面/宿主基线。服务端只有每位请求者一份世界会话，成功 open 自然替换旧会话，失败保留；不在请求前 close 旧目标。页面关闭仍发送当前规范化 slot 的 close；若切换回执晚于关页/超时，宿主按回执 slot 关闭新会话，不重开页面，也不覆盖后来已打开的会话。
+在线目标已离线、距离、权限或格式拒绝通过现有 message(...) 提示，不 patch world，不修改原页面/宿主基线。服务端只有每位请求者一份世界会话，成功 open 自然替换旧会话，失败保留；不在请求前 close 旧目标。页面关闭仍发送当前规范化 slot 的 close；若切换回执晚于关页/超时，宿主按回执 slot 关闭新会话，不重开页面，也不覆盖后来已打开的会话。
 
 定向验证（2026-11-09）：Fabric/NeoForge × 26.1/26.2/26.3 compileJava + playerWorldEditTest 全部通过，每目标 47 项；日志 logs/player-extended/open-world-matrix.log。纯 JVM 覆盖 UUID/self 选择器、非法/混合字段、宿主 slot/revision 同步绑定、旧目标与同 UUID 旧 token 拒绝、undo、数据副本隔离、服务端会话替换与旧 close 不误关新会话。
 

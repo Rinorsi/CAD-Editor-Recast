@@ -257,6 +257,12 @@ public final class VaultStore implements AutoCloseable {
     return object(e, "stack").deepCopy();
   }
 
+  /** Native host only: no page transport size cap, still bounded by the entry quota. */
+  public synchronized JsonObject playerPreset(String id) {
+    var e=require(id);if(!kind(e).equals("player_preset"))throw fail("wrong_kind","该条目不是玩家预设");
+    var out=e.deepCopy();out.addProperty("templateRevision",PlayerPresetHash.template(object(e,"template")));return out;
+  }
+
   private JsonObject envelope(Collection<JsonObject> values) {
     JsonObject out = new JsonObject();
     out.addProperty("version", 3);
@@ -952,6 +958,12 @@ public final class VaultStore implements AutoCloseable {
       }
       case "update" -> {
         JsonObject e = require(text(request, "id", "", 36)).deepCopy();
+        if(request.has("template")) {
+          if(!kind(e).equals("player_preset"))throw fail("wrong_kind","仅玩家预设支持模板编辑");
+          if(!PlayerPresetHash.template(object(e,"template")).equals(text(request,"expectedTemplateRevision","",64)))throw fail("target_changed","预设内容已变化，请重新打开并比较草稿");
+          e.add("template",PlayerPresetValidation.validate(object(request,"template"),validator));
+          out.addProperty("templateRevision",PlayerPresetHash.template(object(e,"template")));
+        }
         if (request.has("name")) {
           String n = text(request, "name", "", 256).strip();
           if (n.isEmpty()) throw fail("BAD_REQUEST", "名称不能为空");
