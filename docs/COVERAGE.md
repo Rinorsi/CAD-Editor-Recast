@@ -75,8 +75,8 @@ component_schema来源只说明独立JVM核验的宿主Codec结构；full不代�
 | `minecraft:equippable` | 可装备 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:glider` | 滑翔 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:provides_banner_patterns` | 提供旗帜图案 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
-| `minecraft:provides_trim_material` | 提供纹饰材料 | 通用表单 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
-| `minecraft:trim` | 盔甲纹饰 | 专用卡片 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:provides_trim_material` | 提供纹饰材料 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:trim` | 盔甲纹饰 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:bees` | 蜜蜂 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:block_entity_data` | 方块实体数据 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:block_state` | 方块状态 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |

@@ -56,6 +56,7 @@ public final class ComponentSchema {
             root.json.addProperty("constraint_source", "int_storage_domain_boundary_probed_json_narrowing_allowed");
             root.json.addProperty("storage_boundary_probes_ok", safeParse(codec, new JsonPrimitive(Integer.MIN_VALUE), inspector.ops) && safeParse(codec, new JsonPrimitive(Integer.MAX_VALUE), inspector.ops));
         }
+        if (codec == net.minecraft.core.component.DataComponents.TRIM.codec() || codec == net.minecraft.core.component.DataComponents.PROVIDES_TRIM_MATERIAL.codec()) annotateCandidates(root);
         if (codec == net.minecraft.core.component.DataComponents.POTION_CONTENTS.codec()) annotateColor(root);
         // Observation matrix, not inferred limits: absence of a counterexample proves no new bound.
         var inputProbes = new JsonArray();
@@ -116,6 +117,19 @@ public final class ComponentSchema {
             entry.addProperty("editable_reason", "schema_wire_budget_exceeded_use_component_validate");
         }
         return new Derived(id.toString(), root, entry);
+    }
+    private static void annotateCandidates(Node node) {
+        if (node.json.has("registry")) {
+            String registry = node.json.get("registry").getAsString();
+            node.json.addProperty("candidate_source", "runtime_registry");
+            node.json.addProperty("candidate_route", registry);
+            node.json.addProperty("allow_manual_id", true);
+            if (node.json.get("kind").getAsString().equals("holder_set")) node.json.addProperty("tag_candidate_route", "tags:" + registry);
+        }
+        node.fields.values().forEach(ComponentSchema::annotateCandidates);
+        if (node.element != null) annotateCandidates(node.element);
+        if (node.key != null) annotateCandidates(node.key);
+        node.alternatives.forEach(ComponentSchema::annotateCandidates);
     }
     private static void annotateColor(Node root) {
         Node color = root.fields.get("custom_color");
@@ -201,7 +215,7 @@ public final class ComponentSchema {
                 n.json.addProperty("shape_notes", "ComponentSerialization.CODEC: recursive contents dispatch (text/translate/score/selector/keybind/nbt), extra siblings and Style including click_event/hover_event; validate via component_validate");
                 return n;
             }
-            if (outer == net.minecraft.util.ExtraCodecs.RESOURCE_PATH_CODEC) {
+            if (outer == net.minecraft.util.ExtraCodecs.RESOURCE_PATH_CODEC || outer == net.minecraft.world.item.equipment.trim.MaterialAssetGroup.AssetInfo.CODEC) {
                 n.type("resource_path"); n.json.addProperty("constraint_notes", "ExtraCodecs.RESOURCE_PATH_CODEC validates the Identifier path grammar"); return n;
             }
             if (outer == Identifier.CODEC || base == Identifier.CODEC) {

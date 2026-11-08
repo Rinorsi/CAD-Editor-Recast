@@ -35,6 +35,13 @@ coverage:full 仅表示导出的字段形状没有未知节点，不代表跨组
 
 RGB 是显示语义：potion_contents.custom_color 真实字段使用 Codec.INT，format:rgb 不意味着只接受 0..16777215；ExtraCodecs RGB/ARGB 还可接收浮点通道列表。map_id/map_color 验证 int 存储域两端；JsonOps 截断/缩窄会接受域外 JSON 数，不能把存储域解释为严格拒绝规则。
 
+## P3-5 复杂组件字段约定
+
+候选节点的 `candidate_source:runtime_registry`、`candidate_route` 指向现有 `registry_request` 名称，客户端按当前世界 generation 查询；`allow_manual_id:true` 要求选择器保留手动 ID 输入。`holder_set` 另有 `tag_candidate_route:tags:<registry>`，标签值提交时加 `#`。不把候选列表内嵌进组件行，也不从快照生成游戏数据。
+
+- `trim`：对象，必填 `material`（holder，`minecraft:trim_material`）与 `pattern`（holder，`minecraft:trim_pattern`）；均允许实时动态注册表 ID 或 Codec 内联对象。材料内联含必填 `asset_name:resource_path`、`description:text_component`，`override_armor_assets` 为装备资产 ID 到资源路径的映射（默认 `{}`）。图案内联字段按导出的 fields 渲染。示例 `{"material":"minecraft:quartz","pattern":"minecraft:sentry"}` 仅用于说明语法，候选必须实时查询。
+- `provides_trim_material`：与上述 `material` 相同的 holder，示例 `"minecraft:quartz"`；内联资源路径使用官方 `MaterialAssetGroup.AssetInfo.CODEC`，不再误标为未知字符串约束。两项无通用组件默认值，必填字段不能填 JSON null；可省略字段以 `optional/default/default_absent` 为准。
+
 ## ranges_for_ui
 
 每个条目含数值字段列表；[完整机器汇总与前端差异](component-schema-ui-ranges-26.1.2.json) 按组件 ID 索引。
@@ -49,7 +56,7 @@ path 使用 $、.field、[]、{value}。min/max/default 的 null 表示没有已
 |---|---:|---:|---:|---:|
 | 旧快照 | 12 | 32 | 12 | 56 |
 | 同一旧范围更新后 | 52 | 4 | 0 | 56 |
-| 当前全部持久组件 | 101 | 6 | 0 | 107 |
+| 当前全部持久组件 | 103 | 4 | 0 | 107 |
 
 ## 全集结构覆盖与剩余未知
 
@@ -131,7 +138,7 @@ path 使用 $、.field、[]、{value}。min/max/default 的 null 表示没有已
 | minecraft:potion_duration_scale | full | — |
 | minecraft:profile | partial | $.properties: outer_mapping_or_cross_field_constraint |
 | minecraft:provides_banner_patterns | full | — |
-| minecraft:provides_trim_material | partial | $.asset_name: string_mapping_constraints_not_exported; $.override_armor_assets{value}: string_mapping_constraints_not_exported |
+| minecraft:provides_trim_material | full | — |
 | minecraft:rabbit/variant | full | — |
 | minecraft:rarity | full | — |
 | minecraft:recipes | full | — |
@@ -146,7 +153,7 @@ path 使用 $、.field、[]、{value}。min/max/default 的 null 表示没有已
 | minecraft:tool | full | — |
 | minecraft:tooltip_display | full | — |
 | minecraft:tooltip_style | full | — |
-| minecraft:trim | partial | $.material.asset_name: string_mapping_constraints_not_exported; $.material.override_armor_assets{value}: string_mapping_constraints_not_exported |
+| minecraft:trim | full | — |
 | minecraft:tropical_fish/base_color | full | — |
 | minecraft:tropical_fish/pattern | full | — |
 | minecraft:tropical_fish/pattern_color | full | — |

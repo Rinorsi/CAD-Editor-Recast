@@ -13531,6 +13531,9 @@
           "kind": "holder",
           "registry": "minecraft:trim_material",
           "allow_inline": true,
+          "candidate_source": "runtime_registry",
+          "candidate_route": "minecraft:trim_material",
+          "allow_manual_id": true,
           "alternatives": [
             {
               "path": "$",
@@ -13541,24 +13544,9 @@
                 {
                   "path": "$.asset_name",
                   "optional": false,
-                  "type": "string",
-                  "kind": "string",
-                  "length_probes": [
-                    {
-                      "length": 0,
-                      "ok": true
-                    },
-                    {
-                      "length": 1,
-                      "ok": true
-                    },
-                    {
-                      "length": 32768,
-                      "ok": true
-                    }
-                  ],
-                  "unknown": true,
-                  "reason": "string_mapping_constraints_not_exported",
+                  "type": "resource_path",
+                  "kind": "resource_path",
+                  "constraint_notes": "ExtraCodecs.RESOURCE_PATH_CODEC validates the Identifier path grammar",
                   "name": "asset_name"
                 },
                 {
@@ -13572,31 +13560,19 @@
                   "element": {
                     "path": "$.override_armor_assets{value}",
                     "optional": false,
-                    "type": "string",
-                    "kind": "string",
-                    "length_probes": [
-                      {
-                        "length": 0,
-                        "ok": true
-                      },
-                      {
-                        "length": 1,
-                        "ok": true
-                      },
-                      {
-                        "length": 32768,
-                        "ok": true
-                      }
-                    ],
-                    "unknown": true,
-                    "reason": "string_mapping_constraints_not_exported"
+                    "type": "resource_path",
+                    "kind": "resource_path",
+                    "constraint_notes": "ExtraCodecs.RESOURCE_PATH_CODEC validates the Identifier path grammar"
                   },
                   "key": {
                     "path": "$.override_armor_assets{key}",
                     "optional": false,
                     "type": "registry",
                     "kind": "registry",
-                    "registry": "minecraft:equipment_asset"
+                    "registry": "minecraft:equipment_asset",
+                    "candidate_source": "runtime_registry",
+                    "candidate_route": "minecraft:equipment_asset",
+                    "allow_manual_id": true
                   }
                 },
                 {
@@ -13617,21 +13593,9 @@
           ]
         }
       ],
-      "coverage": "partial",
-      "unknown_paths": [
-        "$.asset_name",
-        "$.override_armor_assets{value}"
-      ],
-      "unknown_details": [
-        {
-          "path": "$.asset_name",
-          "reason": "string_mapping_constraints_not_exported"
-        },
-        {
-          "path": "$.override_armor_assets{value}",
-          "reason": "string_mapping_constraints_not_exported"
-        }
-      ],
+      "coverage": "full",
+      "unknown_paths": [],
+      "unknown_details": [],
       "editable": "structured",
       "editable_reason": "derived_shape_with_whole_codec_validation",
       "validator_route": "component_validate",
@@ -15448,6 +15412,9 @@
               "registry": "minecraft:trim_material",
               "allow_inline": true,
               "name": "material",
+              "candidate_source": "runtime_registry",
+              "candidate_route": "minecraft:trim_material",
+              "allow_manual_id": true,
               "alternatives": [
                 {
                   "path": "$.material",
@@ -15458,24 +15425,9 @@
                     {
                       "path": "$.material.asset_name",
                       "optional": false,
-                      "type": "string",
-                      "kind": "string",
-                      "length_probes": [
-                        {
-                          "length": 0,
-                          "ok": true
-                        },
-                        {
-                          "length": 1,
-                          "ok": true
-                        },
-                        {
-                          "length": 32768,
-                          "ok": true
-                        }
-                      ],
-                      "unknown": true,
-                      "reason": "string_mapping_constraints_not_exported",
+                      "type": "resource_path",
+                      "kind": "resource_path",
+                      "constraint_notes": "ExtraCodecs.RESOURCE_PATH_CODEC validates the Identifier path grammar",
                       "name": "asset_name"
                     },
                     {
@@ -15489,31 +15441,19 @@
                       "element": {
                         "path": "$.material.override_armor_assets{value}",
                         "optional": false,
-                        "type": "string",
-                        "kind": "string",
-                        "length_probes": [
-                          {
-                            "length": 0,
-                            "ok": true
-                          },
-                          {
-                            "length": 1,
-                            "ok": true
-                          },
-                          {
-                            "length": 32768,
-                            "ok": true
-                          }
-                        ],
-                        "unknown": true,
-                        "reason": "string_mapping_constraints_not_exported"
+                        "type": "resource_path",
+                        "kind": "resource_path",
+                        "constraint_notes": "ExtraCodecs.RESOURCE_PATH_CODEC validates the Identifier path grammar"
                       },
                       "key": {
                         "path": "$.material.override_armor_assets{key}",
                         "optional": false,
                         "type": "registry",
                         "kind": "registry",
-                        "registry": "minecraft:equipment_asset"
+                        "registry": "minecraft:equipment_asset",
+                        "candidate_source": "runtime_registry",
+                        "candidate_route": "minecraft:equipment_asset",
+                        "allow_manual_id": true
                       }
                     },
                     {
@@ -15541,6 +15481,9 @@
               "registry": "minecraft:trim_pattern",
               "allow_inline": true,
               "name": "pattern",
+              "candidate_source": "runtime_registry",
+              "candidate_route": "minecraft:trim_pattern",
+              "allow_manual_id": true,
               "alternatives": [
                 {
                   "path": "$.pattern",
@@ -15582,21 +15525,9 @@
           ]
         }
       ],
-      "coverage": "partial",
-      "unknown_paths": [
-        "$.material.asset_name",
-        "$.material.override_armor_assets{value}"
-      ],
-      "unknown_details": [
-        {
-          "path": "$.material.asset_name",
-          "reason": "string_mapping_constraints_not_exported"
-        },
-        {
-          "path": "$.material.override_armor_assets{value}",
-          "reason": "string_mapping_constraints_not_exported"
-        }
-      ],
+      "coverage": "full",
+      "unknown_paths": [],
+      "unknown_details": [],
       "editable": "structured",
       "editable_reason": "derived_shape_with_whole_codec_validation",
       "validator_route": "component_validate",
