@@ -126,6 +126,14 @@ function vaultEntitySummary(e) {
   if (s.effectCount) bits.push(s.effectCount + ' 个效果');
   return bits.join(' · ');
 }
+/* 方块 / 玩家预设条目：摘要键见 docs/vault-contract.md（block、blockStateFields、nbtFields；sections、counts） */
+function vaultOtherIcon(e) { var s = e.summary || {}; return e.kind === 'block' ? itemIcon(shortId(s.block || 'minecraft:stone'), 16) : uiIcon('user', 16); }
+function vaultOtherSummary(e) {
+  var s = e.summary || {}, bits = [];
+  if (e.kind === 'block') { if (s.block) bits.push(nameOf('block', shortId(s.block)) || humanId(s.block)); if (s.blockStateFields) bits.push(s.blockStateFields + ' 项状态'); if (s.nbtFields) bits.push(s.nbtFields + ' 项数据'); }
+  else (s.sections || []).forEach(function (k) { var n = s.counts && s.counts[k]; bits.push((Labels.vaultSection[k] || k) + (n ? ' ' + n : '')); });
+  return bits.join(' · ');
+}
 function vaultSummary(e) {
   var s = e.summary || {}, bits = [];
   if (s.enchantCount) bits.push('附魔 ' + s.enchantCount);
@@ -142,8 +150,8 @@ function vaultErr(r) { toast((r && r.reason) || (r && r.error) || '保险库操�
 /* opts.pick(stack, entry)：作为选择器打开时，点「使用」把栈交出去；不传就是普通的保险库窗口 */
 function openVault(opts) {
   opts = opts || {};
-  var V = { query: '', tags: [], sort: 'recent', rows: [], total: 0, next: null, token: 0, open: -1, kind: opts.pickEntity || opts.kind === 'entity' ? 'entity' : 'item' };
-  var fixedKind = !!(opts.pick || opts.pickEntity);   // 作为选择器打开时只看对应的一类
+  var V = { query: '', tags: [], sort: 'recent', rows: [], total: 0, next: null, token: 0, open: -1, kind: opts.pickEntity || opts.kind === 'entity' ? 'entity' : (opts.kind === 'block' || opts.kind === 'player_preset' ? opts.kind : 'item') };
+  var fixedKind = !!(opts.pick || opts.pickEntity || opts.pickEntry);   // 作为选择器打开时只看对应的一类
   var q = h('input', { class: 'k-input', type: 'text', placeholder: '搜索名称、标签、物品（支持拼音）', spellcheck: 'false' });
   var sbox = kSearchBox(q, function (v) { V.query = v; refresh(); });
   var tagBar = h('div', { class: 'k-chips vt-tags' }), list, stat = h('span', { class: 'k-sub vt-stat' }), warn = h('div', { class: 'vt-warn' });
@@ -180,8 +188,8 @@ function openVault(opts) {
       }
       clear(errBox);
       /* 两类条目分开：生物页只留 kind==='entity' 的，物品页不要 entity。旧版本的游戏不认 kind，会把物品原样返回——那时生物页给出说明，不把物品当生物 */
-      var got = r.entries || [], mine = got.filter(function (x) { return V.kind === 'entity' ? x.kind === 'entity' : x.kind !== 'entity'; });
-      if (V.kind === 'entity' && got.length && !got.some(function (x) { return x.kind !== undefined; })) { mine = []; V.legacy = true; } else V.legacy = false;
+      var got = r.entries || [], mine = got.filter(function (x) { return V.kind === 'item' ? (x.kind === undefined || x.kind === 'item') : x.kind === V.kind; });
+      if (V.kind !== 'item' && got.length && !got.some(function (x) { return x.kind !== undefined; })) { mine = []; V.legacy = true; } else V.legacy = false;
       r = Object.assign({}, r, { entries: mine, total: V.legacy ? 0 : r.total });
       V.rows = append ? V.rows.concat(r.entries) : r.entries; V.total = r.total; V.next = r.done ? null : r.nextOffset;
       more.style.display = V.next === null ? 'none' : '';
@@ -193,12 +201,14 @@ function openVault(opts) {
   function vaultErrRow(r) { clear(errBox); errBox.appendChild(xEmpty((r.reason || r.error || '读取保险库失败') + (r.error === 'NOT_READY' ? '（文件还在加载，稍后再点一下搜索）' : ''))); }
   function takeAnd(e, fn) { Vault.take(e.id, function (r) { if (!r.ok) { vaultErr(r); return; } fn(r.stack, r.entry); }); }
   var xl = xList({
-    items: function () { return V.rows; }, empty: V.legacy ? '这个版本的游戏还不支持把生物存进保险库，请更新模组后重启游戏。' : V.query || V.tags.length ? '没有匹配的条目' : V.kind === 'entity' ? '还没有存过生物。在刷怪蛋、刷怪笼或世界里的生物编辑页点“存入保险库”。' : '保险库还是空的。编辑好物品后点上面的“存入当前物品”。',
+    items: function () { return V.rows; }, empty: V.legacy ? '这个版本的游戏还不支持把生物存进保险库，请更新模组后重启游戏。' : V.query || V.tags.length ? '没有匹配的条目' : V.kind === 'block' ? '还没有存过方块。对准一个方块打开它的编辑页，点“存入保险库”。' : V.kind === 'player_preset' ? '还没有存过玩家预设。打开玩家编辑页，点“存入保险库”。' : V.kind === 'entity' ? '还没有存过生物。在刷怪蛋、刷怪笼或世界里的生物编辑页点“存入保险库”。' : '保险库还是空的。编辑好物品后点上面的“存入当前物品”。',
     row: function (e, i) {
       var tagEls = (e.tags || []).map(function (t) { return h('span', { class: 'k-tag dim', text: t }); });
       var acts = h('div', { class: 'x-rt' }, []);
       var isEnt = V.kind === 'entity';
-      if (isEnt && opts.pickEntity) acts.appendChild(kBtn('使用', function () { Vault.takeEntity(e.id, function (r) { if (!r.ok) { vaultErr(r); return; } closeModal(); opts.pickEntity(r.snbt, r.entry); }); }, { cls: 'pri', icon: 'check' }));
+      var isOther = V.kind === 'block' || V.kind === 'player_preset';
+      if (isOther) { if (opts.pickEntry) acts.appendChild(kBtn('套用', function () { opts.pickEntry(e); }, { cls: 'pri', icon: 'check' })); }
+      else if (isEnt && opts.pickEntity) acts.appendChild(kBtn('使用', function () { Vault.takeEntity(e.id, function (r) { if (!r.ok) { vaultErr(r); return; } closeModal(); opts.pickEntity(r.snbt, r.entry); }); }, { cls: 'pri', icon: 'check' }));
       else if (isEnt) { /* 生物条目在窗口里只管理；取出在各处“选择生物”里 */ }
       else if (opts.pick) acts.appendChild(kBtn('使用', function () { takeAnd(e, function (stack, entry) { closeModal(); opts.pick(stack, entry); }); }, { cls: 'pri', icon: 'check' }));
       else {
@@ -213,7 +223,7 @@ function openVault(opts) {
         acts.appendChild(giveBtn);
       }
       var entI = isEnt ? vaultEntInfo(e) : null;
-      return { chevron: true, icon: isEnt ? entityIcon(entI.id || 'minecraft:pig', 16) : itemIcon(e.item && e.item.id || 'minecraft:stick', 16), title: e.name, sub: isEnt ? (vaultEntitySummary(e) || entI.id) : (vaultSummary(e) || (e.item && e.item.id) || ''), tip: (e.note || '') + (e.translatedName ? '\n' + e.translatedName : ''), right: acts, meta: vaultMeta(e, isEnt),
+      return { chevron: true, icon: isOther ? vaultOtherIcon(e) : isEnt ? entityIcon(entI.id || 'minecraft:pig', 16) : itemIcon(e.item && e.item.id || 'minecraft:stick', 16), title: e.name, sub: isOther ? vaultOtherSummary(e) : isEnt ? (vaultEntitySummary(e) || entI.id) : (vaultSummary(e) || (e.item && e.item.id) || ''), tip: (e.note || '') + (e.translatedName ? '\n' + e.translatedName : ''), right: acts, meta: vaultMeta(e, isEnt),
         body: function () {
           var nm = vInput(e.name || '', function (v) { if (!v.trim()) return; Vault.call('update', { id: e.id, name: v }, function (r) { if (r.ok) { e.name = v; paintState(); } else vaultErr(r); }); }, '名称');
           var tg = vInput((e.tags || []).join('，'), function (v) { var t = splitTags(v).slice(0, 8); Vault.call('update', { id: e.id, tags: t }, function (r) { if (r.ok) { e.tags = t; refresh();  xl.draw(); } else vaultErr(r); }); }, '标签，用逗号隔开（最多 8 个）');
@@ -237,7 +247,7 @@ function openVault(opts) {
   if (!(Store.docs && Store.docs.length) || V.kind !== 'item' || opts.pickEntity) saveBtn.style.display = 'none';
   var impBtn = kBtn('导入…', function () { openVaultImport(refresh); }, { icon: 'upload' });
   var expBtn = kBtn('导出全部', function () { vaultExport(); }, { icon: 'download' });
-  var kindSeg = fixedKind ? null : kSeg([{ v: 'item', label: '物品', icon: 'backpack' }, { v: 'entity', label: '生物', icon: 'paw' }], V.kind, function (v) { V.kind = v; V.tags = []; saveBtn.style.display = v === 'item' && Store.docs && Store.docs.length ? '' : 'none'; q.setAttribute('placeholder', v === 'entity' ? '搜索名称、标签、生物（支持拼音）' : '搜索名称、标签、物品（支持拼音）'); refresh(); }).el;
+  var kindSeg = fixedKind ? null : kSeg([{ v: 'item', label: '物品', icon: 'backpack' }, { v: 'entity', label: '生物', icon: 'paw' }, { v: 'block', label: '方块', icon: 'cube' }, { v: 'player_preset', label: '玩家预设', icon: 'user' }], V.kind, function (v) { V.kind = v; V.tags = []; saveBtn.style.display = v === 'item' && Store.docs && Store.docs.length ? '' : 'none'; q.setAttribute('placeholder', v === 'entity' ? '搜索名称、标签、生物（支持拼音）' : v === 'block' ? '搜索名称、标签、方块' : v === 'player_preset' ? '搜索名称、标签' : '搜索名称、标签、物品（支持拼音）'); refresh(); }).el;
   var top = h('div', { class: 'vt-top' }, [sbox.el]);
   var body = [top, h('div', { class: 'vt-bar' }, [kindSeg, sort.el, saveBtn, h('div', { class: 'grow' }), stat]), tagBar, warn, undoEl, list, more];
   var win = modalShell('保险库', opts.pickEntity ? '选一只生物' : opts.pick ? '选一件放进去' : '存在这台电脑上，所有存档和服务器通用', body, [impBtn, expBtn, h('div', { class: 'grow' }), kBtn('完成', closeModal, { cls: 'pri' })], 'wide vtwin');

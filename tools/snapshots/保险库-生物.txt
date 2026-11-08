@@ -22,6 +22,12 @@ div
             div.k-segi.on
               img.o-ico [src="oriel:textures/icons/paw.png" style="height:16px;width:16px"]
               "生物"
+            div.k-segi
+              img.o-ico [src="oriel:textures/icons/cube.png" style="height:16px;width:16px"]
+              "方块"
+            div.k-segi
+              img.o-ico [src="oriel:textures/icons/user.png" style="height:16px;width:16px"]
+              "玩家预设"
           div.k-seg
             div.k-segi.on
               "最近"

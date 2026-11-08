@@ -37,6 +37,13 @@ div
     div.ed-tags
       span.k-tag "方块"
       span.dim.k-tag "sign"
+    div.ed-vault
+      div.k-btn [title="把这个方块的状态和数据存起来，之后可以套用到同类方块"]
+        img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
+        span "存入保险库"
+      div.k-btn [title="选一份已存的内容套用到这里；套用前会先显示将被覆盖的内容"]
+        img.o-ico [src="oriel:textures/icons/download.png" style="height:16px;width:16px"]
+        span "从保险库套用…"
     div.ed-stagehead
       span.fold-arrow
         img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
@@ -194,6 +201,13 @@ div
     div.ed-tags
       span.k-tag "方块"
       span.dim.k-tag "sign"
+    div.ed-vault
+      div.k-btn [title="把这个方块的状态和数据存起来，之后可以套用到同类方块"]
+        img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
+        span "存入保险库"
+      div.k-btn [title="选一份已存的内容套用到这里；套用前会先显示将被覆盖的内容"]
+        img.o-ico [src="oriel:textures/icons/download.png" style="height:16px;width:16px"]
+        span "从保险库套用…"
     div.ed-stagehead
       span.fold-arrow
         img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
@@ -317,6 +331,13 @@ div
     div.ed-tags
       span.k-tag "方块"
       span.dim.k-tag "sign"
+    div.ed-vault
+      div.k-btn [title="把这个方块的状态和数据存起来，之后可以套用到同类方块"]
+        img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
+        span "存入保险库"
+      div.k-btn [title="选一份已存的内容套用到这里；套用前会先显示将被覆盖的内容"]
+        img.o-ico [src="oriel:textures/icons/download.png" style="height:16px;width:16px"]
+        span "从保险库套用…"
     div.ed-stagehead
       span.fold-arrow
         img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]

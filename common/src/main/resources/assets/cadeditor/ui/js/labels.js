@@ -53,3 +53,6 @@ Labels.blockVal = { true: '是', false: '否', north: '北', south: '南', east:
 Labels.enchTag = { curse: '诅咒', treasure: '宝藏', tradeable: '村民交易', non_treasure: '非宝藏', in_enchanting_table: '附魔台', on_random_loot: '随机战利品', on_traded_equipment: '交易装备', on_mob_spawn_equipment: '生物装备', double_trade_price: '交易加价', smelts_loot: '熔炼战利品' };
 /* 稀有度的短名：由 Labels.rarity 派生，不再单独手写一份（原 pages.js 的 RARITY_ZH） */
 Labels.rarityZh = {}; (function () { for (var i = 0; i < Labels.rarity.length; i++) Labels.rarityZh[Labels.rarity[i].v] = Labels.rarity[i].label; })();
+
+/* 保险库里「玩家预设」的分区名（和后端 sections 的取值一一对应） */
+Labels.vaultSection = { inventory: '背包', equipment: '装备', ender: '末影箱', attributes: '属性', effects: '状态效果', game_mode: '游戏模式', block: '方块状态与数据' };
