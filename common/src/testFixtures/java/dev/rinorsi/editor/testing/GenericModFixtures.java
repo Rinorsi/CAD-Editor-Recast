@@ -37,14 +37,17 @@ public final class GenericModFixtures {
     }
     @SuppressWarnings("unchecked")
     private static BlockEntityType<Machine> blockType() {
-        // The same actual two-argument constructor is private in 26.1, public in 26.2+.
-        // Reflection is confined to fixtures; no production access widening.
-        try {
+        // 26.2 exposes the constructor and its supplier; only the 26.1 fixture needs private access.
+        //? if >=26.2 {
+        return new BlockEntityType<>(Machine::new,Set.of(BLOCK));
+        //?} else {
+        /*try {
             var ctor=Arrays.stream(BlockEntityType.class.getDeclaredConstructors()).filter(c->c.getParameterCount()==2).findFirst().orElseThrow();
             var factory=ctor.getParameterTypes()[0];
             Object supplier=Proxy.newProxyInstance(factory.getClassLoader(),new Class<?>[]{factory},(p,m,a)->new Machine((BlockPos)a[0],(BlockState)a[1]));
             ctor.setAccessible(true);return (BlockEntityType<Machine>)ctor.newInstance(supplier,Set.of(BLOCK));
         }catch(ReflectiveOperationException e){throw new IllegalStateException(e);}
+        *///?}
     }
     private static <T,V extends T> V register(Registry<T> registry,String id,Supplier<V> create) throws Exception {
         var frozen=MappedRegistry.class.getDeclaredField("frozen");frozen.setAccessible(true);boolean wasFrozen=frozen.getBoolean(registry);

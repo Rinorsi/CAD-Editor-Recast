@@ -84,7 +84,7 @@ stonecutter.properties.toml   每个游戏版本的 MC / 加载器 / API / Oriel
 | 29 | NeoForge | 模组构造时立即初始化 HUD | 此时 Minecraft singleton 尚未建立；通过 ClientStartedEvent / Fabric CLIENT_STARTED 平台回调初始化 HUD |
 | 30 | 26.2 / NeoForge | GLFW 创建时隐藏即足够 | 26.2 Minecraft 构造器额外 glfwShowWindow；测试 mixin 拦截它。NeoForge 独立测试 config/fml.toml 关闭 earlyWindowControl，避免加载器先打开窗口；26.3 另拦截 EarlyWindowHandoff 的显示调用 |
 | 31 | 多模块构建 | 初始化脚本默认只作用于主构建 | Gradle -I 同时作用于 included build-logic；六个探针 init 脚本用 findProject 检查目标存在后才配置，避免初始化失败 |
-| 32 | 26.1 / 26.2+ | BlockEntityType 的二参数构造器及 supplier 在 26.1 非公开，26.2 起公开 | 仅隔离 testFixtures 通过实际构造器反射注册测试方块实体；生产统一调用注册表中类型的 create/isValid，无新版本分支、无 access widening |
+| 32 | 26.1 / 26.2+ | BlockEntityType 的二参数构造器及 supplier 在 26.1 非公开，26.2 起公开 | testFixtures 用 Stonecutter：26.1 反射访问实际私有构造器，26.2+ 调用公开构造器；生产统一使用注册表中类型的 create/isValid，无运行时版本分派、无 access widening |
 
 ## 实施约定
 
@@ -141,3 +141,9 @@ VaultTemplates 的 BlockStateEdit、WorldNbt、Inventory.EQUIPMENT_SLOT_MAPPING 
 - 独立 Fabric 26.1.2 专用服探针 42 项通过：真实方块/在线玩家的存入→关闭库→重开→套用、原生 undo、同 BE 不同 block ID 拒绝、撤权拒绝及不改目标。server-receipt.json / server.log。使用脱离网络登录的 ServerPlayer 与 RecordingListener，不是客户端视觉验收。
 - merge-templates.log / merge-entity.log / merge-legacy.log：新旧离线合并、数值/SNBT 保真、同名编号、幂等与非法输入安全拒绝通过。
 - 不启动用户客户端，不执行全量实机验收；前端确认摘要和实际客户端画面由最终统一验收覆盖。
+
+### P4-4 通用注册表 schema
+
+生产 GenericSchema / GenericSchemaChannel 与世界编辑接入全部在 common，无加载器 import、无运行时版本识别。实体/方块实体 create、save/load、NBT Tag 类型、RegistryLookup 和实际 Codec 在三个版本共用；常量重命名沿用已有 Stonecutter replacements。测试构造器可见性差异见上表 #32，26.1 私有访问只存在于隔离测试分支；26.2+ 使用公开 API。26.3 BlockState 的字符串/对象表示由实际 Codec 识别，不复制序列化字段表。
+
+六目标 compileJava / codecVerificationClasses / 完整 codecVerification 通过：`daily/2026-11-08/logs/p4-generic/matrix-reviewed.log`；GenericSchemaTest 每目标 97 项，新增测试接入 check/codecVerification。公共构造器分支补充矩阵见 `fixture-stonecutter.log`。真实注册的测试组件、方块实体、实体覆盖读/改/保存/新实例回读与拒绝/回滚；按版本捕获的完整证据在同目录 `fabric-26.1-evidence.json` 至 `neoforge-26.3-evidence.json`。本轮不启动客户端/专服，不代替最终整合包和页面实机验收。

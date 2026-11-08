@@ -49,3 +49,15 @@ fields 使用现有 block views 的对象映射格式。每个字段包含：
 复合、列表和数组目前只导出类型描述，统一在数据页编辑。继承了专用容器/命名等视图的模组类型不会额外叠加通用表单，其附加私有字段仍用数据页。加载器省略默认键、转换类型或无法在 detached 副本回读关系数据（例如带乘客的实体）时，严格保真校验会拒绝通用写入；不把这种正规化冒充无损保存。已有骑乘等专用操作保持原行为。
 
 目录请求为本地客户端只读任务，最多同时排队 8 个任务，全局每 tick 一个工厂。关闭页面、换世界、标签/资源代际变化取消旧任务；候选按真实字符串查注册表，避免每次构造 schema 全量复制所有注册表。预算为协作式，不能抢占任意模组自身耗时工厂。
+
+## 验证（2026-11-08）
+
+实现提交 `f05c89f`；契约先行提交 `aecc404`。`GenericModFixtures` 只存在于 testFixtures，注册实际自定义 Block/BlockEntityType/EntityType/DataComponentType；生产不解冻注册表、不加载测试类。
+
+- Fabric / NeoForge × 26.1.2 / 26.2 / 26.3 六目标生产编译、codecVerificationClasses 与完整 codecVerification 通过。完整日志：`../Oriel-UI-Workspace/daily/2026-11-08/logs/p4-generic/matrix-reviewed.log`。未重写组件 schema 快照。
+- `GenericSchemaTest` 每目标 97 项：实际注册表候选导出、默认工厂、字段类型/歧义/预算、组件新增/修改/移除和实际 Codec 拒绝、方块实体/实体的打开/草稿/三方合并/保存预览/新实例回读、完整 typed NBT 保留、冲突/只读/类型变化/注入拒绝。另模拟实际目标 loader 丢字段，验证拒绝成功回执并完整回滚，然后验证正常目标写入与回读。
+- `fabric-26.1-evidence.json` 至 `neoforge-26.3-evidence.json` 位于同一日志目录；schema 和默认 SNBT 都由实际运行捕获。每版本目录分别遍历 158 / 159 / 162 个实体类型（含测试实体）、50 个方块实体类型（含测试类型），每条均分页保留，无静态类型白名单。
+- 目录明确 unavailable：`minecraft:player` 没有普通默认工厂；`minecraft:piston` 的无世界初值缺少移动方向，无法序列化。这是模板目录的限制，不冒充玩家专用编辑器或实际已初始化活塞的能力。每条原因随证据保存。
+- `fixture-stonecutter.log` 为测试构造器可见性分支的六目标补充编译/探针；`source-review.txt`、`diff-check.log`、`source-manifest.json` 保存源代码审阅、格式检查及源码哈希。
+
+以上使用真实 Minecraft Codec、工厂、加载器和隔离 Level，不启动游戏客户端或专用服务器。NeoForge 的独立 JVM 按仓库约定使用同版本 common NeoForm 原生运行时，真实 FML 运行和浏览器消息投递仍由最终统一实机验收覆盖。测试实体没有历史 DataFixer，启动日志中的 `No data fixer registered for generic_probe:agent` 不表示本次验证失败，也不宣称测试实体支持旧存档迁移。
