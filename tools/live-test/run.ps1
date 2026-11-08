@@ -1,4 +1,4 @@
-param([ValidateSet('new','old')][string]$InputEngine='new', [string]$EvidenceRoot)
+param([ValidateSet('new','old')][string]$InputEngine='new', [string]$EvidenceRoot, [ValidateSet('smoke','pages')][string]$Driver='smoke')
 $ErrorActionPreference='Stop'
 $Root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 Set-Location $Root
@@ -25,10 +25,20 @@ New-Item -ItemType Directory $Run | Out-Null
 $Lock=Join-Path $Root 'logs/.gradle.lock.d'
 $Held=$false;$Process=$null;$Node=$null
 $Owner=[Guid]::NewGuid().ToString('N')
+$OwnerFile=Join-Path $Lock ('live-test-'+$Owner+'.owner')
+function Release-OwnedLock {
+    if($script:Held -and (Test-Path -LiteralPath $OwnerFile) -and (Get-Content -LiteralPath $OwnerFile -Raw) -eq $Owner){
+        Remove-Item -LiteralPath $OwnerFile
+        [IO.Directory]::Delete($Lock,$false)
+        $script:Held=$false
+    }
+}
 try {
     $Deadline=(Get-Date).AddMinutes(20)
     while(!$Held){try{New-Item -ItemType Directory $Lock -ErrorAction Stop | Out-Null;$Held=$true}catch{if((Get-Date)-gt $Deadline){throw};Start-Sleep 5}}
+    [IO.File]::WriteAllText($OwnerFile,$Owner)
     Assert-NoGame
+    if(Get-NetTCPConnection -LocalPort 25599 -State Listen -ErrorAction SilentlyContinue){throw 'MCTest port became occupied; refusing to launch'}
     $Info=[Diagnostics.ProcessStartInfo]::new()
     $Info.FileName=$env:ComSpec
     $Info.Arguments='/d /s /c ""'+(Join-Path $Root 'gradlew.bat')+'" --console=plain --max-workers=2 -PliveTestOwner='+$Owner+' "-PliveTestEvidence='+$Out+'" -PliveTestInput='+$InputEngine+' -I tools/live-test/launch.init.gradle :fabric:26.1.2:runClient"'
@@ -38,13 +48,13 @@ try {
     $Stdout=$Process.StandardOutput.ReadToEndAsync();$Stderr=$Process.StandardError.ReadToEndAsync()
     [IO.File]::WriteAllText(($Out+'/owned-gradle-launcher-pid.txt'),[string]$Process.Id)
     $NodeInfo=[Diagnostics.ProcessStartInfo]::new()
-    $NodeInfo.FileName=(Get-Command node).Source;$NodeInfo.Arguments='tools/live-test/smoke.mjs';$NodeInfo.WorkingDirectory=$Root
+    $NodeInfo.FileName=(Get-Command node).Source;$NodeInfo.Arguments='tools/live-test/'+$Driver+'.mjs';$NodeInfo.WorkingDirectory=$Root
     $NodeInfo.UseShellExecute=$false;$NodeInfo.CreateNoWindow=$true
     $NodeInfo.Environment['EDITOR_LIVE_TEST_EVIDENCE']=$Out
     $Node=[Diagnostics.Process]::Start($NodeInfo)
     $Deadline=(Get-Date).AddMinutes(15)
     while(!$Process.WaitForExit(1000)){
-        if($Held -and (Test-Path ($Out+'/mctest-ready.json'))){Remove-Item -LiteralPath $Lock;$Held=$false;Write-Output 'Released build lock after client readiness'}
+        if($Held -and (Test-Path ($Out+'/mctest-ready.json'))){Release-OwnedLock;Write-Output 'Released build lock after client readiness'}
         if((Get-Date)-gt $Deadline){throw 'Owned client timed out'}
         if($Node.HasExited -and $Node.ExitCode -ne 0){throw 'MCTest smoke failed; see mctest-error.txt'}
     }
@@ -63,5 +73,9 @@ try {
         [IO.File]::WriteAllText(($Out+'/runClient.log'),$Stdout.Result+[Environment]::NewLine+$Stderr.Result)
         $Process.Dispose()
     }
-    if($Held){Remove-Item -LiteralPath $Lock}
+    Release-OwnedLock
+    $Remaining=@(Get-CimInstance Win32_Process | Where-Object { $_.Name -in @('java.exe','javaw.exe') -and $_.CommandLine -like ('*-Deditor.liveTest.owner='+$Owner+'*') })
+    $Listeners=@(Get-NetTCPConnection -LocalPort 25599 -State Listen -ErrorAction SilentlyContinue)
+    @{ownedRemaining=@($Remaining | ForEach-Object { $_.ProcessId });port25599=@($Listeners | ForEach-Object { $_.OwningProcess });ownedLockReleased=!(Test-Path -LiteralPath $OwnerFile)} | ConvertTo-Json | Set-Content ($Out+'/cleanup.json')
+    if($Remaining.Count){throw 'Owned client still running after cleanup'}
 }

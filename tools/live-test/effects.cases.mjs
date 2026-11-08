@@ -2,6 +2,8 @@
 // All edits are visible UI controls. No page controller functions or bridge sends.
 export const controls = {
   advanced: { selector: '[title="高级：原始组件、SNBT、命令"]' },
+  topMore: { selector: '#topbar [title="更多"]' },
+  advancedMenu: { selector: '.k-menu .k-mi', text: '高级' },
   itemData: { selector: '.advnav-i', text: '物品数据' },
   fullData: { selector: '.k-chead', contains: '带类型的 SNBT' },
   snbt: { selector: 'textarea.ed-snbt' },
@@ -70,7 +72,7 @@ export const cases = [
 ];
 export function referencedControls(c) {
   if (c.skip) return [];
-  const keys = c.edit.kind === 'stack' ? ['advanced', 'itemData', 'snbt', 'stage', 'apply', 'confirm']
+  const keys = c.edit.kind === 'stack' ? ['advanced', 'topMore', 'advancedMenu', 'itemData', 'snbt', 'stage', 'apply', 'confirm']
     : c.edit.kind === 'world-data' ? ['data', 'snbt', 'apply']
     : c.edit.kind === 'vault' ? ['vault', 'saveItem', 'save', 'give']
     : [...c.edit.fields.map(f => f.control), 'apply'];

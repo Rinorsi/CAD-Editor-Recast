@@ -80,14 +80,37 @@ export class Runner {
     }
     throw new Error('Escape did not return to world');
   }
-  async open() { await this.call('key', { key: 'i' }); await this.call('waitFor', { condition: 'screen:OrielScreen', timeoutTicks: 80 }); }
+  async open() { await this.wait(5); await this.call('keybind', { name: 'key.cadeditor.edit', action: 'tap' }); await this.call('waitFor', { condition: 'screen:OrielScreen', timeoutTicks: 80 }); await this.wait(6); }
+  async ready(locator) {
+    await this.call('hover', { x: 4, y: 4 }); await this.wait(2);
+    let r;
+    for (let i = 0; i < 15; i++) {
+      r = await this.probe.inspect(locator);
+      if (r && !r.error && r.w > 0 && r.h > 0) {
+        if (r.hit && r.x >= 0 && r.y >= 0 && r.x < r.width && r.y < r.height) return r;
+        if (r.y > r.height - 45 || r.y < 80) {
+          await this.call('scroll', { amount: r.y < 80 ? 3 : -3, x: r.width * 0.8, y: r.height * 0.65 });
+        }
+      }
+      await this.wait(2);
+    }
+    throw new Error(`Control did not become clickable: ${JSON.stringify(locator)}; actual=${JSON.stringify(r)}`);
+  }
   async control(key, value, expand = false) {
     return this.step(`${value !== undefined ? 'fill' : expand ? 'expand' : 'click'} ${key}`, async () => {
-      const l = controls[key];
-      if (expand && !(await this.probe.inspect(l)).collapsed) return;
+      let l = controls[key];
+      if (key === 'advanced') {
+        const direct = await this.probe.inspect(l);
+        if (direct && !direct.error && direct.w === 0) {
+          await clickPage(this.mc, this.probe, controls.topMore); await this.wait(6);
+          l = controls.advancedMenu;
+        }
+      }
+      const ready = await this.ready(l);
+      if (expand && !ready.collapsed) return;
       if (value !== undefined) await fillPage(this.mc, this.probe, l, value);
       else await clickPage(this.mc, this.probe, l);
-      await this.wait(2);
+      await this.wait(6);
     });
   }
   async fields(fields) { for (const f of fields) await this.step(`control ${f.control}`, () => this.control(f.control, f.value, f.expand)); }
@@ -98,7 +121,7 @@ export class Runner {
   }
   async prepare(c) {
     await this.close();
-    for (const cmd of ['gamemode creative', 'effect clear @s', 'clear @s', 'kill @e[tag=effects]', 'kill @e[type=item,distance=..16]', 'fill -1 -60 2 1 -58 4 air', 'tp @s 0.5 -60 0.5 0 -80']) await this.command(cmd);
+    for (const cmd of ['gamemode creative', 'effect clear @s', 'clear @s', 'tp @e[tag=effects] 100 -60 100', 'kill @e[tag=effects]', 'kill @e[type=item,distance=..16]', 'fill -1 -60 2 1 -58 4 air', 'tp @s 0.5 -60 0.5 0 -80']) await this.command(cmd);
     await this.call('key', { key: '1' });
     if (c.effect.kind === 'eat') {
       await this.open();
@@ -151,6 +174,9 @@ export class Runner {
       if (e.wear !== undefined) expect((await this.held()).damage, e.wear, 'attack durability');
     } else if (e.kind === 'mine') {
       await this.command('setblock 0 -60 3 stone'); await this.command('tp @s 0.5 -60 0.5 0 20.5'); await this.command('gamemode survival');
+      await this.wait(5);
+      const aiming = await this.call('player');
+      expect(aiming.lookingAt?.pos, { x: 0, y: -60, z: 3 }, 'mining crosshair');
       await this.call('keybind', { name: 'attack', action: 'press' });
       try { await this.call('waitFor', { condition: 'block:0,-60,3=minecraft:air', timeoutTicks: 80 }); }
       finally { await this.call('keybind', { name: 'attack', action: 'release' }); }
@@ -168,10 +194,16 @@ export class Runner {
     } else if (e.kind === 'pickup') {
       await this.command('item replace entity @s hotbar.1 from entity @s hotbar.0');
       await this.command('tp @s 0.5 -60 0.5 0 45');
-      await this.call('key', { key: '2' }); await this.wait(2);
-      await this.call('key', { key: 'q', modifiers: ['ctrl'] }); await this.call('key', { key: '1' });
-      await this.command('tp @s 0.5 -60 0.5 0 0');
-      await this.call('keybind', { name: 'forward', action: 'hold', ticks: 4 }); await this.wait(45);
+      await this.call('selectSlot', { slot: 1 }); await this.wait(2);
+      expect((await this.call('player')).selectedSlot, 1, 'drop selected slot');
+      // MCTest key modifiers do not keep Ctrl held until vanilla processes the drop.
+      // Drop all 16 through actual drop-key taps instead of copying another stack.
+      for (let i = 0; i < 16; i++) { await this.call('keybind', { name: 'drop', action: 'tap' }); await this.wait(1); }
+      await this.call('selectSlot', { slot: 0 });
+      const dropped = (await this.call('entities', { type: 'minecraft:item', radius: 8 })).entities;
+      if (!dropped.length) throw new Error('No dropped pearl entity to collect');
+      const at = dropped[0].pos;
+      await this.command(`tp @s ${at.x} -60 ${at.z} 0 0`); await this.wait(45);
       const p = await this.call('player'), stacks = p.inventory.filter(i => i.item === 'minecraft:ender_pearl');
       expect(stacks.length, 1, 'merged stack count'); expect(stacks[0]?.count, e.count, 'picked-up stack size');
     } else if (e.kind === 'place-container') {

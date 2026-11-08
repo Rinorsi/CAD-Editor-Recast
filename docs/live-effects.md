@@ -25,9 +25,9 @@ pwsh -NoProfile -File tools/live-test/effects.ps1 -Only attack-damage
 - 保险库：持钻石按 **I** →点保险库→「存入当前物品」→「存入」→「给我」→`player.inventory` 总数由 1 变 2。该流程本来没有「应用修改」按钮，测试按它的实际玩家流程执行。
 - 攻击、挖掘、使用、拾取均用 MCTest 的按键映射驱动；场景位置用玩家可用的 `/tp` 命令。没有使用直接伤害/编辑数据的测试接口替代效果。
 - 外观数据检查：用玩家可执行的 `/item replace ... from ...` 把改好的物品原样复制到证据箱，再由 `block(source:server)` 读取 SNBT；命令不写预期组件值。解析器比较相应组件的值，避免把命令回显误当成功。
-- `PageProbe` 只生成 DOM 选择、文本/输入值、矩形和遮挡查询。没有对页面状态赋值、滚动、focus、click 或调用业务函数的接口。只读拿到坐标后用 MCTest `click`，并验证输入框实际文字。零匹配、多匹配、遮挡、禁用或超出视口全部 FAIL，**不会回退到内部函数**。目前没有自动滚轮寻址，屏幕外控件同样 FAIL。
+- `PageProbe` 只生成 DOM 选择、文本/输入值和矩形查询，宿主补充只读原生命中检查。没有对页面状态赋值、滚动、focus、click 或调用业务函数的接口。只读拿到坐标后用 MCTest `click`，并验证输入框实际文字。零匹配、多匹配、遮挡、禁用或超出视口全部 FAIL，**不会回退到内部函数**。页面导航和滚轮寻址使用真实 MCTest 输入。
 
-`LivePageProbe.java` 沿用已有 autotest 文件桥，不需要扩展；仍只在测试 probe jar。旧 smoke 含内部函数调用，不能当作本套的输入真实性证据。本套没有修改旧 smoke 的语义。
+`LivePageProbe.java` uses the existing test-only file bridge. Control inspection additionally uses the host's read-only `DocumentDriver.elementAt` paint hit test: Oriel 0.11.0 does not expose `document.elementFromPoint` to JavaScript. It resolves the exact DOM match index and verifies the native hit belongs to that control; the subsequent input is still an actual MCTest click. It never sends input from the probe. The driver moves the in-game pointer away first to dismiss stale tooltips, navigates the topbar overflow menu, waits for animations and scrolls controls into view with MCTest. The old smoke contains controller-level shortcuts and is not evidence of input authenticity.
 
 ## 快速档用例
 

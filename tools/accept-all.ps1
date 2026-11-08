@@ -4,7 +4,7 @@ param(
     [switch]$SkipGame,
     [switch]$FailFast,
     [switch]$WhatIf,
-    [ValidateSet('ui')][string]$Only
+    [ValidateSet('ui','java','world','accept','smoke','effects','pages')][string]$Only
 )
 $ErrorActionPreference = 'Stop'
 if ($Quick -and $Full) { throw '-Quick and -Full are mutually exclusive' }
@@ -19,7 +19,8 @@ $Stages = @(
     @{id='world'; seconds=1200; game=$true},
     @{id='accept'; seconds=2400; game=$true},
     @{id='smoke'; seconds=2400; game=$true},
-    @{id='effects'; seconds=1800; game=$true}
+    @{id='effects'; seconds=1800; game=$true},
+    @{id='pages'; seconds=1800; game=$true}
 )
 function Get-UiScripts {
     Get-ChildItem (Join-Path $Root 'tools/ui-*.cjs') | Sort-Object @{Expression={ if ($_.BaseName -eq 'ui-lint') { 2 } elseif ($_.BaseName -eq 'ui-snapshot') { 1 } else { 0 } }}, Name
@@ -32,20 +33,21 @@ function Get-Commands([string]$Id) {
         }
         java {
             'gradlew.bat --console=plain --max-workers=2 -PmcTest=false :fabric:26.1.2:build'
-            'gradlew.bat --console=plain --max-workers=2 -PmcTest=false :fabric:26.1.2:check --rerun-tasks :fabric:26.1.2:exportAutotestClasspath'
+            'gradlew.bat --console=plain --max-workers=2 -PmcTest=false :fabric:26.1.2:check --rerun-tasks :fabric:26.1.2:autotestClasses :fabric:26.1.2:exportAutotestClasspath'
             'Inspect current release jar: gradle.properties version; no test/probe/evidence entries (including nested jars)'
         }
         world { 'pwsh -NoProfile -File tools/live-test/world-gates.ps1 -EvidenceRoot "' + $Out + '/world" -BuildDirectory "' + $Build + '"' }
         accept { 'pwsh -NoProfile -File tools/accept/run.ps1 -EvidenceRoot "' + $Out + '/accept"' }
         smoke { 'pwsh -NoProfile -File tools/live-test/run.ps1 -EvidenceRoot "' + $Out + '/smoke"' }
-        effects { 'pwsh -NoProfile -File tools/live-test/effects.ps1 -Tier ' + $Tier }
+        effects { 'pwsh -NoProfile -File tools/live-test/effects.ps1 -Tier quick -EvidenceRoot "' + $Out + '/effects"' }
+        pages { 'pwsh -NoProfile -File tools/live-test/pages.ps1 -EvidenceRoot "' + $Out + '/pages"' }
     }
 }
 if ($WhatIf) {
     Write-Output ('WHATIF tier=' + $Tier + '; no commands, process checks, locks or reports will be executed/written')
     Write-Output 'Safety: check user Minecraft at start and before each game stage; sticky SKIP all game stages if found. Never kill preexisting Java; reuse silent launchers.'
     foreach ($Stage in $Stages) {
-        $Reason = if ($Only -and $Stage.id -ne $Only) { '-Only ui' } elseif ($Stage.game -and $SkipGame) { '-SkipGame' } elseif ($Stage.id -eq 'accept' -and !$Full) { 'requires -Full' } elseif ($Stage.id -eq 'effects' -and !(Test-Path tools/live-test/effects.ps1)) { 'script not yet provided' }
+        $Reason = if ($Only -and $Stage.id -ne $Only) { '-Only ' + $Only } elseif ($Stage.game -and $SkipGame) { '-SkipGame' } elseif ($Stage.id -eq 'accept' -and !$Full) { 'requires -Full' } elseif ($Stage.id -eq 'effects' -and !(Test-Path tools/live-test/effects.ps1)) { 'script not yet provided' }
         Write-Output ($Stage.id + ' [' + $(if ($Reason) { 'SKIP: ' + $Reason } else { 'RUN' }) + '] timeout=' + $Stage.seconds + 's')
         Get-Commands $Stage.id | ForEach-Object { Write-Output ('  ' + $_) }
     }
@@ -117,7 +119,7 @@ function Invoke-CommandLog([string]$Exe, [string[]]$Arguments, [string]$Log) {
 }
 function Assert-CleanArchive([IO.Compression.ZipArchive]$Archive, [string]$Label) {
     foreach ($Entry in $Archive.Entries) {
-        if ($Entry.FullName -match '(?i)mctest|autotest|livetest|probe|acceptance|evidence|receipt|screenshots|(^|/)(logs|daily|testFixtures|codecVerification)(/|$)|\.(log|args|jsonl|hprof|jfr)$|(^|/)(report\.(json|md)|page-(request|response)\.(json|tmp)|owned-[^/]+|captured-[^/]+)|探针|证据') {
+        if ($Entry.FullName -match '(?i)mctest|autotest|livetest|probe|acceptance|evidence|(^|/)[^/]*receipt[^/]*\.(json|jsonl|md|txt)$|screenshots|(^|/)(logs|daily|testFixtures|codecVerification)(/|$)|\.(log|args|jsonl|hprof|jfr)$|(^|/)(report\.(json|md)|page-(request|response)\.(json|tmp)|owned-[^/]+|captured-[^/]+)|探针|证据') {
             throw ('Forbidden release entry: ' + $Label + '!/' + $Entry.FullName)
         }
         if ($Entry.FullName -match '(?i)\.(json|mf)$') {
@@ -148,7 +150,7 @@ function Invoke-JavaStage([string]$Evidence) {
         }
         [IO.File]::WriteAllText($OwnerFile, $Token)
         foreach ($Task in @('build','check')) {
-            $Tasks = if ($Task -eq 'build') { ':fabric:26.1.2:build' } else { ':fabric:26.1.2:check --rerun-tasks :fabric:26.1.2:exportAutotestClasspath' }
+            $Tasks = if ($Task -eq 'build') { ':fabric:26.1.2:build' } else { ':fabric:26.1.2:check --rerun-tasks :fabric:26.1.2:autotestClasses :fabric:26.1.2:exportAutotestClasspath' }
             Invoke-CommandLog $env:ComSpec @('/d','/s','/c', ('""' + (Join-Path $Root 'gradlew.bat') + '" --console=plain --max-workers=2 -PmcTest=false ' + $Tasks + '"')) (Join-Path $Evidence ($Task + '.log'))
         }
         $VersionLine = Get-Content (Join-Path $Root 'gradle.properties') | Where-Object { $_ -match '^version\s*=' } | Select-Object -First 1
@@ -181,7 +183,7 @@ foreach ($Stage in $Stages) {
     $Status='SKIP'; $Reason=''; $Commands=@(Get-Commands $Stage.id)
     try {
         if ($Stopped) { $Reason='Stopped after previous failure (-FailFast)' }
-        elseif ($Only -and $Stage.id -ne $Only) { $Reason='Not selected (-Only ui)' }
+        elseif ($Only -and $Stage.id -ne $Only) { $Reason='Not selected (-Only ' + $Only + ')' }
         elseif ($Stage.game -and $SkipGame) { $Reason='Disabled by -SkipGame' }
         elseif ($Stage.id -eq 'accept' -and !$Full) { $Reason='Quick tier: hidden acceptance requires -Full' }
         elseif ($Stage.id -eq 'effects' -and !(Test-Path tools/live-test/effects.ps1)) { $Reason='Script not yet provided (脚本尚未提供)' }
@@ -211,7 +213,8 @@ foreach ($Stage in $Stages) {
                     world { Invoke-CommandLog 'pwsh' @('-NoProfile','-File','tools/live-test/world-gates.ps1','-EvidenceRoot',$Evidence,'-BuildDirectory',$Build) (Join-Path $Evidence 'stage.log') }
                     accept { Invoke-CommandLog 'pwsh' @('-NoProfile','-File','tools/accept/run.ps1','-EvidenceRoot',$Evidence) (Join-Path $Evidence 'stage.log') }
                     smoke { Invoke-CommandLog 'pwsh' @('-NoProfile','-File','tools/live-test/run.ps1','-EvidenceRoot',$Evidence) (Join-Path $Evidence 'stage.log') }
-                    effects { Invoke-CommandLog 'pwsh' @('-NoProfile','-File','tools/live-test/effects.ps1','-Tier',$Tier) (Join-Path $Evidence 'stage.log') }
+                    effects { Invoke-CommandLog 'pwsh' @('-NoProfile','-File','tools/live-test/effects.ps1','-Tier','quick','-EvidenceRoot',$Evidence) (Join-Path $Evidence 'stage.log') }
+                    pages { Invoke-CommandLog 'pwsh' @('-NoProfile','-File','tools/live-test/pages.ps1','-EvidenceRoot',$Evidence) (Join-Path $Evidence 'stage.log') }
                 }
                 $Status='PASS'; $Reason='Completed'
             }

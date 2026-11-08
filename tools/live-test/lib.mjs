@@ -1,6 +1,18 @@
 import { appendFileSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 export const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+export async function publishProbe(run, request) {
+  const temporary = join(run, 'page-request.tmp'), destination = join(run, 'page-request.json');
+  writeFileSync(temporary, JSON.stringify(request));
+  const deadline = Date.now() + 2000;
+  for (;;) {
+    try { renameSync(temporary, destination); return; }
+    catch (error) {
+      if (!['EPERM', 'EACCES', 'EBUSY'].includes(error.code) || Date.now() >= deadline) throw error;
+      await delay(10); // Windows may briefly deny replacement while the render thread reads it.
+    }
+  }
+}
 
 // One connection owns its pending requests. A timeout/close never leaves a hanging promise.
 export class MCTest {
@@ -45,9 +57,8 @@ export class PageProbe {
   constructor(run, evidence) { this.run = run; this.evidence = evidence; this.seq = 0; }
   async inspect(locator) {
     const id = `effects-${process.pid}-${++this.seq}`;
-    const js = `(function(){var l=${JSON.stringify(locator)},a=Array.prototype.slice.call(document.querySelectorAll(l.selector));if(l.text)a=a.filter(function(e){return e.textContent.trim()===l.text;});if(l.contains)a=a.filter(function(e){return e.textContent.indexOf(l.contains)>=0;});if(l.label)a=a.filter(function(e){var p=e.closest('.k-xrow');return p&&p.querySelector('.tx .z')&&p.querySelector('.tx .z').textContent.trim()===l.label;});if(l.index!==undefined)a=a.slice(l.index,l.index+1);if(a.length!==1)return {error:'Expected one control',matches:a.length};var e=a[0],r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,t=document.elementFromPoint(x,y);return {x:x,y:y,width:window.innerWidth,height:window.innerHeight,w:r.width,h:r.height,value:e.value,collapsed:!!e.closest('.k-card')&&e.closest('.k-card').classList.contains('collapsed'),disabled:!!e.disabled||e.classList.contains('dim')||e.classList.contains('dis'),hit:!!t&&(t===e||e.contains(t)),text:e.textContent};})()`;
-    writeFileSync(join(this.run, 'page-request.tmp'), JSON.stringify({ id, js }));
-    renameSync(join(this.run, 'page-request.tmp'), join(this.run, 'page-request.json'));
+    const js = `(function(){var l=${JSON.stringify(locator)},a=Array.prototype.slice.call(document.querySelectorAll(l.selector));if(l.text)a=a.filter(function(e){return e.textContent.trim()===l.text;});if(l.contains)a=a.filter(function(e){return e.textContent.indexOf(l.contains)>=0;});if(l.label)a=a.filter(function(e){var p=e.closest('.k-xrow');return p&&p.querySelector('.tx .z')&&p.querySelector('.tx .z').textContent.trim()===l.label;});if(l.index!==undefined)a=a.slice(l.index,l.index+1);if(a.length!==1)return {error:'Expected one control',matches:a.length};var e=a[0],r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,ix=Array.prototype.indexOf.call(document.querySelectorAll(l.selector),e);return {matchIndex:ix,x:x,y:y,width:window.innerWidth,height:window.innerHeight,w:r.width,h:r.height,value:e.value,collapsed:!!e.closest('.k-card')&&e.closest('.k-card').classList.contains('collapsed'),disabled:!!e.disabled||e.classList.contains('dim')||e.classList.contains('dis'),text:e.textContent};})()`;
+    await publishProbe(this.run, { id, js, hitSelector: locator.selector });
     for (let i = 0; i < 100; i++) {
       await delay(50);
       let r;
@@ -63,6 +74,9 @@ export class PageProbe {
   }
 }
 export async function clickPage(mc, probe, locator) {
+  // Move the in-game pointer first so an old tooltip cannot occlude the new target.
+  await mc.call('hover', { x: 4, y: 4 });
+  await delay(80);
   const r = await probe.inspect(locator);
   if (!r || r.error || r.disabled || !r.hit || r.w <= 0 || r.h <= 0 || r.x < 0 || r.y < 0 || r.x >= r.width || r.y >= r.height)
     throw new Error(`Unclickable control ${JSON.stringify(locator)}; actual=${JSON.stringify(r)}`);

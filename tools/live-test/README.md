@@ -4,6 +4,10 @@ P1-0 player-path effects tests are documented in [docs/live-effects.md](../../do
 
 The new effects driver uses only read-only DOM probes followed by actual MCTest clicks and paired per-character key/type input. It does not use the controller-level shortcuts in the older smoke below. Quick currently has 25 component cases plus 7 block/entity/player/vault cases; full lists the remaining 82 components as explicit pending SKIPs. Each run has its own `logs/live-test/effects/<time>/report.md`, step timings, RPC/page receipts and screenshots. This is implemented automation, not a claim of live acceptance or a measured six-minute runtime.
 
+## New-page smoke
+
+`pages.ps1` reuses `run.ps1 -Driver pages`, including its invisible window mixins, user-process/port checks and unique launch token. Both acceptance tiers run it; `-Only pages` reruns it in a fresh evidence directory. It creates one flat creative world and covers 46 requested fixtures plus two ray-selection boundary cases (an item behind a chest and beyond reach). All page opening uses `key.cadeditor.edit`; tab navigation, opposite-half chest clearing and apply use MCTest clicks. The DOM/file probe only reads text, rectangles and native hit-test results. Each target retains PNG, command/player/log receipts and a PASS/FAIL/SKIP row. Variant preview evidence includes `.k-vent` geometry and PNG crop color variation, not an appearance-quality claim.
+
 ## Daily Baseline / 明天开工前的固定动作
 
 From the repository root, run one command before starting work:
@@ -17,13 +21,13 @@ The unified runner writes `logs/accept-all/<timestamp-id>/report.md` and `report
 | Parameter | Behavior |
 | --- | --- |
 | `-Quick` | Default tier; skips the roughly 14-minute hidden 107-component acceptance stage, but still runs world probes, MCTest smoke and quick effects. |
-| `-Full` | Includes hidden acceptance (107 components x 3 rounds and 12 world rounds); effects use `-Tier full`. Mutually exclusive with `-Quick`. |
+| `-Full` | Includes hidden acceptance (107 components x 3 rounds and 12 world rounds); effects use `-Tier quick` (32 executable cases). Both tiers run new-page smoke. Mutually exclusive with `-Quick`. |
 | `-SkipGame` | Skip **all** game-dependent stages, including independent servers. UI and Java still run. |
 | `-FailFast` | Stop after the first failed stage; remaining stages are reported SKIP. |
 | `-WhatIf` | Print planned stages, exact commands, timeouts and output paths only. Does not create reports, acquire locks, inspect processes or launch anything. |
-| `-Only ui` | Run only the Node UI checks, snapshots, lint and UI JS syntax checks; write the usual summary. No Gradle or game launch. |
+| `-Only <stage>` | Run only `ui`, `java`, `world`, `accept`, `smoke`, `effects`, or `pages`; other stages are reported SKIP. Use `-Full -Only accept` for hidden acceptance. |
 
-Order: all `tools/ui-*.cjs` tests, snapshot and lint (plus JS syntax checks); Gradle build and `check --rerun-tasks`; release-jar version/content inspection; independent world servers; full-only hidden acceptance; silent MCTest smoke; `tools/live-test/effects.ps1 -Tier quick|full`. A missing effects driver is SKIP (`script not yet provided`), never a substitute implementation. Effects currently retain their own evidence destination; follow `effects/stage.log` to their receipts. The five legacy `final-*-gate.ps1` build wrappers are covered by the single build/check stage, not repeated five times.
+Order: all `tools/ui-*.cjs` tests, snapshot and lint (plus JS syntax checks); Gradle build and `check --rerun-tasks`; release-jar version/content inspection; independent world servers; full-only hidden acceptance; silent MCTest smoke; `tools/live-test/effects.ps1 -Tier quick`; `tools/live-test/pages.ps1` (read-only DOM probes and real tab/slot clicks). A missing effects driver is SKIP (`script not yet provided`), never a substitute implementation. Effects currently retain their own evidence destination; follow `effects/stage.log` to their receipts. The five legacy `final-*-gate.ps1` build wrappers are covered by the single build/check stage, not repeated five times.
 
 Timeouts per stage: UI 10 minutes, Java 60 minutes (including at most 20 minutes waiting for the lock), world probes 20 minutes, hidden acceptance 40 minutes, MCTest 40 minutes, effects 30 minutes. Timeouts are FAIL. Cleanup is limited to this launch's process descendants; preexisting processes, Cindy (`agent.jar`) and Gradle daemons are never terminated. Java uses atomic directory creation for `logs/.gradle.lock.d`, waits for other holders and deletes only its own ownership marker and empty lock in `finally`. MCTest retains its own atomic lock/readiness-release mechanism; the outer runner does not hold a Gradle lock while invoking game stages.
 

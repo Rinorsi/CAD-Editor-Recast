@@ -61,7 +61,8 @@ try {
   assert.deepEqual(requests.at(-1).params, { x: 320, y: 200 });
   const previous = requests.length;
   await assert.rejects(clickPage(client, { inspect: async () => ({ ...await probe.inspect(), hit: false }) }, { selector: '.occluded' }), /Unclickable control.*occluded/);
-  assert.equal(requests.length, previous, 'unclickable controls must never click/fallback');
+  assert.equal(requests.length, previous + 1, 'unclickable controls may move the pointer but must never click/fallback');
+  assert.equal(requests.at(-1).method, 'hover');
   await typeText(client, 'a:7');
   assert.deepEqual(requests.slice(-6).map(r => [r.method, r.params]), [['key', { key: 'a' }], ['type', { text: 'a' }], ['key', { key: 'semicolon' }], ['type', { text: ':' }], ['key', { key: '7' }], ['type', { text: '7' }]]);
   await assert.rejects(fillPage(client, { inspect: async () => ({ ...await probe.inspect(), value: 'lost-first-character' }) }, { selector: '.input' }, 'abc'), /Input mismatch/);

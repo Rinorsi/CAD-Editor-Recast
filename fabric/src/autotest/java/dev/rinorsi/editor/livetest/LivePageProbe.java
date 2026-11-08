@@ -34,6 +34,25 @@ public final class LivePageProbe implements ClientModInitializer {
                     Object page = ((Optional<?>) Class.forName("dev.oriel.mod.client.OrielAutomation").getMethod("screen").invoke(null)).orElseThrow();
                     Object value = ((Optional<?>) page.getClass().getMethod("eval", String.class).invoke(page, input.get("js").getAsString())).orElseThrow();
                     result.add("value", (com.google.gson.JsonElement) value);
+                    // Oriel's JS DOM has no elementFromPoint. Query the same native paint hit
+                    // test as the input host; this reads geometry only and never sends input.
+                    if (input.has("hitSelector") && result.get("value").isJsonObject()) {
+                        var control = result.getAsJsonObject("value");
+                        if (control.has("matchIndex")) {
+                            var driver = dev.oriel.mod.client.DocumentDriver.of(mc.screen);
+                            if (driver == null || driver.document() == null) throw new IllegalStateException("Page unavailable");
+                            var matches = driver.document().querySelectorAll(input.get("hitSelector").getAsString());
+                            int index = control.get("matchIndex").getAsInt();
+                            var element = index >= 0 && index < matches.size() ? matches.get(index) : null;
+                            var hit = driver.elementAt(control.get("x").getAsDouble(), control.get("y").getAsDouble());
+                            control.addProperty("hit", element != null && hit != null && element.contains(hit));
+                            if (hit != null) {
+                                control.addProperty("hitTag", hit.tagName());
+                                control.addProperty("hitClass", hit.getAttribute("class"));
+                                control.addProperty("hitText", hit.textContent());
+                            }
+                        }
+                    }
                 }
                 result.addProperty("visible", GLFW.glfwGetWindowAttrib(mc.getWindow().handle(), GLFW.GLFW_VISIBLE));
                 result.addProperty("focused", GLFW.glfwGetWindowAttrib(mc.getWindow().handle(), GLFW.GLFW_FOCUSED));

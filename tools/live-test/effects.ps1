@@ -1,13 +1,14 @@
 param(
     [ValidateSet('quick','full')][string]$Tier='quick',
     [string]$Only,
-    [switch]$DryRun
+    [switch]$DryRun,
+    [string]$EvidenceRoot
 )
 $ErrorActionPreference='Stop'
 $Root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 Set-Location $Root
 $Stamp=(Get-Date).ToString('yyyy-MM-ddTHH-mm-ss-fff')+'-'+$PID
-$Out=Join-Path $Root ('logs/live-test/effects/'+$Stamp)
+$Out=if($EvidenceRoot){[IO.Path]::GetFullPath($EvidenceRoot)}else{Join-Path $Root ('logs/live-test/effects/'+$Stamp)}
 New-Item -ItemType Directory -Force $Out | Out-Null
 $Driver=Join-Path $PSScriptRoot 'effects.mjs'
 $DriverArgs=@($Driver,'--tier',$Tier,'--out',$Out)
@@ -42,6 +43,14 @@ New-Item -ItemType Directory $Run | Out-Null
 $Lock=Join-Path $Root 'logs/.gradle.lock.d'
 $Held=$false;$Process=$null;$Node=$null;$Stdout=$null;$Stderr=$null
 $Owner=[Guid]::NewGuid().ToString('N')
+$OwnerFile=Join-Path $Lock ('effects-'+$Owner+'.owner')
+function Release-OwnedLock {
+    if($script:Held -and (Test-Path -LiteralPath $OwnerFile) -and (Get-Content -LiteralPath $OwnerFile -Raw) -eq $Owner){
+        Remove-Item -LiteralPath $OwnerFile
+        [IO.Directory]::Delete($Lock,$false)
+        $script:Held=$false
+    }
+}
 $Failed=$false
 try {
     $Deadline=(Get-Date).AddMinutes(20)
@@ -49,6 +58,7 @@ try {
         try{New-Item -ItemType Directory $Lock -ErrorAction Stop | Out-Null;$Held=$true}
         catch{if((Get-Date)-gt $Deadline){throw 'Timed out waiting for Gradle lock'};Write-Output 'Waiting for Gradle lock';Start-Sleep 5}
     }
+    [IO.File]::WriteAllText($OwnerFile,$Owner)
     if((User-Games).Count){Skip-Run 'User Minecraft started while waiting for Gradle lock';exit 2}
     if(Get-NetTCPConnection -LocalPort 25599 -State Listen -ErrorAction SilentlyContinue){Skip-Run 'MCTest port became occupied';exit 2}
     $Info=[Diagnostics.ProcessStartInfo]::new()
@@ -66,7 +76,7 @@ try {
     $Node=[Diagnostics.Process]::Start($NodeInfo)
     $Deadline=(Get-Date).AddMinutes($(if($Tier -eq 'quick'){10}else{25}))
     while(!$Process.WaitForExit(1000)){
-        if($Held -and (Test-Path ($Out+'/mctest-ready.json'))){Remove-Item -LiteralPath $Lock;$Held=$false;Write-Output 'Released build lock after client readiness'}
+        if($Held -and (Test-Path ($Out+'/mctest-ready.json'))){Release-OwnedLock;Write-Output 'Released build lock after client readiness'}
         if((Get-Date)-gt $Deadline){throw 'Owned effects client timed out'}
         if($Node.HasExited -and $Node.ExitCode -ne 0){throw 'Effects driver failed; see report.md'}
     }
@@ -89,7 +99,11 @@ try {
         [IO.File]::WriteAllText(($Out+'/runClient.log'),$Stdout.Result+[Environment]::NewLine+$Stderr.Result)
         $Process.Dispose()
     }
-    if($Held){Remove-Item -LiteralPath $Lock}
+    Release-OwnedLock
+    $Remaining=@(Get-CimInstance Win32_Process | Where-Object { $_.Name -in @('java.exe','javaw.exe') -and $_.CommandLine -like ('*-Deditor.liveTest.owner='+$Owner+'*') })
+    $Listeners=@(Get-NetTCPConnection -LocalPort 25599 -State Listen -ErrorAction SilentlyContinue)
+    @{ownedRemaining=@($Remaining | ForEach-Object { $_.ProcessId });port25599=@($Listeners | ForEach-Object { $_.OwningProcess });ownedLockReleased=!(Test-Path -LiteralPath $OwnerFile)} | ConvertTo-Json | Set-Content ($Out+'/cleanup.json')
+    if($Remaining.Count){$Failed=$true}
 }
 Write-Output ('Report: '+$Out+'/report.md')
 if($Failed){exit 1}
