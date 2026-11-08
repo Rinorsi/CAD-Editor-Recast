@@ -89,6 +89,21 @@ int 范围为 Java signed int。存储范围由实时 save 的 Tag 类型决定�
 {"entity":{"creeper":{"Fuse":50,"ExplosionRadius":5}}}
 ```
 
+## P2-4 大小与末影人
+
+已有通用 schema 变种 `slime/size`（也适用于 MagmaCube）和 `phantom/size`：由实时 setter 在整数端点获取合法范围，再逐值真实 load/save 验证。UI 应使用 options 的保存值和 min/max，不把视觉大小与原始 Size（可能有偏移）混同；不新增重复视图。相关属性仍按 attributes 支持情况编辑，不能绕过 loader 重算属性。
+
+新增 `world.views.enderman` / `entity_schema.views.enderman` 仅 EnderMan，写入 `entity.enderman` 的 `carriedBlockState`。类型为 BlockState.CODEC `{Name,Properties?}` 或 null；null 清空携带物。候选/属性范围来自实时 block 注册表及 StateDefinition，同 falling_block；原版过滤空气，显式写空气因不被保留而拒绝，应发送 null。未知字段、无效状态/属性、错误实体类型拒绝。不是根据旧版可搬运方块目录硬编码限制。
+
+视图示例：
+```json
+{"enderman":{"carriedBlockState":{"Name":"minecraft:oak_log","Properties":{"axis":"z"}}}}
+```
+Edits 示例：
+```json
+{"entity":{"enderman":{"carriedBlockState":null}}}
+```
+
 ## 展示实体字段
 
 |entity.display字段|格式与校验|

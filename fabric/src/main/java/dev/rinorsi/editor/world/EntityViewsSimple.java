@@ -9,6 +9,7 @@ import net.minecraft.nbt.*;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.item.*;
 import net.minecraft.world.entity.monster.Creeper;
+import net.minecraft.world.entity.monster.EnderMan;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -28,6 +29,7 @@ final class EntityViewsSimple {
         }
         if(entity instanceof PrimedTnt)sections.put("tnt",primitives(saved,"fuse"));
         if(entity instanceof Creeper)sections.put("creeper",primitives(saved,"Fuse","ExplosionRadius"));
+        if(entity instanceof EnderMan)sections.put("enderman",Map.of("carriedBlockState",new Field(BlockState.CODEC,"BlockState.CODEC",true)));
         return sections;
     }
     private static void booleans(Map<String,Field> fields,String... names) {
@@ -47,7 +49,7 @@ final class EntityViewsSimple {
         }
         return fields;
     }
-    static boolean supports(String section) { return Set.of("owner","dropped_item","falling_block","tnt","creeper").contains(section); }
+    static boolean supports(String section) { return Set.of("owner","dropped_item","falling_block","tnt","creeper","enderman").contains(section); }
     static void views(JsonObject out, Entity entity, CompoundTag saved, RegistryAccess access) {
         for(var section:sections(entity,saved).entrySet()) {
             var view=new JsonObject();

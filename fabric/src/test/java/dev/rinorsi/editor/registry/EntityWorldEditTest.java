@@ -66,6 +66,7 @@ public final class EntityWorldEditTest {
         ownerViews();
         droppedItemViews();
         fallingAndExplosiveViews();
+        endermanAndExistingViews();
         var offers=new MerchantOffers();offers.add(new MerchantOffer(new ItemCost(Items.EMERALD,2),new ItemStack(Items.BREAD,3),12,5,0.05f));
         var raw=MerchantOffers.CODEC.encodeStart(access.createSerializationContext(NbtOps.INSTANCE),offers).getOrThrow();var normalized=EntityWorldEdit.offers(offers,access);var roundtrip=EntityWorldEdit.decodeOffers(normalized,access,raw);check(raw.equals(MerchantOffers.CODEC.encodeStart(access.createSerializationContext(NbtOps.INSTANCE),roundtrip).getOrThrow()),"trade cost predicate exact roundtrip");
         normalized.get(0).getAsJsonObject().addProperty("uses",2);var updated=EntityWorldEdit.decodeOffers(normalized,access,raw);check(updated.get(0).getUses()==2,"offer uses codec");normalized.get(0).getAsJsonObject().getAsJsonObject("buy").addProperty("count",0);reject(()->EntityWorldEdit.decodeOffers(normalized,access,raw),"trade stack guard");
@@ -116,6 +117,26 @@ public final class EntityWorldEditTest {
         var creeperView=EntityWorldEdit.views(creeper,creeperNbt,access).getAsJsonObject("creeper");check(creeperView.get("Fuse").getAsInt()==50&&creeperView.get("ExplosionRadius").getAsInt()==5,"creeper fuse and radius read/write");
         reject(()->edit(creeper,"{creeper:{ExplosionRadius:128}}"),"creeper byte bound");reject(()->edit(creeper,"{creeper:{Fuse:'50'}}"),"creeper strict integer");
         for(String section:List.of("falling_block","tnt","creeper"))reject(()->edit(create(EntityType.ZOMBIE),"{"+section+":{}}"),"simple target guard "+section);
+    }
+    private static void endermanAndExistingViews(){
+        var enderman=create(EntityType.ENDERMAN);check(EntityWorldEdit.views(enderman,WorldTarget.saveEntity(enderman,access),access).getAsJsonObject("enderman").get("carriedBlockState").isJsonNull(),"empty enderman hand");
+        var saved=edit(enderman,"{enderman:{carriedBlockState:{Name:'minecraft:oak_log',Properties:{axis:'z'}}}}");EntityWorldEdit.load(enderman,saved,access);
+        check(EntityWorldEdit.views(enderman,saved,access).getAsJsonObject("enderman").getAsJsonObject("carriedBlockState").get("Name").getAsString().equals("minecraft:oak_log"),"enderman block read/write");
+        check(!edit(enderman,"{enderman:{carriedBlockState:null}}").contains("carriedBlockState"),"enderman clear");
+        reject(()->edit(enderman,"{enderman:{carriedBlockState:{Name:'minecraft:air'}}}"),"enderman loader drops air");
+        reject(()->edit(enderman,"{enderman:{carriedBlockState:{Name:'minecraft:oak_log',Properties:{axis:'invalid'}}}}"),"enderman state property");
+        reject(()->edit(create(EntityType.ZOMBIE),"{enderman:{carriedBlockState:null}}"),"enderman target guard");
+        for(var type:List.of(EntityType.SLIME,EntityType.MAGMA_CUBE,EntityType.PHANTOM)){
+            var schema=EntitySchema.describe(type,level,access);boolean size=false;
+            for(var raw:schema.getAsJsonArray("variants")){var row=raw.getAsJsonObject();if(row.get("id").getAsString().endsWith("/size"))size=row.getAsJsonArray("options").size()>1;}
+            check(size,"existing live size variants "+type);
+        }
+        var schema=EntitySchema.describe(EntityType.CREEPER,level,access);boolean powered=false;
+        for(var raw:schema.getAsJsonArray("extras"))if(raw.getAsJsonObject().get("key").getAsString().equals("powered"))powered=true;
+        check(powered,"existing powered extras");
+        schema=EntitySchema.describe(EntityType.WOLF,level,access);boolean sitting=false;
+        for(var raw:schema.getAsJsonArray("extras")){var row=raw.getAsJsonObject();if(row.has("id")&&row.get("id").getAsString().equals("sitting"))sitting=row.get("key").getAsString().equals("Sitting");}
+        check(sitting,"existing Sitting extras");
     }
     private static Entity create(EntityType<?> type){return EntitySchema.create(type,level);}
     private static CompoundTag edit(Entity e,String json){return EntityWorldEdit.prepare(e,WorldTarget.saveEntity(e,access),JsonParser.parseString(json).getAsJsonObject(),level,access);}
