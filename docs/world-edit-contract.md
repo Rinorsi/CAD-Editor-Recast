@@ -92,6 +92,40 @@ world 字段：
 
 身份/移动字段锁定：方块 id/x/y/z/keepPacked；实体字段以实体增量协议为准。玩家使用 world-player-contract.md 的在线授权逐项接口；禁止对玩家整份加载 NBT，禁止换方块实体类型。命令块 conditional/facing 使用 block_state；模式由同一 BE 类型的 block_type 操作切换；command/auto 可走规范化视图或 NBT，仍需原版管理员权限。
 
+## 大箱子（普通箱子与陷阱箱）
+
+双联 `ChestBlock` 的 `container` 同时覆盖两个真实方块实体，新增只读 `double` 元数据。单箱仍为 27 格且没有 `double`。`slot`、`snbt`、`nbt`、名称和 `block_state` 仍指点开的那一半；不要把另一半 NBT 拼进 SNBT。
+
+```json
+{
+  "container": {
+    "size": 54,
+    "kind": "minecraft:chest",
+    "double": {"partner": {"x": 1, "y": 64, "z": 0}, "size": 54, "order": "vanilla"},
+    "unresolved_loot": false,
+    "slots": [{"slot": 0, "stack": {"empty": true}}, {"slot": 27, "stack": {"empty": true}}, {"slot": 53, "stack": {"empty": true}}]
+  }
+}
+```
+
+上例省略其余槽；正常返回完整 0..53（含空格）。位置仅为形状示例，真实伙伴位置通过 `ChestBlock.getConnectedDirection` 和两边状态检查取得；陷阱箱 kind 为其真实 BE 类型。任一半有未展开战利品表时保持原有规则：`unresolved_loot:true`、空 slots，拒绝 normalized 槽位写入，不生成战利品。
+
+编号严格采用原版 `ChestBlock.getBlockType` / `CompoundContainer` 顺序：FIRST 的本地 0..26 对应全局 0..26，SECOND 的本地 0..26 对应全局 27..53。从任意一半打开，完整槽位数组及编号相同。**26.1.2 实际枚举映射为 ChestType.RIGHT → FIRST、ChestType.LEFT → SECOND**；玩家所见左右与状态枚举命名不能直接等同，前端必须按返回的编号绘制，不按枚举名字重新排序。
+
+跨半修改仍使用相同增量请求，不需回传 `double`：
+
+```json
+{"op":"apply","requestId":"double-1","slot":{"kind":"block","dim":"minecraft:overworld","x":0,"y":64,"z":0,"token":"opened token"},"revision":"opened/saved revision","container":{"slots":[{"slot":0,"stack":{"empty":true}},{"slot":53,"stack":{"id":"minecraft:paper","count":1,"comps":{},"removed":{}}}]}}
+```
+
+两半各自从冻结基线生成分离副本，经原版 `loadWithComponents`、物品规则及三方合并校验，再统一写入。另一半同样检查区块、交互距离和区域权限。两半加载完成后才通知比较器；任一半写入或最终响应构建失败时，恢复两半的写前 NBT/状态，版本和撤销缓存不推进。未知模组回调的外部副作用与已有事务一样不保证可撤销；回滚异常记录为 suppressed 异常。
+
+会话基线、内容指纹及 undo 前像包含两半。未编辑的当前槽位保留；任一半同槽不同修改报 `target_changed`，整笔不写。点开半的冲突沿用 `["Items","[Slot=0]",...]`，另一半前缀为 `["container","double","partner","Items","[Slot=0]",...]`，其中 Slot 为该半本地 0..26，按上述顺序映射到页面全局编号。
+
+连接关系（两边位置、方块类型、LEFT/RIGHT、朝向）属于会话身份。拆成单箱、移除任何一半、换块或改变连接/顺序均报 `target_changed`，`stale:"identity"`、`conflicts:[{"path":["container","double"]}]`，不得写入任何一半。双箱会话内改变 `type`/`facing` 使其断连也拒绝；关闭后按新拓扑重新打开。单箱状态编辑仍沿用原协议。undo 同时还原两半本次实际修改的路径，保留后来未冲突的其他槽位。
+
+验证使用 map-backed Level fixture 和真实箱子工厂/原版容器/加载器，覆盖普通及陷阱箱四方向、两边打开、跨半写入、合并、撤销、写入/响应失败回滚与拆除。真实客户端、红石 tick 和网络同步留待统一实机验收，本轮不启动服务器探针。
+
 ## 权限、保护和冲突
 
 会话版本、ACK更新点、stale诊断与retryAfterMs精确规则见 [world-revision-contract.md](world-revision-contract.md)。网络revision是冻结会话版本，不再计算实时NBT哈希。
