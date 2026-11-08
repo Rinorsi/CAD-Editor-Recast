@@ -49,7 +49,7 @@ world.views.GROUP 返回 {value,snbt,schema}。value 为真实 Codec JSON，snbt
 |brewing_stand|BrewTime、Fuel|实际 short/byte|
 |campfire|CookingTimes、CookingTotalTimes|真实 int 数组 Codec，不能保留/被截断的编辑由加载保存检查拒绝|
 
-Book、RecordItem、书架 Items 内容确实变化时，从副本自动更新 has_book / has_record / slot_*_occupied；单独状态编辑不强行覆盖用户值。Book、RecordItem、头颅组件、nameable.CustomName 及信标效果可 null，其他字段不允许 null。空旗帜图案/默认陶罐装饰按原版稀疏保存省略。
+Book、RecordItem、书架 Items 内容确实变化时，从副本自动更新 has_book / has_record / slot_*_occupied；单独状态编辑不强行覆盖用户值。Book、RecordItem、头颅组件、nameable.CustomName、信标效果、end_gateway.exit_portal 及 vault 的 config.key_item 可 null，其他可写字段不允许 null。空旗帜图案/默认陶罐装饰按原版稀疏保存省略。
 
 蜡封标牌改文字须同一笔最终结果 is_waxed:false，否则 sign_waxed；完整 SNBT 同样受限。修改后含可执行命令的文本要求 ServerPlayer.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)，与创造/生存无关。命令方块、结构方块、拼图方块依据原版 GameMasterBlock 标记要求同一权限；有权限+生存允许，无权限+创造拒绝。其他权限/距离/区域保护守卫不变。
 
@@ -179,7 +179,7 @@ WorldEditTest 原420项保持通过，并调用 BlockWorldEditTest 扩展，覆�
 
 ## structure_block：结构方块
 
-字段 `name/author/metadata` 为字符串，name 可用空字符串清空；非空 name 必须是原版可保留的资源 ID（建议带 namespace）。`posX/Y/Z` 为 int，范围 ±`StructureBlockEntity.MAX_OFFSET_PER_AXIS`；`sizeX/Y/Z` 为 0..`MAX_SIZE_PER_AXIS`，当前均以 48 为上限。`rotation/mirror/mode` 使用原版 LEGACY_CODEC，`schema.fields.KEY.candidates` 由实际枚举经同一 Codec 生成（大小写按候选，不自行转换）。`ignoreEntities/powered/showair/showboundingbox` 为 boolean；`integrity` 为有限 float（保存器不限制 0..1，放置时原版才 clamp）；`seed` 为 signed long，须无损 JSON。全部字段拒绝 null。未知字段 invalid_request；非法类型、范围、枚举及原版加载未保留 invalid_nbt。不会执行保存/加载结构操作，strict 等未暴露字段保留。
+字段 `name/author/metadata` 为字符串，name 可用空字符串清空；非空 name 必须是原版可保留的资源 ID（建议带 namespace）。`posX/Y/Z` 为 int，范围 ±`StructureBlockEntity.MAX_OFFSET_PER_AXIS`；`sizeX/Y/Z` 为 0..`MAX_SIZE_PER_AXIS`，当前均以 48 为上限。`rotation/mirror/mode` 使用原版 LEGACY_CODEC，`schema.fields.KEY.candidates` 由实际枚举经同一 Codec 生成（大小写按候选，不自行转换）。`ignoreEntities/powered/showair/showboundingbox` 为 boolean；`integrity` 为有限 float（保存器不限制 0..1，放置时原版才 clamp）；`seed` 为 signed long，须无损 JSON。全部字段拒绝 null。未知字段 invalid_request；非法类型、范围、枚举及原版加载未保留 invalid_nbt。不会执行保存/加载结构操作，strict 等未暴露字段保留；修改 mode 时同时从副本同步 block_state.mode，以匹配原版加载行为。
 
 视图片段（完整 value 包含以上所有字段）：
 ```json
@@ -244,5 +244,29 @@ WorldEditTest 原420项保持通过，并调用 BlockWorldEditTest 扩展，覆�
 拒绝示例：
 ```json
 {"views":{"bell":{"ticks":0}}}
+```
+
+## vault：试炼宝库 / 不祥宝库（安全子集）
+
+两者共用 VaultBlockEntity，是否不祥由真实 `block_state.ominous` 决定。value/edits 中使用带点的扁平字段名，schema.saved_path 指出原版嵌套路径：
+
+|字段|类型与来源|边界 / null|
+|---|---|---|
+|config.key_item|ItemStack.CODEC 的 id/count/components；物品候选使用实时 ITEM 注册表|原版物品栈限制；null 删除键并清空钥匙要求，空栈视图为 null|
+|config.loot_table|LootTable.KEY_CODEC 资源键字符串；candidates 来自实际 LOOT_TABLE 注册表|允许未注册资源键，候选非强制名单；null 拒绝|
+|config.activation_range|有限 double；VaultConfig.CODEC|必须 ≤ deactivation_range；原版无非负限制，null 拒绝|
+|config.deactivation_range|有限 double；VaultConfig.CODEC|必须 ≥ activation_range；原版无非负限制，null 拒绝|
+|server_data.rewarded_players|UUIDUtil.CODEC_LINKED_SET 的 UUID int 数组列表|只读；缺省 []，提交任何值含 null 均 invalid_request|
+
+默认配置会稀疏保存。掉落表候选取当前服务端 reloadableRegistries 的 LOOT_TABLE；脱离服务端或未提供该注册表时 `candidates_available:false`、candidates:[]，允许手动资源键，不把缺少候选误判为无合法掉落表。视图通过实际 getConfig() 补齐默认值，写入后使用原版 loadWithComponents 副本检查全部暴露配置的语义值（含未编辑项），防止 lenient Codec 吞错并回退默认；仅把编辑路径转成原版规范保存值。比如设置默认范围是合法操作，不会因保存器省略默认键误拒绝。未改 config 项和 server_data/shared_data 原样保留。未知字段、只读字段为 invalid_request；非法类型、非有限数、非法物品/ID、跨字段范围或原版加载未保留为 invalid_nbt。
+
+`config.override_loot_table_to_display`、server_data 的 items_to_eject/state_updating_resumes_at/total_ejections_needed，以及 shared_data 的展示物品、connected_players、粒子范围等复杂状态继续仅完整 SNBT，不允许整 config/server_data/shared_data 对象作为 vault edits。这里只验证持久化，不触发开锁、奖励或证明掉落表运行有效。
+
+视图示意（实际默认值以返回值为准）：
+```json
+{"vault":{"value":{"config.key_item":{"id":"minecraft:trial_key","count":1},"config.loot_table":"minecraft:chests/trial_chambers/reward","config.activation_range":4,"config.deactivation_range":4.5,"server_data.rewarded_players":[]},"schema":{"fields":{"config.activation_range":{"type":"number","nullable":false,"saved_path":"config.activation_range","constraint":"config.activation_range <= config.deactivation_range; VaultConfig codec"},"server_data.rewarded_players":{"read_only":true,"nullable":false}}}}}
+```
+```json
+{"views":{"vault":{"config.key_item":{"id":"minecraft:diamond","count":1},"config.activation_range":2,"config.deactivation_range":3}}}
 ```
 

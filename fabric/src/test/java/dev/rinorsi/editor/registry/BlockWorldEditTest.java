@@ -20,6 +20,7 @@ public final class BlockWorldEditTest {
         run(EntitySchemaTest.access(),Path.of("logs/block-edit"));
     }
     public static void run(RegistryAccess access,Path output) throws Exception {
+        vaultViews(access);
         sculkViews(access);
         structureViews(access);
         nameableViews(access);
@@ -261,7 +262,10 @@ public final class BlockWorldEditTest {
             var data=be.saveWithFullMetadata(access);var rows=new JsonObject();BlockViews.add(rows,be,access,data);var group=be==structure ? "structure_block" : "jigsaw";
             for(var entry:rows.getAsJsonObject(group).getAsJsonObject("schema").getAsJsonObject("fields").entrySet()) {
                 var schema=entry.getValue().getAsJsonObject();if(!schema.has("candidates"))continue;
-                for(var candidate:schema.getAsJsonArray("candidates"))roundtrip(be,data,"{"+group+":{"+entry.getKey()+":"+candidate+"}}",access);
+                for(var candidate:schema.getAsJsonArray("candidates")) {
+                    var savedEnum=roundtrip(be,data,"{"+group+":{"+entry.getKey()+":"+candidate+"}}",access);
+                    if(be==structure && entry.getKey().equals("mode") && !Objects.equals(data.get("mode"),savedEnum.get("mode")))check(BlockViews.contentState(be,data,savedEnum,be.getBlockState(),access).getValue(StructureBlock.MODE)==((StructureBlockEntity)WorldTarget.copyBlock(be,savedEnum,access)).getMode(),"structure mode synchronizes block state");
+                }
                 reject("invalid_nbt",()->BlockViews.apply(be,data,JsonParser.parseString("{"+group+":{"+entry.getKey()+":'__invalid__'}}").getAsJsonObject(),access));
             }
         }
@@ -280,6 +284,24 @@ public final class BlockWorldEditTest {
             var be=((EntityBlock)block).newBlockEntity(BlockPos.ZERO,block.defaultBlockState());var before=be.saveWithFullMetadata(access);var group=block==Blocks.BELL ? "bell" : "sculk_catalyst";var views=new JsonObject();BlockViews.add(views,be,access,before);
             for(var field:views.getAsJsonObject(group).getAsJsonObject("schema").getAsJsonObject("fields").entrySet()) {check(field.getValue().getAsJsonObject().get("read_only").getAsBoolean(),"readonly state");reject("invalid_request",()->BlockViews.apply(be,before,JsonParser.parseString("{"+group+":{"+field.getKey()+":null}}").getAsJsonObject(),access));}
             if(block==Blocks.BELL)check(!before.contains("ticks") && !before.contains("resonating"),"bell has no saved timers");
+        }
+    }
+    private static void vaultViews(RegistryAccess access) {
+        for(boolean ominous:new boolean[]{false,true}) {
+            var state=Blocks.VAULT.defaultBlockState().setValue(VaultBlock.OMINOUS,ominous);
+            var original=new net.minecraft.world.level.block.entity.vault.VaultBlockEntity(BlockPos.ZERO,state);
+            var seeded=original.saveWithFullMetadata(access);var serverData=seeded.getCompound("server_data").orElseGet(CompoundTag::new);var rewarded=UUID.randomUUID();serverData.put("rewarded_players",net.minecraft.core.UUIDUtil.CODEC_LINKED_SET.encodeStart(NbtOps.INSTANCE,Set.of(rewarded)).getOrThrow());seeded.put("server_data",serverData);
+            var be=(net.minecraft.world.level.block.entity.vault.VaultBlockEntity)WorldTarget.copyBlock(original,seeded,access);
+            var before=be.saveWithFullMetadata(access);var views=new JsonObject();BlockViews.add(views,be,access,before);var value=views.getAsJsonObject("vault").getAsJsonObject("value");
+            check(value.get("config.activation_range").getAsDouble()==be.getConfig().activationRange(),"vault actual default range");check(value.getAsJsonArray("server_data.rewarded_players").size()==1,"vault rewarded player read");
+            var saved=roundtrip(be,before,"{vault:{'config.activation_range':2,'config.deactivation_range':3,'config.key_item':{id:'minecraft:diamond',count:2},'config.loot_table':'minecraft:chests/simple_dungeon'}}",access);
+            check(Objects.equals(before.get("shared_data"),saved.get("shared_data")) && Objects.equals(before.get("server_data"),saved.get("server_data")),"vault complex state preserved");
+            var copy=(net.minecraft.world.level.block.entity.vault.VaultBlockEntity)WorldTarget.copyBlock(be,saved,access);check(copy.getConfig().keyItem().getCount()==2 && copy.getConfig().activationRange()==2,"vault readback");
+            var defaults=value.deepCopy();defaults.remove("server_data.rewarded_players");roundtrip(copy,saved,"{vault:"+defaults+"}",access);
+            var cleared=roundtrip(copy,saved,"{vault:{'config.key_item':null}}",access);check(((net.minecraft.world.level.block.entity.vault.VaultBlockEntity)WorldTarget.copyBlock(be,cleared,access)).getConfig().keyItem().isEmpty(),"vault clear key");
+            roundtrip(be,before,"{vault:{'config.activation_range':-1,'config.deactivation_range':-1}}",access);
+            for(String fields:List.of("'config.activation_range':100","'config.activation_range':null","'config.activation_range':'1'","'config.activation_range':1e400","'config.loot_table':'bad id'","'config.key_item':{id:'minecraft:__missing__',count:1}"))reject("invalid_nbt",()->BlockViews.apply(be,before,JsonParser.parseString("{vault:{"+fields+"}}").getAsJsonObject(),access));
+            for(String fields:List.of("'server_data.rewarded_players':[]","'server_data.rewarded_players':null","config:{}","shared_data:{}"))reject("invalid_request",()->BlockViews.apply(be,before,JsonParser.parseString("{vault:{"+fields+"}}").getAsJsonObject(),access));
         }
     }
     @SuppressWarnings({"rawtypes","unchecked"}) private static String propertyName(net.minecraft.world.level.block.state.properties.Property property,Object value){return property.getName((Comparable)value);}

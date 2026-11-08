@@ -13,6 +13,8 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.state.properties.StructureMode;
+import net.minecraft.world.level.block.entity.vault.VaultBlockEntity;
+import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.block.entity.*;
 
 /** Normalized fields use vanilla codecs, then the existing detached loadWithComponents gate. */
@@ -43,6 +45,7 @@ public final class BlockViews {
         if (block instanceof JigsawBlockEntity) groups.put("jigsaw",List.of(f("name",Identifier.CODEC),f("target",Identifier.CODEC),f("pool",JigsawBlockEntity.POOL_CODEC),f("final_state",Codec.STRING),f("joint",JigsawBlockEntity.JointType.CODEC)));
         if (block instanceof SculkSensorBlockEntity) groups.put("sculk_sensor",List.of(f("last_vibration_frequency",Codec.INT),f("listener.event_delay",net.minecraft.util.ExtraCodecs.NON_NEGATIVE_INT)));
         if (block instanceof SculkShriekerBlockEntity) groups.put("sculk_shrieker",List.of(f("warning_level",Codec.INT),f("listener.event_delay",net.minecraft.util.ExtraCodecs.NON_NEGATIVE_INT)));
+        if (block instanceof VaultBlockEntity) groups.put("vault",List.of(f("config.key_item",ItemStack.CODEC),f("config.loot_table",LootTable.KEY_CODEC),f("config.activation_range",Codec.DOUBLE),f("config.deactivation_range",Codec.DOUBLE),f("server_data.rewarded_players",net.minecraft.core.UUIDUtil.CODEC_LINKED_SET)));
         return groups;
     }
     private static boolean nullable(Field field) { return field.component || field.codec == ItemStack.CODEC || field.key.equals("exit_portal") || field.key.equals("CustomName") || field.key.equals("primary_effect") || field.key.equals("secondary_effect"); }
@@ -87,6 +90,19 @@ public final class BlockViews {
         if(field.key.equals("triggered") && tag instanceof ByteTag value) {nbt.putInt(key,value.byteValue()!=0 ? CrafterBlockEntity.SLOT_DISABLED : CrafterBlockEntity.SLOT_ENABLED);return;}
         if (tag == null) nbt.remove(key); else nbt.put(key,tag);
     }
+    private static Tag effectiveTag(BlockEntity block,CompoundTag nbt,Field field,RegistryAccess access) {
+        var tag=get(nbt,field);
+        if(tag!=null || !(block instanceof VaultBlockEntity vault))return tag;
+        var config=vault.getConfig();
+        return switch(field.key) {
+            case "config.key_item" -> config.keyItem().isEmpty() ? null : ItemStack.CODEC.encodeStart(access.createSerializationContext(NbtOps.INSTANCE),config.keyItem()).getOrThrow();
+            case "config.loot_table" -> LootTable.KEY_CODEC.encodeStart(access.createSerializationContext(NbtOps.INSTANCE),config.lootTable()).getOrThrow();
+            case "config.activation_range" -> DoubleTag.valueOf(config.activationRange());
+            case "config.deactivation_range" -> DoubleTag.valueOf(config.deactivationRange());
+            case "server_data.rewarded_players" -> new ListTag();
+            default -> null;
+        };
+    }
     private static <T> Tag encode(Codec<T> codec,JsonElement json,RegistryAccess access) {
         var value = codec.parse(access.createSerializationContext(JsonOps.INSTANCE),json).getOrThrow(s -> new EditorSessions.Failure("invalid_nbt",s));
         return codec.encodeStart(access.createSerializationContext(NbtOps.INSTANCE),value).getOrThrow(s -> new EditorSessions.Failure("invalid_nbt",s));
@@ -99,7 +115,7 @@ public final class BlockViews {
         fields(block).forEach((group,fields) -> {
             var value = new JsonObject(); var subset = new CompoundTag(); var properties = new JsonObject();
             for (var field : fields) {
-                Tag tag = get(nbt,field);
+                Tag tag = effectiveTag(block,nbt,field,access);
                 // Include real runtime defaults even if vanilla omits them from a sparse save.
                 if (tag == null && block instanceof BannerBlockEntity b && field.key.equals("patterns")) tag = encode(field.codec, BannerPatternLayers.CODEC.encodeStart(access.createSerializationContext(JsonOps.INSTANCE),b.getPatterns()).getOrThrow(),access);
                 if (tag == null && block instanceof DecoratedPotBlockEntity p && field.key.equals("sherds")) tag = encode(field.codec,PotDecorations.CODEC.encodeStart(access.createSerializationContext(JsonOps.INSTANCE),p.getDecorations()).getOrThrow(),access);
@@ -107,6 +123,19 @@ public final class BlockViews {
                 value.add(field.key,tag == null ? JsonNull.INSTANCE : decode(field.codec,tag,access));
                 if(tag != null) subset.put(field.key,field.key.equals("triggered") && nbt.get(field.key)!=null ? nbt.get(field.key).copy() : tag.copy());
                 var schema = new JsonObject(); schema.addProperty("authority","vanilla_codec_and_loadWithComponents"); schema.addProperty("codec",field.codec.toString()); schema.addProperty("nullable",nullable(field));
+                if(field.codec==Codec.BOOL)schema.addProperty("type","boolean");
+                if(field.codec==Codec.STRING)schema.addProperty("type","string");
+                if(field.codec==Codec.INT)schema.addProperty("type","integer");
+                if(field.codec==Codec.DOUBLE) {schema.addProperty("type","number");schema.addProperty("min",-Double.MAX_VALUE);schema.addProperty("max",Double.MAX_VALUE);schema.addProperty("constraint","config.activation_range <= config.deactivation_range; VaultConfig codec");}
+                if(block instanceof VaultBlockEntity) {
+                    if(field.key.equals("server_data.rewarded_players"))schema.addProperty("read_only",true);
+                    if(field.key.equals("config.loot_table")) {
+                        net.minecraft.core.HolderLookup.Provider lookup=block.getLevel() instanceof net.minecraft.server.level.ServerLevel level ? level.getServer().reloadableRegistries().lookup() : access;
+                        var registry=lookup.lookup(net.minecraft.core.registries.Registries.LOOT_TABLE);var values=new JsonArray();registry.ifPresent(tables->tables.listElementIds().map(key->key.identifier().toString()).sorted().forEach(values::add));
+                        schema.add("candidates",values);schema.addProperty("candidates_available",registry.isPresent());schema.addProperty("candidate_source","server reloadable LOOT_TABLE registry when available; resource keys may reference absent tables");
+                    }
+                    if(field.key.equals("config.key_item"))schema.addProperty("candidate_source","ItemStack.CODEC + runtime ITEM registry; same item picker as other stack fields");
+                }
                 if(field.key.contains("."))schema.addProperty("saved_path",field.key);
                 if(field.codec==net.minecraft.util.ExtraCodecs.NON_NEGATIVE_INT) {schema.addProperty("type","integer");schema.addProperty("min",0);schema.addProperty("max",Integer.MAX_VALUE);}
                 if(field.component) schema.addProperty("saved_path",field.key.substring(10));
@@ -170,6 +199,7 @@ public final class BlockViews {
             for(var entry:group.getValue().getAsJsonObject().entrySet()) {
                 var field=allowed.stream().filter(f->f.key.equals(entry.getKey())).findFirst().orElseThrow(()->new EditorSessions.Failure("invalid_request","未知视图字段："+entry.getKey()));
                 var json=entry.getValue();
+                if(block instanceof VaultBlockEntity && field.key.equals("server_data.rewarded_players"))throw new EditorSessions.Failure("invalid_request","已奖励玩家列表只读");
                 if(block instanceof BeaconBlockEntity && field.key.equals("Levels"))throw new EditorSessions.Failure("invalid_request","信标等级由金字塔计算，只读");
                 if(block instanceof BeaconBlockEntity && (field.key.equals("primary_effect") || field.key.equals("secondary_effect")) && !json.isJsonNull()) {
                     var effect=net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.holderByNameCodec().parse(access.createSerializationContext(JsonOps.INSTANCE),json).getOrThrow(s->new EditorSessions.Failure("invalid_nbt",s));
@@ -181,6 +211,7 @@ public final class BlockViews {
                 }
                 // Sign sides accept a partial object; unedited lines/filtered messages remain intact.
                 if(field.codec==SignText.DIRECT_CODEC)requireSignSide(json,access);
+                if(field.codec==Codec.DOUBLE && (!json.isJsonPrimitive() || !json.getAsJsonPrimitive().isNumber() || !Double.isFinite(json.getAsDouble())))throw new EditorSessions.Failure("invalid_nbt","必须为有限 double");
                 if(field.codec==net.minecraft.util.ExtraCodecs.NON_NEGATIVE_INT)requireInteger(json,0,Integer.MAX_VALUE);
                 if(field.codec==Codec.LONG)requireInteger(json,Long.MIN_VALUE,Long.MAX_VALUE);
                 if(field.codec==Codec.FLOAT && (!json.isJsonPrimitive() || !json.getAsJsonPrimitive().isNumber() || !Float.isFinite(json.getAsFloat())))throw new EditorSessions.Failure("invalid_nbt","必须为有限 float");
@@ -222,6 +253,17 @@ public final class BlockViews {
         requireUnwaxed(block,nbt,result);
         if(block instanceof TheEndGatewayBlockEntity || block instanceof StructureBlockEntity || block instanceof JigsawBlockEntity || block instanceof SculkSensorBlockEntity || block instanceof SculkShriekerBlockEntity)
             WorldNbt.requireEditedFieldsRetained(nbt,result,WorldTarget.copyBlock(block,result,access).saveWithFullMetadata(access));
+        if(block instanceof VaultBlockEntity && edits.has("vault")) {
+            var copy=WorldTarget.copyBlock(block,result,access);var saved=copy.saveWithFullMetadata(access);var changes=edits.getAsJsonObject("vault");
+            // VaultConfig uses lenient defaults and omits default values. Compare semantic values
+            // for ALL exposed config fields before adopting only edited canonical saved paths.
+            for(var field:groups.get("vault")) {
+                if(!field.key.startsWith("config."))continue;
+                var expected=changes.has(field.key) && changes.get(field.key).isJsonNull() ? null : effectiveTag(block,result,field,access);
+                if(!Objects.equals(expected,effectiveTag(copy,saved,field,access)))throw new EditorSessions.Failure("invalid_nbt","原版宝库加载器未保留配置："+field.key);
+            }
+            for(var field:groups.get("vault"))if(changes.has(field.key))put(result,field,get(saved,field));
+        }
         return result;
     }
     public static void requireUnwaxed(BlockEntity block,CompoundTag before,CompoundTag after) {
@@ -231,6 +273,8 @@ public final class BlockViews {
     }
     /** Content-derived flags change only when content changes; standalone state edits stay explicit. */
     public static net.minecraft.world.level.block.state.BlockState contentState(BlockEntity source,CompoundTag before,CompoundTag after,net.minecraft.world.level.block.state.BlockState state,RegistryAccess access) {
+        if(source instanceof StructureBlockEntity && !Objects.equals(before.get("mode"),after.get("mode")))
+            return state.setValue(net.minecraft.world.level.block.StructureBlock.MODE,((StructureBlockEntity)WorldTarget.copyBlock(source,after,access)).getMode());
         if(source instanceof LecternBlockEntity && !Objects.equals(before.get("Book"),after.get("Book")))
             return state.setValue(net.minecraft.world.level.block.LecternBlock.HAS_BOOK,!((LecternBlockEntity)WorldTarget.copyBlock(source,after,access)).getBook().isEmpty());
         if(source instanceof JukeboxBlockEntity && !Objects.equals(before.get("RecordItem"),after.get("RecordItem")))
