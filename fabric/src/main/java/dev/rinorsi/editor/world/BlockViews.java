@@ -26,6 +26,7 @@ public final class BlockViews {
         if (block instanceof ChiseledBookShelfBlockEntity) groups.put("chiseled_bookshelf",List.of(f("last_interacted_slot",Codec.INT)));
         if (block instanceof CommandBlockEntity) groups.put("command_block",List.of(f("Command",Codec.STRING),f("TrackOutput",Codec.BOOL),f("auto",Codec.BOOL),f("powered",Codec.BOOL)));
         if (block instanceof AbstractFurnaceBlockEntity) groups.put("furnace",List.of(f("cooking_time_spent",Codec.SHORT),f("cooking_total_time",Codec.SHORT),f("lit_time_remaining",Codec.SHORT),f("lit_total_time",Codec.SHORT)));
+        if (block instanceof HopperBlockEntity) groups.put("hopper",List.of(f("TransferCooldown",Codec.INT)));
         if (block instanceof BrewingStandBlockEntity) groups.put("brewing_stand",List.of(f("BrewTime",Codec.SHORT),f("Fuel",Codec.BYTE)));
         if (block instanceof CampfireBlockEntity) groups.put("campfire",List.of(f("CookingTimes",Codec.INT_STREAM),f("CookingTotalTimes",Codec.INT_STREAM)));
         if (block instanceof SkullBlockEntity) groups.put("skull",List.of(new Field("minecraft:profile",DataComponents.PROFILE.codec(),true),new Field("minecraft:custom_name",DataComponents.CUSTOM_NAME.codec(),true)));

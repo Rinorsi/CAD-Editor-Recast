@@ -21,6 +21,7 @@ public final class BlockWorldEditTest {
     }
     public static void run(RegistryAccess access,Path output) throws Exception {
         nameableViews(access);
+        hopperView(access);
         var samples=new JsonObject();var metadata=new JsonObject();metadata.addProperty("mode","pure-jvm-real-factories-and-codecs-not-live-ticks");metadata.add("command_block_types",BlockStateEdit.commandTypes());samples.add("capture_metadata",metadata);
         for(var block:List.of(Blocks.CHEST,Blocks.FURNACE,Blocks.OAK_DOOR,Blocks.STONE_SLAB,Blocks.OAK_STAIRS,Blocks.REPEATER,Blocks.COMMAND_BLOCK,Blocks.REDSTONE_WIRE)) {
             var state=block.defaultBlockState();var states=new JsonArray();
@@ -164,6 +165,16 @@ public final class BlockWorldEditTest {
         check(!new EditorPolicy(2,false).allows(false,false),"state envelope permission guard");reject("out_of_reach",()->WorldAccess.reach(false));reject("protected_area",()->WorldAccess.area(false));
         Files.createDirectories(output);Files.writeString(output.resolve("block-captured.json"),new GsonBuilder().setPrettyPrinting().create().toJson(samples));
         System.out.println("PASS BlockWorldEditTest "+checks+" checks; factory/codec/state data; real-client run pending");
+    }
+    private static void hopperView(RegistryAccess access) {
+        var be=new HopperBlockEntity(BlockPos.ZERO,Blocks.HOPPER.defaultBlockState());var before=be.saveWithFullMetadata(access);
+        var views=new JsonObject();BlockViews.add(views,be,access,before);
+        check(views.getAsJsonObject("hopper").getAsJsonObject("value").get("TransferCooldown").getAsInt()==before.getInt("TransferCooldown").orElseThrow(),"hopper real cooldown");
+        for(int value:new int[]{Integer.MIN_VALUE,-1,0,HopperBlockEntity.MOVE_ITEM_SPEED,Integer.MAX_VALUE}) {
+            var saved=roundtrip(be,before,"{hopper:{TransferCooldown:"+value+"}}",access);
+            check(saved.getInt("TransferCooldown").orElseThrow()==value,"hopper int retained");
+        }
+        for(String value:List.of("null","2147483648","-2147483649","1.5","'8'"))reject("invalid_nbt",()->BlockViews.apply(be,before,JsonParser.parseString("{hopper:{TransferCooldown:"+value+"}}").getAsJsonObject(),access));
     }
     private static void nameableViews(RegistryAccess access) {
         for(var block:net.minecraft.core.registries.BuiltInRegistries.BLOCK) {

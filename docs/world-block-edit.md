@@ -69,6 +69,20 @@ edits 示例：
 {"views":{"nameable":{"CustomName":{"text":"工坊","color":"gold"}}}}
 ```
 
+## hopper：搬运冷却（P1-2）
+
+字段 `TransferCooldown` 是整数 tick，范围来自 `Codec.INT` / 原版 `getIntOr`、`putInt`：`Integer.MIN_VALUE` 至 `Integer.MAX_VALUE`（-2147483648..2147483647），不是正常搬运间隔的硬上限；负数是原版可保留状态，不额外猜测游戏范围。`null` 拒绝，清零用 `0`。非整数、越界、null 为 `invalid_nbt`，未知字段为 `invalid_request`；沿用动态三方合并，不覆盖未编辑的当前计时。
+
+视图示例：
+```json
+{"hopper":{"value":{"TransferCooldown":-1},"snbt":"{TransferCooldown:-1}","schema":{"fields":{"TransferCooldown":{"nullable":false,"min":-2147483648,"max":2147483647}}}}}
+```
+
+edits 示例：
+```json
+{"views":{"hopper":{"TransferCooldown":0}}}
+```
+
 ## 动态字段白名单及来源
 
 下表为内部数据指纹和动态合并语义；网络revision为冻结的不透明会话版本，详见 [world-revision-contract.md](world-revision-contract.md)。不因当前计时变化重新计算会话版本。
