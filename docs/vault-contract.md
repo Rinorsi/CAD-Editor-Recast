@@ -1,5 +1,13 @@
 # 本机保险库协议（26.1.2 / v1）
 
+## 玩家预设完整编辑页（2026-11-09）
+
+世界页 open_world:{vault_id} 在本机读取 player_preset，生成与在线玩家相同的 views.player/schema，标记 player.preset:true、vault_id、sections（已保存分区）。编辑仍发送页面 apply:{requestId,slot,entity:{player:{...}}}；宿主校验当前 slot/token，把已保存分区的规范化修改写回同一条 template。其他分区和玩家身份、位置、状态默认字段不可写入预设。不发送模板或保险库路径到服务器。
+
+VaultStore 的 update 增加可选 template 与必需的 expectedTemplateRevision（只在更新 template 时必需）；只允许 player_preset。templateRevision 是原模板规范化键序 SHA-256，读取时提供，内容已变化报 target_changed，条目删除报 NOT_FOUND；名称/标签/备注仍从最新条目保留。新增模板必须通过实时物品 Codec、属性/效果/模式与模板结构校验，超限仍报 ENTRY_TOO_LARGE / FILE_LIMIT，失败不改变库。成功返回 templateRevision。现有不含 template 的元数据 update 不变。
+
+完整页需要已进入世界，以使用实际组件注册表；不是在线玩家权限或服务端写入入口。未保存的分区不自动加入，关闭页面沿用保险库 flush；成功回执的 persisted:false 不能当作磁盘备份完成。
+
 ## 玩家预设备份检查（2026-11-09）
 
 只读 has_backup：{op:"has_backup",requestId,kind:"player_preset",template:{sections:{...}},sections?:[...分区...]}；也接受 world 或 uploadToken（上传包 {world,sections?} / {template,sections?}）。显式请求 sections 优先于上传包 sections；省略时 template 使用自身全部分区，world 使用全部六分区。选择须非空、不重复且存在于输入模板，非法返回 BAD_REQUEST（预设分区无效或缺失）；其他 kind 返回 wrong_kind。上传仍有原期限和大小限制。

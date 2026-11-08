@@ -23,6 +23,14 @@
 
 ### 页面内切换在线玩家（2026-11-09）
 
+补充：完整玩家编辑页支持三种来源。open_world 接受 {self:true}、{uuid}、{uuid,offline:true}、{vault_id:'保险库条目UUID'}，互斥。离线网络 slot 为 {kind:'entity',player:'offline',uuid,dim,token?}；预设 slot 为 {kind:'entity',player:'preset',uuid:条目UUID,vault_id,dim,token}，只在客户端本机处理，模板不上传服务器。所有来源的 world.views.player 与在线玩家同形，使用原有 apply 的 entity.player 规范化字段，不能以 snbt 替代完整编辑页。
+
+world.player 统一提供 self/name/uuid；离线追加 offline:true；预设追加 preset:true、vault_id、sections:[实际保存分区]。预设 uuid 是条目 UUID，不是在线玩家 UUID。前端按 sections 显示预设可编辑标签，不把缺失分区的默认值保存回模板。未保存分区以及生命、饥饿、经验、能力等只用原版临时 Player 默认值展示；提交不属于已保存分区的字段返回 protected_field。
+
+离线 open/apply 需要实时游戏管理员权限，目标必须不在线且不是单人房主；用隔离 ServerPlayer 加载，复用 PlayerWorldEdit.prepare 和三方合并。写入沿用最新文件指纹校验、备份 5 份与 ATOMIC_MOVE；未知/未修改 NBT 字段保留。canUndo:false；undo 返回 undo_unavailable。上线竞争返回 player_online，文件写入竞争返回 target_changed，均不落盘。saved 返回同形新 world，不写连接中的玩家对象。
+
+预设编辑使用当前客户端世界的注册表/Codec和未注册的临时 Player，不需要在线编辑目标，也不写玩家存档。只修改选中的本机保险库条目；元数据保留，模板内容冲突/删除/超配额/校验失败拒绝，旧页面草稿保留。canUndo:false。saved 表示本机内存更新，world.vault.persisted/readOnly/storageError 与保险库既有持久化语义相同；关闭页面仍触发 flush。切换成功后旧远端会话关闭，切换失败不关闭旧目标。
+
 已打开世界编辑页可发 oriel.send('open_world', {uuid:'目标玩家UUID'})，或 {self:true} 返回自己；二者互斥，不接受页面提供 dim/slot。宿主使用客户端当前维度构造 {kind:'entity',player:'online',uuid,dim} 或 {kind:'entity',player:'self',dim}，沿用现有网络 open、权限和交互距离检查，不需要准星。
 
 仅 opened 成功后在当前 screen patch 'world'（不新开 OrielScreen），页面可用 weSaved(world) 整体换页；宿主同时切换规范化 slot/token/revision，清除旧扩展视图基线。apply/undo 只能使用新目标的 slot，旧目标或旧 token 即使 UUID 相同也拒绝；revision 始终由宿主绑定。切换期间禁止 apply/undo/玩家扩展请求；已有写回或扩展请求尚未完成时，先提示等待，不发送切换请求。页面负责在主动导航前处理自己的未保存草稿。
