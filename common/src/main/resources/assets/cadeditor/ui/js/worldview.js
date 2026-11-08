@@ -6,7 +6,7 @@ var WEV = {};
 WE.views = {}; WE.bstate = {}; WE.btype = ''; WE.upd = true; WE.face = 'front';
 function weResetEdits() { WE.views = {}; WE.bstate = {}; WE.btype = ''; }
 function weViews() { return (WE.w && WE.w.views) || {}; }
-function weViewGroups() { var v = weViews(); return Object.keys(v).filter(function (g) { return g !== 'unsupported' && v[g] && v[g].value; }); }
+function weViewGroups() { var v = weViews(); return Object.keys(v).filter(function (g) { return g !== 'unsupported' && g !== 'generic' && v[g] && v[g].value; }); }
 function weViewOrig(g) { var v = weViews()[g]; return v && v.value ? v.value : {}; }
 /* 草稿存储（方块视图 WE.views、实体 / 玩家 WE.ent 共用）：只记和原值不同的字段，改回原值就删掉；改完刷新顶栏 / 底栏 */
 function weDraftGet(store, g, k, orig) { var e = store[g]; if (e && Object.prototype.hasOwnProperty.call(e, k)) return e[k]; return orig[k]; }

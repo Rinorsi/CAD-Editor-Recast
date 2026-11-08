@@ -29,16 +29,17 @@ function opened(req, view, value, schema, extra) {
   opened(last(), 'position', { dimension: 'minecraft:overworld', x: 1.5, y: 64, z: 2.5, yaw: 90, pitch: 0 }, { dimensions: ['minecraft:overworld', 'minecraft:the_nether'], manualId: true });
   b = body(); c.pxPosition(b);
   assert.ok(px().some(r => r.view === 'respawn' && r.action === 'read'), '位置到了之后才去读重生点');
-  const go = btn(b, '传送'); assert.ok(go, '有「传送」按钮');
-  go.fire('click');
+  assert.equal(btn(b, '传送'), undefined, '位置页没有自己的应用按钮，走顶栏「应用修改」'); assert.equal(c.pxDirtyCount(), 0, '没改就没有草稿');
+  c.pxState('position').draft.x = 1.5 + 10; assert.deepEqual(Array.from(c.pxDirtyViews()), ['position'], '改了坐标就算有未应用的修改');
+  c.pxApplyAll();
   assert.equal(last().action, 'apply'); assert.equal(last().view, 'position'); assert.equal(last().revision, 'r-position', '带最近一次读到的 revision');
-  assert.equal(last().patch.x, 1.5); assert.equal(last().patch.dimension, 'minecraft:overworld');
+  assert.equal(last().patch.x, 11.5); assert.equal(last().patch.dimension, 'minecraft:overworld');
   c.pxResult({ status: 'rejected', requestId: last().requestId, code: 'chunk_unavailable' });
   assert.ok(toasts.some(x => /无法加载传送目标/.test(x)), '被拒绝给出中文原因');
   assert.ok(c.pxState('position').draft, '被拒绝保留草稿');
   opened(last(), 'position', { dimension: 'minecraft:the_nether', x: 8, y: 70, z: 8, yaw: 0, pitch: 0 }, {}, {});
   c.pxState('position').draft = { x: 99 };
-  c.pxResult({ status: 'saved', requestId: (() => { b = body(); c.pxPosition(b); btn(b, '传送').fire('click'); return last().requestId; })(), playerExtended: { revision: 'r2', value: { dimension: 'minecraft:the_nether', x: 8, y: 70, z: 8, yaw: 0, pitch: 0 }, schema: {} } });
+  c.pxResult({ status: 'saved', requestId: (() => { b = body(); c.pxPosition(b); c.pxApplyAll(); return last().requestId; })(), playerExtended: { revision: 'r2', value: { dimension: 'minecraft:the_nether', x: 8, y: 70, z: 8, yaw: 0, pitch: 0 }, schema: {} } });
   assert.equal(c.pxState('position').draft, null, 'saved 之后清草稿');
   assert.equal(c.pxState('position').revision, 'r2', 'saved 更新 revision');
 }
@@ -69,7 +70,8 @@ function opened(req, view, value, schema, extra) {
   const d = c.pxState('recipes').dirty['minecraft:stick'];
   assert.equal(json(d), json({ id: 'minecraft:stick', unlocked: true, highlighted: true }), '高亮会同时解锁');
   b = body(); c.pxRecipes(b);
-  tbtn('应用 1 项').fire('click');
+  assert.equal(c.pxDirtyCount(), 1, '顶栏的未应用计数包含这一项'); assert.equal(tbtn('应用'), undefined, '工具行里没有自己的应用按钮');
+  c.pxApplyAll();
   assert.equal(json(last().patch), json({ entries: [{ id: 'minecraft:stick', unlocked: true, highlighted: true }] }), '只发改过的');
   const st = c.pxState('recipes');
   for (let i = 0; i < 70; i++) st.dirty['r' + i] = { id: 'r' + i, unlocked: true, highlighted: false };
@@ -102,8 +104,13 @@ function opened(req, view, value, schema, extra) {
   let b = body(); c.pxStats(b);
   opened(last(), 'stats', { entries: [{ type: 'minecraft:custom', id: 'minecraft:jump', value: 3 }] }, { min: 0, max: 2147483647 });
   b = body(); c.pxStats(b); const n = px().length;
-  tbtn('应用').fire('click');
-  assert.equal(px().length, n, '没有修改不发请求'); assert.ok(toasts.some(x => /还没有修改/.test(x)));
+  c.pxApplyAll();
+  assert.equal(px().length, n, '没有修改不发请求'); assert.equal(c.pxDirtyCount(), 0);
+  // 放弃：清掉所有草稿
+  c.pxState('stats').dirty['x|y'] = { type: 'x', id: 'y', value: 1 }; assert.equal(c.pxDirtyCount(), 1); c.weMarkDirty = () => {}; c.pxDiscard(); assert.equal(c.pxDirtyCount(), 0, '放弃玩家页的修改');
+  // 成就页只对自己出现
+  c.WE.w = { kind: 'entity', type: 'minecraft:player', slot: { kind: 'entity', uuid: 'u2' }, player: { self: false } }; assert.ok(!c.weTabs().some(x => x.id === 'padv'), '别人的玩家页没有成就');
+  c.WE.w.player.self = true; assert.ok(c.weTabs().some(x => x.id === 'padv'), '自己的有成就');
 }
 
 // ---- 离线玩家：UUID 不完整不发；完整才发，带 offline:true
@@ -134,7 +141,7 @@ function opened(req, view, value, schema, extra) {
   c.WE.toolsExtra = null; b = body(); c.pxAdvancements(b);
   assert.ok(c.WE.toolsExtra && c.WE.toolsExtra.some(n => n.querySelector && n.querySelector('input')), '搜索框在工具行里，不在滚动区里'); assert.equal(qa(b, 'input').length, 0, '滚动区里没有搜索框');
   assert.ok(/我的世界/.test(b.textContent) && /游戏的核心与目标/.test(b.textContent), '用翻译后的中文名和说明');
-  assert.ok(/含内部成就/.test(c.WE.toolsExtra.map(n => n.textContent).join('')), '有内部成就开关');
+  assert.ok(/含内部成就/.test(b.textContent), '内部成就开关在段标题上'); assert.equal(c.WE.toolsExtra.length, 1, '工具行里只有搜索框');
   assert.equal(qa(b, '.k-toggle').length, 0, '没展开时不显示条件');
   qa(b, '.k-xhead')[0].fire('click'); // 点开：记下展开状态并重画
   assert.equal(c.pxState('advancements').open['minecraft:story/root'], true, '点一下就展开');

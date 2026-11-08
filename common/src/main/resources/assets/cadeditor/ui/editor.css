@@ -1636,6 +1636,8 @@ body.vault-only .ew { display: none; }
 .ed-tsearch .k-input { flex: 1; min-width: 60px; }
 .ed-tools .k-btn { flex: none; }
 .px-id { color: var(--tx3); }
+.it.link { cursor: pointer; text-decoration: underline; }
+.it.link:hover { color: var(--tx); }
 
 .kc-li { width: 100%; height: 16px; min-height: 16px; padding: 0 3px; line-height: 14px; }
 .kc-r.editing { background: rgba(255, 255, 255, 0.07); }

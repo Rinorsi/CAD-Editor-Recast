@@ -4,11 +4,11 @@
 var GX_INT_RANGE = { byte: [-128, 127], short: [-32768, 32767], int: [-2147483648, 2147483647] };
 function gxShort(s) { s = String(s === undefined ? '' : s); return s.length > 40 ? s.slice(0, 40) + '…' : s; }
 function gxDecode(s) { try { var v = parseSnbt(String(s)); return typeof v === 'string' ? v : String(s); } catch (e) { return String(s); } }
-function gxNote(f) { return f.read_only_reason || f.editable_reason || '只能在「数据」页修改'; }
+function gxNote(f) { return f.read_only_reason || f.editable_reason || '请用「数据」页'; }
 /* g：视图名；fields：schema.fields；get(g,k) / set(g,k,snbt)：方块和实体各自的草稿读写 */
 function gxFields(body, g, fields, get, set) {
   var keys = Object.keys(fields || {});
-  if (!keys.length) { body.appendChild(xEmpty('没有读到可以直接改的字段，请在「数据」页修改。')); return; }
+  if (!keys.length) { body.appendChild(xEmpty('没有可以直接改的字段，请用「数据」页。')); return; }
   keys.forEach(function (key) {
     var f = fields[key] || {}, cur = get(g, key), kind = f.type || f.kind || 'unknown', nt = f.nbt_type || '';
     if (cur === undefined) cur = f.default_snbt === undefined ? '' : f.default_snbt;
@@ -38,8 +38,7 @@ function gxFields(body, g, fields, get, set) {
   });
 }
 function gxIntro(body, spec) {
-  body.appendChild(kHint('这个类型没有专用设置。下面的字段是根据游戏里它实际保存出来的数据推断的，类型保持不变；认不准的字段会标出原因，请去「数据」页改。', 'sub'));
-  if (spec && spec.available === false) body.appendChild(kHint(spec.editable_reason || '读不到这个类型的字段结构。', 'note'));
+  if (spec && spec.available === false) body.appendChild(kHint(spec.editable_reason || '读不到这个类型的字段。', 'note'));
 }
 WEV.generic = function (body, g) {
   var v = weViews()[g] || {}, sc = v.schema || {};

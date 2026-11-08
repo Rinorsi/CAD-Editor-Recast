@@ -13,7 +13,26 @@ function pxTarget(offline) {
 }
 function pxSelf() { return !!(WE.w && WE.w.player && WE.w.player.self); }
 function pxState(view) { return PX.views[view] || (PX.views[view] = { status: 'idle', draft: null, entries: [], offset: 0, query: '', total: 0, nextOffset: null, open: {}, dirty: {} }); }
-function pxReset() { PX.views = {}; PX.pending = {}; }
+function pxReset() { PX.views = {}; PX.pending = {}; PX.queue = []; }
+/* 哪些视图有没应用的草稿（顶栏「应用修改」会把它们依次发出去）。离线玩家有自己的写入按钮，不算 */
+function pxDirty(view) {
+  var st = PX.views[view]; if (!st || !st.loaded) return 0;
+  if (view === 'position' || view === 'respawn') return st.draft !== null && st.draft !== undefined && JSON.stringify(st.draft) !== JSON.stringify(st.value) ? 1 : 0;
+  return Object.keys(st.dirty || {}).length;
+}
+var PX_APPLIED = ['position', 'respawn', 'recipes', 'advancements', 'stats'];
+function pxDirtyViews() { return PX_APPLIED.filter(function (v) { return pxDirty(v) > 0; }); }
+function pxDirtyCount() { var n = 0; PX_APPLIED.forEach(function (v) { n += pxDirty(v); }); return n; }
+function pxApplyAll() { PX.queue = pxDirtyViews(); pxNext(); }
+function pxNext() {
+  var v = PX.queue.shift(); if (!v) return;
+  var st = pxState(v);
+  if (v === 'position' || v === 'respawn') pxApply(v, clone(st.draft)); else pxApplyDirty(st, v);
+}
+function pxDiscard() {
+  PX_APPLIED.forEach(function (v) { var st = PX.views[v]; if (st) { st.draft = null; st.dirty = {}; } });
+  PX.queue = []; weMarkDirty(); weRedrawBody();
+}
 
 function pxSend(msg, view, kind) {
   var sent = (typeof oriel !== 'undefined' && oriel.send) ? oriel.send('player_extended', msg) : false;
@@ -58,6 +77,7 @@ function pxResult(r) {
   var p = PX.pending[r.requestId]; delete PX.pending[r.requestId];
   var st = pxState(p.view); st.busy = false; toastDismiss('px-pending');
   if (r.status === 'rejected') {
+    PX.queue = [];
     st.status = st.loaded ? 'ready' : 'error'; st.err = PX_CODE[r.code] || r.reason || r.code || '失败';
     toast(st.err + (r.reason && PX_CODE[r.code] ? '（' + r.reason + '）' : ''), 'error', 'px-err');
     if (r.code === 'session_lost' || r.code === 'target_changed') { st.value = null; st.loaded = false; }
@@ -69,7 +89,8 @@ function pxResult(r) {
     st.appending = false;
     if (r.status === 'saved') { st.draft = null; st.dirty = {}; toast('游戏已确认修改', 'ok', 'px-ok'); }
   }
-  if (weActive()) weRedrawBody();
+  if (r.status === 'saved' && PX.queue && PX.queue.length) pxNext();   // 顶栏一次应用了好几页：接着发下一页
+  if (weActive()) { weRedrawBody(); weMarkDirty(); }
 }
 
 /* ---------- 名字：优先游戏语言文件（翻译键），再退回注册表名字，最后才是 ID 的可读化 ---------- */
@@ -109,15 +130,9 @@ function pxApplyDirty(st, view) {
   pxApply(view, { entries: list });
 }
 /* 列表页的工具行：搜索框 + （成就的）内部成就开关 + 重新读取 + 应用 N 项。滚动时一直在 */
-function pxListTools(st, view, hint, extra) {
+function pxListTools(st, view, hint) {
   var inp = kInput(st.query || '', function () {}, { placeholder: hint, onCommit: function (v) { st.query = v.trim(); st.status = 'idle'; weRedrawBody(); } });
-  var n = pxChanged(st).length, nodes = [h('div', { class: 'ed-tsearch' }, [uiIcon('search', 12), inp])];
-  (extra || []).forEach(function (x) { nodes.push(x); });
-  nodes.push(kBtn('', function () { st.status = 'idle'; st.dirty = {}; weRedrawBody(); }, { icon: 'refresh', title: '放弃本页未应用的修改，重新从游戏读取' }));
-  var ap = kBtn(n ? '应用 ' + n + ' 项' : '应用', function () { pxApplyDirty(st, view); }, { cls: 'pri', icon: 'check' });
-  if (!n) ap.classList.add('dis');
-  nodes.push(ap);
-  WE.toolsExtra = nodes;
+  WE.toolsExtra = [h('div', { class: 'ed-tsearch' }, [uiIcon('search', 12), inp])];   // 应用 / 放弃用顶栏和底栏已有的，不在这一行重复
 }
 function pxMore(body, st, view) {
   if (st.nextOffset === null || st.nextOffset === undefined) return;
@@ -135,13 +150,12 @@ function pxActions(st, view, label, onApply, extra) {
 function pxPosition(body) {
   var st = pxGate(body, 'position', '位置'); if (!st) return;
   var d = st.draft || (st.draft = clone(st.value));
-  body.appendChild(xSec('compass', '位置', '「传送」会把玩家立刻送过去'));
+  body.appendChild(xSec('compass', '位置', '点顶栏「应用修改」即传送'));
   function num(key, title, o) { body.appendChild(xNum({ title: title, value: d[key], min: o.min, max: o.max, step: o.step || 1, dec: o.dec === undefined ? 2 : o.dec, noSlider: true, onChange: function (v) { d[key] = v; } })); }
   var dims = pxDims(st);
   if (dims.length) body.appendChild(xSelect({ title: '维度', options: dims, value: d.dimension, onChange: function (v) { d.dimension = v; }, width: 200 }));
-  body.appendChild(xText({ title: '维度 ID', sub: '模组维度可以手动输入', value: d.dimension, cls: 'we-in', onCommit: function (v) { d.dimension = v.trim(); weRedrawBody(); } }));
+  body.appendChild(xText({ title: '维度 ID', value: d.dimension, cls: 'we-in', onCommit: function (v) { d.dimension = v.trim(); weRedrawBody(); } }));
   num('x', 'X', {}); num('y', 'Y', {}); num('z', 'Z', {}); num('yaw', '水平朝向', { min: -360, max: 360, dec: 1 }); num('pitch', '俯仰', { min: -90, max: 90, dec: 1 });
-  body.appendChild(pxActions(st, 'position', '传送', function () { pxApply('position', clone(d)); }));
   pxRespawn(body);
 }
 function pxRespawn(body) {
@@ -162,7 +176,7 @@ function pxRespawn(body) {
   ['x', 'y', 'z'].forEach(function (k) { body.appendChild(xNum({ title: k.toUpperCase(), value: d[k], step: 1, dec: 0, round: true, noSlider: true, onChange: function (v) { d[k] = Math.round(v); } })); });
   body.appendChild(xNum({ title: '朝向', value: d.yaw, min: -360, max: 360, step: 1, dec: 1, noSlider: true, onChange: function (v) { d.yaw = v; } }));
   body.appendChild(xToggle({ title: '强制重生在这里', sub: '关闭时，游戏会先检查床或重生锚还在不在', value: !!d.forced, onChange: function (on) { d.forced = on; } }));
-  body.appendChild(pxActions(st, 'respawn', '保存重生点', function () { pxApply('respawn', clone(d)); }, [kBtn('清除重生点', function () { pxApply('respawn', null); }, { icon: 'trash' })]));
+  body.appendChild(h('div', { class: 'world-actions' }, [kBtn('清除重生点', function () { pxApply('respawn', null); }, { icon: 'trash' })]));
 }
 
 /* ---------- 配方 ---------- */
@@ -185,8 +199,8 @@ function pxAdvancements(body) {
   if (!pxSelf()) { body.appendChild(xSec('trophy', '成就')); body.appendChild(xEmpty('成就只能修改自己的数据。')); return; }
   var st = pxGate(body, 'advancements', '成就'); if (!st) return;
   var inner = st.displayed === false;
-  pxListTools(st, 'advancements', '搜索成就（名称或 ID）', [kBtn(inner ? '含内部成就 ✓' : '含内部成就', function () { st.displayed = inner ? true : false; st.status = 'idle'; weRedrawBody(); }, { title: '内部成就是配方解锁之类玩家界面里看不到的条目' })]);
-  body.appendChild(xSec('trophy', '成就', st.total + ' 项 · 授予 / 收回会触发原版奖励和公告，无法撤销'));
+  pxListTools(st, 'advancements', '搜索成就（名称或 ID）');
+  body.appendChild(xSec('trophy', '成就', st.total + ' 项', kBtn(inner ? '含内部成就 ✓' : '含内部成就', function () { st.displayed = inner ? true : false; st.status = 'idle'; weRedrawBody(); }, { title: '内部成就：配方解锁之类，玩家界面里看不到' })));
   st.entries.forEach(function (e) {
     var cur = st.dirty[e.id] || { id: e.id, criteria: e.criteria }, crit = cur.criteria || [], doneN = crit.filter(function (c) { return c.done; }).length, desc = pxAdvDesc(e);
     var all = crit.length && doneN === crit.length;
@@ -225,14 +239,14 @@ function pxStats(body) {
 /* ---------- 离线玩家 ---------- */
 function pxOffline(body) {
   var st = pxState('offline');
-  body.appendChild(xSec('user', '离线玩家', '只能改此刻不在线的玩家；写入前会自动备份'));
-  body.appendChild(xText({ title: '玩家 UUID', sub: '完整的 36 位 UUID', value: PX.off.uuid, placeholder: '00000000-0000-0000-0000-000000000000', cls: 'we-in', onCommit: function (v) { PX.off.uuid = v.trim(); st.status = 'idle'; st.value = null; st.loaded = false; st.draft = null; } }));
+  body.appendChild(xSec('user', '离线玩家', '对方不在线时才能改，写入前自动备份'));
+  body.appendChild(xText({ title: '玩家 UUID', value: PX.off.uuid, placeholder: '00000000-0000-0000-0000-000000000000', cls: 'we-in', onCommit: function (v) { PX.off.uuid = v.trim(); st.status = 'idle'; st.value = null; st.loaded = false; st.draft = null; } }));
   body.appendChild(h('div', { class: 'world-actions' }, [kBtn('读取存档', function () { st.value = null; st.loaded = false; st.draft = null; pxRead('offline'); weRedrawBody(); }, { icon: 'search' })]));
   if (st.status === 'loading') { body.appendChild(xEmpty('正在读取…')); return; }
   if (st.err && !st.loaded) { body.appendChild(kHint(st.err, 'err')); return; }
   if (!st.loaded) { body.appendChild(xEmpty('输入 UUID 后点「读取存档」。')); return; }
   var keys = (st.schema && st.schema.editableKeys) || [];
-  body.appendChild(kHint('可以改的字段：' + (keys.join('、') || '无') + '。身份、位置、成就这类字段不通过这里修改。', 'sub'));
+  body.appendChild(kHint('可改：' + (keys.join('、') || '无'), 'sub'));
   var code = kCode({ value: st.draft === null || st.draft === undefined ? nbtPrint(nbtParse(st.value.snbt), true) : st.draft, height: 260, validate: function (t) { nbtParse(t); }, onInput: function (t) { st.draft = t; } });
   body.appendChild(code.el);
   body.appendChild(h('div', { class: 'world-actions' }, [kBtn('写入离线存档', function () {

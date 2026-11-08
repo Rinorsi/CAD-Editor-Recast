@@ -54,7 +54,7 @@ function open() { c.WE.w = { kind: 'block', views: { generic: { value, snbt: '{}
   c.WE.w = { kind: 'entity', type: 'mod:thing', views: { generic: { value: { mood: '3' }, schema: { fields: { mood: { type: 'integer', nbt_type: 'int', default_snbt: '3', editable: 'structured', read_only: false } } } } } };
   c.WE.ent = {}; const b = body(); c.EV_SIMPLE_TAB.generic(b);
   assert.ok(/mood/.test(b.textContent));
-  assert.ok(c.evSimpleGroups().some(g => g[0] === 'generic'), '实体设置标签里有通用视图');
+  c.WE.w.slot = {}; c.WE.w.type = 'mod:thing'; assert.ok(c.weTabs().some(x => x.id === 'gents'), '实体有单独的「其他设置」页'); const ids = c.weTabs().map(x => x.id); assert.equal(ids[ids.length - 1], 'data'); assert.equal(ids[ids.length - 2], 'gents', '放在「数据」前面');
 }
 // ---- 没有字段时给出去数据页的提示
 {

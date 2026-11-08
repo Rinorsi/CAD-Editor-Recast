@@ -47,10 +47,10 @@ div
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
     div.ed-tabs
-      div.ed-tab.on
+      div.ed-tab.on [title="刷怪设置"]
         img.o-ico [src="oriel:textures/icons/paw.png" style="height:16px;width:16px"]
         span "刷怪设置"
-      div.ed-tab
+      div.ed-tab [title="数据"]
         img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
         span "数据"
     div.ed-tools
@@ -674,10 +674,10 @@ div
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
     div.ed-tabs
-      div.ed-tab
+      div.ed-tab [title="刷怪设置"]
         img.o-ico [src="oriel:textures/icons/paw.png" style="height:16px;width:16px"]
         span "刷怪设置"
-      div.ed-tab.on
+      div.ed-tab.on [title="数据"]
         img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
         span "数据"
     div.ed-tools [style="display:none"]

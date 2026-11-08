@@ -8,7 +8,7 @@ var WE = { w: null, text: '', slots: {}, pending: null, tab: '', seq: 0, obj: nu
 function weActive() { return !!WE.w; }
 function weBase() { try { return nbtPrint(nbtParse(WE.w.snbt), false); } catch (e) { return WE.w.snbt; } }
 function weDirtyText() { if (!WE.w) return false; try { return nbtPrint(nbtParse(WE.text), false) !== weBase(); } catch (e) { return true; } }
-function weDirty() { return weDirtyText() || Object.keys(WE.slots).length > 0 || (typeof weViewsDirty === 'function' && weViewsDirty()) || (typeof evDirty === 'function' && evDirty()); }
+function weDirty() { return (typeof pxDirtyCount === 'function' && pxDirtyCount() > 0) || weDirtyText() || Object.keys(WE.slots).length > 0 || (typeof weViewsDirty === 'function' && weViewsDirty()) || (typeof evDirty === 'function' && evDirty()); }
 function weName() {
   var w = WE.w;
   if (w.player) return (w.player.name || '玩家') + (w.player.self ? '（你）' : '');
@@ -29,7 +29,11 @@ function weTabs() {
   if (w.kind === 'block' && (weStateSchema().length || weTypeSchema().length > 1)) t.push({ id: 'state', label: '方块状态', icon: 'sliders' });
   if (noBE) return t;
   if (w.kind === 'entity' && w.player) {
-    return [{ id: 'pinv', label: '背包', icon: 'backpack' }, { id: 'pender', label: '末影箱', icon: 'chest' }, { id: 'pstat', label: '状态', icon: 'heart' }, { id: 'pabil', label: '能力', icon: 'wind' }, { id: 'pattr', label: '属性与效果', icon: 'sliders' }, { id: 'ppos', label: '位置与重生', icon: 'compass' }, { id: 'prec', label: '配方', icon: 'book' }, { id: 'padv', label: '成就', icon: 'trophy' }, { id: 'pstats', label: '统计', icon: 'scroll' }, { id: 'poff', label: '离线玩家', icon: 'user' }];
+    var pt = [{ id: 'pinv', label: '背包', icon: 'backpack' }, { id: 'pender', label: '末影箱', icon: 'chest' }, { id: 'pstat', label: '状态', icon: 'heart' }, { id: 'pabil', label: '能力', icon: 'wind' }, { id: 'pattr', label: '属性与效果', icon: 'sliders' },
+      { id: 'ppos', label: '位置与重生', icon: 'compass' }, { id: 'prec', label: '配方', icon: 'book' }];
+    if (w.player.self) pt.push({ id: 'padv', label: '成就', icon: 'trophy' });   // 成就只能改自己的，别人的页面没有这一页
+    pt.push({ id: 'pstats', label: '统计', icon: 'scroll' }, { id: 'poff', label: '离线玩家', icon: 'user' });
+    return pt;
   }
   if (w.kind === 'entity') {
     if (evGroup('pose')) t.push({ id: 'pose', label: '姿势', icon: 'user' });
@@ -41,7 +45,9 @@ function weTabs() {
     if (evHasRelations()) t.push({ id: 'relations', label: '关系', icon: 'users' });
     t.push({ id: 'entity', label: '属性', icon: 'paw' });
     if (evGroup('riding')) t.push({ id: 'riding', label: '乘客', icon: 'users' });
+    if (evGroup('generic')) t.push({ id: 'gents', label: '其他设置', icon: 'sliders' });
   }
+  if (w.kind === 'block' && weViews().generic && weViews().generic.value) t.push({ id: 'gview', label: '其他设置', icon: 'sliders' });
   t.push({ id: 'data', label: '数据', icon: 'code' });
   return t;
 }
@@ -68,6 +74,7 @@ function weMarkDirty() { drawWorldTop(); drawWorldFoot(); }
 function drawWorldFoot() {
   var f = clear($('footer')), w = WE.w, s = w.slot || {};
   f.appendChild(edFootChg(weDirty(), '有未应用的修改', '没有未应用的修改'));
+  if (typeof pxDirtyCount === 'function' && pxDirtyCount() > 0) { var dis = h('span', { class: 'it link', text: '放弃玩家页的修改', title: '放弃位置 / 重生点 / 配方 / 成就 / 统计里还没应用的修改' }); activate(dis, function () { pxDiscard(); }); f.appendChild(dis); }
   if (WE.err) f.appendChild(h('span', { class: 'it bad' }, [uiIcon('close', 12), WE.err]));
   f.appendChild(h('div', { class: 'grow' }));
   f.appendChild(h('span', { class: 'it', title: '这个目标在世界里的位置', text: weWhere() }));
@@ -78,10 +85,11 @@ function drawWorldScreen() {
   var hero = h('aside', { class: 'ed-hero', id: 'hero' });
   var right = h('section', { class: 'ed-right' }), tabbar = h('div', { class: 'ed-tabs', id: 'tabbar' }), body = h('div', { class: 'ed-body', id: 'edbody' });
   weTabs().forEach(function (t) {
-    var el = h('div', { class: 'ed-tab' + (WE.tab === t.id ? ' on' : '') }, [uiIcon(t.icon, 14), h('span', { text: t.label })]);
+    var el = h('div', { class: 'ed-tab' + (WE.tab === t.id ? ' on' : ''), title: t.label }, [uiIcon(t.icon, 14), h('span', { text: t.label })]);
     activate(el, function () { WE.tab = t.id; weRender(); });
     tabbar.appendChild(el);
   });
+  tabbar.classList.toggle('dense', weTabs().length >= 4);   // 和物品页一样：4 页以上只留当前页的名字，其余只显示图标
   var tools = h('div', { class: 'ed-tools', id: 'edtools' });
   right.appendChild(tabbar); right.appendChild(tools); right.appendChild(body);
   host.appendChild(hero); host.appendChild(makeSplit()); host.appendChild(right); ensureResize();
@@ -96,6 +104,8 @@ function weTabBody(body) {
   else if (WE.tab === 'pstat') wpStatusTab(body);
   else if (WE.tab === 'pabil') wpAbilitiesTab(body);
   else if (WE.tab === 'pattr') wpAttrTab(body);
+  else if (WE.tab === 'gents') EV_SIMPLE_TAB.generic(body);
+  else if (WE.tab === 'gview') WEV.generic(body, 'generic');
   else if (WE.tab === 'ppos') pxPosition(body);
   else if (WE.tab === 'prec') pxRecipes(body);
   else if (WE.tab === 'padv') pxAdvancements(body);
@@ -197,6 +207,12 @@ function weDataTab(body) {
 function weApply() {
   if (WE.pending) { toast('上一笔修改还没有回执', 'info', 'we-wait'); return; }
   if (Date.now() - (WE.lastSendAt || 0) < 650) return;   // 服务器 500ms 限流：连点不重复提交
+  var pxv = typeof pxDirtyViews === 'function' ? pxDirtyViews() : [];
+  if (pxv.length) {   // 玩家页的位置 / 重生点 / 配方 / 成就 / 统计各走自己的协议，先应用这些
+    pxApplyAll();
+    if (weChangeCount() - pxDirtyCount() > 0) toast('其余修改请在这些应用完成后再点一次「应用修改」', 'info', 'we-px');
+    return;
+  }
   var w = WE.w, msg = { requestId: 'w-' + Date.now() + '-' + (++WE.seq), slot: clone(w.slot) };
   if (weDirtyText()) {
     try { msg.snbt = nbtPrint(nbtParse(WE.text), false); } catch (e) { toast('SNBT 有误，没有提交：' + (e.message || e), 'error'); return; }
@@ -257,7 +273,7 @@ function weWhere() {
   return (p ? '位置 ' + p.join(' ') : shortId(w.type)) + (dim ? ' · ' + dim : '');
 }
 function weChangeCount() {
-  var n = (weDirtyText() ? 1 : 0) + Object.keys(WE.slots).length + (typeof wpSlotsDirty === 'function' ? wpSlotsDirty() : 0);
+  var n = (weDirtyText() ? 1 : 0) + Object.keys(WE.slots).length + (typeof wpSlotsDirty === 'function' ? wpSlotsDirty() : 0) + (typeof pxDirtyCount === 'function' ? pxDirtyCount() : 0);
   if (typeof weViewsDirty === 'function') n += Object.keys(WE.views).length + Object.keys(WE.bstate).length + (WE.btype && WE.btype !== WE.w.block ? 1 : 0);
   if (typeof evDirty === 'function' && evDirty()) n += Object.keys(WE.ent).length + (WE.offers !== null ? 1 : 0);
   return n;

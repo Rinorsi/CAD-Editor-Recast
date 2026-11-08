@@ -40,17 +40,17 @@ div
     div.ed-sounds
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabs
-      div.ed-tab.on
+    div.dense.ed-tabs
+      div.ed-tab.on [title="交易"]
         img.o-ico [src="oriel:textures/icons/coins.png" style="height:16px;width:16px"]
         span "交易"
-      div.ed-tab
+      div.ed-tab [title="属性"]
         img.o-ico [src="oriel:textures/icons/paw.png" style="height:16px;width:16px"]
         span "属性"
-      div.ed-tab
+      div.ed-tab [title="乘客"]
         img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
         span "乘客"
-      div.ed-tab
+      div.ed-tab [title="数据"]
         img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
         span "数据"
     div.ed-tools [style="display:none"]
@@ -142,17 +142,17 @@ div
     div.ed-sounds
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabs
-      div.ed-tab
+    div.dense.ed-tabs
+      div.ed-tab [title="交易"]
         img.o-ico [src="oriel:textures/icons/coins.png" style="height:16px;width:16px"]
         span "交易"
-      div.ed-tab.on
+      div.ed-tab.on [title="属性"]
         img.o-ico [src="oriel:textures/icons/paw.png" style="height:16px;width:16px"]
         span "属性"
-      div.ed-tab
+      div.ed-tab [title="乘客"]
         img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
         span "乘客"
-      div.ed-tab
+      div.ed-tab [title="数据"]
         img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
         span "数据"
     div.ed-tools
@@ -561,17 +561,17 @@ div
     div.ed-sounds
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabs
-      div.ed-tab
+    div.dense.ed-tabs
+      div.ed-tab [title="交易"]
         img.o-ico [src="oriel:textures/icons/coins.png" style="height:16px;width:16px"]
         span "交易"
-      div.ed-tab
+      div.ed-tab [title="属性"]
         img.o-ico [src="oriel:textures/icons/paw.png" style="height:16px;width:16px"]
         span "属性"
-      div.ed-tab.on
+      div.ed-tab.on [title="乘客"]
         img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
         span "乘客"
-      div.ed-tab
+      div.ed-tab [title="数据"]
         img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
         span "数据"
     div.ed-tools
@@ -728,17 +728,17 @@ div
     div.ed-sounds
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabs
-      div.ed-tab
+    div.dense.ed-tabs
+      div.ed-tab [title="交易"]
         img.o-ico [src="oriel:textures/icons/coins.png" style="height:16px;width:16px"]
         span "交易"
-      div.ed-tab
+      div.ed-tab [title="属性"]
         img.o-ico [src="oriel:textures/icons/paw.png" style="height:16px;width:16px"]
         span "属性"
-      div.ed-tab
+      div.ed-tab [title="乘客"]
         img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
         span "乘客"
-      div.ed-tab.on
+      div.ed-tab.on [title="数据"]
         img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
         span "数据"
     div.ed-tools [style="display:none"]
