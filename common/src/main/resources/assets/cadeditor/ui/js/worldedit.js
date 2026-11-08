@@ -57,6 +57,10 @@ function weRender() {
 }
 function drawWorldTop() {
   var bar = clear($('topbar')), w = WE.w;
+  if (w.player && !w.player.self) {   // 正在看别的玩家：左上角一键回到自己的数据
+    var back = kBtn('返回自己', function () { if (typeof oriel !== 'undefined' && oriel.send) oriel.send('open_world', { self: true }); }, { icon: 'back', title: '回到你自己的编辑页' });
+    back.style.marginRight = '6px'; bar.appendChild(back);
+  }
   edTopHead(bar, { icon: w.kind === 'block' ? itemIcon(shortId(w.block || w.type), 22) : w.player ? itemIcon('player_head', 22) : entityIcon(w.type, 22), title: weName(), crumb: w.kind === 'block' ? '方块' : w.player ? '玩家' : '实体' });
   var un = h('div', { class: 'k-ibtn' + (w.canUndo ? '' : ' dis'), title: '撤销上一次写入游戏的修改' }, [uiIcon('undo', 14)]);
   activate(un, function () { if (WE.w.canUndo) weUndo(); });

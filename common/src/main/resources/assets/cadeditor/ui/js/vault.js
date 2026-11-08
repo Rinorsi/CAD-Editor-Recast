@@ -252,7 +252,7 @@ function openVault(opts) {
   var expBtn = kBtn('导出全部', function () { vaultExport(); }, { icon: 'download' });
   var kindSeg = fixedKind ? null : kSeg([{ v: 'item', label: '物品', icon: 'backpack' }, { v: 'entity', label: '生物', icon: 'paw' }, { v: 'block', label: '方块', icon: 'cube' }, { v: 'player_preset', label: '玩家预设', icon: 'user' }], V.kind, function (v) { V.kind = v; V.tags = []; saveBtn.style.display = v === 'item' && Store.docs && Store.docs.length ? '' : 'none'; q.setAttribute('placeholder', v === 'entity' ? '搜索名称、标签、生物（支持拼音）' : v === 'block' ? '搜索名称、标签、方块' : v === 'player_preset' ? '搜索名称、标签' : '搜索名称、标签、物品（支持拼音）'); refresh(); }).el;
   var body = [h('div', { class: 'vt-bar' }, [kindSeg, sbox.el, sort.el, tagBtn, stat]), tagBar, warn, list, more];
-  var win = modalShell('保险库', opts.pickEntity ? '选一只生物' : opts.pick ? '选一件放进去' : '存在这台电脑上，所有存档和服务器通用', body, [saveBtn, impBtn, expBtn, undoEl, h('div', { class: 'grow' }), kBtn('完成', closeModal, { cls: 'pri' })], 'wide vtwin');
+  var win = modalShell('保险库', opts.pickEntity ? '选一只生物' : opts.pick ? '选一件放进去' : '存在这台电脑上，所有存档和服务器通用', body, [saveBtn, impBtn, expBtn, kBtn('存档玩家', function () { openPlayersModal(); }, { icon: 'users', title: '看这个存档里所有玩家：直接打开他们的编辑页、复制 UUID、存成预设' }), undoEl, h('div', { class: 'grow' }), kBtn('完成', closeModal, { cls: 'pri' })], 'wide vtwin');
   openModal(win, !!opts.pick); windowify(win, 'vault');   // 和别的大窗口一样：能拖、能拉大小
   refresh(); paintState();
 }

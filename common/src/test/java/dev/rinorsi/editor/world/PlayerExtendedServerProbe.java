@@ -35,6 +35,7 @@ public final class PlayerExtendedServerProbe {
             }
             var deniedExport=request(p,"export_preset","");deniedExport.remove("view");code(call(p,deniedExport),"player_forbidden");
             server.getPlayerList().getOps().add(new ServerOpListEntry(p.nameAndId(),LevelBasedPermissionSet.GAMEMASTER,false));
+            switchTargets(p,other);
             var pos=read(p,"position");var patch=pos.getAsJsonObject("value").deepCopy();patch.addProperty("x",32.5);patch.addProperty("z",32.5);patch.addProperty("yaw",80.25);patch.addProperty("pitch",20.5);
             saved(apply(p,"position",pos,patch));check(p.getX()==32.5&&p.getYRot()==80.25f&&p.getXRot()==20.5f,"teleport loads chunk and applies rotation");
             var foreignPosition=request(p,"read","position");foreignPosition.getAsJsonObject("target").addProperty("uuid",other.getStringUUID());var foreignBaseline=opened(call(p,foreignPosition));var foreignPatch=foreignBaseline.getAsJsonObject("value").deepCopy();foreignPatch.addProperty("x",8.5);foreignPosition.addProperty("action","apply");foreignPosition.addProperty("revision",foreignBaseline.get("revision").getAsString());foreignPosition.add("patch",foreignPatch);saved(call(p,foreignPosition));check(other.getX()==8.5&&p.getX()==32.5,"explicit other UUID edits target without redirecting to self");
@@ -116,6 +117,21 @@ public final class PlayerExtendedServerProbe {
         check(Arrays.equals(bytes,Files.readAllBytes(path)),"all profile reads leave archive byte identical");check(stats.equals(list.stats)&&advancements.equals(list.advancements),"temporary player reads leave native caches unchanged");
         check(Files.readString(legacy).equals("{}")&&statsFiles.equals(archiveFiles(server.getWorldPath(LevelResource.PLAYER_STATS_DIR)))&&advancementFiles.equals(archiveFiles(server.getWorldPath(LevelResource.PLAYER_ADVANCEMENTS_DIR))),"read-only profile never migrates legacy stats or writes stat/advancement files");
     }
+    private static void switchTargets(ServerPlayer p,ServerPlayer other)throws Exception {
+        p.level().getChunk(0,0);
+        String dim=p.level().dimension().identifier().toString();
+        var self=dev.rinorsi.editor.client.WorldPageTarget.playerSlot(json("{self:true}"),dim);var remote=dev.rinorsi.editor.client.WorldPageTarget.playerSlot(json("{uuid:'"+other.getStringUUID()+"'}"),dim);
+        var first=call(p,worldRequest("open",self));check(first.get("status").getAsString().equals("opened"),"navigation opens self");var a=dev.rinorsi.editor.client.WorldPageTarget.Binding.opened(first.getAsJsonObject("world"));
+        var second=call(p,worldRequest("open",remote));check(second.get("status").getAsString().equals("opened"),"navigation opens online player without crosshair");var b=dev.rinorsi.editor.client.WorldPageTarget.Binding.opened(second.getAsJsonObject("world"));
+        var edit=worldRequest("apply",a.slot());edit.addProperty("revision",a.revision());edit.add("entity",json("{player:{SelectedItemSlot:1}}"));code(call(p,edit),"session_lost");
+        edit.add("slot",b.slot());var saved=call(p,b.bind(edit,false));check(saved.get("status").getAsString().equals("saved")&&other.getInventory().getSelectedSlot()==1&&p.getInventory().getSelectedSlot()==0,"new binding applies only to new player");b=dev.rinorsi.editor.client.WorldPageTarget.Binding.opened(saved.getAsJsonObject("world"));
+        var undo=worldRequest("undo",b.slot());check(call(p,b.bind(undo,true)).get("status").getAsString().equals("saved")&&other.getInventory().getSelectedSlot()==0,"new binding undo restores new player");
+        var back=call(p,worldRequest("open",self));check(back.get("status").getAsString().equals("opened")&&back.getAsJsonObject("world").getAsJsonObject("slot").get("uuid").getAsString().equals(p.getStringUUID()),"navigation returns to self");a=dev.rinorsi.editor.client.WorldPageTarget.Binding.opened(back.getAsJsonObject("world"));
+        var oldPos=other.position();other.setPos(100,65,100);code(call(p,worldRequest("open",remote)),"out_of_reach");other.setPos(oldPos);
+        var missing=remote.deepCopy();missing.addProperty("uuid",UUID.randomUUID().toString());code(call(p,worldRequest("open",missing)),"player_offline");
+        edit=worldRequest("apply",a.slot());edit.add("entity",json("{player:{SelectedItemSlot:0}}"));check(call(p,a.bind(edit,false)).get("status").getAsString().equals("saved"),"rejected navigation leaves previous server session usable");
+    }
+    private static JsonObject worldRequest(String op,JsonObject slot){var r=new JsonObject();r.addProperty("op",op);r.addProperty("requestId",UUID.randomUUID().toString());r.add("slot",slot);return r;}
     private static Map<String,String> archiveFiles(Path dir)throws Exception{var result=new TreeMap<String,String>();if(Files.isDirectory(dir))try(var paths=Files.walk(dir)){for(var path:paths.filter(Files::isRegularFile).toList())result.put(dir.relativize(path).toString(),PlayerExtendedEditor.hash(Files.readAllBytes(path)));}return result;}
     private static JsonObject profileRow(JsonArray rows,UUID uuid){for(var raw:rows){var row=raw.getAsJsonObject();if(row.get("uuid").getAsString().equals(uuid.toString()))return row;}throw new AssertionError("missing profile "+uuid);}
     private static void displayMetadata(ServerPlayer p)throws Exception{

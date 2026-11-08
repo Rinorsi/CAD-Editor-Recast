@@ -73,6 +73,9 @@ div
         div.k-btn
           img.o-ico [src="oriel:textures/icons/download.png" style="height:16px;width:16px"]
           span "导出全部"
+        div.k-btn [title="看这个存档里所有玩家：直接打开他们的编辑页、复制 UUID、存成预设"]
+          img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
+          span "存档玩家"
         div
         div.grow
         div.k-btn.pri

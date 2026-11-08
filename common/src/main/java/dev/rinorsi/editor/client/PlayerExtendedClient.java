@@ -26,6 +26,8 @@ public final class PlayerExtendedClient {
         screen.driver().onClose(()->{if(owner==screen)clear();});
     }
     public static void clear(){owner=null;revisions.clear();queue.clear();pending=null;pageId=null;pendingKey=null;nextSend=0;}
+    static boolean busy(){return pending!=null||!queue.isEmpty();}
+    static void resetViews(){revisions.clear();}
     public static void tick(){
         long now=System.nanoTime();
         if(pending!=null&&now>deadline){String id=pageId;pending=null;nextSend=now+INTERVAL;reject(id,"request_timeout","服务器未确认玩家编辑结果；请重新读取核对，保留草稿");}
@@ -37,6 +39,7 @@ public final class PlayerExtendedClient {
         if(owner!=screen)return;String id="";
         try{
             var r=raw.getAsJsonObject().deepCopy();id=StackCodec.string(r,"requestId");
+            if(WorldEditorClient.switching())throw new EditorSessions.Failure("request_pending","正在切换玩家，请等待目标读取完成");
             if(id.isEmpty()||id.length()>80)throw new IllegalArgumentException("请求编号无效");
             if(queue.size()>=4)throw new EditorSessions.Failure("rate_limited","待发送请求过多，请稍后重试");
             if(id.equals(pageId)&&pending!=null)throw new IllegalArgumentException("请求编号重复");

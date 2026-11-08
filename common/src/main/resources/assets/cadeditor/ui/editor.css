@@ -1632,7 +1632,7 @@ body.vault-only .ew { display: none; }
 [data-theme=light] .kc-r.bad { background: rgba(220, 40, 40, 0.18); }
 
 /* 工具行里的搜索框和按钮（标签页通过 WE.toolsExtra 放进来，滚动时一直在） */
-.ed-tsearch { flex: 1 1 100px; max-width: 213px; min-width: 90px; display: flex; align-items: center; gap: 4px; }
+.ed-tsearch { flex: 1 1 90px; max-width: 160px; min-width: 80px; display: flex; align-items: center; gap: 4px; }
 .ed-tsearch .k-input { flex: 1; min-width: 60px; }
 .ed-tools .k-btn { flex: none; }
 .px-id { color: var(--tx3); }
@@ -1641,13 +1641,17 @@ body.vault-only .ew { display: none; }
 
 .kc-li { width: 100%; height: 16px; min-height: 16px; padding: 0 3px; line-height: 14px; }
 .kc-r.editing { background: rgba(255, 255, 255, 0.07); }
+.px-sum { display: flex; flex-direction: column; gap: 8px; padding: 6px 0 8px; }
+.px-tiles { display: flex; flex-wrap: wrap; gap: 6px; }
+.px-tile { display: flex; align-items: center; gap: 6px; min-width: 76px; padding: 4px 8px; background: var(--well2); border: 1px solid var(--ln2); }
+.px-tile .tx { display: flex; flex-direction: column; line-height: 13px; }
+.px-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; }
+.px-where { display: flex; align-items: center; gap: 5px; color: var(--tx2); }
+.px-eq { display: flex; gap: 3px; }
 
-.px-sum { display: flex; flex-wrap: wrap; gap: 4px 18px; padding: 4px 0 8px; }
-.px-sum .k-stat { display: flex; align-items: center; gap: 6px; }
-.px-eq { display: flex; gap: 2px; }
+/* 行头 .k-xhead 给文字和小图标设了灰色 -mc-tint，会被里面的开关、按钮、数字框继承，把它们的贴图整体染暗（像套了一层黑色遮罩）。
+   带贴图的控件一律还原成白色（不染色），亮绿开关才是真正的亮绿。 */
+.k-toggle, .k-sw2, .ed-toggle, .k-xhead .k-btn, .k-xhead .k-seg, .k-xhead .k-sel, .k-xhead .k-mini, .k-xhead .k-xnum, .k-xhead .k-input { -mc-tint: #fff; }
 
-/* 分页栏横向滚动：放不下时两头出现 ‹ › */
-.ed-tabwrap { flex: none; display: flex; align-items: flex-end; min-width: 0; background: var(--well); border-bottom: 1px solid var(--ln2); }
-.ed-tabwrap > .ed-tabs { flex: 1; min-width: 0; border-bottom: 0; }
-.ed-tarr { flex: none; width: 16px; height: 27px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--tx2); }
-.ed-tarr:hover { color: var(--tx); background: rgba(255, 255, 255, 0.08); }
+.px-msearch { max-width: none; margin-bottom: 6px; }
+.px-modal { max-height: 420px; overflow-y: auto; }

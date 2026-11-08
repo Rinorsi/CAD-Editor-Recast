@@ -5,14 +5,16 @@
 var PX = { seq: 0, views: {}, pending: {}, off: { uuid: '' }, arch: { exp: {}, open: {}, rawFor: '' } };
 
 function pxTarget(offline) {
-  var w = WE.w, p = w && w.player;
+  var w = typeof WE !== 'undefined' ? WE.w : null, p = w && w.player;
   if (offline) return { uuid: PX.off.uuid, offline: true };
   if (p && p.self) return {};
   var u = w && w.slot && w.slot.uuid;
-  return u ? { uuid: u } : null;
+  return u ? { uuid: u } : {};
 }
 function pxSelf() { return !!(WE.w && WE.w.player && WE.w.player.self); }
 function pxState(view) { return PX.views[view] || (PX.views[view] = { status: 'idle', draft: null, entries: [], offset: 0, query: '', total: 0, nextOffset: null, open: {}, dirty: {} }); }
+/* 玩家名单有两个宿主：世界页的标签，和保险库里打开的弹窗；重画时两边都刷新 */
+function pxRedrawAll() { if (PX.modal) PX.modal.redraw(); if (typeof weActive === 'function' && weActive()) weRedrawBody(); }
 function pxReset() { PX.views = {}; PX.pending = {}; PX.queue = []; PX.unlock = null; PX.arch = { exp: {}, open: {}, rawFor: '' }; }
 /* 哪些视图有没应用的草稿（顶栏「应用修改」会把它们依次发出去）。离线玩家有自己的写入按钮，不算 */
 function pxDirty(view) {
@@ -77,7 +79,7 @@ function pxResult(r) {
   var p = PX.pending[r.requestId]; delete PX.pending[r.requestId];
   if (p.kind === 'export') {   // 存档玩家档案：导出摘要 + 预设模板，不碰编辑会话
     PX.arch.exp[p.uuid] = r.status === 'exported' ? { status: 'ready', summary: r.summary || {}, template: r.template } : { status: 'error', err: PX_CODE[r.code] || r.reason || r.code || '读取失败' };
-    if (weActive()) weRedrawBody();
+    pxRedrawAll();
     return;
   }
   var st = pxState(p.view); st.busy = false; toastDismiss('px-pending');
@@ -101,6 +103,7 @@ function pxResult(r) {
     else if (p.view === 'advancements' && r.status === 'saved') pxUnlockNext(ust);
   }
   if (r.status === 'saved' && PX.queue && PX.queue.length) pxNext();   // 顶栏一次应用了好几页：接着发下一页
+  if (PX.modal) PX.modal.redraw();
   if (weActive()) { weRedrawBody(); weMarkDirty(); }
 }
 
@@ -299,17 +302,33 @@ function pxSavePreset(e, cb) {
     });
   });
 }
+/* 摘要卡：一排小方块（生命 / 饥饿 / 等级 / 位置 / 背包 / 末影箱）+ 装备格，简单好看，不堆文字 */
 function pxSummaryBox(sm) {
-  var box = h('div', { class: 'px-sum' });
-  function stat(l, v) { if (v === undefined || v === null || v === '') return; box.appendChild(h('div', { class: 'k-stat' }, [h('span', { class: 'sl', text: l }), h('b', { text: String(v) })])); }
-  stat('游戏模式', Labels.mode[sm.game_mode] || sm.game_mode);
-  stat('生命', sm.health !== undefined ? fmtNum(sm.health) : ''); stat('饥饿', sm.food); stat('等级', sm.xp_level);
-  if (sm.dimension) stat('位置', (Labels.dim[sm.dimension] || humanId(sm.dimension)) + ' ' + [sm.x, sm.y, sm.z].map(function (v) { return Math.round(v); }).join(' '));
-  stat('背包', sm.inventory_count !== undefined ? sm.inventory_count + ' 件' : ''); stat('末影箱', sm.ender_count !== undefined ? sm.ender_count + ' 件' : '');
-  var eq = sm.equipment || {}, ico = [];
-  ['head', 'chest', 'legs', 'feet', 'offhand'].forEach(function (k) { if (eq[k]) ico.push(h('span', { title: pxObjName(eq[k]) }, [itemIcon(shortId(eq[k]), 16)])); });
-  if (ico.length) box.appendChild(h('div', { class: 'k-stat' }, [h('span', { class: 'sl', text: '装备' }), h('div', { class: 'px-eq' }, ico)]));
+  var box = h('div', { class: 'px-sum' }), row = h('div', { class: 'px-tiles' });
+  function tile(icon, label, value, tip) {
+    if (value === undefined || value === null || value === '') return;
+    row.appendChild(h('div', { class: 'px-tile', title: tip || label }, [uiIcon(icon, 14), h('div', { class: 'tx' }, [h('b', { text: String(value) }), h('span', { class: 'k-sub', text: label })])]));
+  }
+  tile('heart', '生命', sm.health !== undefined ? fmtNum(sm.health) : '');
+  tile('hunger', '饥饿', sm.food);
+  tile('xp', '等级', sm.xp_level);
+  tile('user', '模式', Labels.mode[sm.game_mode] || sm.game_mode);
+  tile('backpack', '背包', sm.inventory_count !== undefined ? sm.inventory_count + ' 件' : '');
+  tile('chest', '末影箱', sm.ender_count !== undefined ? sm.ender_count + ' 件' : '');
+  box.appendChild(row);
+  var foot = h('div', { class: 'px-foot' });
+  if (sm.dimension) foot.appendChild(h('div', { class: 'px-where' }, [uiIcon('compass', 14), h('span', { text: (Labels.dim[sm.dimension] || humanId(sm.dimension)) + '  ' + [sm.x, sm.y, sm.z].map(function (v) { return Math.round(v); }).join('  ') })]));
+  var eq = sm.equipment || {}, slots = [];
+  [['head', '头盔'], ['chest', '胸甲'], ['legs', '护腿'], ['feet', '靴子'], ['offhand', '副手']].forEach(function (k) {
+    slots.push(h('div', { class: 'slot s34', title: k[1] + (eq[k[0]] ? '：' + pxObjName(eq[k[0]]) : '：空') }, eq[k[0]] ? [itemIcon(shortId(eq[k[0]]), 24)] : []));
+  });
+  foot.appendChild(h('div', { class: 'px-eq' }, slots));
+  box.appendChild(foot);
   return box;
+}
+function pxCopyText(text, what) {
+  if (Prefs.hostClip && typeof oriel !== 'undefined' && oriel.send) { oriel.send('clipboard', { text: text }); toast('已复制' + what, 'ok'); }
+  else toast('当前环境不能直接写剪贴板', 'warn');
 }
 function pxOpenRaw(e) {
   var st = pxState('offline'); PX.off.uuid = e.uuid; PX.arch.rawFor = e.uuid; st.loaded = false; st.value = null; st.draft = null; pxRead('offline');
@@ -323,15 +342,21 @@ function pxRawModal(e) {
   }, { cls: 'pri', icon: 'check' });
   openModal(modalShell('原始数据', pxPlayerLabel(e) + (keys.length ? ' · 可改：' + keys.join('、') : ''), [code.el], [h('div', { class: 'grow' }), kBtn('取消', closeModal), go]), true);
 }
-function pxArchive(body) {
+/* 存档玩家名单。host：放内容的容器；o.modal：在弹窗里（搜索框放在内容顶部，不依赖世界页的工具行）；o.redraw：重画整块 */
+function pxArchive(body, o) {
+  o = o || {}; var redraw = o.redraw || pxRedrawAll;
   var st = pxGate(body, 'players', '玩家名单'); if (!st) return;
-  pxListTools(st, 'players', '搜索玩家（名字或 UUID）');
+  if (o.modal) {
+    var inp = kInput(st.query || '', function () {}, { placeholder: '搜索玩家（名字或 UUID）', onCommit: function (v) { st.query = v.trim(); st.status = 'idle'; redraw(); } });
+    body.appendChild(h('div', { class: 'ed-tsearch px-msearch' }, [uiIcon('search', 12), inp]));
+  } else pxListTools(st, 'players', '搜索玩家（名字或 UUID）');
   var raw = pxState('offline');
   if (PX.arch.rawFor && raw.loaded && raw.value) {
     var who = PX.arch.rawFor; PX.arch.rawFor = '';
     var ee = st.entries.filter(function (x) { return x.uuid === who; })[0] || { uuid: who, name: null };
     setTimeout(function () { pxRawModal(ee); }, 0);
   }
+  var myPage = typeof WE !== 'undefined' && WE.w && WE.w.player && WE.w.player.self;
   body.appendChild(xSec('users', '存档里的玩家', st.total + ' 位'));
   st.entries.forEach(function (e) {
     var ex = PX.arch.exp[e.uuid], open = !!PX.arch.open[e.uuid], tags = [];
@@ -339,16 +364,19 @@ function pxArchive(body) {
     if (e.online) tags.push(h('span', { class: 'k-tag', text: '在线' }));
     if (e.owner) tags.push(h('span', { class: 'k-tag dim', text: '房主' }));
     body.appendChild(xRow({ icon: uiIcon('user', 16), title: pxPlayerLabel(e), sub: e.uuid + (e.last_played_ms ? ' · ' + pxWhen(e.last_played_ms) : ''), tip: e.uuid, right: h('div', { class: 'k-row' }, tags), open: open,
-      onHead: function () { PX.arch.open[e.uuid] = !open; if (!open && (!ex || ex.status === 'error')) pxExport(e); weRedrawBody(); },
+      onHead: function () { PX.arch.open[e.uuid] = !open; if (!open && (!ex || ex.status === 'error')) pxExport(e); redraw(); },
       body: function () {
         var kids = [];
         if (!ex || ex.status === 'loading') kids.push(xEmpty('正在读取…'));
         else if (ex.status === 'error') kids.push(kHint(ex.err, 'err'));
         else {
           kids.push(pxSummaryBox(ex.summary));
-          var acts = [kBtn('复制到保险库', function () { pxSavePreset(e, function (en) { toast('已存入保险库：' + en.name, 'ok'); }); }, { icon: 'chest', title: '把这位玩家的背包、装备、末影箱、属性、效果、游戏模式存成预设' })];
-          if (!e.self && WE.w.player && WE.w.player.self) acts.push(kBtn('套用到我', function () { pxSavePreset(e, function (en) { vwSections(en); }); }, { icon: 'download', title: '先存入保险库，再选要套用的部分；套用前会检查你现在的数据有没有备份' }));
-          if (!e.online && !e.owner) acts.push(kBtn('改原始数据', function () { pxOpenRaw(e); }, { icon: 'code', title: '直接编辑这位离线玩家的存档数据，写入前自动备份' }));
+          var acts = [];
+          if (e.online && !e.self) acts.push(kBtn('查看详细数据', function () { if (typeof oriel !== 'undefined' && oriel.send) { oriel.send('open_world', { uuid: e.uuid }); if (PX.modal) { closeModal(); PX.modal = null; } } }, { cls: 'pri', icon: 'eye', title: '打开这位玩家的完整编辑页（和你自己的页面一样），左上角可以回到自己' }));
+          else if (!e.online && !e.owner) acts.push(kBtn('查看详细数据', function () { pxOpenRaw(e); }, { cls: 'pri', icon: 'eye', title: '这位玩家不在线：查看并可编辑他的存档数据，写入前自动备份' }));
+          acts.push(kBtn('复制到保险库', function () { pxSavePreset(e, function (en) { toast('已存入保险库：' + en.name, 'ok'); }); }, { icon: 'chest', title: '把这位玩家的背包、装备、末影箱、属性、效果、游戏模式存成预设' }));
+          acts.push(kBtn('复制玩家 UUID', function () { pxCopyText(e.uuid, ' UUID'); }, { icon: 'copy', title: e.uuid }));
+          if (!e.self && myPage) acts.push(kBtn('套用到我', function () { pxSavePreset(e, function (en) { vwSections(en); }); }, { icon: 'download', title: '先存入保险库，再选要套用的部分；套用前会检查你现在的数据有没有备份' }));
           kids.push(h('div', { class: 'world-actions' }, acts));
         }
         return kids;
@@ -359,6 +387,15 @@ function pxArchive(body) {
   body.appendChild(xSec('search', '按 UUID 查找'));
   body.appendChild(xText({ title: '玩家 UUID', value: PX.off.uuid, placeholder: '00000000-0000-0000-0000-000000000000', cls: 'we-in', onCommit: function (v) {
     v = v.trim(); PX.off.uuid = v;
-    if (/^[0-9a-fA-F-]{32,36}$/.test(v)) { var e = { uuid: v, name: null, online: false }; PX.arch.open[v] = true; pxExport(e); st.query = v; st.status = 'idle'; weRedrawBody(); }
+    if (/^[0-9a-fA-F-]{32,36}$/.test(v)) { var e = { uuid: v, name: null, online: false }; PX.arch.open[v] = true; pxExport(e); st.query = v; st.status = 'idle'; redraw(); }
   } }));
+}
+/* 保险库窗口里的入口：同一份名单，能直接打开玩家的编辑页 / 复制 UUID / 存成预设 */
+function openPlayersModal() {
+  var host = h('div', { class: 'px-modal' });
+  function draw() { clear(host); pxArchive(host, { modal: true, redraw: draw }); }
+  PX.modal = { redraw: draw }; PX.views.players = PX.views.players || null;
+  var st = pxState('players'); st.status = 'idle';
+  draw();
+  openModal(modalShell('存档玩家', '这个存档里的所有玩家', [host], [h('div', { class: 'grow' }), kBtn('完成', function () { PX.modal = null; closeModal(); }, { cls: 'pri' })], 'wide'), true);
 }
