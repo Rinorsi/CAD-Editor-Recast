@@ -153,8 +153,8 @@ function esFlagRow(f, o, edit) {
     var inp = kInput(text, function (x) {
       edit(function (obj) {
         if (!x) { delete obj[k]; return; }
-        if (f.type === 'string') { obj[k] = x; return; }
-        var c = isObj(obj[k]) ? obj[k] : {}; c.text = x; obj[k] = c;
+        if (f.type === 'string' || !isObj(obj[k]) || Object.keys(obj[k]).every(function (key) { return key === 'text'; })) { obj[k] = x; return; }
+        var c = obj[k]; c.text = x; obj[k] = c;
       });
     }, { placeholder: '不填就没有名字' });
     inp.classList.add('world-inline-value');

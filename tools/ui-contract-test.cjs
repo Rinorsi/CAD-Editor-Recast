@@ -3,9 +3,9 @@ const vm = require('node:vm');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const dir = path.resolve(__dirname, '../fabric/src/main/resources/assets/cadeditor/ui/js');
-const events = {}, sent = [], toasts = [];
+const events = {}, domEvents = {}, sent = [], toasts = [];
 const context = vm.createContext({ console, setTimeout: () => 1, clearTimeout() {},
-  document: { addEventListener() {}, getElementById() { return null; } },
+  document: { addEventListener(k, fn) { domEvents[k] = fn; }, getElementById() { return null; } },
   oriel: { data: {}, on(k, fn) { events[k] = fn; }, send(k, value) { sent.push({k, value}); return true; } } });
 for (const file of ['data.js', 'core.js', 'labels.js', 'nbt.js', 'reg.js', 'screens.js', 'worldedit.js']) vm.runInContext(fs.readFileSync(path.join(dir,file),'utf8'),context);
 for (const name of ['rebuild','drawHero','drawTabbar','drawTopbar','drawFooter','drawTabBody']) context[name] = () => {};
@@ -45,4 +45,14 @@ vm.runInContext(fixture,preview);
 assert.equal(preview.ORIEL_STACK.slot.kind,'preview');
 preview.applyToGame();
 assert.match(previewToast,/不会写入真实物品/);
-console.log('PASS UI contract: payload, duplicate guard, rejection, confirmed baseline, pending edits, fixture host isolation.');
+// Closing a popup/modal must consume Escape; otherwise Minecraft closes the editor too.
+let modal = true, prevented = false, popupClosed = 0, modalClosed = 0;
+context.document.getElementById = id => id === 'modal' && modal ? {} : null;
+context.KPop = { el: {} };
+context.kPopClose = () => { popupClosed++; context.KPop.el = null; };
+context.closeModal = () => { modalClosed++; modal = false; };
+const escape = () => { prevented = false; domEvents.keydown({ key: 'Escape', preventDefault() { prevented = true; } }); };
+escape(); assert.equal(prevented, true); assert.equal(popupClosed, 1); assert.equal(modalClosed, 0);
+escape(); assert.equal(prevented, true); assert.equal(modalClosed, 1);
+escape(); assert.equal(prevented, false, 'Escape without a popup must still reach Minecraft');
+console.log('PASS UI contract: payload, duplicate guard, rejection, confirmed baseline, pending edits, fixture host isolation, Escape ownership.');

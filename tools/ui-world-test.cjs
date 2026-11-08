@@ -465,7 +465,10 @@ console.log('PASS world edit: container slots, typed SNBT apply, rejected keeps 
   assert.equal(data.CollarColor, 1);
   // 名字：文本组件，清空就删掉
   const nameIn = row(p, '名字').querySelector('input'); nameIn.value = '小黑'; nameIn.fire('input');
-  assert.deepEqual(data.CustomName, { text: '小黑' });
+  assert.equal(data.CustomName, '小黑', 'plain text must use the vanilla canonical string form');
+  data.CustomName = { text: '旧名', color: 'red', bold: true };
+  nameIn.value = '新名'; nameIn.fire('input');
+  assert.deepEqual(data.CustomName, { text: '新名', color: 'red', bold: true }, 'styled names retain their formatting');
   nameIn.value = ''; nameIn.fire('input'); assert.equal(data.CustomName, undefined);
   // 装备：主手放钻石剑
   c.pickItem = (a, fn) => fn('diamond_sword');
