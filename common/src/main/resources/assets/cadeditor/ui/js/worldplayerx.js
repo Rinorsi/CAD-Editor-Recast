@@ -2,7 +2,7 @@
    协议见 docs/player-extended-contract.md。它是独立于 entity.player 的会话：每个视图单独读、单独应用，
    不进顶栏「应用修改」的草稿；服务端 saved 之后才清本地草稿，拒绝或超时保留。
    列表页（配方 / 成就 / 统计）的搜索框、重新读取、应用按钮放在顶部的工具行里（WE.toolsExtra），滚动时一直在。 */
-var PX = { seq: 0, views: {}, pending: {}, off: { uuid: '' } };
+var PX = { seq: 0, views: {}, pending: {}, off: { uuid: '' }, arch: { exp: {}, open: {}, rawFor: '' } };
 
 function pxTarget(offline) {
   var w = WE.w, p = w && w.player;
@@ -13,7 +13,7 @@ function pxTarget(offline) {
 }
 function pxSelf() { return !!(WE.w && WE.w.player && WE.w.player.self); }
 function pxState(view) { return PX.views[view] || (PX.views[view] = { status: 'idle', draft: null, entries: [], offset: 0, query: '', total: 0, nextOffset: null, open: {}, dirty: {} }); }
-function pxReset() { PX.views = {}; PX.pending = {}; PX.queue = []; }
+function pxReset() { PX.views = {}; PX.pending = {}; PX.queue = []; PX.arch = { exp: {}, open: {}, rawFor: '' }; }
 /* 哪些视图有没应用的草稿（顶栏「应用修改」会把它们依次发出去）。离线玩家有自己的写入按钮，不算 */
 function pxDirty(view) {
   var st = PX.views[view]; if (!st || !st.loaded) return 0;
@@ -75,6 +75,11 @@ var PX_CODE = {
 function pxResult(r) {
   if (!r || !r.requestId || !PX.pending[r.requestId]) return;
   var p = PX.pending[r.requestId]; delete PX.pending[r.requestId];
+  if (p.kind === 'export') {   // 存档玩家档案：导出摘要 + 预设模板，不碰编辑会话
+    PX.arch.exp[p.uuid] = r.status === 'exported' ? { status: 'ready', summary: r.summary || {}, template: r.template } : { status: 'error', err: PX_CODE[r.code] || r.reason || r.code || '读取失败' };
+    if (weActive()) weRedrawBody();
+    return;
+  }
   var st = pxState(p.view); st.busy = false; toastDismiss('px-pending');
   if (r.status === 'rejected') {
     PX.queue = [];
@@ -236,21 +241,92 @@ function pxStats(body) {
   pxMore(body, st, 'stats');
 }
 
-/* ---------- 离线玩家 ---------- */
-function pxOffline(body) {
+/* ---------- 存档玩家：这个存档里所有玩家的名单；点开看摘要，复制到保险库、套用到当前玩家，离线的还能改原始数据 ---------- */
+function pxExport(e) {
+  var t = { uuid: e.uuid, offline: !e.online };
+  var msg = { op: 'player_extended', requestId: 'px-' + Date.now() + '-' + (++PX.seq), action: 'export_preset', target: t };
+  PX.arch.exp[e.uuid] = { status: 'loading' };
+  var sent = (typeof oriel !== 'undefined' && oriel.send) ? oriel.send('player_extended', msg) : false;
+  if (!sent) { PX.arch.exp[e.uuid] = { status: 'error', err: '宿主没有接受请求' }; return; }
+  PX.pending[msg.requestId] = { view: 'players', kind: 'export', uuid: e.uuid, at: Date.now() };
+}
+function pxPlayerLabel(e) { return e.name || '未知玩家'; }
+function pxWhen(ms) {
+  if (!ms) return '';
+  var d = new Date(ms), z = function (n) { return n < 10 ? '0' + n : '' + n; };
+  return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()) + ' ' + z(d.getHours()) + ':' + z(d.getMinutes());
+}
+/* 把导出的模板存进保险库（走分段上传），cb(entry) */
+function pxSavePreset(e, cb) {
+  var ex = PX.arch.exp[e.uuid]; if (!ex || ex.status !== 'ready') return;
+  Vault.upload(JSON.stringify({ template: ex.template }), function (u) {
+    if (!u.ok) { vaultErr(u); return; }
+    Vault.call('save', { kind: 'player_preset', uploadToken: u.token, name: pxPlayerLabel(e) + ' 的数据', tags: ['存档玩家'] }, function (r) {
+      if (!r.ok) { vaultErr(r); return; }
+      cb(r.entry || { id: r.id, name: pxPlayerLabel(e) + ' 的数据' });
+    });
+  });
+}
+function pxSummaryBox(sm) {
+  var box = h('div', { class: 'px-sum' });
+  function stat(l, v) { if (v === undefined || v === null || v === '') return; box.appendChild(h('div', { class: 'k-stat' }, [h('span', { class: 'sl', text: l }), h('b', { text: String(v) })])); }
+  stat('游戏模式', Labels.mode[sm.game_mode] || sm.game_mode);
+  stat('生命', sm.health !== undefined ? fmtNum(sm.health) : ''); stat('饥饿', sm.food); stat('等级', sm.xp_level);
+  if (sm.dimension) stat('位置', (Labels.dim[sm.dimension] || humanId(sm.dimension)) + ' ' + [sm.x, sm.y, sm.z].map(function (v) { return Math.round(v); }).join(' '));
+  stat('背包', sm.inventory_count !== undefined ? sm.inventory_count + ' 件' : ''); stat('末影箱', sm.ender_count !== undefined ? sm.ender_count + ' 件' : '');
+  var eq = sm.equipment || {}, ico = [];
+  ['head', 'chest', 'legs', 'feet', 'offhand'].forEach(function (k) { if (eq[k]) ico.push(h('span', { title: pxObjName(eq[k]) }, [itemIcon(shortId(eq[k]), 16)])); });
+  if (ico.length) box.appendChild(h('div', { class: 'k-stat' }, [h('span', { class: 'sl', text: '装备' }), h('div', { class: 'px-eq' }, ico)]));
+  return box;
+}
+function pxOpenRaw(e) {
+  var st = pxState('offline'); PX.off.uuid = e.uuid; PX.arch.rawFor = e.uuid; st.loaded = false; st.value = null; st.draft = null; pxRead('offline');
+}
+function pxRawModal(e) {
   var st = pxState('offline');
-  body.appendChild(xSec('user', '离线玩家', '对方不在线时才能改，写入前自动备份'));
-  body.appendChild(xText({ title: '玩家 UUID', value: PX.off.uuid, placeholder: '00000000-0000-0000-0000-000000000000', cls: 'we-in', onCommit: function (v) { PX.off.uuid = v.trim(); st.status = 'idle'; st.value = null; st.loaded = false; st.draft = null; } }));
-  body.appendChild(h('div', { class: 'world-actions' }, [kBtn('读取存档', function () { st.value = null; st.loaded = false; st.draft = null; pxRead('offline'); weRedrawBody(); }, { icon: 'search' })]));
-  if (st.status === 'loading') { body.appendChild(xEmpty('正在读取…')); return; }
-  if (st.err && !st.loaded) { body.appendChild(kHint(st.err, 'err')); return; }
-  if (!st.loaded) { body.appendChild(xEmpty('输入 UUID 后点「读取存档」。')); return; }
+  var code = kCode({ value: nbtPrint(nbtParse(st.value.snbt), true), height: 300, validate: function (t) { nbtParse(t); } });
   var keys = (st.schema && st.schema.editableKeys) || [];
-  body.appendChild(kHint('可改：' + (keys.join('、') || '无'), 'sub'));
-  var code = kCode({ value: st.draft === null || st.draft === undefined ? nbtPrint(nbtParse(st.value.snbt), true) : st.draft, height: 260, validate: function (t) { nbtParse(t); }, onInput: function (t) { st.draft = t; } });
-  body.appendChild(code.el);
-  body.appendChild(h('div', { class: 'world-actions' }, [kBtn('写入离线存档', function () {
-    var text = code.get();
-    try { pxApply('offline', { snbt: nbtPrint(nbtParse(text), false) }); } catch (e) { toast('SNBT 有误，没有提交：' + (e.message || e), 'error'); }
-  }, { cls: 'pri', icon: 'check' })]));
+  var go = kBtn('写入存档', function () {
+    try { pxApply('offline', { snbt: nbtPrint(nbtParse(code.get()), false) }); closeModal(); } catch (err) { toast('SNBT 有误，没有提交：' + (err.message || err), 'error'); }
+  }, { cls: 'pri', icon: 'check' });
+  openModal(modalShell('原始数据', pxPlayerLabel(e) + (keys.length ? ' · 可改：' + keys.join('、') : ''), [code.el], [h('div', { class: 'grow' }), kBtn('取消', closeModal), go]), true);
+}
+function pxArchive(body) {
+  var st = pxGate(body, 'players', '玩家名单'); if (!st) return;
+  pxListTools(st, 'players', '搜索玩家（名字或 UUID）');
+  var raw = pxState('offline');
+  if (PX.arch.rawFor && raw.loaded && raw.value) {
+    var who = PX.arch.rawFor; PX.arch.rawFor = '';
+    var ee = st.entries.filter(function (x) { return x.uuid === who; })[0] || { uuid: who, name: null };
+    setTimeout(function () { pxRawModal(ee); }, 0);
+  }
+  body.appendChild(xSec('users', '存档里的玩家', st.total + ' 位'));
+  st.entries.forEach(function (e) {
+    var ex = PX.arch.exp[e.uuid], open = !!PX.arch.open[e.uuid], tags = [];
+    if (e.self) tags.push(h('span', { class: 'k-tag', text: '你' }));
+    if (e.online) tags.push(h('span', { class: 'k-tag', text: '在线' }));
+    if (e.owner) tags.push(h('span', { class: 'k-tag dim', text: '房主' }));
+    body.appendChild(xRow({ icon: uiIcon('user', 16), title: pxPlayerLabel(e), sub: e.uuid + (e.last_played_ms ? ' · ' + pxWhen(e.last_played_ms) : ''), tip: e.uuid, right: h('div', { class: 'k-row' }, tags), open: open,
+      onHead: function () { PX.arch.open[e.uuid] = !open; if (!open && (!ex || ex.status === 'error')) pxExport(e); weRedrawBody(); },
+      body: function () {
+        var kids = [];
+        if (!ex || ex.status === 'loading') kids.push(xEmpty('正在读取…'));
+        else if (ex.status === 'error') kids.push(kHint(ex.err, 'err'));
+        else {
+          kids.push(pxSummaryBox(ex.summary));
+          var acts = [kBtn('复制到保险库', function () { pxSavePreset(e, function (en) { toast('已存入保险库：' + en.name, 'ok'); }); }, { icon: 'chest', title: '把这位玩家的背包、装备、末影箱、属性、效果、游戏模式存成预设' })];
+          if (!e.self && WE.w.player && WE.w.player.self) acts.push(kBtn('套用到我', function () { pxSavePreset(e, function (en) { vwSections(en); }); }, { icon: 'download', title: '先存入保险库，再选要套用的部分；套用前会检查你现在的数据有没有备份' }));
+          if (!e.online && !e.owner) acts.push(kBtn('改原始数据', function () { pxOpenRaw(e); }, { icon: 'code', title: '直接编辑这位离线玩家的存档数据，写入前自动备份' }));
+          kids.push(h('div', { class: 'world-actions' }, acts));
+        }
+        return kids;
+      } }));
+  });
+  if (!st.entries.length) body.appendChild(xEmpty('没有匹配的玩家。'));
+  pxMore(body, st, 'players');
+  body.appendChild(xSec('search', '按 UUID 查找'));
+  body.appendChild(xText({ title: '玩家 UUID', value: PX.off.uuid, placeholder: '00000000-0000-0000-0000-000000000000', cls: 'we-in', onCommit: function (v) {
+    v = v.trim(); PX.off.uuid = v;
+    if (/^[0-9a-fA-F-]{32,36}$/.test(v)) { var e = { uuid: v, name: null, online: false }; PX.arch.open[v] = true; pxExport(e); st.query = v; st.status = 'idle'; weRedrawBody(); }
+  } }));
 }

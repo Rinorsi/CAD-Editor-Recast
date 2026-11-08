@@ -32,7 +32,7 @@ function weTabs() {
     var pt = [{ id: 'pinv', label: '背包', icon: 'backpack' }, { id: 'pender', label: '末影箱', icon: 'chest' }, { id: 'pstat', label: '状态', icon: 'heart' }, { id: 'pabil', label: '能力', icon: 'wind' }, { id: 'pattr', label: '属性与效果', icon: 'sliders' },
       { id: 'ppos', label: '位置与重生', icon: 'compass' }, { id: 'prec', label: '配方', icon: 'book' }];
     if (w.player.self) pt.push({ id: 'padv', label: '成就', icon: 'trophy' });   // 成就只能改自己的，别人的页面没有这一页
-    pt.push({ id: 'pstats', label: '统计', icon: 'scroll' }, { id: 'poff', label: '离线玩家', icon: 'user' });
+    pt.push({ id: 'pstats', label: '统计', icon: 'scroll' }, { id: 'poff', label: '存档玩家', icon: 'users' });
     return pt;
   }
   if (w.kind === 'entity') {
@@ -110,7 +110,7 @@ function weTabBody(body) {
   else if (WE.tab === 'prec') pxRecipes(body);
   else if (WE.tab === 'padv') pxAdvancements(body);
   else if (WE.tab === 'pstats') pxStats(body);
-  else if (WE.tab === 'poff') pxOffline(body);
+  else if (WE.tab === 'poff') pxArchive(body);
   else if (WE.tab === 'pose') evPoseTab(body);
   else if (WE.tab === 'frame') evFrameTab(body);
   else if (WE.tab === 'painting') evPaintingTab(body);

@@ -92,9 +92,9 @@ div
       div.ed-tab [title="统计"]
         img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
         span "统计"
-      div.ed-tab [title="离线玩家"]
-        img.o-ico [src="oriel:textures/icons/user.png" style="height:16px;width:16px"]
-        span "离线玩家"
+      div.ed-tab [title="存档玩家"]
+        img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
+        span "存档玩家"
     div.ed-tools
       span.ed-tools-t "背包"
       div.grow
@@ -324,9 +324,9 @@ div
       div.ed-tab [title="统计"]
         img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
         span "统计"
-      div.ed-tab [title="离线玩家"]
-        img.o-ico [src="oriel:textures/icons/user.png" style="height:16px;width:16px"]
-        span "离线玩家"
+      div.ed-tab [title="存档玩家"]
+        img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
+        span "存档玩家"
     div.ed-tools [style="display:none"]
       span.ed-tools-t "末影箱"
       div.grow
@@ -484,9 +484,9 @@ div
       div.ed-tab [title="统计"]
         img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
         span "统计"
-      div.ed-tab [title="离线玩家"]
-        img.o-ico [src="oriel:textures/icons/user.png" style="height:16px;width:16px"]
-        span "离线玩家"
+      div.ed-tab [title="存档玩家"]
+        img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
+        span "存档玩家"
     div.ed-tools
       span.ed-tools-t "状态"
       div.grow
@@ -782,9 +782,9 @@ div
       div.ed-tab [title="统计"]
         img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
         span "统计"
-      div.ed-tab [title="离线玩家"]
-        img.o-ico [src="oriel:textures/icons/user.png" style="height:16px;width:16px"]
-        span "离线玩家"
+      div.ed-tab [title="存档玩家"]
+        img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
+        span "存档玩家"
     div.ed-tools [style="display:none"]
       span.ed-tools-t "能力"
       div.grow
@@ -972,9 +972,9 @@ div
       div.ed-tab [title="统计"]
         img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
         span "统计"
-      div.ed-tab [title="离线玩家"]
-        img.o-ico [src="oriel:textures/icons/user.png" style="height:16px;width:16px"]
-        span "离线玩家"
+      div.ed-tab [title="存档玩家"]
+        img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
+        span "存档玩家"
     div.ed-tools
       span.ed-tools-t "属性与效果"
       div.grow
@@ -1143,9 +1143,9 @@ div
       div.ed-tab [title="统计"]
         img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
         span "统计"
-      div.ed-tab [title="离线玩家"]
-        img.o-ico [src="oriel:textures/icons/user.png" style="height:16px;width:16px"]
-        span "离线玩家"
+      div.ed-tab [title="存档玩家"]
+        img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
+        span "存档玩家"
     div.ed-tools [style="display:none"]
       span.ed-tools-t "位置与重生"
       div.grow
@@ -1257,9 +1257,9 @@ div
       div.ed-tab [title="统计"]
         img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
         span "统计"
-      div.ed-tab [title="离线玩家"]
-        img.o-ico [src="oriel:textures/icons/user.png" style="height:16px;width:16px"]
-        span "离线玩家"
+      div.ed-tab [title="存档玩家"]
+        img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
+        span "存档玩家"
     div.ed-tools [style="display:none"]
       span.ed-tools-t "配方"
       div.grow
@@ -1371,9 +1371,9 @@ div
       div.ed-tab [title="统计"]
         img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
         span "统计"
-      div.ed-tab [title="离线玩家"]
-        img.o-ico [src="oriel:textures/icons/user.png" style="height:16px;width:16px"]
-        span "离线玩家"
+      div.ed-tab [title="存档玩家"]
+        img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
+        span "存档玩家"
     div.ed-tools [style="display:none"]
       span.ed-tools-t "成就"
       div.grow
@@ -1485,9 +1485,9 @@ div
       div.ed-tab.on [title="统计"]
         img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
         span "统计"
-      div.ed-tab [title="离线玩家"]
-        img.o-ico [src="oriel:textures/icons/user.png" style="height:16px;width:16px"]
-        span "离线玩家"
+      div.ed-tab [title="存档玩家"]
+        img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
+        span "存档玩家"
     div.ed-tools [style="display:none"]
       span.ed-tools-t "统计"
       div.grow
@@ -1599,43 +1599,16 @@ div
       div.ed-tab [title="统计"]
         img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
         span "统计"
-      div.ed-tab.on [title="离线玩家"]
-        img.o-ico [src="oriel:textures/icons/user.png" style="height:16px;width:16px"]
-        span "离线玩家"
+      div.ed-tab.on [title="存档玩家"]
+        img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
+        span "存档玩家"
     div.ed-tools [style="display:none"]
-      span.ed-tools-t "离线玩家"
+      span.ed-tools-t "存档玩家"
       div.grow
       div.k-mini [title="折叠 / 展开本页全部卡片"]
         img.o-ico [src="oriel:textures/icons/layers.png" style="height:16px;width:16px"]
     div.ed-body
-      div.k-list
-        div.k-card.w-card [data-card="w:poff:离线玩家"]
-          div.k-chead
-            div.k-cico
-              img.o-ico [src="oriel:textures/icons/user.png" style="height:16px;width:16px"]
-            div.k-ctx
-              div.k-ctitle
-                "离线玩家"
-                span.k-badge [title="这一项和物品原版默认值不同"] "自定义"
-              div.k-cdesc "对方不在线时才能改，写入前自动备份"
-            div.k-csum
-            div.k-cval
-            div.k-reset [title="放弃这里的修改，使用物品原本的值"] "恢复默认"
-            span.k-swph
-            div.k-chev [title="折叠 / 展开"]
-              img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
-          div.k-cbody
-            div.k-srow.k-xrow
-              div.k-xhead
-                div.tx
-                  div.z "玩家 UUID"
-                input.k-input.we-in [placeholder="00000000-0000-0000-0000-000000000000" type="text"]
-            div.world-actions
-              div.k-btn
-                img.o-ico [src="oriel:textures/icons/search.png" style="height:16px;width:16px"]
-                span "读取存档"
-            div.k-empty "输入 UUID 后点「读取存档」。"
-          div.k-div
+      div.k-empty "正在读取玩家名单…"
 ## footer
 div
   span.it

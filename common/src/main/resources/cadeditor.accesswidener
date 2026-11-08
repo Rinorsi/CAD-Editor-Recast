@@ -1,4 +1,7 @@
 accessWidener v2 official
+# Detached ServerPlayer reads must remove constructor-created cache entries; no public no-save cleanup exists.
+accessible field net/minecraft/server/players/PlayerList stats Ljava/util/Map;
+accessible field net/minecraft/server/players/PlayerList advancements Ljava/util/Map;
 # Fabric's screen events expose keys, but not the hovered inventory slot.
 accessible field net/minecraft/client/gui/screens/inventory/AbstractContainerScreen hoveredSlot Lnet/minecraft/world/inventory/Slot;
 # Target only the preview instance: SoundManager has no per-instance pause API in 26.1.2.

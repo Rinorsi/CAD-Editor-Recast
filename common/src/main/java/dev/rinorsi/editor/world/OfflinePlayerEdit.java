@@ -23,8 +23,8 @@ public final class OfflinePlayerEdit {
     private static final long MAX_BYTES=8L*1024*1024;
     // Security allowlist, not candidate data. Only keys actually serialized by vanilla are exposed.
     private static final Set<String> FIELDS=Set.of("Inventory","EnderItems","SelectedItemSlot","Health","foodLevel","foodSaturationLevel","XpLevel","XpP","XpTotal");
-    public record Snapshot(Path path,String fingerprint,CompoundTag data,CompoundTag editable){
-        public JsonObject value(){var v=new JsonObject();v.addProperty("snbt",editable.toString());return v;}
+    public record Snapshot(Path path,String fingerprint,CompoundTag data,CompoundTag editable,JsonObject summary){
+        public JsonObject value(){var v=new JsonObject();v.addProperty("snbt",editable.toString());v.add("summary",summary.deepCopy());return v;}
     }
     private static void guard(MinecraftServer server,UUID uuid){
         if(!server.isSameThread())PlayerExtendedEditor.fail("invalid_request","离线编辑必须在服务端线程执行");
@@ -43,10 +43,20 @@ public final class OfflinePlayerEdit {
             var nativeData=roundTrip(server,uuid,data);var editable=new CompoundTag();
             for(String k:new TreeSet<>(FIELDS))if(nativeData.contains(k))editable.put(k,nativeData.get(k).copy());
             if(editable.toString().length()>WorldNbt.MAX_SNBT)PlayerExtendedEditor.fail("payload_too_large","离线玩家可编辑数据超过 24000 字符");
-            return new Snapshot(path,PlayerExtendedEditor.hash(bytes),data,editable);
+            var summary=PlayerProfiles.loaded(server,data,p->PlayerProfiles.summary(p,PlayerProfiles.name(server,uuid)));
+            return new Snapshot(path,PlayerExtendedEditor.hash(bytes),data,editable,summary);
         }catch(IOException e){throw io(e);}
     }
     private static byte[] bytes(Path path)throws IOException {if(Files.size(path)>MAX_BYTES)PlayerExtendedEditor.fail("payload_too_large","玩家文件超过安全读取上限");try(var input=Files.newInputStream(path)){var bytes=input.readNBytes((int)MAX_BYTES+1);if(bytes.length>MAX_BYTES)PlayerExtendedEditor.fail("payload_too_large","玩家文件超过安全读取上限");return bytes;}}
+    static CompoundTag readData(MinecraftServer server,UUID uuid){
+        var path=server.getWorldPath(LevelResource.PLAYER_DATA_DIR).resolve(uuid+".dat");
+        try {
+            if(!Files.isRegularFile(path,LinkOption.NOFOLLOW_LINKS))PlayerExtendedEditor.fail("offline_missing","没有找到此 UUID 的玩家存档");
+            var raw=NbtIo.readCompressed(new ByteArrayInputStream(bytes(path)),NbtAccounter.create(MAX_BYTES));
+            if(raw.getIntOr("DataVersion",-1)>SharedConstants.getCurrentVersion().dataVersion().version())PlayerExtendedEditor.fail("invalid_nbt","玩家文件来自更新的游戏版本，不能降级读取");
+            return DataFixTypes.PLAYER.updateToCurrentVersion(server.getFixerUpper(),raw,raw.getIntOr("DataVersion",-1));
+        }catch(IOException e){throw io(e);}
+    }
     private static CompoundTag roundTrip(MinecraftServer server,UUID uuid,CompoundTag data){
         // A detached vanilla Player avoids ServerPlayer's PlayerList stats/advancement caches.
         var player=new Player(server.overworld(),new GameProfile(uuid,"OfflineEditor")){

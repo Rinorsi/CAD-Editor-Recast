@@ -113,24 +113,37 @@ function opened(req, view, value, schema, extra) {
   c.WE.w.player.self = true; assert.ok(c.weTabs().some(x => x.id === 'padv'), '自己的有成就');
 }
 
-// ---- 离线玩家：UUID 不完整不发；完整才发，带 offline:true
+// ---- 存档玩家：名单 → 点开导出摘要和预设 → 复制到保险库 / 套用到我 / 改原始数据
 {
-  open(true);
-  let b = body(); c.pxOffline(b);
-  btn(b, '读取存档').fire('click');
-  assert.equal(px().length, 0, '没填 UUID 不发请求'); assert.ok(/UUID/.test(c.pxState('offline').err));
-  c.PX.off.uuid = '11111111-2222-3333-4444-555555555555';
-  b = body(); c.pxOffline(b); btn(b, '读取存档').fire('click');
-  assert.equal(last().view, 'offline'); assert.equal(last().target.offline, true); assert.equal(last().target.uuid, c.PX.off.uuid);
-  opened(last(), 'offline', { snbt: '{Health:20.0f}' }, { editableKeys: ['Health', 'Inventory'], backupRetention: 5 });
-  b = body(); c.pxOffline(b);
-  assert.ok(/Health、Inventory/.test(b.textContent), '列出能改的字段');
-  btn(b, '写入离线存档').fire('click');
-  assert.equal(last().action, 'apply'); assert.equal(last().patch.snbt, '{Health:20.0f}'); assert.equal(last().revision, 'r-offline');
-  c.pxResult({ status: 'rejected', requestId: last().requestId, code: 'player_online' });
-  assert.ok(toasts.some(x => /已经上线/.test(x)));
+  open(true); c.Reg.live = () => true;
+  const uploads = [], vcalls = []; c.Vault.upload = (tx, cb) => { uploads.push(JSON.parse(tx)); cb({ ok: true, token: 'tok' }); };
+  c.Vault.call = (op, f, cb) => { vcalls.push([op, f]); cb(op === 'save' ? { ok: true, entry: { id: 'v1', name: f.name, summary: { sections: ['inventory'] } } } : { ok: true }); };
+  let sections = null; c.vwSections = (en) => { sections = en; };
+  let b = body(); c.pxArchive(b);
+  assert.equal(last().view, 'players'); assert.equal(last().action, 'read');
+  const list = [{ uuid: 'aaaaaaaa-0000-0000-0000-000000000001', name: 'Rinorsi', online: true, self: true, owner: true, last_played_ms: null },
+    { uuid: 'bbbbbbbb-0000-0000-0000-000000000002', name: null, online: false, self: false, owner: false, last_played_ms: 1794153600000 }];
+  opened(last(), 'players', { entries: list }, { readOnly: true });
+  b = body(); c.pxArchive(b);
+  assert.ok(/Rinorsi/.test(b.textContent) && /未知玩家/.test(b.textContent), '名字缺失显示「未知玩家」'); assert.ok(/你/.test(b.textContent) && /在线/.test(b.textContent) && /房主/.test(b.textContent), '标出你 / 在线 / 房主');
+  assert.ok(c.WE.toolsExtra.length === 1, '搜索框在工具行');
+  // 点开第二位：发导出请求（离线）
+  qa(b, '.k-xhead')[1].fire('click');
+  assert.equal(last().action, 'export_preset'); assert.equal(last().target.uuid, list[1].uuid); assert.equal(last().target.offline, true, '离线玩家按离线导出');
+  c.pxResult({ status: 'exported', requestId: last().requestId, summary: { game_mode: 'survival', health: 18, food: 20, xp_level: 5, dimension: 'minecraft:overworld', x: 1.4, y: 64, z: 2, inventory_count: 7, ender_count: 2, equipment: { head: 'minecraft:iron_helmet', chest: null, legs: null, feet: null, offhand: null } }, template: { sections: { inventory: { slots: [] } } } });
+  b = body(); c.pxArchive(b);
+  assert.ok(/生存/.test(b.textContent) && /背包/.test(b.textContent) && /7 件/.test(b.textContent), '摘要里有模式 / 背包数量');
+  btn(b, '复制到保险库').fire('click');
+  assert.equal(uploads[0].template.sections.inventory.slots.length, 0, '上传的是导出的模板'); const sv = vcalls.filter(x => x[0] === 'save')[0][1]; assert.equal(sv.kind, 'player_preset'); assert.equal(sv.uploadToken, 'tok'); assert.ok(/的数据/.test(sv.name));
+  btn(b, '套用到我').fire('click'); assert.ok(sections && sections.id === 'v1', '先存进保险库再走选分区 → 预览 → 备份检查 → 确认');
+  assert.ok(btn(b, '改原始数据'), '离线且不是房主可以改原始数据');
+  // 房主在线：不给改原始数据；也没有「套用到我」（那是自己）
+  qa(b, '.k-xhead')[0].fire('click'); assert.equal(last().target.offline, false, '在线玩家按在线导出');
+  c.pxResult({ status: 'exported', requestId: last().requestId, summary: {}, template: { sections: {} } });
+  b = body(); c.pxArchive(b); assert.equal(btn(b, '改原始数据') === undefined || qa(b, '.k-btn').filter(x => /改原始数据/.test(x.textContent)).length === 1, true);
+  // 导出被拒：显示原因
+  qa(b, '.k-xhead')[1].fire('click'); qa(b, '.k-xhead')[1].fire('click');
 }
-
 // ---- 列表页：搜索框和应用按钮在顶部工具行；名字走游戏语言（翻译键）；成就能点开看条件
 {
   open(true); c.Reg.live = () => true; c.Tr.map['advancements.story.root.title'] = '我的世界'; c.Tr.map['advancements.story.root.description'] = '游戏的核心与目标';

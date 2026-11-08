@@ -49,7 +49,8 @@ public final class PlayerExtendedClient {
         try{
             var r=queued.message;
             if(!ClientPlatform.get().canSend(EditorPackets.Request.TYPE))throw new EditorSessions.Failure("UNAVAILABLE","服务器未安装物品工坊");
-            String action=StackCodec.string(r,"action"),view=StackCodec.string(r,"view");var target=StackCodec.object(r,"target");
+            String action=StackCodec.string(r,"action"),view=r.has("view")?StackCodec.string(r,"view"):"";
+            if(!r.has("target"))r.add("target",new JsonObject());var target=StackCodec.object(r,"target");
             if(!target.has("uuid"))target.addProperty("uuid",Minecraft.getInstance().player.getStringUUID());
             target.addProperty("uuid",UUID.fromString(StackCodec.string(target,"uuid")).toString());
             if(!target.has("offline"))target.addProperty("offline",false);
@@ -73,7 +74,7 @@ public final class PlayerExtendedClient {
     }
     public static boolean receive(JsonObject result){
         if(pending==null||!pending.equals(result.has("requestId")?result.get("requestId").getAsString():""))return false;
-        if(result.has("playerExtended"))revisions.put(pendingKey,result.getAsJsonObject("playerExtended").get("revision").getAsString());
+        if(result.has("playerExtended")){var revision=result.getAsJsonObject("playerExtended").get("revision");if(revision!=null&&!revision.isJsonNull())revisions.put(pendingKey,revision.getAsString());}
         var page=result.deepCopy();page.addProperty("requestId",pageId);pending=null;nextSend=System.nanoTime()+INTERVAL;
         if(owner!=null)owner.driver().patch("player_extended_result",page);return true;
     }

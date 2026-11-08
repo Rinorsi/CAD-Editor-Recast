@@ -34,17 +34,34 @@ public final class PlayerExtendedEditor {
             if(!server.isSameThread())fail("invalid_request","玩家编辑必须在服务端线程执行");
             id=StackCodec.string(request,"requestId");if(id.length()>80)fail("invalid_request","requestId 过长");
             policy.get().requirePlayerEdit(actor);
-            keys(request,Set.of("op","requestId","action","target","view","offset","limit","query","displayed","revision","patch"));
-            var target=StackCodec.object(request,"target");keys(target,Set.of("uuid","offline"));
+            keys(request,Set.of("op","requestId","action","target","view","offset","limit","query","displayed","revision","patch","sections"));
+            action=StackCodec.string(request,"action");view=request.has("view")?StackCodec.string(request,"view"):"";
+            long now=System.nanoTime();Long last=LAST.get(actor.getUUID());if(last!=null&&now-last<500_000_000L)fail("rate_limited","操作过快，请稍后重试");LAST.put(actor.getUUID(),now);
+            if(view.equals("players")) {
+                keys(request,Set.of("op","requestId","action","target","view","offset","limit","query"));
+                if(!action.equals("read"))fail("invalid_request","存档玩家名单只支持读取");
+                var schema=new JsonObject();schema.addProperty("source","PlayerList / playerdata / singleplayer owner / local profile cache");schema.addProperty("readOnly",true);schema.addProperty("manualId",true);
+                var data=envelope(actor.getUUID(),false,view,PlayerProfiles.players(actor),schema,request,null);data.add("target",new JsonObject());
+                var result=result("opened",id);result.add("playerExtended",data);WorldWire.encode(result);sink.accept(result);return true;
+            }
+            var target=request.has("target")?StackCodec.object(request,"target"):new JsonObject();keys(target,Set.of("uuid","offline"));
             boolean offline=target.has("offline")&&bool(target,"offline");
             uuid=target.has("uuid")?UUID.fromString(StackCodec.string(target,"uuid")):actor.getUUID();
-            view=StackCodec.string(request,"view");action=StackCodec.string(request,"action");
+            if(action.equals("export_preset")) {
+                keys(request,Set.of("op","requestId","action","target","sections"));
+                if(offline&&!target.has("uuid"))fail("invalid_request","离线玩家必须指定 UUID");
+                var selected=request.get("sections");String name=PlayerProfiles.name(server,uuid);
+                JsonObject exported;
+                if(offline)exported=PlayerProfiles.offline(server,uuid,p->PlayerProfiles.export(p,selected,name));
+                else {var p=server.getPlayerList().getPlayer(uuid);if(p==null)fail("player_offline","目标玩家不在线或不存在");exported=PlayerProfiles.export(p,selected,name);}
+                exported.addProperty("status","exported");exported.addProperty("requestId",id);WorldWire.encode(exported);sink.accept(exported);return true;
+            }
+            if(request.has("sections"))fail("invalid_request","sections 仅适用于导出预设");
             if(!Set.of("position","respawn","recipes","advancements","stats","offline").contains(view)||offline!=view.equals("offline"))fail("invalid_request","玩家视图与在线状态不匹配");
             if(request.has("displayed")){bool(request,"displayed");if(!view.equals("advancements"))fail("invalid_request","displayed 仅适用于成就视图");}
             if(offline&&!target.has("uuid"))fail("invalid_request","离线玩家必须指定 UUID");
             if(view.equals("advancements")&&!uuid.equals(actor.getUUID()))fail("advancement_self_only","成就只能读取或修改自己的数据");
             if(!action.equals("read")&&!action.equals("apply"))fail("invalid_request","未知玩家扩展操作");
-            long now=System.nanoTime();Long last=LAST.get(actor.getUUID());if(last!=null&&now-last<500_000_000L)fail("rate_limited","操作过快，请稍后重试");LAST.put(actor.getUUID(),now);
             var p=offline?null:server.getPlayerList().getPlayer(uuid);
             if(!offline&&p==null)fail("player_offline","目标玩家不在线或不存在");
             var file=offline?OfflinePlayerEdit.read(server,uuid):null;
@@ -107,7 +124,7 @@ public final class PlayerExtendedEditor {
         data.addProperty("offset",offset);data.addProperty("total",1);data.add("nextOffset",JsonNull.INSTANCE);
         if(value.isJsonObject()&&value.getAsJsonObject().has("entries")){
             boolean displayed=view.equals("advancements")&&req.has("displayed")&&bool(req,"displayed");
-            var matches=new ArrayList<JsonElement>();for(var raw:value.getAsJsonObject().getAsJsonArray("entries")){var row=raw.getAsJsonObject();if(displayed&&!row.get("has_display").getAsBoolean())continue;if(query.isEmpty()||row.get("id").getAsString().toLowerCase(Locale.ROOT).contains(query)||(row.has("type")&&row.get("type").getAsString().contains(query)))matches.add(raw);}
+            var matches=new ArrayList<JsonElement>();for(var raw:value.getAsJsonObject().getAsJsonArray("entries")){var row=raw.getAsJsonObject();if(displayed&&!row.get("has_display").getAsBoolean())continue;String identity=row.get(view.equals("players")?"uuid":"id").getAsString();if(query.isEmpty()||identity.toLowerCase(Locale.ROOT).contains(query)||(row.has("type")&&row.get("type").getAsString().contains(query))||(view.equals("players")&&!row.get("name").isJsonNull()&&row.get("name").getAsString().toLowerCase(Locale.ROOT).contains(query)))matches.add(raw);}
             var entries=new JsonArray();int end=Math.min(offset,matches.size());int chars=0;
             while(end<matches.size()&&entries.size()<limit){var row=matches.get(end);int size=row.toString().length();if(chars+size>18000&&entries.size()>0)break;if(size>18000)fail("payload_too_large","单个玩家条目超过页面上限");entries.add(row);chars+=size;end++;}
             var page=new JsonObject();page.add("entries",entries);data.add("value",page);data.addProperty("total",matches.size());if(end<matches.size())data.addProperty("nextOffset",end);
