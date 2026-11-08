@@ -1,6 +1,6 @@
 # Silent Live Client Checks
 
-P1-0 player-path effects tests are documented in [docs/live-effects.md](../../docs/live-effects.md). Development-only checks: `pwsh -NoProfile -File tools/live-test/effects.ps1 -Tier quick -DryRun`, the same with `-Tier full`, and `node tools/live-test/effects.selftest.mjs`. `-Only <case-name>` selects one case. **Do not start the effects client during this development pass: the user reserved real runs for the final combined verification.**
+P1-0 player-path effects tests are documented in [docs/live-effects.md](../../docs/live-effects.md). Static checks: `pwsh -NoProfile -File tools/live-test/effects.ps1 -Tier quick -DryRun`, the same with `-Tier full`, and `node tools/live-test/effects.selftest.mjs`. `-Only <case-name>` selects one case. The 2026-11-08 combined live run is complete with failures retained: effects 17/32 PASS, pages 48/48 PASS; see `logs/accept-all/FINAL.md`.
 
 The new effects driver uses only read-only DOM probes followed by actual MCTest clicks and paired per-character key/type input. It does not use the controller-level shortcuts in the older smoke below. Quick currently has 25 component cases plus 7 block/entity/player/vault cases; full lists the remaining 82 components as explicit pending SKIPs. Each run has its own `logs/live-test/effects/<time>/report.md`, step timings, RPC/page receipts and screenshots. This is implemented automation, not a claim of live acceptance or a measured six-minute runtime.
 
