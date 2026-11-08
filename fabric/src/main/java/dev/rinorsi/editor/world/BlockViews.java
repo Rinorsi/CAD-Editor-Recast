@@ -8,6 +8,11 @@ import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.*;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.state.properties.StructureMode;
 import net.minecraft.world.level.block.entity.*;
 
 /** Normalized fields use vanilla codecs, then the existing detached loadWithComponents gate. */
@@ -33,9 +38,12 @@ public final class BlockViews {
         if (block instanceof BrewingStandBlockEntity) groups.put("brewing_stand",List.of(f("BrewTime",Codec.SHORT),f("Fuel",Codec.BYTE)));
         if (block instanceof CampfireBlockEntity) groups.put("campfire",List.of(f("CookingTimes",Codec.INT_STREAM),f("CookingTotalTimes",Codec.INT_STREAM)));
         if (block instanceof SkullBlockEntity) groups.put("skull",List.of(new Field("minecraft:profile",DataComponents.PROFILE.codec(),true),new Field("minecraft:custom_name",DataComponents.CUSTOM_NAME.codec(),true)));
+        if (block instanceof TheEndGatewayBlockEntity) groups.put("end_gateway",List.of(f("exit_portal",BlockPos.CODEC),f("ExactTeleport",Codec.BOOL),f("Age",Codec.LONG)));
+        if (block instanceof StructureBlockEntity) groups.put("structure_block",List.of(f("name",Codec.STRING),f("author",Codec.STRING),f("metadata",Codec.STRING),f("posX",Codec.INT),f("posY",Codec.INT),f("posZ",Codec.INT),f("sizeX",Codec.INT),f("sizeY",Codec.INT),f("sizeZ",Codec.INT),f("rotation",Rotation.LEGACY_CODEC),f("mirror",Mirror.LEGACY_CODEC),f("mode",StructureMode.LEGACY_CODEC),f("ignoreEntities",Codec.BOOL),f("powered",Codec.BOOL),f("showair",Codec.BOOL),f("showboundingbox",Codec.BOOL),f("integrity",Codec.FLOAT),f("seed",Codec.LONG)));
+        if (block instanceof JigsawBlockEntity) groups.put("jigsaw",List.of(f("name",Identifier.CODEC),f("target",Identifier.CODEC),f("pool",JigsawBlockEntity.POOL_CODEC),f("final_state",Codec.STRING),f("joint",JigsawBlockEntity.JointType.CODEC)));
         return groups;
     }
-    private static boolean nullable(Field field) { return field.component || field.codec == ItemStack.CODEC || field.key.equals("CustomName") || field.key.equals("primary_effect") || field.key.equals("secondary_effect"); }
+    private static boolean nullable(Field field) { return field.component || field.codec == ItemStack.CODEC || field.key.equals("exit_portal") || field.key.equals("CustomName") || field.key.equals("primary_effect") || field.key.equals("secondary_effect"); }
     private static Field f(String key,Codec<?> codec) { return new Field(key,codec,false); }
     private static void requireInteger(JsonElement value,long min,long max) {
         try {
@@ -91,6 +99,7 @@ public final class BlockViews {
                 // Include real runtime defaults even if vanilla omits them from a sparse save.
                 if (tag == null && block instanceof BannerBlockEntity b && field.key.equals("patterns")) tag = encode(field.codec, BannerPatternLayers.CODEC.encodeStart(access.createSerializationContext(JsonOps.INSTANCE),b.getPatterns()).getOrThrow(),access);
                 if (tag == null && block instanceof DecoratedPotBlockEntity p && field.key.equals("sherds")) tag = encode(field.codec,PotDecorations.CODEC.encodeStart(access.createSerializationContext(JsonOps.INSTANCE),p.getDecorations()).getOrThrow(),access);
+                if (tag == null && field.key.equals("ExactTeleport")) tag=ByteTag.valueOf(false);
                 value.add(field.key,tag == null ? JsonNull.INSTANCE : decode(field.codec,tag,access));
                 if(tag != null) subset.put(field.key,field.key.equals("triggered") && nbt.get(field.key)!=null ? nbt.get(field.key).copy() : tag.copy());
                 var schema = new JsonObject(); schema.addProperty("authority","vanilla_codec_and_loadWithComponents"); schema.addProperty("codec",field.codec.toString()); schema.addProperty("nullable",nullable(field));
@@ -110,6 +119,14 @@ public final class BlockViews {
                     if(field.key.equals("disabled_slots")) {schema.remove("length");schema.addProperty("type","array");schema.addProperty("item_min",0);schema.addProperty("item_max",crafter.getContainerSize()-1);schema.addProperty("unique_items",true);schema.addProperty("empty_slots_only",true);}
                     if(field.key.equals("triggered")) {schema.addProperty("type","boolean");schema.addProperty("saved_type","int");}
                 }
+                if(field.codec == Codec.LONG) {schema.addProperty("type","integer");schema.addProperty("min",Long.MIN_VALUE);schema.addProperty("max",Long.MAX_VALUE);schema.addProperty("precision","JSON integer; use lossless JSON for values beyond 2^53");}
+                if(field.codec == Codec.FLOAT) {schema.addProperty("type","number");schema.addProperty("min",-Float.MAX_VALUE);schema.addProperty("max",Float.MAX_VALUE);}
+                if(block instanceof StructureBlockEntity && (field.key.startsWith("pos") || field.key.startsWith("size"))) {schema.addProperty("min",field.key.startsWith("pos") ? -StructureBlockEntity.MAX_OFFSET_PER_AXIS : 0);schema.addProperty("max",field.key.startsWith("pos") ? StructureBlockEntity.MAX_OFFSET_PER_AXIS : StructureBlockEntity.MAX_SIZE_PER_AXIS);}
+                if(field.codec==Rotation.LEGACY_CODEC) candidates(schema,Rotation.LEGACY_CODEC,Rotation.values(),access);
+                if(field.codec==Mirror.LEGACY_CODEC) candidates(schema,Mirror.LEGACY_CODEC,Mirror.values(),access);
+                if(field.codec==StructureMode.LEGACY_CODEC) candidates(schema,StructureMode.LEGACY_CODEC,StructureMode.values(),access);
+                if(field.codec==JigsawBlockEntity.JointType.CODEC) candidates(schema,JigsawBlockEntity.JointType.CODEC,JigsawBlockEntity.JointType.values(),access);
+                if(field.codec==BlockPos.CODEC) {schema.addProperty("type","array");schema.addProperty("length",3);schema.addProperty("bounds","BlockPos.CODEC + Level.isInSpawnableBounds; vanilla loader retention");}
                 properties.add(field.key,schema);
             }
             var schema = new JsonObject();schema.add("fields",properties);
@@ -117,9 +134,19 @@ public final class BlockViews {
             if(block instanceof ChiseledBookShelfBlockEntity) schema.addProperty("items_write_path","container.slots");
             var row = new JsonObject();row.add("value",value);row.addProperty("snbt",subset.toString());row.add("schema",schema);views.add(group,row);
         });
-        if(block instanceof TheEndGatewayBlockEntity || block instanceof StructureBlockEntity) {
-            var row = new JsonObject();row.addProperty("supported",false);row.addProperty("reason","仅完整 SNBT；尚无安全的专用字段编辑器");views.add("unsupported",row);
+        if(block instanceof ConduitBlockEntity conduit) {
+            var value=new JsonObject();var target=nbt.get("Target");value.add("Target",target==null ? JsonNull.INSTANCE : NbtOps.INSTANCE.convertTo(JsonOps.INSTANCE,target));
+            value.addProperty("Active",conduit.isActive());value.addProperty("Hunting",conduit.isHunting());
+            readOnly(views,"conduit",value,"Target is saved entity reference; Active/Hunting are live runtime state",nbt);
         }
+    }
+    private static void readOnly(JsonObject views,String group,JsonObject value,String source,CompoundTag nbt) {
+        var properties=new JsonObject();for(var entry:value.entrySet()) {var field=new JsonObject();field.addProperty("read_only",true);field.addProperty("nullable",entry.getValue().isJsonNull());field.addProperty("source",source);properties.add(entry.getKey(),field);}
+        var schema=new JsonObject();schema.add("fields",properties);var row=new JsonObject();row.add("value",value);row.add("schema",schema);row.addProperty("snbt",nbt.toString());views.add(group,row);
+    }
+    private static <T> void candidates(JsonObject schema,Codec<T> codec,T[] values,RegistryAccess access) {
+        var candidates=new JsonArray();for(var value:values)candidates.add(codec.encodeStart(access.createSerializationContext(JsonOps.INSTANCE),value).getOrThrow());
+        schema.add("candidates",candidates);schema.addProperty("candidate_source","runtime vanilla enum + saving codec");
     }
     public static CompoundTag apply(BlockEntity block,CompoundTag nbt,JsonObject edits,RegistryAccess access) {
         var result = nbt.copy();var groups=fields(block);
@@ -140,6 +167,11 @@ public final class BlockViews {
                 }
                 // Sign sides accept a partial object; unedited lines/filtered messages remain intact.
                 if(field.codec==SignText.DIRECT_CODEC)requireSignSide(json,access);
+                if(field.codec==Codec.LONG)requireInteger(json,Long.MIN_VALUE,Long.MAX_VALUE);
+                if(field.codec==Codec.FLOAT && (!json.isJsonPrimitive() || !json.getAsJsonPrimitive().isNumber() || !Float.isFinite(json.getAsFloat())))throw new EditorSessions.Failure("invalid_nbt","必须为有限 float");
+                if(field.codec==Codec.STRING && (!json.isJsonPrimitive() || !json.getAsJsonPrimitive().isString()))throw new EditorSessions.Failure("invalid_nbt","必须为字符串");
+                if(field.codec==BlockPos.CODEC) {if(!json.isJsonArray() || json.getAsJsonArray().size()!=3)throw new EditorSessions.Failure("invalid_nbt","坐标必须为三个整数");for(var coordinate:json.getAsJsonArray())requireInteger(coordinate,Integer.MIN_VALUE,Integer.MAX_VALUE);}
+                if(block instanceof StructureBlockEntity && (field.key.startsWith("pos") || field.key.startsWith("size")))requireInteger(json,field.key.startsWith("pos") ? -StructureBlockEntity.MAX_OFFSET_PER_AXIS : 0,field.key.startsWith("pos") ? StructureBlockEntity.MAX_OFFSET_PER_AXIS : StructureBlockEntity.MAX_SIZE_PER_AXIS);
                 if(field.codec==Codec.SHORT)requireInteger(json,Short.MIN_VALUE,Short.MAX_VALUE);
                 if(field.codec==Codec.BYTE)requireInteger(json,Byte.MIN_VALUE,Byte.MAX_VALUE);
                 if(field.codec==Codec.INT)requireInteger(json,Integer.MIN_VALUE,Integer.MAX_VALUE);
@@ -167,11 +199,14 @@ public final class BlockViews {
                 // Vanilla omits default banner layers/pot decorations rather than saving empty fields.
                 if(field.codec==BannerPatternLayers.CODEC && encoded instanceof ListTag list && list.isEmpty()) encoded=null;
                 if(field.codec==PotDecorations.CODEC && PotDecorations.CODEC.parse(access.createSerializationContext(NbtOps.INSTANCE),encoded).getOrThrow().equals(PotDecorations.EMPTY))encoded=null;
+                if(block instanceof TheEndGatewayBlockEntity && field.key.equals("ExactTeleport") && !json.getAsBoolean())encoded=null;
                 put(result,field,encoded);
             }
         }
         if(block instanceof JukeboxBlockEntity && !Objects.equals(nbt.get("RecordItem"),result.get("RecordItem")))result.remove(JukeboxBlockEntity.TICKS_SINCE_SONG_STARTED_TAG_ID);
         requireUnwaxed(block,nbt,result);
+        if(block instanceof TheEndGatewayBlockEntity || block instanceof StructureBlockEntity || block instanceof JigsawBlockEntity)
+            WorldNbt.requireEditedFieldsRetained(nbt,result,WorldTarget.copyBlock(block,result,access).saveWithFullMetadata(access));
         return result;
     }
     public static void requireUnwaxed(BlockEntity block,CompoundTag before,CompoundTag after) {

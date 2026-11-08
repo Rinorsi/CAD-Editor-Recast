@@ -20,6 +20,7 @@ public final class BlockWorldEditTest {
         run(EntitySchemaTest.access(),Path.of("logs/block-edit"));
     }
     public static void run(RegistryAccess access,Path output) throws Exception {
+        structureViews(access);
         nameableViews(access);
         hopperView(access);
         beaconView(access);
@@ -238,6 +239,32 @@ public final class BlockWorldEditTest {
         var saved=WorldTarget.copyBlock(be,edited,access).saveWithFullMetadata(access);
         WorldNbt.requireEditedFieldsRetained(before,edited,saved);checks++;
         return saved;
+    }
+    private static void structureViews(RegistryAccess access) {
+        var conduit=new ConduitBlockEntity(BlockPos.ZERO,Blocks.CONDUIT.defaultBlockState());var conduitData=conduit.saveWithFullMetadata(access);var conduitViews=new JsonObject();BlockViews.add(conduitViews,conduit,access,conduitData);
+        check(!conduitViews.getAsJsonObject("conduit").getAsJsonObject("value").get("Active").getAsBoolean(),"conduit runtime active");
+        reject("invalid_request",()->BlockViews.apply(conduit,conduitData,JsonParser.parseString("{conduit:{Target:null}}").getAsJsonObject(),access));
+        var gateway=new TheEndGatewayBlockEntity(BlockPos.ZERO,Blocks.END_GATEWAY.defaultBlockState());var before=gateway.saveWithFullMetadata(access);
+        var views=new JsonObject();BlockViews.add(views,gateway,access,before);check(!views.has("unsupported") && views.getAsJsonObject("end_gateway").getAsJsonObject("value").get("exit_portal").isJsonNull(),"gateway supported and absent exit");
+        var saved=roundtrip(gateway,before,"{end_gateway:{exit_portal:[10,64,-10],ExactTeleport:true,Age:9223372036854775807}}",access);
+        check(saved.getLong("Age").orElseThrow()==Long.MAX_VALUE,"gateway long precision");
+        saved=roundtrip(gateway,saved,"{end_gateway:{exit_portal:null,ExactTeleport:false,Age:-9223372036854775808}}",access);check(!saved.contains("exit_portal") && !saved.contains("ExactTeleport"),"gateway sparse removal");
+        for(String fields:List.of("Age:9223372036854775808","Age:1.5","Age:null","ExactTeleport:1","exit_portal:[0,1]","exit_portal:[0,1.5,0]","exit_portal:[2147483647,0,0]"))reject("invalid_nbt",()->BlockViews.apply(gateway,before,JsonParser.parseString("{end_gateway:{"+fields+"}}").getAsJsonObject(),access));
+        var structure=new StructureBlockEntity(BlockPos.ZERO,Blocks.STRUCTURE_BLOCK.defaultBlockState());var initial=structure.saveWithFullMetadata(access);
+        var result=roundtrip(structure,initial,"{structure_block:{name:'minecraft:workshop',author:'editor',metadata:'test',posX:"+(-StructureBlockEntity.MAX_OFFSET_PER_AXIS)+",sizeX:"+StructureBlockEntity.MAX_SIZE_PER_AXIS+",ignoreEntities:false,powered:true,showair:true,showboundingbox:false,integrity:0.5,seed:-9223372036854775808}}",access);
+        check(result.getString("author").orElseThrow().equals("editor"),"structure write");
+        for(String fields:List.of("posX:"+(StructureBlockEntity.MAX_OFFSET_PER_AXIS+1),"sizeY:-1","integrity:'NaN'","name:'bad name'","mode:'bad'","author:null"))reject("invalid_nbt",()->BlockViews.apply(structure,initial,JsonParser.parseString("{structure_block:{"+fields+"}}").getAsJsonObject(),access));
+        var jigsaw=new JigsawBlockEntity(BlockPos.ZERO,Blocks.JIGSAW.defaultBlockState());var jigsawBefore=jigsaw.saveWithFullMetadata(access);
+        roundtrip(jigsaw,jigsawBefore,"{jigsaw:{name:'minecraft:test',target:'minecraft:target',pool:'minecraft:empty',final_state:'minecraft:stone'}}",access);
+        for(var be:List.of(structure,jigsaw)) {
+            var data=be.saveWithFullMetadata(access);var rows=new JsonObject();BlockViews.add(rows,be,access,data);var group=be==structure ? "structure_block" : "jigsaw";
+            for(var entry:rows.getAsJsonObject(group).getAsJsonObject("schema").getAsJsonObject("fields").entrySet()) {
+                var schema=entry.getValue().getAsJsonObject();if(!schema.has("candidates"))continue;
+                for(var candidate:schema.getAsJsonArray("candidates"))roundtrip(be,data,"{"+group+":{"+entry.getKey()+":"+candidate+"}}",access);
+                reject("invalid_nbt",()->BlockViews.apply(be,data,JsonParser.parseString("{"+group+":{"+entry.getKey()+":'__invalid__'}}").getAsJsonObject(),access));
+            }
+        }
+        reject("invalid_nbt",()->BlockViews.apply(jigsaw,jigsawBefore,JsonParser.parseString("{jigsaw:{name:'invalid identifier'}}").getAsJsonObject(),access));
     }
     @SuppressWarnings({"rawtypes","unchecked"}) private static String propertyName(net.minecraft.world.level.block.state.properties.Property property,Object value){return property.getName((Comparable)value);}
     private static void check(boolean ok,String message){if(!ok)throw new AssertionError(message);checks++;}

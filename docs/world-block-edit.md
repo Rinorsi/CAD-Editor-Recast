@@ -53,7 +53,7 @@ Book、RecordItem、书架 Items 内容确实变化时，从副本自动更新 h
 
 蜡封标牌改文字须同一笔最终结果 is_waxed:false，否则 sign_waxed；完整 SNBT 同样受限。修改后含可执行命令的文本要求 ServerPlayer.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)，与创造/生存无关。命令方块、结构方块、拼图方块依据原版 GameMasterBlock 标记要求同一权限；有权限+生存允许，无权限+创造拒绝。其他权限/距离/区域保护守卫不变。
 
-end_gateway / structure_block 返回 views.unsupported:{supported:false,reason}，无安全的专用 normalized 写入；保留旧完整 SNBT 及身份保护，不声称已验证传送/结构副作用。
+end_gateway / structure_block / jigsaw 已提供下述专用视图，不返回 unsupported；传送/结构生成副作用仍未运行验收。
 
 ## nameable：自定义名称（P1-1）
 
@@ -147,10 +147,56 @@ edits 示例：
 |雕纹书架|支持 last_interacted_slot 及既有 container.slots|工厂/视图往返；真实书架内容和交互待客户端|
 |三种命令块|支持 block_type / 状态 / 命令字段|实际注册表模式、副本NBT保留；执行/调度待客户端|
 |熔炉/烟熏炉/高炉/酿造台/营火|支持进度视图/Codec写入/动态合并|JVM数据守卫/往返；真实 ticking 熔炉改名与倒计时合并已在独立专用服验证；声音/客户端待验收|
-|折跃门/结构方块|partial：原SNBT；专用normalized不支持|工厂标记捕获；传送/结构行为未验收|
+|折跃门/结构方块/拼图方块|支持专用 normalized 视图及副本保留验证|真实 Codec/工厂测试；传送/结构生成行为未验收|
 |试炼刷怪笼/未知模组BE|保留原通用路径，无新动态白名单|通用三方合并；实际激活/第三方模组 loader 未专项实测|
 
 WorldEditTest 原420项保持通过，并调用 BlockWorldEditTest 扩展，覆盖属性遍历、BE保真、模式副本、规范化修改、非法颜色/行数、蜡封规则、动态三方合并、状态冲突、token及共用权限/距离/保护守卫。守卫单测不是 ServerPlayer 集成验收。
 
 复现：tools/world-edit/verify-block.ps1 -ClasspathJson <runtime-classpath.json>；编译目录与完整输出在 logs/block-edit。真实完整工厂/Codec捕获见 [world-block-samples.json](world-block-samples.json)，不是手写默认表。真实客户端请求、远程服、多玩家保护、Level.setBlock邻居传播及持续tick：**real-client run pending**。
+
+## conduit：潮涌核心（只读）
+
+`Target` 为原版 EntityReference 保存的 UUID int 数组，未锁定目标为 null（只读缺省，不是可提交的清空操作）。`Active/Hunting` 为实际实例 `isActive()/isHunting()` boolean；它们不保存到 NBT，由原版环境检测计算。全部 schema.fields 标记 read_only；任何 conduit edits（含 null）均 invalid_request，无可写字段、无候选。Target 涉及实体引用，不提供专用修改。snbt 为真实完整快照，运行状态不伪装成保存字段。
+
+```json
+{"conduit":{"value":{"Target":null,"Active":false,"Hunting":false},"schema":{"fields":{"Target":{"read_only":true,"nullable":true},"Active":{"read_only":true,"nullable":false},"Hunting":{"read_only":true,"nullable":false}}}}}
+```
+拒绝示例：
+```json
+{"views":{"conduit":{"Active":true}}}
+```
+
+## end_gateway：末地折跃门
+
+`exit_portal` 使用 26.1.2 原版保存键（不是旧版 ExitPortal），`BlockPos.CODEC` JSON 为 `[x,y,z]` 三个 int；原版 `Level.isInSpawnableBounds` 过滤后必须保留，否则 invalid_nbt。null 删除出口。`ExactTeleport` 为 boolean，false 按原版稀疏保存删除键，null 拒绝。`Age` 为完整 signed long，null 拒绝；前端须使用无损 JSON 整数，不能用 JS Number 近似超出 2^53 的值。字段无静态候选，范围来自 Codec/保存类型与加载器。未知字段 invalid_request，非法类型、越界、加载未保留 invalid_nbt。
+
+```json
+{"end_gateway":{"value":{"exit_portal":null,"ExactTeleport":false,"Age":0},"snbt":"{Age:0L}","schema":{"fields":{"exit_portal":{"nullable":true,"type":"array","length":3},"ExactTeleport":{"nullable":false},"Age":{"nullable":false,"type":"integer"}}}}}
+```
+```json
+{"views":{"end_gateway":{"exit_portal":[10,64,-10],"ExactTeleport":true,"Age":0}}}
+```
+
+## structure_block：结构方块
+
+字段 `name/author/metadata` 为字符串，name 可用空字符串清空；非空 name 必须是原版可保留的资源 ID（建议带 namespace）。`posX/Y/Z` 为 int，范围 ±`StructureBlockEntity.MAX_OFFSET_PER_AXIS`；`sizeX/Y/Z` 为 0..`MAX_SIZE_PER_AXIS`，当前均以 48 为上限。`rotation/mirror/mode` 使用原版 LEGACY_CODEC，`schema.fields.KEY.candidates` 由实际枚举经同一 Codec 生成（大小写按候选，不自行转换）。`ignoreEntities/powered/showair/showboundingbox` 为 boolean；`integrity` 为有限 float（保存器不限制 0..1，放置时原版才 clamp）；`seed` 为 signed long，须无损 JSON。全部字段拒绝 null。未知字段 invalid_request；非法类型、范围、枚举及原版加载未保留 invalid_nbt。不会执行保存/加载结构操作，strict 等未暴露字段保留。
+
+视图片段（完整 value 包含以上所有字段）：
+```json
+{"structure_block":{"value":{"name":"","posX":0,"sizeX":0,"integrity":1,"seed":0},"schema":{"fields":{"posX":{"min":-48,"max":48,"nullable":false},"sizeX":{"min":0,"max":48,"nullable":false}}}}}
+```
+```json
+{"views":{"structure_block":{"name":"minecraft:workshop","author":"editor","sizeX":16,"sizeY":8,"sizeZ":16,"integrity":0.75}}}
+```
+
+## jigsaw：拼图方块
+
+`name/target` 为 `Identifier.CODEC` 资源 ID，`pool` 使用 `JigsawBlockEntity.POOL_CODEC`（资源键，允许尚未存在的 pool，非强制注册表成员）；`final_state` 为原版字符串，加载器不解析方块表达式，保留不表示生成时必然有效。`joint` 使用原版 JointType.CODEC，候选由实际枚举生成到 candidates（当前 rollable/aligned）。全部字段拒绝 null，清空引用用合法资源 ID；未知字段 invalid_request，非法 ID/枚举/类型及加载未保留 invalid_nbt。不会执行生成操作，优先级等其他字段保留。
+
+```json
+{"jigsaw":{"value":{"name":"minecraft:empty","target":"minecraft:empty","pool":"minecraft:empty","final_state":"minecraft:air","joint":"rollable"},"schema":{"fields":{"joint":{"nullable":false,"candidates":["rollable","aligned"]}}}}}
+```
+```json
+{"views":{"jigsaw":{"target":"minecraft:door","pool":"minecraft:empty","joint":"aligned","final_state":"minecraft:stone"}}}
+```
 
