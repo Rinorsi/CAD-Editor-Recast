@@ -34,8 +34,14 @@ public final class WorldWire {
                 var result = JsonParser.parseString(new String(bytes, StandardCharsets.UTF_8)).getAsJsonObject();
                 if (result.has("worldEncoding")) EditorSessions.fail("invalid_request", "不允许嵌套压缩消息");
                 if (result.has("op")) {
-                    var slot = StackCodec.object(result,"slot"); String kind = StackCodec.string(slot,"kind");
-                    if (!kind.equals("block") && !kind.equals("entity")) EditorSessions.fail("invalid_request", "压缩传输只用于世界目标");
+                    if ("player_extended".equals(StackCodec.string(result,"op"))) {
+                        // Player views address an explicit UUID target, not the legacy world slot.
+                        // Authorization and target/view validation remain in PlayerExtendedEditor.
+                        StackCodec.object(result,"target");
+                    } else {
+                        var slot = StackCodec.object(result,"slot"); String kind = StackCodec.string(slot,"kind");
+                        if (!kind.equals("block") && !kind.equals("entity")) EditorSessions.fail("invalid_request", "压缩传输只用于世界目标");
+                    }
                 }
                 return result;
             }

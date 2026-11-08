@@ -25,8 +25,16 @@ public final class PlayerWorldEditTest {
         current.addProperty("Health",19);check(!WorldNbt.revision(base).equals(WorldNbt.revision(PlayerWorldEdit.with(live,current))),"concurrent health conflict");
         var sessions=new WorldEditSessions();var who=UUID.randomUUID();var slot=JsonParser.parseString("{kind:'entity',dim:'minecraft:overworld',uuid:'test',token:'p'}").getAsJsonObject();var openedSession=sessions.open(who,slot,base);var state=sessions.require(who,slot,openedSession.revision,live);state.saved(base,live,false);check(state.preimage().equals(base),"session undo preimage");
         var numeric=new JsonObject();numeric.addProperty("v",Double.NaN);reject(()->PlayerWorldEdit.number(numeric,"v",0,1),"invalid_request");numeric.addProperty("v",-1);reject(()->PlayerWorldEdit.number(numeric,"v",0,1),"invalid_request");numeric.addProperty("v",1);check(PlayerWorldEdit.number(numeric,"v",0,1)==1,"finite boundary accepted");
+        var clear=JsonParser.parseString("{op:'player_extended',requestId:'null-roundtrip',action:'apply',target:{uuid:'00000000-0000-0000-0000-000000000001'},view:'respawn',patch:null}").getAsJsonObject();
+        check(wire(clear).equals(clear)&&wire(clear).get("patch").isJsonNull(),"respawn clear preserves explicit JSON null");
+        var large=clear.deepCopy();large.addProperty("view","offline");large.getAsJsonObject("target").addProperty("offline",true);var snbt=new JsonObject();snbt.addProperty("snbt"," ".repeat(17000)+"{}");large.add("patch",snbt);
+        check(JsonParser.parseString(WorldWire.encode(large)).getAsJsonObject().has("worldEncoding"),"large offline request uses bounded compression");
+        check(wire(large).equals(large),"compressed player request does not require legacy slot");
+        var reply=JsonParser.parseString("{status:'saved',requestId:'null-roundtrip',playerExtended:{value:null,nextOffset:null}}").getAsJsonObject();
+        check(wire(reply).equals(reply)&&wire(reply).getAsJsonObject("playerExtended").get("value").isJsonNull(),"respawn reply preserves null value and pagination end");
         System.out.println("PlayerWorldEditTest: "+checks+" checks passed");
     }
+    private static JsonObject wire(JsonObject value){return WorldWire.decode(JsonParser.parseString(WorldWire.encode(value)).getAsJsonObject());}
     private static void reject(Runnable r,String code){try{r.run();throw new AssertionError("expected "+code);}catch(EditorSessions.Failure f){check(f.code.equals(code),"error code "+code);}}
     private static void check(boolean b,String message){if(!b)throw new AssertionError(message);checks++;}
 }

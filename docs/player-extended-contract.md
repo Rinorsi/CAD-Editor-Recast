@@ -65,3 +65,5 @@ stats.value={entries:[{type:'minecraft:custom',id:'minecraft:jump',value:0}]}，
 页面注意：同一视图的 read 会更新宿主持有的基线；有未保存草稿时不要自动轮询 read 或以翻页请求悄悄刷新基线。显式重新读取应先让用户保留/放弃草稿。所有扩展请求由宿主串行发送，并遵守 500ms 服务端间隔。
 
 验收与证据：[player-extended-verification.md](player-extended-verification.md)。
+
+宿主将页面消息排入最多 4 笔等待队列，一次发送 1 笔，回执后间隔至少 550ms；排队与在途合计超时 10 秒。它不会自动重试写操作。apply 的页面 revision 若与 Java 持有值不符会拒绝，不会因排队中的 read 换过基线而静默提交旧草稿。较长离线 SNBT 仍可使用既有 gzip 传输，展开和压缩大小上限不变。
