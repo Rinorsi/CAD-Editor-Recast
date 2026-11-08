@@ -10,6 +10,9 @@ import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.item.*;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.EnderMan;
+import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -30,6 +33,19 @@ final class EntityViewsSimple {
         if(entity instanceof PrimedTnt)sections.put("tnt",primitives(saved,"fuse"));
         if(entity instanceof Creeper)sections.put("creeper",primitives(saved,"Fuse","ExplosionRadius"));
         if(entity instanceof EnderMan)sections.put("enderman",Map.of("carriedBlockState",new Field(BlockState.CODEC,"BlockState.CODEC",true)));
+        if(entity instanceof AreaEffectCloud) {
+            var fields=primitives(saved,"Age","Duration","WaitTime","ReapplicationDelay","DurationOnUse","RadiusOnUse","RadiusPerTick","Radius");
+            fields.put("potion_contents",new Field(PotionContents.CODEC,"PotionContents.CODEC",true));
+            fields.put("custom_particle",new Field(ParticleTypes.CODEC,"ParticleTypes.CODEC",true));
+            fields.put("potion_duration_scale",new Field(Codec.FLOAT,"float",true));sections.put("area_effect_cloud",fields);
+        }
+        if(entity instanceof ExperienceOrb)sections.put("experience_orb",primitives(saved,"Value"));
+        if(entity instanceof AbstractArrow) {
+            var fields=primitives(saved,"damage");fields.put("pickup",new Field(AbstractArrow.Pickup.LEGACY_CODEC,"pickup",false));sections.put("arrow",fields);
+        }
+        if(entity instanceof Interaction) {
+            var fields=primitives(saved,"width","height");booleans(fields,"response");sections.put("interaction",fields);
+        }
         return sections;
     }
     private static void booleans(Map<String,Field> fields,String... names) {
@@ -49,7 +65,7 @@ final class EntityViewsSimple {
         }
         return fields;
     }
-    static boolean supports(String section) { return Set.of("owner","dropped_item","falling_block","tnt","creeper","enderman").contains(section); }
+    static boolean supports(String section) { return Set.of("owner","dropped_item","falling_block","tnt","creeper","enderman","area_effect_cloud","experience_orb","arrow","interaction","leash","team").contains(section); }
     static void views(JsonObject out, Entity entity, CompoundTag saved, RegistryAccess access) {
         for(var section:sections(entity,saved).entrySet()) {
             var view=new JsonObject();
@@ -60,6 +76,13 @@ final class EntityViewsSimple {
                 else view.add(key,saved.contains(key)?EntityWorldEdit.json(saved.get(key)):JsonNull.INSTANCE);
             }
             out.add(section.getKey(),view);
+        }
+        var scoreboard=entity.level().getScoreboard();var team=new JsonObject();team.addProperty("readOnly",true);team.addProperty("available",scoreboard!=null);
+        var names=new JsonArray();if(scoreboard!=null)scoreboard.getTeamNames().stream().sorted().forEach(names::add);team.add("options",names);
+        var membership=scoreboard==null?null:scoreboard.getPlayersTeam(entity.getScoreboardName());team.add("name",membership==null?JsonNull.INSTANCE:new JsonPrimitive(membership.getName()));out.add("team",team);
+        if(entity instanceof Leashable leashable) {
+            var leash=new JsonObject();leash.addProperty("readOnly",true);leash.addProperty("reason","Leash relationships are protected; no graph-safe write/undo adapter");
+            var data=leashable.getLeashData();leash.add("data",data==null?JsonNull.INSTANCE:Leashable.LeashData.CODEC.encodeStart(access.createSerializationContext(JsonOps.INSTANCE),data).getOrThrow());out.add("leash",leash);
         }
         if(entity instanceof TamableAnimal tame) {
             var view=new JsonObject();var owner=tame.getOwnerReference();
@@ -83,10 +106,18 @@ final class EntityViewsSimple {
                 if(spec.codec==Codec.BYTE){field.addProperty("min",Byte.MIN_VALUE);field.addProperty("max",Byte.MAX_VALUE);}
                 if(spec.codec==Codec.INT){field.addProperty("min",Integer.MIN_VALUE);field.addProperty("max",Integer.MAX_VALUE);}
                 if(spec.codec==BlockState.CODEC){field.addProperty("registry","minecraft:block");field.addProperty("properties","live Block StateDefinition; block_properties registry channel");}
+                if(spec.type.equals("pickup"))field.add("options",pickupOptions());
+                if(spec.codec==PotionContents.CODEC){field.addProperty("registry","minecraft:potion");field.addProperty("effectsRegistry","minecraft:mob_effect");}
+                if(spec.codec==ParticleTypes.CODEC)field.addProperty("registry","minecraft:particle_type");
+                if(entity instanceof AreaEffectCloud&&key.equals("Radius")&&!entity.level().isClientSide()) {
+                    var low=(AreaEffectCloud)entity.getType().create(entity.level(),EntitySpawnReason.COMMAND);var high=(AreaEffectCloud)entity.getType().create(entity.level(),EntitySpawnReason.COMMAND);
+                    low.setRadius(-Float.MAX_VALUE);high.setRadius(Float.MAX_VALUE);field.addProperty("min",low.getRadius());field.addProperty("max",high.getRadius());
+                }
                 fields.add(key,field);
             }
             schema.add("fields",fields);out.add(section.getKey(),schema);
         }
+        // Read-only relation views carry their metadata inline to keep near-budget schemas small.
         if(entity instanceof TamableAnimal) {
             var section=new JsonObject();section.addProperty("write","entity.owner");
             section.addProperty("field","Owner");section.addProperty("type","UUID string or null");
@@ -95,6 +126,7 @@ final class EntityViewsSimple {
         }
     }
     static void apply(Entity source, CompoundTag nbt, JsonObject edit, Level level, RegistryAccess access) {
+        require(!edit.has("team"),"Team view is read-only");require(!edit.has("leash"),"Leash relationship is read-only");
         var available=sections(source,nbt);
         for(var section:edit.entrySet()) {
             if(!supports(section.getKey())||section.getKey().equals("owner"))continue;
@@ -122,11 +154,20 @@ final class EntityViewsSimple {
             }
         }
     }
+    private static JsonArray pickupOptions() {
+        var options=new JsonArray();for(var pickup:AbstractArrow.Pickup.values()) {
+            var row=new JsonObject();row.addProperty("label",pickup.name());row.add("value",AbstractArrow.Pickup.LEGACY_CODEC.encodeStart(JsonOps.INSTANCE,pickup).getOrThrow());options.add(row);
+        }return options;
+    }
     private static <T> Tag encoded(Codec<T> codec,JsonElement value,RegistryAccess access) {
         return codec.encodeStart(access.createSerializationContext(NbtOps.INSTANCE),codec.parse(access.createSerializationContext(JsonOps.INSTANCE),value).getOrThrow()).getOrThrow();
     }
     private static Tag encode(Field field,JsonElement value,RegistryAccess access) {
         var codec=field.codec;
+        if(field.type.equals("pickup")) {
+            require(value.isJsonPrimitive()&&value.getAsJsonPrimitive().isNumber(),"Pickup requires an integer codec value");int requested=value.getAsBigDecimal().intValueExact();
+            require(pickupOptions().asList().stream().anyMatch(option->option.getAsJsonObject().get("value").getAsInt()==requested),"Unknown pickup mode");
+        }
         if(codec==Codec.BOOL)require(value.isJsonPrimitive()&&value.getAsJsonPrimitive().isBoolean(),"Field requires boolean");
         if(codec==BlockState.CODEC) {
             var wire=value.getAsJsonObject();require(Set.of("Name","Properties").containsAll(wire.keySet()),"Unknown block state field");

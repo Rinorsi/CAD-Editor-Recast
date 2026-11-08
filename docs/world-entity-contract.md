@@ -104,6 +104,67 @@ Edits 示例：
 {"entity":{"enderman":{"carriedBlockState":null}}}
 ```
 
+## P2-5 其他实体与关系读取
+
+### 可写视图
+
+以下视图同名写入 `entity.<视图名>`；未知字段、错误目标类型、类型/存储越界、Codec 错误、非有限浮点数或实际 loader 未保留请求值均拒绝。省略字段保留原值，除明确标注外 null 非法。signed int/short/double/float 的范围按实时保存 Tag 类型与对应 Java 存储类型；不手写游戏选项目录。各视图的 fields 在 `schema` / `entity_schema.views` 提供类型、路径和存储边界。
+
+|视图|实体|字段|
+|---|---|---|
+|area_effect_cloud|AreaEffectCloud|Radius/RadiusOnUse/RadiusPerTick：有限 float；Age/Duration/WaitTime/ReapplicationDelay/DurationOnUse：int；potion_contents：PotionContents.CODEC；custom_particle：ParticleTypes.CODEC；potion_duration_scale：有限 float|
+|experience_orb|ExperienceOrb|Value：实际保存 short，-32768..32767|
+|arrow|AbstractArrow（含普通箭、光灵箭及同基类实体）|damage：有限 double；pickup：实际 Pickup.LEGACY_CODEC 数值，候选为实时 Pickup.values() 经 Codec 编码得到的 `{label,value}`，非合法枚举值/小数拒绝，不能依赖 Codec 的越界回退|
+|interaction|Interaction|width/height：有限 float，原版无额外 clamp；response：严格 boolean；不开放 attack/interaction 玩家行为记忆|
+
+药水云的 `potion_contents` 支持 Codec 的 potion、自定义颜色和 custom_effects 等完整结构；药水和效果候选分别来自当前 potion/mob_effect 注册表，效果结构/范围由 MobEffectInstance Codec 决定，不转为过时 Effects 键。粒子及其参数来自 particle_type 与 ParticleTypes.CODEC。三个可选字段 potion_contents/custom_particle/potion_duration_scale 的 null 表示删除覆盖、恢复原版默认；默认空药水或默认 duration scale 若被原版省略，应发送 null，不发送会被省略的显式空对象/默认值。Radius 边界通过真实服务端侧 setter 端点获取，在 schema.fields.Radius.min/max 返回；越界被 clamp 后不相等就拒绝。客户端 fixture 不模拟服务端半径 setter，相关门禁使用不启动/不 tick 的 server-side Level fixture。
+
+视图和 edits 示例：
+```json
+{"area_effect_cloud":{"Radius":3,"Duration":200,"Age":0,"WaitTime":20,"ReapplicationDelay":20,"DurationOnUse":0,"RadiusOnUse":0,"RadiusPerTick":0,"potion_contents":null,"custom_particle":null,"potion_duration_scale":null}}
+```
+```json
+{"entity":{"area_effect_cloud":{"Radius":4.5,"Duration":200,"potion_contents":{"custom_effects":[{"id":"minecraft:speed","duration":100,"amplifier":1}]}}}}
+```
+```json
+{"experience_orb":{"Value":7}}
+```
+```json
+{"entity":{"experience_orb":{"Value":123}}}
+```
+```json
+{"arrow":{"damage":2,"pickup":0}}
+```
+```json
+{"entity":{"arrow":{"damage":5.25,"pickup":1}}}
+```
+```json
+{"interaction":{"width":1,"height":1,"response":false}}
+```
+```json
+{"entity":{"interaction":{"width":2.5,"height":3,"response":true}}}
+```
+
+### 只读关系视图
+
+为保持接近 24KB 上限的村民 entity_schema 可分页，只读 team/leash 的元数据直接内联在 world.views 中，不在 entity_schema.views 重复展开。前端以视图的 readOnly 判断，不能因没有 schema 就显示写入控件。
+
+`team` 适用全部实体，`name` 是实时 Scoreboard 中按 entity.getScoreboardName() 查出的直接队伍名或 null，不把驯服动物的继承主人队伍混为直接成员。`options` 是当前记分板的队伍名列表；`available` 表示记分板可用；`readOnly:true`。不新建/修改队伍，不使用静态队伍目录。不存在记分板时 available:false、name:null、options:[]。
+
+`leash` 适用 Leashable，`data` 为实时 LeashData.CODEC 的 JSON（方块坐标数组或 `{UUID:[四个int]}`），无关系时 null；`readOnly:true` 和 `reason` 明确未实现关系图写入。不会把该 UUID 当作实体身份 UUID 改写。现有 WorldNbt/merge/undo 全程保护 leash，写入需另建关系事务适配，不能通过普通 NBT 降级绕过。**本轮拴绳仅读取，连接/解除尚未实现。**
+
+只读字段无合法 edits；发送下列 edits 必须拒绝，空对象也拒绝，null 不表示允许清除关系：
+```json
+{"team":{"name":"red","options":["red","blue"],"available":true,"readOnly":true},"leash":{"data":[1,64,2],"readOnly":true,"reason":"Leash relationships are protected; no graph-safe write/undo adapter"}}
+```
+```json
+{"entity":{"team":{"name":null},"leash":{"data":null}}}
+```
+
+### 验证记录
+
+本轮新增门禁写在 EntityWorldEditTest：每个可写视图覆盖读出、合法写入、非法拒绝；只读队伍/拴绳覆盖实时读取与写入拒绝；已有 Sitting/powered/三类 size 覆盖回归断言。仅运行 compileJava、build、check，日志见 `logs/lane-entities/`。没有启动 Minecraft、客户端、专用服或实机探针；在线新主人分配的真实联网验证仍留给最终统一实机验收。
+
 ## 展示实体字段
 
 |entity.display字段|格式与校验|

@@ -38,7 +38,8 @@ public java.util.Collection<net.minecraft.world.entity.boss.enderdragon.EnderDra
 public net.minecraft.world.TickRateManager tickRateManager() {return null;}
 public net.minecraft.world.level.saveddata.maps.MapItemSavedData getMapData(net.minecraft.world.level.saveddata.maps.MapId a0) {return null;}
 public void destroyBlockProgress(int a0,net.minecraft.core.BlockPos a1,int a2) {}
-public net.minecraft.world.scores.Scoreboard getScoreboard() {return null;}
+public net.minecraft.world.scores.Scoreboard getScoreboard() {return scoreboard;}
+private final net.minecraft.world.scores.Scoreboard scoreboard=new net.minecraft.world.scores.Scoreboard();
 public net.minecraft.world.item.crafting.RecipeAccess recipeAccess() {return null;}
 protected net.minecraft.world.level.entity.LevelEntityGetter<net.minecraft.world.entity.Entity> getEntities() {return null;}
 public net.minecraft.world.clock.ClockManager clockManager() {return h->0L;}

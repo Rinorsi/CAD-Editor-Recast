@@ -67,6 +67,7 @@ public final class EntityWorldEditTest {
         droppedItemViews();
         fallingAndExplosiveViews();
         endermanAndExistingViews();
+        remainingSimpleViews();
         var offers=new MerchantOffers();offers.add(new MerchantOffer(new ItemCost(Items.EMERALD,2),new ItemStack(Items.BREAD,3),12,5,0.05f));
         var raw=MerchantOffers.CODEC.encodeStart(access.createSerializationContext(NbtOps.INSTANCE),offers).getOrThrow();var normalized=EntityWorldEdit.offers(offers,access);var roundtrip=EntityWorldEdit.decodeOffers(normalized,access,raw);check(raw.equals(MerchantOffers.CODEC.encodeStart(access.createSerializationContext(NbtOps.INSTANCE),roundtrip).getOrThrow()),"trade cost predicate exact roundtrip");
         normalized.get(0).getAsJsonObject().addProperty("uses",2);var updated=EntityWorldEdit.decodeOffers(normalized,access,raw);check(updated.get(0).getUses()==2,"offer uses codec");normalized.get(0).getAsJsonObject().getAsJsonObject("buy").addProperty("count",0);reject(()->EntityWorldEdit.decodeOffers(normalized,access,raw),"trade stack guard");
@@ -137,6 +138,51 @@ public final class EntityWorldEditTest {
         schema=EntitySchema.describe(EntityType.WOLF,level,access);boolean sitting=false;
         for(var raw:schema.getAsJsonArray("extras")){var row=raw.getAsJsonObject();if(row.has("id")&&row.get("id").getAsString().equals("sitting"))sitting=row.get("key").getAsString().equals("Sitting");}
         check(sitting,"existing Sitting extras");
+    }
+    private static void remainingSimpleViews(){
+        var originalLevel=level;level=new EntitySchemaTestLevel(access,false);
+        try {
+            var cloud=create(EntityType.AREA_EFFECT_CLOUD);
+            String potion=access.lookupOrThrow(Registries.POTION).listElements().findFirst().orElseThrow().key().identifier().toString();
+            String effect=access.lookupOrThrow(Registries.MOB_EFFECT).listElements().findFirst().orElseThrow().key().identifier().toString();
+            var saved=edit(cloud,"{area_effect_cloud:{Radius:4.5,Duration:200,Age:5,WaitTime:10,ReapplicationDelay:30,DurationOnUse:-5,RadiusOnUse:-0.1,RadiusPerTick:0.01,potion_duration_scale:2,potion_contents:{potion:'"+potion+"',custom_effects:[{id:'"+effect+"',duration:100,amplifier:1}]}}}");
+            EntityWorldEdit.load(cloud,saved,access);var view=EntityWorldEdit.views(cloud,saved,access).getAsJsonObject("area_effect_cloud");
+            check(view.get("Radius").getAsFloat()==4.5f&&view.get("Duration").getAsInt()==200,"cloud radius duration read/write");
+            check(view.getAsJsonObject("potion_contents").getAsJsonArray("custom_effects").size()==1,"cloud potion/effects codec");
+            check(EntityWorldSchema.describe(cloud,access).getAsJsonObject("area_effect_cloud").getAsJsonObject("fields").getAsJsonObject("Radius").get("max").getAsFloat()>4.5,"cloud radius live setter bounds");
+            var clear=edit(cloud,"{area_effect_cloud:{potion_contents:null,custom_particle:null,potion_duration_scale:null}}");check(!clear.contains("potion_contents")&&!clear.contains("potion_duration_scale"),"cloud optional clear");
+            for(String bad:List.of("{Radius:100}","{Duration:1.5}","{potion_contents:{potion:'missing:potion'}}","{potion_contents:{custom_effects:[{id:'missing:effect'}]}}","{custom_particle:{type:'missing:particle'}}","{Duration:null}"))reject(()->edit(cloud,"{area_effect_cloud:"+bad+"}"),"cloud rejects "+bad);
+            var particle=access.lookupOrThrow(Registries.PARTICLE_TYPE).listElements().map(h->h.value()).filter(p->p instanceof net.minecraft.core.particles.SimpleParticleType).findFirst().orElseThrow();
+            var particleEdit=new JsonObject();var cloudEdit=new JsonObject();cloudEdit.add("custom_particle",net.minecraft.core.particles.ParticleTypes.CODEC.encodeStart(access.createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE),(net.minecraft.core.particles.SimpleParticleType)particle).getOrThrow());particleEdit.add("area_effect_cloud",cloudEdit);
+            check(EntityWorldEdit.prepare(cloud,saved,particleEdit,level,access).contains("custom_particle"),"cloud particle codec");
+            var orb=create(EntityType.EXPERIENCE_ORB);var experience=edit(orb,"{experience_orb:{Value:123}}");EntityWorldEdit.load(orb,experience,access);
+            check(EntityWorldEdit.views(orb,experience,access).getAsJsonObject("experience_orb").get("Value").getAsInt()==123,"experience value read/write");reject(()->edit(orb,"{experience_orb:{Value:32768}}"),"experience short bound");
+            for(var type:List.of(EntityType.ARROW,EntityType.SPECTRAL_ARROW)) {
+                var arrow=create(type);var pickupSchema=EntityWorldSchema.describe(arrow,access).getAsJsonObject("arrow").getAsJsonObject("fields").getAsJsonObject("pickup");
+                for(var option:pickupSchema.getAsJsonArray("options")) {
+                    int pickup=option.getAsJsonObject().get("value").getAsInt();var shot=edit(arrow,"{arrow:{damage:5.25,pickup:"+pickup+"}}");EntityWorldEdit.load(arrow,shot,access);
+                    var arrowView=EntityWorldEdit.views(arrow,shot,access).getAsJsonObject("arrow");check(arrowView.get("damage").getAsDouble()==5.25&&arrowView.get("pickup").getAsInt()==pickup,"arrow damage/pickup codec "+type);
+                }
+                reject(()->edit(arrow,"{arrow:{pickup:127}}"),"arrow unknown pickup");reject(()->edit(arrow,"{arrow:{pickup:0.5}}"),"arrow fractional pickup");reject(()->edit(arrow,"{arrow:{damage:'five'}}"),"arrow damage type");
+            }
+            var interaction=create(EntityType.INTERACTION);var interacted=edit(interaction,"{interaction:{width:2.5,height:3,response:true}}");EntityWorldEdit.load(interaction,interacted,access);
+            var interactionView=EntityWorldEdit.views(interaction,interacted,access).getAsJsonObject("interaction");check(interactionView.get("width").getAsFloat()==2.5f&&interactionView.get("height").getAsFloat()==3&&interactionView.get("response").getAsBoolean(),"interaction dimensions response read/write");
+            reject(()->edit(interaction,"{interaction:{response:1}}"),"interaction boolean");reject(()->edit(interaction,"{interaction:{width:null}}"),"interaction null");
+            var mob=create(EntityType.COW);var scoreboard=level.getScoreboard();var team=scoreboard.addPlayerTeam("entity_lane_test");scoreboard.addPlayerToTeam(mob.getScoreboardName(),team);
+            var teamView=EntityWorldEdit.views(mob,WorldTarget.saveEntity(mob,access),access).getAsJsonObject("team");check(teamView.get("name").getAsString().equals(team.getName())&&teamView.getAsJsonArray("options").asList().contains(new JsonPrimitive(team.getName())),"team membership/options from live scoreboard");
+            var data=Leashable.LeashData.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE,JsonParser.parseString("[1,64,2]")).getOrThrow();((Leashable)mob).setLeashData(data);
+            var leashView=EntityWorldEdit.views(mob,WorldTarget.saveEntity(mob,access),access).getAsJsonObject("leash");check(leashView.get("data").getAsJsonArray().get(1).getAsInt()==64&&leashView.get("readOnly").getAsBoolean(),"leash live codec read");
+            reject(()->edit(mob,"{leash:{data:null}}"),"leash relationship readonly");reject(()->edit(mob,"{team:{name:null}}"),"team readonly");
+            var baseline=WorldTarget.saveEntity(mob,access);var moved=baseline.copy();moved.remove("leash");reject(()->WorldNbt.protect(baseline,moved,true),"raw leash still protected");
+            for(String section:List.of("area_effect_cloud","experience_orb","arrow","interaction"))reject(()->edit(mob,"{"+section+":{}}"),"remaining target guard "+section);
+            for(var type:List.of(EntityType.WOLF,EntityType.ITEM,EntityType.FALLING_BLOCK,EntityType.TNT,EntityType.CREEPER,EntityType.ENDERMAN,EntityType.AREA_EFFECT_CLOUD,EntityType.EXPERIENCE_ORB,EntityType.ARROW,EntityType.SPECTRAL_ARROW,EntityType.INTERACTION)) {
+                var entries=new JsonArray();entries.add(EntitySchema.describe(type,level,access));check(RegistryPages.split("entity_schema","entities-lane",entries).size()==1,"simple schema fits transport "+type);
+            }
+            for(double value:new double[]{Double.NaN,Double.POSITIVE_INFINITY,Double.NEGATIVE_INFINITY}) {
+                var values=new JsonObject();values.addProperty("damage",value);var request=new JsonObject();request.add("arrow",values);var arrow=create(EntityType.ARROW);
+                reject(()->EntityWorldEdit.prepare(arrow,WorldTarget.saveEntity(arrow,access),request,level,access),"arrow nonfinite rejected");
+            }
+        } finally {level=originalLevel;}
     }
     private static Entity create(EntityType<?> type){return EntitySchema.create(type,level);}
     private static CompoundTag edit(Entity e,String json){return EntityWorldEdit.prepare(e,WorldTarget.saveEntity(e,access),JsonParser.parseString(json).getAsJsonObject(),level,access);}
