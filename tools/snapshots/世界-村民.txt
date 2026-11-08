@@ -37,6 +37,7 @@ div
     div.ed-tags
       span.k-tag "实体"
       span.dim.k-tag "villager"
+    div.ed-sounds
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
     div.ed-tabs
@@ -138,6 +139,7 @@ div
     div.ed-tags
       span.k-tag "实体"
       span.dim.k-tag "villager"
+    div.ed-sounds
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
     div.ed-tabs
@@ -165,6 +167,7 @@ div
         div.tx
           b "Villager"
           span.k-sub "villager · 放置好的生物不能换类型"
+        div.ed-sounds
         div.k-btn [title="把保险库里同类型生物的外观、属性、装备等套上来"]
           img.o-ico [src="oriel:textures/icons/download.png" style="height:16px;width:16px"]
           span "从保险库套用"
@@ -555,6 +558,7 @@ div
     div.ed-tags
       span.k-tag "实体"
       span.dim.k-tag "villager"
+    div.ed-sounds
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
     div.ed-tabs
@@ -656,6 +660,7 @@ div
                 div.tx
                   b "Chicken"
                   span.k-sub "minecraft:chicken"
+                div.ed-sounds
                 div.k-btn
                   img.o-ico [src="oriel:textures/icons/grid.png" style="height:16px;width:16px"]
                   span "更换生物"
@@ -720,6 +725,7 @@ div
     div.ed-tags
       span.k-tag "实体"
       span.dim.k-tag "villager"
+    div.ed-sounds
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
     div.ed-tabs

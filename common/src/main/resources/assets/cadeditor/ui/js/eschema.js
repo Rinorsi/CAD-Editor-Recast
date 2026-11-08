@@ -382,6 +382,7 @@ function esEntityHeader(o) {
   var id = o.id ? Reg.full(o.id) : '';
   var name = id ? entityName(id) : (o.empty || '（未选择）');
   var kids = [h('div', { class: 'egg-ico' }, [o.iconFn ? o.iconFn(32) : esEntityIcon(id, 32)]), h('div', { class: 'tx' }, [h('b', { text: name }), h('span', { class: 'k-sub', text: o.sub !== undefined ? o.sub : id })])];
+  var snd = id && typeof mobSoundRow === 'function' ? mobSoundRow(id) : null; if (snd) kids.push(snd);
   if (o.onPick) kids.push(kBtn('更换生物', function () { openRegPick({ reg: 'entity_type', current: id, title: '选择生物', onEntityNbt: o.onEntityNbt, onPick: o.onPick }); }, { icon: 'grid' }));
   if (o.onApplyVault) kids.push(kBtn('从保险库套用', function () { openVault({ kind: 'entity', pickEntity: function (snbt) { o.onApplyVault(snbt); } }); }, { icon: 'download', title: '把保险库里同类型生物的外观、属性、装备等套上来' }));
   if (o.snbtText && id) kids.push(kBtn('存入保险库', function () { openVaultSaveEntity(o.snbtText(), name); }, { icon: 'chest', title: '把调好的整只生物存起来，之后在任何选择生物的地方取出' }));

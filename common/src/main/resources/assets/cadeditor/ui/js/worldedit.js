@@ -281,6 +281,7 @@ function weHero() {
   if (open) hero.appendChild(h('div', { class: 'ed-stage' + (entView ? ' ent' : '') }, [h('div', { class: 'plate' }), vis]));
   hero.appendChild(h('div', { class: 'ed-name' + (weName().length > 6 ? ' sm' : ''), text: weName() }));
   hero.appendChild(h('div', { class: 'ed-tags' }, [h('span', { class: 'k-tag', text: isBlock ? '方块' : isPlayer ? '玩家' : '实体' }), h('span', { class: 'k-tag dim', text: shortId(w.type) })]));
+  var snd = !isBlock && !isPlayer && typeof mobSoundRow === 'function' ? mobSoundRow(w.type) : null; if (snd) hero.appendChild(snd);
   var vwa = typeof vwActions === 'function' ? vwActions() : null; if (vwa) hero.appendChild(vwa);
   var stats = h('div', { class: 'ed-stats' });
   function stat(l, v) { stats.appendChild(h('div', { class: 'k-stat' }, [h('span', { class: 'sl', text: l }), h('b', { text: String(v) })])); }

@@ -94,6 +94,7 @@ div
               div.tx
                 b "Cat"
                 span.k-sub "minecraft:cat · 本来是"
+              div.ed-sounds
               div.k-btn.m-ripple
                 img.o-ico [src="oriel:textures/icons/grid.png" style="height:16px;width:16px"]
                 span "更换生物"

@@ -109,6 +109,10 @@ html, body { margin: 0; height: 100%; }
 .ed-name { text-align: center; font-size: 24px; line-height: 28px; word-break: break-all; text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.55); }
 .ed-name.sm { font-size: 12px; line-height: 16px; }
 .ed-tags { display: flex; justify-content: center; gap: 3px; flex-wrap: wrap; }
+.ed-sounds { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+.ed-sounds:empty { display: none; }
+.k-snd { display: flex; align-items: center; gap: 3px; }
+.ew.hthin .ed-hero .ed-sounds { display: none; }
 .ed-vault { display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
 .k-tag { padding: 0 4px; height: 15px; line-height: 15px; color: #fff; white-space: nowrap; background: color-mix(in srgb, var(--cat) 58%, #000); border: 1px solid color-mix(in srgb, var(--cat) 80%, #fff); }
 .k-tag.dim { color: var(--tx2); background: var(--ln); border-color: var(--ln3); }
