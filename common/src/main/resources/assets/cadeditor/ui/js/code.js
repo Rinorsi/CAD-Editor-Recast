@@ -147,10 +147,7 @@ function kCode(o) {
   function act(fn) { return function () { try { fn(); } catch (e) { toast('无法处理：' + (e.message || e), 'warn', 'kc-bad'); } }; }
   var bFmt = kBtn('格式化', act(function () { set(kcFormat(text, false)); }), { icon: 'refresh', title: '按层级缩进重新排版（保留所有类型后缀）' });
   var bCmp = kBtn('压缩', act(function () { set(kcFormat(text, true)); }), { icon: 'layers', title: '压成一行，方便粘进命令' });
-  var bCopy = kBtn('复制', function () {
-    if (Prefs.hostClip && typeof oriel !== 'undefined' && oriel.send) { oriel.send('clipboard', { text: text }); toast('已复制到剪贴板（' + text.length + ' 字符）', 'ok'); }
-    else toast('当前环境不能直接写剪贴板，请切到「编辑」选中文字复制', 'warn');
-  }, { icon: 'copy' });
+  var bCopy = kBtn('复制', function () { copyText(text, '（' + text.length + ' 字符）'); }, { icon: 'copy' });
   var bFold = kBtn('', function () {
     var L = kcLines(kcTokens(text)), any = Object.keys(folded).some(function (k) { return folded[k]; });
     folded = {}; if (!any) Object.keys(L.fold).forEach(function (k) { if (+k > 0) folded[k] = true; });

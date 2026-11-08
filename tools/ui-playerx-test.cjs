@@ -223,3 +223,11 @@ console.log('PASS player extension: position / respawn / recipes / advancements 
   assert.equal(c.vwKind(), null, '预设页没有「存入保险库」');
   c.WE.w.player = { self: true }; c.drawWorldTop(); assert.equal(qa(t.root, '.k-btn').filter(x => /返回自己/.test(x.textContent)).length, 0, '自己的页面没有');
 }
+// ---- 复制：宿主能写就直接写；写不了就弹窗说明，内容放在里面能手动复制
+{
+  c.Prefs.hostClip = true; sent.length = 0; assert.equal(c.copyText('abc', ' UUID'), true); assert.equal(sent.filter(x => x[0] === 'clipboard')[0][1].text, 'abc');
+  c.Prefs.hostClip = false; sent.length = 0; assert.equal(c.copyText('11111111-2222-3333-4444-555555555555', ' UUID'), false, '写不了剪贴板');
+  assert.equal(sent.filter(x => x[0] === 'clipboard').length, 0); assert.ok(/不能直接复制/.test(t.root.textContent), '弹窗说明现在不能复制');
+  assert.ok(qa(t.root, 'input').some(i => i.value === '11111111-2222-3333-4444-555555555555'), 'ID 放在窗口里可以手动复制'); c.closeModal();
+  c.copyText('{a:1}' + 'x'.repeat(100), ''); assert.ok(qa(t.root, 'textarea').length >= 1, '长内容用多行文本框'); c.closeModal(); c.Prefs.hostClip = true;
+}

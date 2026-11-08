@@ -855,8 +855,7 @@ function advCmd(host) {
   pad.appendChild(out);
   /* 页面脚本不能写剪贴板（Oriel 沙箱设计）：宿主声明 hostClip 后，把文本交给宿主写入；没有宿主时退回「全选，请按 Ctrl+C」 */
   var copy = kBtn('复制', function () {
-    if (Prefs.hostClip && typeof oriel !== 'undefined' && oriel.send) { oriel.send('clipboard', { text: out.value }); toast('已复制到剪贴板', 'ok'); return; }
-    out.focus(); if (out.select) out.select(); toast('已全选，请按 Ctrl+C 复制', 'info');
+    copyText(out.value, '命令');
   }, { icon: 'copy' });
   pad.appendChild(h('div', { class: 'ed-sbar' }, [cnt, h('div', { class: 'grow' }), copy, kBtn('应用到游戏', function () { applyToGame(); }, { cls: 'pri', icon: 'play' })]));
   host.appendChild(pad);

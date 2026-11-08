@@ -324,10 +324,7 @@ function pxSummaryBox(sm) {
   box.appendChild(foot);
   return box;
 }
-function pxCopyText(text, what) {
-  if (Prefs.hostClip && typeof oriel !== 'undefined' && oriel.send) { oriel.send('clipboard', { text: text }); toast('已复制' + what, 'ok'); }
-  else toast('当前环境不能直接写剪贴板', 'warn');
-}
+function pxCopyText(text, what) { copyText(text, what); }
 /* 存档玩家名单：点开一位看摘要，查看玩家数据 = 打开他的完整编辑页 */
 function pxArchive(body) {
   var redraw = pxRedrawAll;

@@ -399,6 +399,17 @@ function kBtn(label, onClick, o) {
   return b;
 }
 
+/* 复制到剪贴板。宿主能写就直接写；写不了就弹一个窗口说明现在不能直接复制，文字放在里面，可以手动选中复制 */
+function copyText(text, what) {
+  if (Prefs.hostClip && typeof oriel !== 'undefined' && oriel.send) { oriel.send('clipboard', { text: text }); toast('已复制' + (what || ''), 'ok'); return true; }
+  var long = text.length > 90 || text.indexOf(String.fromCharCode(10)) >= 0;
+  var box = long ? h('textarea', { class: 'ed-snbt', spellcheck: 'false', style: 'height:220px;min-height:220px;' }) : h('input', { class: 'k-input', type: 'text', spellcheck: 'false' });
+  box.value = text;
+  openModal(modalShell('复制' + (what || ''), '', [h('div', { class: 'k-sub', text: '现在不能直接复制到剪贴板。请在下面选中内容，按 Ctrl+C 手动复制。' }), box], [h('div', { class: 'grow' }), kBtn('完成', closeModal, { cls: 'pri' })]), true);
+  setTimeout(function () { if (box.focus) box.focus(); if (box.select) box.select(); }, 0);
+  return false;
+}
+
 /* ---------- 卡片骨架 ----------
    spec = { id, icon: 元素或图标名, title, desc, span: 1|2, comps: [组件 id], value?: fn -> 头部右侧大数字 }
    返回 { el, body, comps, update() }，update 刷新"已修改"徽标；具体控件的刷新由各卡片自己登记 */
