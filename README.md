@@ -13,7 +13,7 @@ CAD Editor（Component And Data Editor）的换代重写，界面基于 [Oriel U
 
 按键都在“控制”设置里（分类：物品栏），可以改：编辑 = I，保险库 = O。按住 Shift 再按 I：只改手里的物品，空手就改自己。
 
-当前版本：<!-- editor-version -->0.99.2<!-- /editor-version --> · [更新日志](CHANGELOG.md) · [发版清单](docs/RELEASE.md)
+当前版本：<!-- editor-version -->0.99.3<!-- /editor-version --> · [更新日志](CHANGELOG.md) · [发版清单](docs/RELEASE.md)
 
 ## 下载
 

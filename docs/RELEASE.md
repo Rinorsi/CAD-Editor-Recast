@@ -1,6 +1,6 @@
 # 发版清单
 
-当前版本：<!-- editor-version -->0.99.2<!-- /editor-version -->。唯一版本定义为根目录 `gradle.properties` 的 `version`；元数据 `${version}` 由 Gradle 展开。新的文档版本引用使用上述标记；历史版本、验收回执、已发布更新日志保持原样。
+当前版本：<!-- editor-version -->0.99.3<!-- /editor-version -->。唯一版本定义为根目录 `gradle.properties` 的 `version`；元数据 `${version}` 由 Gradle 展开。新的文档版本引用使用上述标记；历史版本、验收回执、已发布更新日志保持原样。
 
 1. 改版本：`pwsh -File tools/bump-version.ps1 -Version <新版本> -DryRun`，审阅后去掉 `-DryRun`。同步 README、docs 当前版本标记、CHANGELOG 未发布章节、元数据模板。补全中文玩家更新日志，删掉开发中占位描述。
 2. 全部功能合并后统一验收：`pwsh -File tools/accept-all.ps1 -Full`；其余五目标运行 `tools/smoke-matrix.ps1`。保留失败、重试和最终证据。可选内存采样：`pwsh -File tools/live-test/run.ps1 -Driver memory -MemoryMinutes 3 -EvidenceRoot <新的独立目录>`。
