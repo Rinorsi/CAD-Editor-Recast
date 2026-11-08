@@ -68,6 +68,16 @@ public final class PlayerProfiles {
         s.add("equipment",equipment);return s;
     }
     private static int count(Container container,int size){int n=0;for(int i=0;i<size;i++)if(!container.getItem(i).isEmpty())n++;return n;}
+    /** No real definitions: even datapack automatic rewards must never run during an archive read. */
+    public static net.minecraft.server.ServerAdvancementManager emptyAdvancements() {
+        // 26.3 eagerly reads the advancement registry in the constructor; older managers start empty.
+        //? if >=26.3 {
+        var empty=new net.minecraft.core.MappedRegistry<net.minecraft.advancements.Advancement>(Registries.ADVANCEMENT,com.mojang.serialization.Lifecycle.stable()).freeze();
+        return new net.minecraft.server.ServerAdvancementManager(net.minecraft.core.HolderLookup.Provider.create(java.util.stream.Stream.of(empty)));
+        //?} else {
+        /*return new net.minecraft.server.ServerAdvancementManager(net.minecraft.core.RegistryAccess.EMPTY);
+        *///?}
+    }
     public static JsonObject export(ServerPlayer p,JsonElement sections,String name) {
         var world=new JsonObject();world.add("player",new JsonObject());var views=new JsonObject();views.add("player",PlayerWorldEdit.values(p));world.add("views",views);
         var request=new JsonObject();request.add("world",world);request.add("sections",sections==null?VaultTemplates.allSections():sections);
@@ -94,7 +104,7 @@ public final class PlayerProfiles {
             // Bypass locateStatsFile's legacy-name migration and automatic advancement rewards.
             // These native read-only instances have an absent path and an independent empty manager.
             list.stats.put(temporary,new net.minecraft.stats.ServerStatsCounter(server,unused));
-            list.advancements.put(temporary,new net.minecraft.server.PlayerAdvancements(server.getFixerUpper(),list,new net.minecraft.server.ServerAdvancementManager(server.registryAccess()),unused,null));
+            list.advancements.put(temporary,new net.minecraft.server.PlayerAdvancements(server.getFixerUpper(),list,emptyAdvancements(),unused,null));
             var player=new ServerPlayer(server,level,new GameProfile(temporary,"ArchiveReader"),ClientInformation.createDefault());
             player.load(input);
             if(!problems.isEmpty())PlayerExtendedEditor.fail("invalid_nbt","原版玩家加载校验失败："+problems.getReport());

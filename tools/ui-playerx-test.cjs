@@ -185,3 +185,24 @@ console.log('PASS player extension: position / respawn / recipes / advancements 
   bar.scrollLeft = 300; c.edTabsFit(bar); assert.equal(R.style.display, 'none', '滚到头不显示 ›');
   Object.assign(bar, { scrollWidth: 200, clientWidth: 200, scrollLeft: 0 }); c.edTabsFit(bar); assert.equal(L.style.display, 'none'); assert.equal(R.style.display, 'none', '放得下就一个箭头都不显示');
 }
+// ---- 解锁所有成就：先把名单读全，再每 64 条一批发出去，最后提示总数
+{
+  open(true);
+  let b = body(); c.pxAdvancements(b);
+  const mk = (a, n) => Array.from({ length: n }, (_, i) => ({ id: 'minecraft:test/a' + (a + i), has_display: true, done: false, criteria: [{ name: 'x', done: false }, { name: 'y', done: false }] }));
+  opened(last(), 'advancements', { entries: mk(0, 40) }, {}, { total: 70, nextOffset: 40 });
+  b = body(); c.pxAdvancements(b);
+  assert.ok(btn(b, '解锁所有成就'), '底部有「解锁所有成就」'); assert.ok(btn(b, '再加载'), '旁边还有「再加载」');
+  btn(b, '解锁所有成就').fire('click'); assert.ok(/无法撤销/.test(t.root.textContent), '先确认：会触发奖励和公告'); btn(t.root, '解锁').fire('click');
+  assert.equal(last().action, 'read'); assert.equal(last().offset, 40, '先把没加载的名单读全');
+  c.pxResult({ status: 'opened', requestId: last().requestId, playerExtended: { view: 'advancements', revision: 'r2', value: { entries: mk(40, 30) }, schema: {}, total: 70, nextOffset: null } });
+  assert.equal(last().action, 'apply'); assert.equal(last().patch.entries.length, 64, '第一批 64 条');
+  assert.ok(last().patch.entries.every(e => e.criteria.every(x => x.done === true)), '每个条件都标为完成');
+  c.pxResult({ status: 'saved', requestId: last().requestId, playerExtended: { view: 'advancements', revision: 'r3', value: { entries: [] }, schema: {}, total: 70, nextOffset: null } });
+  assert.equal(last().action, 'apply'); assert.equal(last().patch.entries.length, 6, '第二批剩下 6 条'); assert.equal(last().revision, 'r3', '带上一批保存后的 revision');
+  toasts = []; c.pxResult({ status: 'saved', requestId: last().requestId, playerExtended: { view: 'advancements', revision: 'r4', value: { entries: [] }, schema: {}, total: 70, nextOffset: null } });
+  assert.ok(toasts.some(x => /已解锁 70 个成就/.test(x)), '结束提示总数'); assert.equal(c.PX.unlock, null);
+  // 被拒绝就停下
+  open(true); b = body(); c.pxAdvancements(b); opened(last(), 'advancements', { entries: mk(0, 3) }, {}, { total: 3, nextOffset: null });
+  c.pxUnlockAll(c.pxState('advancements')); assert.equal(last().action, 'apply'); c.pxResult({ status: 'rejected', requestId: last().requestId, code: 'player_forbidden' }); assert.equal(c.PX.unlock, null, '被拒绝就停');
+}

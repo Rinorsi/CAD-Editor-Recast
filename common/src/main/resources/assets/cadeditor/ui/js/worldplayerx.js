@@ -13,7 +13,7 @@ function pxTarget(offline) {
 }
 function pxSelf() { return !!(WE.w && WE.w.player && WE.w.player.self); }
 function pxState(view) { return PX.views[view] || (PX.views[view] = { status: 'idle', draft: null, entries: [], offset: 0, query: '', total: 0, nextOffset: null, open: {}, dirty: {} }); }
-function pxReset() { PX.views = {}; PX.pending = {}; PX.queue = []; PX.arch = { exp: {}, open: {}, rawFor: '' }; }
+function pxReset() { PX.views = {}; PX.pending = {}; PX.queue = []; PX.unlock = null; PX.arch = { exp: {}, open: {}, rawFor: '' }; }
 /* 哪些视图有没应用的草稿（顶栏「应用修改」会把它们依次发出去）。离线玩家有自己的写入按钮，不算 */
 function pxDirty(view) {
   var st = PX.views[view]; if (!st || !st.loaded) return 0;
@@ -94,6 +94,12 @@ function pxResult(r) {
     st.appending = false;
     if (r.status === 'saved') { st.draft = null; st.dirty = {}; toast('游戏已确认修改', 'ok', 'px-ok'); }
   }
+  if (PX.unlock) {
+    var ust = pxState('advancements');
+    if (r.status === 'rejected') PX.unlock = null;
+    else if (p.view === 'advancements' && p.kind === 'read') { if (ust.nextOffset !== null && ust.nextOffset !== undefined) pxRead('advancements', { offset: ust.nextOffset, append: true }); else if (PX.unlock.rest === null) pxUnlockStart(ust); }
+    else if (p.view === 'advancements' && r.status === 'saved') pxUnlockNext(ust);
+  }
   if (r.status === 'saved' && PX.queue && PX.queue.length) pxNext();   // 顶栏一次应用了好几页：接着发下一页
   if (weActive()) { weRedrawBody(); weMarkDirty(); }
 }
@@ -139,9 +145,35 @@ function pxListTools(st, view, hint) {
   var inp = kInput(st.query || '', function () {}, { placeholder: hint, onCommit: function (v) { st.query = v.trim(); st.status = 'idle'; weRedrawBody(); } });
   WE.toolsExtra = [h('div', { class: 'ed-tsearch' }, [uiIcon('search', 12), inp])];   // 应用 / 放弃用顶栏和底栏已有的，不在这一行重复
 }
-function pxMore(body, st, view) {
-  if (st.nextOffset === null || st.nextOffset === undefined) return;
-  body.appendChild(h('div', { class: 'world-actions' }, [kBtn('再加载 ' + Math.min(32, st.total - st.entries.length) + ' 项（共 ' + st.total + '）', function () { st.status = 'loading'; pxRead(view, { offset: st.nextOffset, append: true }); weRedrawBody(); }, { icon: 'down' })]));
+function pxMore(body, st, view, extra) {
+  var kids = [];
+  if (st.nextOffset !== null && st.nextOffset !== undefined) kids.push(kBtn('再加载 ' + Math.min(32, st.total - st.entries.length) + ' 项（共 ' + st.total + '）', function () { st.status = 'loading'; pxRead(view, { offset: st.nextOffset, append: true }); weRedrawBody(); }, { icon: 'down' }));
+  (extra || []).forEach(function (x) { kids.push(x); });
+  if (kids.length) body.appendChild(h('div', { class: 'world-actions' }, kids));
+}
+/* 一键解锁所有成就：先把名单读全，再每 64 条一批发出去（协议一次最多 64 项），全程不经过顶栏的草稿 */
+function pxUnlockAll(st) {
+  PX.unlock = { rest: null };
+  if (st.nextOffset !== null && st.nextOffset !== undefined) { st.status = 'loading'; pxRead('advancements', { offset: st.nextOffset, append: true }); weRedrawBody(); }
+  else pxUnlockStart(st);
+}
+function pxUnlockStart(st) {
+  var list = [];
+  st.entries.forEach(function (e) { var crit = e.criteria || []; if (crit.length && crit.some(function (c) { return !c.done; })) list.push({ id: e.id, criteria: crit.map(function (c) { return { name: c.name, done: true }; }) }); });
+  if (!list.length) { PX.unlock = null; toast('没有需要解锁的成就', 'info'); return; }
+  PX.unlock = { rest: list, total: list.length };
+  pxUnlockNext(st);
+}
+function pxUnlockNext(st) {
+  var u = PX.unlock; if (!u) return;
+  var batch = u.rest.splice(0, 64);
+  if (!batch.length) { var n = u.total; PX.unlock = null; st.status = 'idle'; toast('已解锁 ' + n + ' 个成就', 'ok', 'px-ok'); weRedrawBody(); return; }
+  st.dirty = {}; batch.forEach(function (e) { st.dirty[e.id] = e; });
+  pxApplyDirty(st, 'advancements');
+}
+function pxUnlockConfirm(st) {
+  var go = kBtn('解锁', function () { closeModal(); pxUnlockAll(st); }, { cls: 'pri', icon: 'check' });
+  openModal(modalShell('解锁所有成就', '', [h('div', { class: 'k-sub', text: '会触发原版的奖励和公告，无法撤销。' + (st.displayed === false ? '' : '只包含玩家界面里看得见的成就。') })], [h('div', { class: 'grow' }), kBtn('取消', closeModal), go]), true);
 }
 function pxDims(st) { return ((st.schema && st.schema.dimensions) || []).map(function (d) { return { v: d, label: Labels.dim[d] || humanId(d) }; }); }
 function pxActions(st, view, label, onApply, extra) {
@@ -223,7 +255,7 @@ function pxAdvancements(body) {
       onHead: crit.length ? function () { st.open[e.id] = !st.open[e.id]; weRedrawBody(); } : null }));
   });
   if (!st.entries.length) body.appendChild(xEmpty('没有匹配的成就。'));
-  pxMore(body, st, 'advancements');
+  pxMore(body, st, 'advancements', [kBtn('解锁所有成就', function () { pxUnlockConfirm(st); }, { icon: 'trophy', title: '把名单里每个成就的全部条件都标为完成' })]);
 }
 
 /* ---------- 统计 ---------- */

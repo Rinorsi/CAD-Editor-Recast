@@ -10,6 +10,7 @@ public final class PlayerWorldEditTest {
     private static int checks;
     public static void main(String[] args){
         net.minecraft.SharedConstants.tryDetectVersion();net.minecraft.server.Bootstrap.bootStrap();
+        check(PlayerProfiles.emptyAdvancements().getAllAdvancements().isEmpty(),"archive constructor has no real advancement rewards on this version");
         reject(()->PlayerWorldEdit.requirePermission(PermissionSet.NO_PERMISSIONS),"player_forbidden");
         reject(()->PlayerWorldEdit.requirePermission(LevelBasedPermissionSet.ALL),"player_forbidden");
         reject(()->PlayerWorldEdit.requirePermission(LevelBasedPermissionSet.MODERATOR),"player_forbidden");
