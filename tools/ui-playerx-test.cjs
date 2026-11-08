@@ -136,17 +136,17 @@ function opened(req, view, value, schema, extra) {
   btn(b, '复制到保险库').fire('click');
   assert.equal(uploads[0].template.sections.inventory.slots.length, 0, '上传的是导出的模板'); const sv = vcalls.filter(x => x[0] === 'save')[0][1]; assert.equal(sv.kind, 'player_preset'); assert.equal(sv.uploadToken, 'tok'); assert.ok(/的数据/.test(sv.name));
   btn(b, '套用到我').fire('click'); assert.ok(sections && sections.id === 'v1', '先存进保险库再走选分区 → 预览 → 备份检查 → 确认');
-  assert.ok(btn(b, '查看详细数据'), '离线玩家的「查看详细数据」打开存档数据'); assert.ok(btn(b, '复制玩家 UUID'), '有复制 UUID'); c.Prefs.hostClip = true; btn(b, '复制玩家 UUID').fire('click');
+  sent.length = 0; assert.ok(btn(b, '查看玩家数据'), '离线玩家也有「查看玩家数据」'); btn(b, '查看玩家数据').fire('click'); const off = sent.filter(x => x[0] === 'open_world')[0]; assert.ok(off && off[1].uuid === list[1].uuid && off[1].offline === true, '离线玩家：打开他的完整编辑页（offline）'); assert.ok(btn(b, '复制玩家 UUID'), '有复制 UUID'); c.Prefs.hostClip = true; btn(b, '复制玩家 UUID').fire('click');
   assert.equal(sent.filter(x => x[0] === 'clipboard').pop()[1].text, list[1].uuid, '复制的是这位玩家的 UUID');
   // 房主在线：不给改原始数据；也没有「套用到我」（那是自己）
   qa(b, '.k-xhead')[0].fire('click'); assert.equal(last().target.offline, false, '在线玩家按在线导出');
   c.pxResult({ status: 'exported', requestId: last().requestId, summary: {}, template: { sections: {} } });
-  b = body(); c.pxArchive(b); assert.equal(qa(b, '.k-btn').filter(x => /查看详细数据/.test(x.textContent)).length, 1, '你自己不需要「查看详细数据」（只有离线那位有）');
+  b = body(); c.pxArchive(b); assert.equal(qa(b, '.k-btn').filter(x => /查看玩家数据/.test(x.textContent)).length, 1, '你自己不需要「查看玩家数据」（只有离线那位有）');
   // 在线的别人：绿色按钮直接打开他的编辑页
   const other = { uuid: 'cccccccc-0000-0000-0000-000000000003', name: 'Alex', online: true, self: false, owner: false };
   c.pxState('players').entries.push(other); c.PX.arch.open[other.uuid] = true; c.PX.arch.exp[other.uuid] = { status: 'ready', summary: {}, template: { sections: {} } };
-  b = body(); c.pxArchive(b); const see = qa(b, '.k-btn').filter(x => /查看详细数据/.test(x.textContent) && x.classList.contains('pri')).pop(); assert.ok(see, '在线的别人有绿色「查看详细数据」');
-  sent.length = 0; see.fire('click'); const ow = sent.filter(x => x[0] === 'open_world')[0]; assert.ok(ow && ow[1].uuid === other.uuid, '直接打开他的编辑页');
+  b = body(); c.pxArchive(b); const see = qa(b, '.k-btn').filter(x => /查看玩家数据/.test(x.textContent) && x.classList.contains('pri')).pop(); assert.ok(see, '在线的别人有绿色「查看玩家数据」');
+  sent.length = 0; see.fire('click'); const ow = sent.filter(x => x[0] === 'open_world')[0]; assert.ok(ow && ow[1].uuid === other.uuid && !ow[1].offline, '在线玩家：直接打开他的编辑页');
 }
 // ---- 列表页：搜索框和应用按钮在顶部工具行；名字走游戏语言（翻译键）；成就能点开看条件
 {
@@ -210,14 +210,15 @@ console.log('PASS player extension: position / respawn / recipes / advancements 
   open(true); b = body(); c.pxAdvancements(b); opened(last(), 'advancements', { entries: mk(0, 3) }, {}, { total: 3, nextOffset: null });
   c.pxUnlockAll(c.pxState('advancements')); assert.equal(last().action, 'apply'); c.pxResult({ status: 'rejected', requestId: last().requestId, code: 'player_forbidden' }); assert.equal(c.PX.unlock, null, '被拒绝就停');
 }
-// ---- 保险库里的入口：同一份名单做成弹窗；顶栏左上角看别人时有「返回自己」
+// ---- 看别人 / 离线 / 预设：标签只留有意义的；顶栏「返回自己」；预设页没有「存入保险库」
 {
-  open(true); c.Reg.live = () => true; c.pxState('players').status = 'idle';
-  c.openPlayersModal(); assert.equal(last().view, 'players', '弹窗打开就读名单'); assert.ok(c.PX.modal, '弹窗登记了自己的重画');
-  opened(last(), 'players', { entries: [{ uuid: 'dddddddd-0000-0000-0000-000000000004', name: 'Steve', online: false, self: false, owner: false, last_played_ms: 1 }] }, {});
-  assert.ok(/Steve/.test(t.root.textContent), '名单画在弹窗里'); c.closeModal(); c.PX.modal = null;
-  c.WE.w = { kind: 'entity', type: 'minecraft:player', slot: { kind: 'entity', uuid: 'u9' }, player: { self: false, name: 'Alex' } }; c.drawWorldTop();
-  const back = qa(t.root, '.k-btn').filter(x => /返回自己/.test(x.textContent))[0]; assert.ok(back, '看别人时左上角有「返回自己」');
+  const w = (player) => { c.WE.w = { kind: 'entity', type: 'minecraft:player', slot: { kind: 'entity', uuid: 'u9' }, player }; return c.weTabs().map(x => x.id); };
+  assert.deepEqual(Array.from(w({ self: true })), ['pinv', 'pender', 'pstat', 'pabil', 'pattr', 'ppos', 'prec', 'padv', 'pstats', 'poff', 'data'].filter(x => x !== 'data').concat([]), '自己：全部标签（含存档玩家名单）');
+  assert.deepEqual(Array.from(w({ self: false })), ['pinv', 'pender', 'pstat', 'pabil', 'pattr', 'ppos', 'prec', 'pstats'], '别的在线玩家：没有成就和名单');
+  assert.deepEqual(Array.from(w({ self: false, offline: true })), ['pinv', 'pender', 'pstat', 'pabil', 'pattr'], '离线玩家：只留能改存档的标签');
+  assert.deepEqual(Array.from(w({ self: false, preset: true })), ['pinv', 'pender', 'pattr'], '预设：只留预设里有的');
+  c.drawWorldTop(); const back = qa(t.root, '.k-btn').filter(x => /返回自己/.test(x.textContent))[0]; assert.ok(back, '看别人时左上角有「返回自己」'); assert.ok(/玩家预设/.test(t.root.textContent), '顶栏标明这是预设');
   sent.length = 0; back.fire('click'); assert.equal(sent.filter(x => x[0] === 'open_world')[0][1].self, true);
-  c.WE.w.player.self = true; c.drawWorldTop(); assert.equal(qa(t.root, '.k-btn').filter(x => /返回自己/.test(x.textContent)).length, 0, '自己的页面没有');
+  assert.equal(c.vwKind(), null, '预设页没有「存入保险库」');
+  c.WE.w.player = { self: true }; c.drawWorldTop(); assert.equal(qa(t.root, '.k-btn').filter(x => /返回自己/.test(x.textContent)).length, 0, '自己的页面没有');
 }

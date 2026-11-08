@@ -2,7 +2,7 @@
    协议见 docs/vault-contract.md 的「P4-6」：保存带当前服务端 world 快照（走分段上传），套用先 preview 看会覆盖什么，
    用户确认后才发页面的 apply（带 vault_template），写入仍由服务端按权限和 revision 校验。 */
 var VW_SECTIONS = ['inventory', 'equipment', 'ender', 'attributes', 'effects', 'game_mode'];
-function vwKind() { var w = WE.w; return !w ? null : w.kind === 'block' ? 'block' : (w.kind === 'entity' && w.player) ? 'player_preset' : null; }
+function vwKind() { var w = WE.w; return !w ? null : w.kind === 'block' ? 'block' : (w.kind === 'entity' && w.player && !w.player.preset) ? 'player_preset' : null; }
 function vwSecName(s) { return Labels.vaultSection[s] || s; }
 /* 左栏里的两个按钮；不适用的页面返回 null */
 function vwActions() {

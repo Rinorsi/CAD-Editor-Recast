@@ -71,3 +71,16 @@ const player = () => { c.WE.w = { kind: 'entity', type: 'minecraft:player', slot
   c.vwPick('block'); assert.ok(toasts.some(x => /先应用或放弃/.test(x)));
 }
 console.log('PASS vault x world: save block / preset via upload, preview before apply, type mismatch refused, dirty page refused.');
+// ---- 保险库里的玩家预设：展开后「查看玩家数据」在「复制一份」左边，点了打开预设的编辑页（open_world vault_id）
+{
+  c.Vault.call = (op, f, cb, view) => {
+    if (op === 'list') cb({ ok: true, entries: [{ id: 'pre1', kind: 'player_preset', name: '生存套装', tags: [], note: '', summary: { sections: ['inventory'], counts: { inventory: 3 } } }], total: 1, done: true });
+    else if (op === 'tags') cb({ ok: true, tags: [] }); else cb({ ok: true, entries: 1, bytes: 1, op: 'stats' });
+  };
+  c.openVault({ kind: 'player_preset' });
+  t.root.querySelectorAll('.k-xhead')[0].fire('click');
+  const view = t.root.querySelectorAll('.k-btn').filter(x => /查看玩家数据/.test(x.textContent))[0]; assert.ok(view, '预设展开后有「查看玩家数据」');
+  const labels = t.root.querySelectorAll('.vt-act')[0].children.map(x => x.textContent.trim()); assert.ok(labels.indexOf('查看玩家数据') < labels.indexOf('复制一份'), '在「复制一份」左边');
+  assert.equal(t.root.querySelectorAll('.k-btn').filter(x => /存档玩家/.test(x.textContent)).length, 0, '保险库底栏没有多余的按钮');
+  sent.length = 0; view.fire('click'); assert.equal(sent.filter(x => x[0] === 'open_world')[0][1].vault_id, 'pre1');
+}

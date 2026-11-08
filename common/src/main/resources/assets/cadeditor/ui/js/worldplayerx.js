@@ -2,7 +2,7 @@
    协议见 docs/player-extended-contract.md。它是独立于 entity.player 的会话：每个视图单独读、单独应用，
    不进顶栏「应用修改」的草稿；服务端 saved 之后才清本地草稿，拒绝或超时保留。
    列表页（配方 / 成就 / 统计）的搜索框、重新读取、应用按钮放在顶部的工具行里（WE.toolsExtra），滚动时一直在。 */
-var PX = { seq: 0, views: {}, pending: {}, off: { uuid: '' }, arch: { exp: {}, open: {}, rawFor: '' } };
+var PX = { seq: 0, views: {}, pending: {}, off: { uuid: '' }, arch: { exp: {}, open: {} } };
 
 function pxTarget(offline) {
   var w = typeof WE !== 'undefined' ? WE.w : null, p = w && w.player;
@@ -13,9 +13,8 @@ function pxTarget(offline) {
 }
 function pxSelf() { return !!(WE.w && WE.w.player && WE.w.player.self); }
 function pxState(view) { return PX.views[view] || (PX.views[view] = { status: 'idle', draft: null, entries: [], offset: 0, query: '', total: 0, nextOffset: null, open: {}, dirty: {} }); }
-/* 玩家名单有两个宿主：世界页的标签，和保险库里打开的弹窗；重画时两边都刷新 */
-function pxRedrawAll() { if (PX.modal) PX.modal.redraw(); if (typeof weActive === 'function' && weActive()) weRedrawBody(); }
-function pxReset() { PX.views = {}; PX.pending = {}; PX.queue = []; PX.unlock = null; PX.arch = { exp: {}, open: {}, rawFor: '' }; }
+function pxRedrawAll() { if (typeof weActive === 'function' && weActive()) weRedrawBody(); }
+function pxReset() { PX.views = {}; PX.pending = {}; PX.queue = []; PX.unlock = null; PX.arch = { exp: {}, open: {} }; }
 /* 哪些视图有没应用的草稿（顶栏「应用修改」会把它们依次发出去）。离线玩家有自己的写入按钮，不算 */
 function pxDirty(view) {
   var st = PX.views[view]; if (!st || !st.loaded) return 0;
@@ -103,7 +102,6 @@ function pxResult(r) {
     else if (p.view === 'advancements' && r.status === 'saved') pxUnlockNext(ust);
   }
   if (r.status === 'saved' && PX.queue && PX.queue.length) pxNext();   // 顶栏一次应用了好几页：接着发下一页
-  if (PX.modal) PX.modal.redraw();
   if (weActive()) { weRedrawBody(); weMarkDirty(); }
 }
 
@@ -330,32 +328,11 @@ function pxCopyText(text, what) {
   if (Prefs.hostClip && typeof oriel !== 'undefined' && oriel.send) { oriel.send('clipboard', { text: text }); toast('已复制' + what, 'ok'); }
   else toast('当前环境不能直接写剪贴板', 'warn');
 }
-function pxOpenRaw(e) {
-  var st = pxState('offline'); PX.off.uuid = e.uuid; PX.arch.rawFor = e.uuid; st.loaded = false; st.value = null; st.draft = null; pxRead('offline');
-}
-function pxRawModal(e) {
-  var st = pxState('offline');
-  var code = kCode({ value: nbtPrint(nbtParse(st.value.snbt), true), height: 300, validate: function (t) { nbtParse(t); } });
-  var keys = (st.schema && st.schema.editableKeys) || [];
-  var go = kBtn('写入存档', function () {
-    try { pxApply('offline', { snbt: nbtPrint(nbtParse(code.get()), false) }); closeModal(); } catch (err) { toast('SNBT 有误，没有提交：' + (err.message || err), 'error'); }
-  }, { cls: 'pri', icon: 'check' });
-  openModal(modalShell('原始数据', pxPlayerLabel(e) + (keys.length ? ' · 可改：' + keys.join('、') : ''), [code.el], [h('div', { class: 'grow' }), kBtn('取消', closeModal), go]), true);
-}
-/* 存档玩家名单。host：放内容的容器；o.modal：在弹窗里（搜索框放在内容顶部，不依赖世界页的工具行）；o.redraw：重画整块 */
-function pxArchive(body, o) {
-  o = o || {}; var redraw = o.redraw || pxRedrawAll;
+/* 存档玩家名单：点开一位看摘要，查看玩家数据 = 打开他的完整编辑页 */
+function pxArchive(body) {
+  var redraw = pxRedrawAll;
   var st = pxGate(body, 'players', '玩家名单'); if (!st) return;
-  if (o.modal) {
-    var inp = kInput(st.query || '', function () {}, { placeholder: '搜索玩家（名字或 UUID）', onCommit: function (v) { st.query = v.trim(); st.status = 'idle'; redraw(); } });
-    body.appendChild(h('div', { class: 'ed-tsearch px-msearch' }, [uiIcon('search', 12), inp]));
-  } else pxListTools(st, 'players', '搜索玩家（名字或 UUID）');
-  var raw = pxState('offline');
-  if (PX.arch.rawFor && raw.loaded && raw.value) {
-    var who = PX.arch.rawFor; PX.arch.rawFor = '';
-    var ee = st.entries.filter(function (x) { return x.uuid === who; })[0] || { uuid: who, name: null };
-    setTimeout(function () { pxRawModal(ee); }, 0);
-  }
+  pxListTools(st, 'players', '搜索玩家（名字或 UUID）');
   var myPage = typeof WE !== 'undefined' && WE.w && WE.w.player && WE.w.player.self;
   body.appendChild(xSec('users', '存档里的玩家', st.total + ' 位'));
   st.entries.forEach(function (e) {
@@ -372,8 +349,7 @@ function pxArchive(body, o) {
         else {
           kids.push(pxSummaryBox(ex.summary));
           var acts = [];
-          if (e.online && !e.self) acts.push(kBtn('查看详细数据', function () { if (typeof oriel !== 'undefined' && oriel.send) { oriel.send('open_world', { uuid: e.uuid }); if (PX.modal) { closeModal(); PX.modal = null; } } }, { cls: 'pri', icon: 'eye', title: '打开这位玩家的完整编辑页（和你自己的页面一样），左上角可以回到自己' }));
-          else if (!e.online && !e.owner) acts.push(kBtn('查看详细数据', function () { pxOpenRaw(e); }, { cls: 'pri', icon: 'eye', title: '这位玩家不在线：查看并可编辑他的存档数据，写入前自动备份' }));
+          if (!e.self) acts.push(kBtn('查看玩家数据', function () { if (typeof oriel !== 'undefined' && oriel.send) oriel.send('open_world', e.online ? { uuid: e.uuid } : { uuid: e.uuid, offline: true }); }, { cls: 'pri', icon: 'eye', title: '用玩家编辑页打开这位玩家（和编辑自己的页面一样），左上角可以回到自己' }));
           acts.push(kBtn('复制到保险库', function () { pxSavePreset(e, function (en) { toast('已存入保险库：' + en.name, 'ok'); }); }, { icon: 'chest', title: '把这位玩家的背包、装备、末影箱、属性、效果、游戏模式存成预设' }));
           acts.push(kBtn('复制玩家 UUID', function () { pxCopyText(e.uuid, ' UUID'); }, { icon: 'copy', title: e.uuid }));
           if (!e.self && myPage) acts.push(kBtn('套用到我', function () { pxSavePreset(e, function (en) { vwSections(en); }); }, { icon: 'download', title: '先存入保险库，再选要套用的部分；套用前会检查你现在的数据有没有备份' }));
@@ -389,13 +365,4 @@ function pxArchive(body, o) {
     v = v.trim(); PX.off.uuid = v;
     if (/^[0-9a-fA-F-]{32,36}$/.test(v)) { var e = { uuid: v, name: null, online: false }; PX.arch.open[v] = true; pxExport(e); st.query = v; st.status = 'idle'; redraw(); }
   } }));
-}
-/* 保险库窗口里的入口：同一份名单，能直接打开玩家的编辑页 / 复制 UUID / 存成预设 */
-function openPlayersModal() {
-  var host = h('div', { class: 'px-modal' });
-  function draw() { clear(host); pxArchive(host, { modal: true, redraw: draw }); }
-  PX.modal = { redraw: draw }; PX.views.players = PX.views.players || null;
-  var st = pxState('players'); st.status = 'idle';
-  draw();
-  openModal(modalShell('存档玩家', '这个存档里的所有玩家', [host], [h('div', { class: 'grow' }), kBtn('完成', function () { PX.modal = null; closeModal(); }, { cls: 'pri' })], 'wide'), true);
 }

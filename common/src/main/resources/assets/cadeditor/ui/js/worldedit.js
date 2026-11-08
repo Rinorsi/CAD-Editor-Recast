@@ -29,10 +29,13 @@ function weTabs() {
   if (w.kind === 'block' && (weStateSchema().length || weTypeSchema().length > 1)) t.push({ id: 'state', label: '方块状态', icon: 'sliders' });
   if (noBE) return t;
   if (w.kind === 'entity' && w.player) {
-    var pt = [{ id: 'pinv', label: '背包', icon: 'backpack' }, { id: 'pender', label: '末影箱', icon: 'chest' }, { id: 'pstat', label: '状态', icon: 'heart' }, { id: 'pabil', label: '能力', icon: 'wind' }, { id: 'pattr', label: '属性与效果', icon: 'sliders' },
-      { id: 'ppos', label: '位置与重生', icon: 'compass' }, { id: 'prec', label: '配方', icon: 'book' }];
-    if (w.player.self) pt.push({ id: 'padv', label: '成就', icon: 'trophy' });   // 成就只能改自己的，别人的页面没有这一页
-    pt.push({ id: 'pstats', label: '统计', icon: 'scroll' }, { id: 'poff', label: '存档玩家', icon: 'users' });
+    var pl = w.player, pt = [{ id: 'pinv', label: '背包', icon: 'backpack' }, { id: 'pender', label: '末影箱', icon: 'chest' }, { id: 'pstat', label: '状态', icon: 'heart' }, { id: 'pabil', label: '能力', icon: 'wind' }, { id: 'pattr', label: '属性与效果', icon: 'sliders' }];
+    if (pl.preset) return pt.filter(function (x) { return x.id === 'pinv' || x.id === 'pender' || x.id === 'pattr'; });   // 保险库预设：只有预设里有的东西
+    if (pl.offline) return pt;   // 离线玩家：位置 / 配方 / 成就 / 统计要在线才有意义
+    pt.push({ id: 'ppos', label: '位置与重生', icon: 'compass' }, { id: 'prec', label: '配方', icon: 'book' });
+    if (pl.self) pt.push({ id: 'padv', label: '成就', icon: 'trophy' });   // 成就只能改自己的，别人的页面没有这一页
+    pt.push({ id: 'pstats', label: '统计', icon: 'scroll' });
+    if (pl.self) pt.push({ id: 'poff', label: '存档玩家', icon: 'users' });   // 名单放在自己的页面里
     return pt;
   }
   if (w.kind === 'entity') {
@@ -61,7 +64,7 @@ function drawWorldTop() {
     var back = kBtn('返回自己', function () { if (typeof oriel !== 'undefined' && oriel.send) oriel.send('open_world', { self: true }); }, { icon: 'back', title: '回到你自己的编辑页' });
     back.style.marginRight = '6px'; bar.appendChild(back);
   }
-  edTopHead(bar, { icon: w.kind === 'block' ? itemIcon(shortId(w.block || w.type), 22) : w.player ? itemIcon('player_head', 22) : entityIcon(w.type, 22), title: weName(), crumb: w.kind === 'block' ? '方块' : w.player ? '玩家' : '实体' });
+  edTopHead(bar, { icon: w.kind === 'block' ? itemIcon(shortId(w.block || w.type), 22) : w.player ? itemIcon('player_head', 22) : entityIcon(w.type, 22), title: weName(), crumb: w.kind === 'block' ? '方块' : w.player ? (w.player.preset ? '玩家预设' : w.player.offline ? '离线玩家' : '玩家') : '实体' });
   var un = h('div', { class: 'k-ibtn' + (w.canUndo ? '' : ' dis'), title: '撤销上一次写入游戏的修改' }, [uiIcon('undo', 14)]);
   activate(un, function () { if (WE.w.canUndo) weUndo(); });
   bar.appendChild(un);
