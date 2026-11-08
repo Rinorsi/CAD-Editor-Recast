@@ -341,6 +341,7 @@ div
             div.k-chev [title="折叠 / 展开"]
               img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
           div.k-cbody.x-sliding [style="height:300px;opacity:1"]
+            div.k-sub "单击编辑 · 双击拿起，点别格放下"
             div.k-cgrid
               div.s34.slot [title="苹果 × 3"]
                 item.k-ico [style="height:16px;width:16px"]

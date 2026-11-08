@@ -284,6 +284,7 @@ CARDS.container = function () {
         swap: function (o) { var j = o.i, l = list(); l.forEach(function (x) { if (x.slot === i) x.slot = j; else if (x.slot === j) x.slot = i; }); save(l); } };
     } });
   card.live.push(function () { grid.repaint(); });
+  card.body.appendChild(weDndHint());
   card.body.appendChild(grid);
   card.body.appendChild(kBtn('全部清空', function () { Ctx.disable('container', { structural: false }); grid.repaint(); }, { cls: 'dng', icon: 'trash' }));
   return card;
@@ -318,7 +319,7 @@ CARDS.bundle = function () {
     eff.set('已占用 ' + Math.round(w * 100) + '%' + (w > 1 ? '：超过 100%，游戏可能无法放入这么多' : ''), w > 1 ? 'warn' : '');
   }
   draw(); card.live.push(draw);
-  card.body.appendChild(row); card.body.appendChild(bar); card.body.appendChild(eff.el);
+  card.body.appendChild(weDndHint()); card.body.appendChild(row); card.body.appendChild(bar); card.body.appendChild(eff.el);
   return card;
 };
 

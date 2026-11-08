@@ -339,6 +339,7 @@ div
             div.det.k-chev [title="折叠 / 展开"]
               img.o-ico [src="oriel:textures/icons/external.png" style="height:16px;width:16px"]
           div.k-cbody
+            div.k-sub "单击编辑 · 双击拿起，点别格放下"
             div.k-cgrid [style="grid-template-columns:repeat(9,34px)"]
               div.s34.slot [title="空格子 1"]
               div.s34.slot [title="空格子 2"]
