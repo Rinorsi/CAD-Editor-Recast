@@ -39,3 +39,13 @@
 | player_extended offline | 同上；目标不在线，单人 owner 拒绝；受限字段、原版加载/保存校验、文件指纹、备份、原子替换；落盘前再次查在线状态 | OfflinePlayerEdit.read/prepare/replace |
 
 扩展 read 同样需要 requirePlayerEdit，不允许通过只读接口泄露其他玩家数据。扩展目标为明确 UUID 的管理员操作，不使用准星距离门槛；不赋予非管理员任何跨维度/远程编辑能力。成就不可代改其他玩家。所有写操作保留请求者/目标/前后指纹审计；只支持当前视图独立提交，无 undo。
+
+## P4-6 保险库模板
+
+| 操作 | 权限与目标检查 | 写入路径 |
+|---|---|---|
+| 本机 block/player_preset save/preview | 无远程写入；preview 不等于服务端成功 | VaultStore / VaultTemplates |
+| 方块预设 apply | WorldTarget 可达/区块/区域检查 + 每次 EditorPolicy.require；相同 block 注册 ID；会话 revision 与基线合并；命令内容仍检查管理员 | WorldEditor → VaultTemplateApply → WorldMergePlan → 原方块写入/undo |
+| 在线玩家预设 apply | 上述检查 + PlayerWorldEdit.requirePermission（gamemaster）+ 在线身份；只允许预设选中的分区 | 原 PlayerWorldEdit.prepare/write，不使用 Entity.load |
+
+套用没有新增绕过权限的包；vault_template 只是现有世界 apply 的规范化输入。拒绝类型不匹配、权限撤销或离线时不会写入目标。

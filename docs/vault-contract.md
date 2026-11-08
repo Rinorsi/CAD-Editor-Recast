@@ -14,10 +14,10 @@
 
 1. 打开现有世界编辑器的对准方块或在线玩家，取得服务端 world（slot/revision）；独立保险库先要求打开目标。
 2. 请求 `{op:"preview",requestId,id,world,sections?:[...已保存分区...]}`，缺省套用已保存的全部分区。大 world 可用 uploadToken 暂存 `{world,sections?}`。
-3. 回执含 `summary:{kind,target,overwrites:[{section,before,after}]}` 与 `apply:{slot,revision,vault_template:{kind,template,sections?}}`；before/after 是字段数、槽位数或条目数等有界摘要。页面显示摘要，等待用户确认。preview 不写世界，其 ok 不代表服务端已保存。
+3. 回执含 `summary:{kind,target,overwrites:[{section,before,after}]}` 与 `apply:{slot,revision,vault_template:{kind,template,sections?}}`；before/after 是字段数、槽位数或条目数等有界摘要；game_mode 使用变更前后的模式名。页面显示摘要，等待用户确认。preview 不写世界，其 ok 不代表服务端已保存。
 4. 确认后给 apply 添加新 requestId，发送现有页面 apply 消息。宿主仍绑定真实 slot/revision；服务端在 EditorPolicy、可达性、在线状态和会话校验后展开 vault_template，复用 PlayerWorldEdit.prepare/write 或既有方块写入。回执与撤销沿用 result/world。
 
-方块 block 注册 ID 必须一致，即使共用方块实体类型也拒绝，服务端再次核对；错误码 block_type_mismatch。SNBT 套用时仅补回目标自身 id/x/y/z。玩家未选分区保持原值，权限/离线/冲突错误沿用世界编辑路径；本机 preview 用 wrong_kind、block_type_mismatch、BAD_REQUEST 等。未知字段/分区拒绝。过大 preview 明确 RESPONSE_LIMIT，不裁剪模板。
+方块 block 注册 ID 必须一致，即使共用方块实体类型也拒绝，服务端再次核对；错误码 block_type_mismatch。SNBT 套用时仅补回目标自身 id/x/y/z。玩家未选分区保持原值，权限/离线/冲突错误沿用世界编辑路径；本机 preview 用 wrong_kind、block_type_mismatch、BAD_REQUEST 等。未知字段/分区拒绝。过大 preview 明确 RESPONSE_LIMIT，不裁剪模板。方块 SNBT 沿用 WorldNbt 的 24000 字符/32 层上限。跨版本模板不自动迁移；未验证的条目标记 compatibilityUnknown，套用时用目标版本 Codec 严格验证。双箱模板仅保存对准半边的方块实体，原有双箱拓扑保护仍生效，不能借模板拆并箱子。
 
 实现：vault/VaultStore、vault/VaultStacks、registry/VaultChannel。2026-11-07。
 
@@ -59,7 +59,7 @@ Esc 或页面关闭通过 VaultScreen.onClose() 返回原 Screen（主菜单、�
 
 ## 条目与类型保真
 
-磁盘/分享格式现为 {version:2,entries:[Entry,...]}；兼容读取version:1，无kind的旧条目视为item。消息回执version仍为1。Entry字段：
+磁盘/分享格式现为 {version:3,entries:[Entry,...]}；兼容读取version:1/2，无kind的旧条目视为item。消息回执version仍为1。Entry字段：
 
 |字段|含义|
 |---|---|
@@ -98,7 +98,7 @@ comps只是JSON显示投影，可能受JS Number精度限制，必须连同compo
 |delete|ids:[]，最多50，全部ID须存在|deleted:number,token:UUID,expires:毫秒；替换上一次撤销|
 |restore|token|restored:number；30秒内一次，恢复原ID和元数据，重查配额和ID冲突|
 |duplicate|id|entry:轻量行；复制stack/标签/名称，新UUID、created/updated|
-|import|entries:[]或text:版本化JSON；version?=1（接受1/2）；offset?=0,limit?=32(1..32)|results:[{index,ok,id?,error?,reason?,incompatible?,compatibilityUnknown?}],nextOffset,done；逐页处理，失败不回滚成功项，同ID拒绝|
+|import|entries:[]或text:版本化JSON；version?=1（接受1/2/3）；offset?=0,limit?=32(1..32)|results:[{index,ok,id?,error?,reason?,incompatible?,compatibilityUnknown?}],nextOffset,done；逐页处理，失败不回滚成功项，同ID拒绝|
 |export|ids:[](最多2000)或all:true；offset?=0,limit?=6000(1..6000)|text,offset,nextOffset,total,done,revision；整个JSON的一段，拼完再解析；revision变化须重导。Unicode代理对不切开，必要时片段多1单元|
 |tags|offset?=0,limit?=100(1..100)|tags:[{name,count}],total,nextOffset,done；名称排序|
 |stats|无|entries,bytes,maxEntries,maxEntryBytes,maxFileBytes,storage；storage只返回实际存储路径末两级（如cadeditor/vault.json），不含用户名；及共同存储状态|
@@ -116,7 +116,7 @@ summary为{enchantCount,hasCustomName,containerSize}，containerSize是非空容
 1. 发送 {op:"upload",requestId:"u1",text:"首段"}，开始新暂存，回 {version:1,requestId,op:"upload",ok:true,token,chars,expires}。每页面一个上传，新建替换旧暂存。
 2. 发送 {op:"upload",requestId:"u2",token:"回执UUID",text:"下一段"}。单段最多6000 UTF-16单元，同时整个请求含转义仍须<=8192字符，客户端自行缩小段长；每段延长30秒。不要切开Unicode代理对。暂存最多8Mi字符，最终解析最多8MiB。
 3. 大stack暂存为stack对象JSON本身；提交 {op:"save",requestId:"s1",uploadToken:"UUID",name:"可选名称"}。
-4. 备份暂存为{version:2,entries:[...]} JSON；提交 {op:"import",requestId:"i1",uploadToken:"UUID",offset:0,limit:32}。使用同token+nextOffset继续，提交刷新30秒期限。
+4. 备份暂存为{version:3,entries:[...]} JSON；提交 {op:"import",requestId:"i1",uploadToken:"UUID",offset:0,limit:32}。使用同token+nextOffset继续，提交刷新30秒期限。
 5. 大条目get遇RESPONSE_LIMIT：对单ID分页export，拼接后读取entries[0].stack，获得完整保真stack。多个条目get超限先拆批，单条仍超限再export。
 
 upload真实捕获见vault-client-captured.json的vault-live-11、12、13（两段上传再save）；以上仍为易读形状说明。所有文本在本机内存处理，页面不能选路径、任意读写文件或下载URL。
@@ -143,7 +143,7 @@ upload真实捕获见vault-client-captured.json的vault-live-11、12、13（两�
 
 ## 持久化和错误
 
-用户级固定全局目录（同一操作系统用户，所有gameDir、世界、服务器共用）：Windows为%APPDATA%/cadeditor/vault.json，APPDATA缺失才用user.home/AppData/Roaming/cadeditor；macOS为~/Library/Application Support/cadeditor/vault.json；其它系统为$XDG_DATA_HOME/cadeditor/vault.json，未设置时~/.local/share/cadeditor/vault.json。系统属性-Dcadeditor.vault.dir=自选目录优先；相对覆盖目录相对user.home解析，仍不依赖gameDir。上一完整版本vault.json.bak；临时文件、独占锁vault.json.lock都在同目录；schema=1。最多2000条、每条65536字节、整文件8388608字节（含JSON/元数据）。超限拒绝，不删旧条目腾空间、不截断正文。
+用户级固定全局目录（同一操作系统用户，所有gameDir、世界、服务器共用）：Windows为%APPDATA%/cadeditor/vault.json，APPDATA缺失才用user.home/AppData/Roaming/cadeditor；macOS为~/Library/Application Support/cadeditor/vault.json；其它系统为$XDG_DATA_HOME/cadeditor/vault.json，未设置时~/.local/share/cadeditor/vault.json。系统属性-Dcadeditor.vault.dir=自选目录优先；相对覆盖目录相对user.home解析，仍不依赖gameDir。上一完整版本vault.json.bak；临时文件、独占锁vault.json.lock都在同目录；schema=3（兼容读取1/2）。最多2000条、每条65536字节、整文件8388608字节（含JSON/元数据）。超限拒绝，不删旧条目腾空间、不截断正文。
 
 第一笔未落盘修改后300ms启动后台写；后续连续修改不会重置这个期限（不再是可无限延后的尾沿防抖）。300ms是开始写入的调度期限，不是磁盘/系统停顿下可保证的完成时间。单后台线程写临时文件、FileChannel.force(true)、原子替换，备份也原子替换。后台只用脱离Minecraft的JSON，磁盘I/O不持有主线程操作使用的锁。下一次stats/list立刻反映已完成写入的persisted状态；页面仍需轮询，不能把save回执里的persisted:false永久保存在界面。
 

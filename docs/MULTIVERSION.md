@@ -130,3 +130,13 @@ stonecutter.properties.toml   每个游戏版本的 MC / 加载器 / API / Oriel
 ### P4-1 玩家扩展 API 核对
 
 位置 teleportTo、RespawnConfig/LevelData.RespawnData、ServerRecipeBook.Packed/loadUntrusted/copyOverData、PlayerAdvancements.award/revoke、ServerStatsCounter、Player.load/saveWithoutId 在 26.1.2 / 26.2 / 26.3 的公开签名一致；本次暂不新增运行时反射或加载器分支。离线使用 detached Player（不是 ServerPlayer），避免构造 ServerPlayer 时污染 PlayerList 的统计/成就缓存。ServerRecipeBook.loadUntrusted 是追加加载，先加载独立书再 copyOverData 替换，确保撤销和取消高亮真实生效。后续编译验证发现的差异追加在此。
+
+### P4-6 保险库模板 API 与验证
+
+VaultTemplates 的 BlockStateEdit、WorldNbt、Inventory.EQUIPMENT_SLOT_MAPPING 和 PlayerWorldEdit 入口在 26.1.2 / 26.2 / 26.3 共用，无新增版本条件或运行时反射。测试初始化继续沿用既有 VanillaRegistries.createLookup/createWorldLookup replacement；生产没有加载器 import。文件版本 3 是保险库格式升级，不是游戏 API 分支；读取 1/2/3，旧程序按版本号拒绝新文件。
+
+- 六目标 compileJava、codecVerificationClasses、vaultTemplateTest 通过：每目标 35 项；新增测试已加入 check/codecVerification。证据：Oriel-UI-Workspace/daily/2026-11-08/logs/vault-templates/matrix.log。
+- 原保险库回归通过：VaultTest 167、VaultEntityTest 74、VaultPersistenceTest 41、VaultGlobalTest 28 项；regression-pass.log。
+- 独立 Fabric 26.1.2 专用服探针 42 项通过：真实方块/在线玩家的存入→关闭库→重开→套用、原生 undo、同 BE 不同 block ID 拒绝、撤权拒绝及不改目标。server-receipt.json / server.log。使用脱离网络登录的 ServerPlayer 与 RecordingListener，不是客户端视觉验收。
+- merge-templates.log / merge-entity.log / merge-legacy.log：新旧离线合并、数值/SNBT 保真、同名编号、幂等与非法输入安全拒绝通过。
+- 不启动用户客户端，不执行全量实机验收；前端确认摘要和实际客户端画面由最终统一验收覆盖。
