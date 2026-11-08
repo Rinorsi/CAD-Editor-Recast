@@ -14,11 +14,7 @@
 ## 明天开工前的固定动作
 
 1. `git pull`，确认在 `main` 的干净基线（版本 0.99.2，今天已推送到 GitHub）。
-2. 跑一遍自动验收，确认基线是绿的，再开始新活。顺序见 `tools/live-test/README.md`：
-   - `pwsh -NoProfile -File tools/accept/run.ps1 -EvidenceRoot logs/live-test`（107 组件 × 3 轮 + 世界 12 轮）
-   - `tools/world-edit/final-*-gate.ps1` 五个门禁，再 `pwsh -NoProfile -File tools/live-test/world-gates.ps1`（五个独立服务器探针）
-   - `pwsh -NoProfile -File tools/live-test/run.ps1`（MCTest 实机冒烟，静默、不抢焦点）
-   - 仓库根目录 `node tools/ui-*.cjs`（界面测试、快照、lint）
+2. 跑一条完整自动验收命令，确认基线是绿的，再开始新活：`pwsh -NoProfile -File tools/accept-all.ps1 -Full`。报告在 `logs/accept-all/<时间-id>/report.md` 和 `report.json`；参数、安全规则与阶段说明见 `tools/live-test/README.md`。日常快速档用 `-Quick`；只查界面用 `-Only ui`；预览不执行用 `-WhatIf`。
 3. 你自己的游戏要**完全退出再启动**，否则读到旧的 Java 类。跑自动验收时不要开着自己的游戏（脚本发现用户游戏会自动跳过）。
 
 ---
@@ -40,13 +36,13 @@
 
 | # | 事项 | 为什么放这一级 | 验收 | 来源 |
 |---|---|---|---|---|
-| P0-1 | 把上面四步自动验收合成**一条命令**，最后出一份汇总报告（通过 / 失败 / 跳过 + 截图索引） | 各步今天都已跑通并入库，只差串起来；之后每次改动都靠它兜底 | 自动 | 今日验收 |
+| 🟡 P0-1 | 已加入 `tools/accept-all.ps1` 统一入口和 Markdown / JSON 汇总；已验证 `-WhatIf` 与 `-Only ui`，真实全量留待功能完成后统一运行 | 各步串联已实现，尚未跑统一入口的实机全量验收 | 自动 | 今日验收 |
 | ✅ P0-2 | 清理 `editor.css` 里为旧布局 bug 加的绕行：`.k-cbody { display:block }`、`.k-modal.k-pal { display:block }`（新版 Oriel 已修限高滚动框） | 今天已在无头预览里验证：各自删掉后，短 / 长内容截图都和原来逐字节相同（`logs/oriel-check/report.md`）。注意 `.k-cbody` 删掉后仍是默认 block，不等于可以改回 flex | 自动（已有证据）+ 实机扫一眼 | Oriel 升级审计 |
 | ✅ P0-3 | 容器和收纳袋格子**单击要等约 260 毫秒**才弹窗：加一句使用提示（双击拿起 / 拖动对换），让新功能能被发现 | 只加一行提示文字 | 你 | 重构第 4 步 |
 | ✅ P0-4 | 淘汰 `forms.js` 里旧控件（`wBool / wNum / wSeg`、`Pop / popOpen / combo`），连同 `ui-lint` `ALLOW` 里的 `ed-enrow / ed-pop / ed-pop-item`；其中 `.ed-pop` 自初始导入起就是 `display:none`，旧表单里组合框的下拉一直看不见 | 先用 `grep` 确认还有没有调用点，没有就是纯删除；有就换成 `kSelect` | 自动 | 重构记录 |
 | P0-5 | `COVERAGE.md` 补今天新版 Oriel 下的自动证据链接（`logs/live-test/` 不入库，要把摘要搬进 `docs/acceptance/`） | 纯文字 | — | 本表 |
 | P0-6 | 重构遗漏的小替换：约 12 处 `numField5 / fieldRow`、手写带「手动输入」的 `kSelect` | 之前因输出和 `xRow` 不同没换；可先让 `xNum` 支持这几处的差异再换 | 自动（快照） | 重构记录 |
-| P0-7 | 像素字号不在 12 的倍数上：`editor.css:805` `.ew.hthin .ed-name` 用 8px（样式表自己的注释就说 8px 汉字不可读），`editor.css:845` `.ew.snug .ed-name` 用 16px（非整倍，笔画不均） | Oriel 严格检查报的 design 警告；改成 12 / 24 会变外观，要先看矮窗口和宽松布局下的截图 | 自动出图，你看 | 今日 Oriel 检查 |
+| P0-7 | 像素字号不在 12 的倍数上：`.ew.hthin .ed-name` 用 8px、`.ew.snug .ed-name` 用 16px（基础是 24px，`.sm` 是 12px）。**已试过改成 12px：** 名字更清晰，但在 13 个预览场景里几乎都命中 `snug`，生物 / 物品名都明显变小——这是外观取舍，所以**没有改**。对比图：`logs/ui/fontstep/`（12px）和 `logs/ui/ctrl/`（现状 16px） | 你看图选：保持 16px（Oriel 检查会一直报 design 提示），或改 12px（更清晰、名字更小），或名字用 24px 但窗口矮时隐藏 | 你 | 今日 Oriel 检查 |
 | P0-8 | 把 Oriel MCP（`Oriel-UI/tools/mcp/oriel-preview.mjs`）和 MCTest（`npx -y mctest-mcp@0.3.0`）注册成会话里的 MCP 服务器 | 今天是用脚本直连的（`tools/live-test/smoke.mjs` 直接发 `{id, method, params}`）；注册后 agent 能直接调工具。Cindy 的表单只接受 HTTP，这两个是 stdio，需要换注册方式或加一层 HTTP 转接 | — | 今日 |
 | P0-11 | MCTest 的 `type` 紧跟在被 `preventDefault()` 的快捷键后会丢首字符（新旧输入后端都一样，真人打字不受影响）：自动化脚本里一律用「逐字 `key` + `type`」 | 已写进 `tools/live-test/README.md`；可顺手封装成一个 `typeText()` 辅助函数 | 自动 | 今日实机 |
 | ✅ P0-9 | MCTest 现在对所有 `runClient` 默认开启（127.0.0.1:25599）：加一个 `-PmcTest=false` 开关和端口属性 | 你自己玩的时候不需要它开控制口 | 自动 | 今日 |

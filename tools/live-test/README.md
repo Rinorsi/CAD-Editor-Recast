@@ -1,11 +1,38 @@
 # Silent Live Client Checks
 
-All evidence is written to `logs/live-test/`. Do not run alongside a user's Minecraft client.
+## Daily Baseline / 明天开工前的固定动作
 
-1. Run `pwsh -NoProfile -File tools/accept/run.ps1 -EvidenceRoot logs/live-test` for the full component/world acceptance suite.
-2. Run the five existing `tools/world-edit/final-*-gate.ps1` scripts sequentially. They build/check; they do not launch the ticking servers. Their legacy build logs remain under `logs/world-*`.
-3. After a successful current build, run `pwsh -NoProfile -File tools/live-test/world-gates.ps1` to reuse the five server probes with current compiled production/test classes and isolated evidence paths. Start with a fresh `logs/live-test/world/classes` directory.
-4. Run `pwsh -NoProfile -File tools/live-test/run.ps1` for MCTest. Java 25, Node 22+ and the configured MCTest localRuntime dependency are required. Port 25599 must be free. The driver connects directly using `{id, method, params}` messages; no MCP registration or npm installation is needed.
+From the repository root, run one command before starting work:
+
+```powershell
+pwsh -NoProfile -File tools/accept-all.ps1 -Full
+```
+
+The unified runner writes `logs/accept-all/<timestamp-id>/report.md` and `report.json`. Each stage records PASS/FAIL/SKIP, elapsed seconds, commands and evidence paths; Markdown includes receipt/screenshot links. Any FAIL returns exit code 1; otherwise 0. `PASS_WITH_SKIPS` is not full acceptance. Failed stages normally do not prevent later stages from running.
+
+| Parameter | Behavior |
+| --- | --- |
+| `-Quick` | Default tier; skips the roughly 14-minute hidden 107-component acceptance stage, but still runs world probes, MCTest smoke and quick effects. |
+| `-Full` | Includes hidden acceptance (107 components x 3 rounds and 12 world rounds); effects use `-Tier full`. Mutually exclusive with `-Quick`. |
+| `-SkipGame` | Skip **all** game-dependent stages, including independent servers. UI and Java still run. |
+| `-FailFast` | Stop after the first failed stage; remaining stages are reported SKIP. |
+| `-WhatIf` | Print planned stages, exact commands, timeouts and output paths only. Does not create reports, acquire locks, inspect processes or launch anything. |
+| `-Only ui` | Run only the Node UI checks, snapshots, lint and UI JS syntax checks; write the usual summary. No Gradle or game launch. |
+
+Order: all `tools/ui-*.cjs` tests, snapshot and lint (plus JS syntax checks); Gradle build and `check --rerun-tasks`; release-jar version/content inspection; independent world servers; full-only hidden acceptance; silent MCTest smoke; `tools/live-test/effects.ps1 -Tier quick|full`. A missing effects driver is SKIP (`script not yet provided`), never a substitute implementation. Effects currently retain their own evidence destination; follow `effects/stage.log` to their receipts. The five legacy `final-*-gate.ps1` build wrappers are covered by the single build/check stage, not repeated five times.
+
+Timeouts per stage: UI 10 minutes, Java 60 minutes (including at most 20 minutes waiting for the lock), world probes 20 minutes, hidden acceptance 40 minutes, MCTest 40 minutes, effects 30 minutes. Timeouts are FAIL. Cleanup is limited to this launch's process descendants; preexisting processes, Cindy (`agent.jar`) and Gradle daemons are never terminated. Java uses atomic directory creation for `logs/.gradle.lock.d`, waits for other holders and deletes only its own ownership marker and empty lock in `finally`. MCTest retains its own atomic lock/readiness-release mechanism; the outer runner does not hold a Gradle lock while invoking game stages.
+
+**Safety:** the runner checks Java/javaw command lines (including `@args` files) at startup and before every game-dependent stage. `KnotClient`, `runClient` or `net.minecraft.client.main.Main` means a user client; Cindy `agent.jar` and `GradleDaemon` are excluded. Once detected, all remaining game-dependent stages are skipped and PID evidence is saved, even if that client later exits. An unavailable process inspection also blocks game stages. Never kill another user's Java process. Client scripts retain their last-moment safety checks and invisible, unfocused, no-mouse-capture mechanisms; no desktop mouse/keyboard automation is added.
+
+Safe runner-only verification:
+
+```powershell
+pwsh -NoProfile -File tools/accept-all.ps1 -Full -WhatIf
+pwsh -NoProfile -File tools/accept-all.ps1 -Only ui
+```
+
+Standalone scripts remain available for diagnosis. `world-gates.ps1 -EvidenceRoot <fresh-directory> -BuildDirectory <current-build-directory>` uses current compiled production/test classes and exported `runtime-classpath.json` instead of legacy classpath receipts. `run.ps1 -EvidenceRoot <fresh-directory>` routes the launcher and Node driver to the same isolated directory. Java 25, Node 22+ and the configured MCTest localRuntime dependency are required; port 25599 must be free. The driver connects directly using `{id, method, params}` messages; no MCP registration or npm installation is needed.
 
 MCTest stays enabled by default for this suite. Direct Gradle clients can opt out with `-PmcTest=false`, or set the client JVM port with `-PmcTestPort=25600`; the suite currently expects port 25599. The everyday `tools/preview/start.ps1` launcher opts out, so it does not open a control port.
 

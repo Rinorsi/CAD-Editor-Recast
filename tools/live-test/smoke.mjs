@@ -1,6 +1,6 @@
 import { appendFileSync, writeFileSync, readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { resolve } from 'node:path';
-const out = resolve('logs/live-test');
+const out = resolve(process.env.EDITOR_LIVE_TEST_EVIDENCE || 'logs/live-test');
 mkdirSync(out, { recursive: true });
 let ws, id = 0, cursor = 0;
 const pending = new Map();

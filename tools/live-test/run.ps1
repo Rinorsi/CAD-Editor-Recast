@@ -1,8 +1,8 @@
-param([ValidateSet('new','old')][string]$InputEngine='new')
+param([ValidateSet('new','old')][string]$InputEngine='new', [string]$EvidenceRoot)
 $ErrorActionPreference='Stop'
 $Root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 Set-Location $Root
-$Out=Join-Path $Root 'logs/live-test'
+$Out=if($EvidenceRoot){[IO.Path]::GetFullPath($EvidenceRoot)}else{Join-Path $Root 'logs/live-test'}
 New-Item -ItemType Directory -Force $Out | Out-Null
 function Assert-NoGame {
     $Games=@(Get-CimInstance Win32_Process -Filter "Name = 'java.exe' OR Name = 'javaw.exe'" | Where-Object {
@@ -31,7 +31,7 @@ try {
     Assert-NoGame
     $Info=[Diagnostics.ProcessStartInfo]::new()
     $Info.FileName=$env:ComSpec
-    $Info.Arguments='/d /s /c ""'+(Join-Path $Root 'gradlew.bat')+'" --console=plain --max-workers=2 -PliveTestOwner='+$Owner+' -PliveTestInput='+$InputEngine+' -I tools/live-test/launch.init.gradle :fabric:26.1.2:runClient"'
+    $Info.Arguments='/d /s /c ""'+(Join-Path $Root 'gradlew.bat')+'" --console=plain --max-workers=2 -PliveTestOwner='+$Owner+' "-PliveTestEvidence='+$Out+'" -PliveTestInput='+$InputEngine+' -I tools/live-test/launch.init.gradle :fabric:26.1.2:runClient"'
     $Info.WorkingDirectory=$Root;$Info.UseShellExecute=$false;$Info.CreateNoWindow=$true;$Info.WindowStyle='Hidden'
     $Info.RedirectStandardOutput=$true;$Info.RedirectStandardError=$true
     $Process=[Diagnostics.Process]::Start($Info)
@@ -40,6 +40,7 @@ try {
     $NodeInfo=[Diagnostics.ProcessStartInfo]::new()
     $NodeInfo.FileName=(Get-Command node).Source;$NodeInfo.Arguments='tools/live-test/smoke.mjs';$NodeInfo.WorkingDirectory=$Root
     $NodeInfo.UseShellExecute=$false;$NodeInfo.CreateNoWindow=$true
+    $NodeInfo.Environment['EDITOR_LIVE_TEST_EVIDENCE']=$Out
     $Node=[Diagnostics.Process]::Start($NodeInfo)
     $Deadline=(Get-Date).AddMinutes(15)
     while(!$Process.WaitForExit(1000)){
