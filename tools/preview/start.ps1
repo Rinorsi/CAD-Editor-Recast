@@ -25,7 +25,7 @@ Push-Location $Editor
 try{
     $ErrorActionPreference='Continue'
     Write-Host '[2/3] 正在启动 Gradle：请保持此窗口开启。'
-    $LaunchArgs=@(':fabric:26.1.2:runClient','--no-problems-report')
+    $LaunchArgs=@(':fabric:26.1.2:runClient','-PmcTest=false','--no-problems-report')
     if($env:EDITOR_LAUNCHER_DEBUG -eq '1'){$LaunchArgs+='-PeditorLauncherDebug=true'}
     $GameStarting=$false
     & $Bash 'tools/gw.sh' @LaunchArgs 2>&1 | ForEach-Object {

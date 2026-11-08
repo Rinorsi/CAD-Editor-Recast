@@ -7,6 +7,8 @@ All evidence is written to `logs/live-test/`. Do not run alongside a user's Mine
 3. After a successful current build, run `pwsh -NoProfile -File tools/live-test/world-gates.ps1` to reuse the five server probes with current compiled production/test classes and isolated evidence paths. Start with a fresh `logs/live-test/world/classes` directory.
 4. Run `pwsh -NoProfile -File tools/live-test/run.ps1` for MCTest. Java 25, Node 22+ and the configured MCTest localRuntime dependency are required. Port 25599 must be free. The driver connects directly using `{id, method, params}` messages; no MCP registration or npm installation is needed.
 
+MCTest stays enabled by default for this suite. Direct Gradle clients can opt out with `-PmcTest=false`, or set the client JVM port with `-PmcTestPort=25600`; the suite currently expects port 25599. The everyday `tools/preview/start.ps1` launcher opts out, so it does not open a control port.
+
 The run directory must be fresh. Archive the previous `logs/live-test/mctest-run` and its root-level receipts/ownership markers together before another run. Do not archive or delete another session's files.
 
 The Gradle launcher acquires `logs/.gradle.lock.d` atomically and releases its own lock once the isolated client is ready. Its `finally` releases the lock on failure. It does not stop Gradle daemons or any preexisting Java process. A unique JVM ownership token identifies only this launch's client during timeout cleanup.

@@ -67,6 +67,6 @@ Oriel 锁定 `>=0.11.0 <0.12.0`。`EditorPageController` 使用发布 jar 中的
 MCTest 让 agent 通过 MCP / 本机 WebSocket 驱动真实 Minecraft 客户端。
 仅通过 Loom `localRuntime` 加载，关闭传递依赖，不进入发布 jar 或 POM；本工程另从 `runServer` 类路径排除它。
 启动：`./gradlew :fabric:26.1.2:runClient`（Windows 可使用 `./gradlew.bat`）。
-默认控制地址为 `127.0.0.1:25599`；改端口需给客户端 JVM 添加 `-Dmctest.port=端口号`，例如 Loom client run 的 `vmArg('-Dmctest.port=25600')`。
-注意：它会在你自己的 `runClient` 里也开一个仅本机回环的控制端口，不要把此端口转发到外网。
-当前默认启用，尚未提供 `-P` 启停或端口开关；构建通过不代表客户端交互已验收。
+默认启用，控制地址为 `127.0.0.1:25599`；`-PmcTest=false` 从开发运行类路径移除 MCTest，`-PmcTestPort=25600` 为客户端添加 `-Dmctest.port=25600`（不改变启停状态）。例如 `./gradlew :fabric:26.1.2:runClient -PmcTestPort=25600`。
+日常 `启动物品工坊预览.bat` / `tools/preview/start.ps1` 固定传入 `-PmcTest=false`，不开控制端口；自动化 `tools/live-test` 不传该开关，保持默认启用。
+不要把控制端口转发到外网。构建通过不代表客户端交互已验收。

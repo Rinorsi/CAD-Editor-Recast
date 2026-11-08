@@ -34,7 +34,9 @@ dependencies {
     implementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
     implementation files(rootProject.file('libs/oriel-fabric-26.1.2-0.11.0.jar'))
     // Development only: agent/MCP client control; never include or publish this dependency.
-    localRuntime('com.coolerpromc.mctest:mctest-fabric-26.1.2:26.1.2.1') { transitive = false }
+    if (providers.gradleProperty('mcTest').orNull != 'false') {
+        localRuntime('com.coolerpromc.mctest:mctest-fabric-26.1.2:26.1.2.1') { transitive = false }
+    }
 }
 loom {
     mods { editor { sourceSet(sourceSets.main) } }
@@ -43,6 +45,9 @@ loom {
         client {
             runDirectory.set(clientRun.absolutePath)
             vmArg('-Doriel.sourceRoot=' + rootProject.file('fabric').absolutePath)
+            if (providers.gradleProperty('mcTestPort').isPresent()) {
+                vmArg('-Dmctest.port=' + providers.gradleProperty('mcTestPort').get())
+            }
             if (providers.gradleProperty('editorLauncherDebug').orNull == 'true') {
                 vmArg('-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:5007')
             }
