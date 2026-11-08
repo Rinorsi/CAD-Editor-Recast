@@ -67,6 +67,7 @@ public final class EntityWorldEdit {
         EntityViewsVehicle.views(out,entity,saved,access);
         EntityViewsVillager.views(out,entity,saved);
         EntityViewsSimple.views(out,entity,saved,access);
+        EntityViewsHorse.views(out,entity,saved,access);
         var riding=new JsonObject();riding.add("passengers",passengers(entity,0));
         riding.add("vehicle",entity.getVehicle()==null?JsonNull.INSTANCE:summary(entity.getVehicle()));
         riding.add("rideCheck",rideCheck());out.add("riding",riding);
@@ -83,10 +84,11 @@ public final class EntityWorldEdit {
     /** The returned compound remains identity protected and contains current runtime state. */
     public static CompoundTag prepare(Entity source, CompoundTag input, JsonObject edit, Level level, RegistryAccess access) {
         var nbt=input.copy();
-        for(String key:edit.keySet())if(!Set.of("pose","equipment","item_frame","painting","display","offers").contains(key)&&!EntityViewsSimple.supports(key)&&!EntityViewsVehicle.supports(key)&&!EntityViewsVillager.supports(key))throw new IllegalArgumentException("未知实体编辑区段："+key);
+        for(String key:edit.keySet())if(!Set.of("pose","equipment","item_frame","painting","display","offers").contains(key)&&!EntityViewsSimple.supports(key)&&!EntityViewsVehicle.supports(key)&&!EntityViewsVillager.supports(key)&&!EntityViewsHorse.supports(key))throw new IllegalArgumentException("未知实体编辑区段："+key);
         EntityViewsVehicle.apply(source,nbt,edit,access);
         EntityViewsVillager.apply(edit);
         EntityViewsSimple.apply(source,nbt,edit,level,access);
+        EntityViewsHorse.apply(source,nbt,edit,level,access);
         if(edit.has("pose")){
             require(source instanceof ArmorStand,"仅盔甲架提供姿态");var data=edit.getAsJsonObject("pose");
             var pose=nbt.getCompound("Pose").map(CompoundTag::copy).orElseGet(CompoundTag::new);
@@ -125,10 +127,11 @@ public final class EntityWorldEdit {
         var copy=source.getType().create(level,EntitySpawnReason.COMMAND);require(copy!=null,"实体工厂不能创建校验副本");
         load(copy,nbt,access);
         if(edit.has("equipment")){require(copy instanceof LivingEntity,"目标没有装备栏");var living=(LivingEntity)copy;var seen=new HashSet<String>();
-            for(var raw:edit.getAsJsonArray("equipment")){var row=raw.getAsJsonObject();String slot=StackCodec.string(row,"slot");require(seen.add(slot),"装备槽重复");var equip=Arrays.stream(EquipmentSlot.values()).filter(s->s.getSerializedName().equals(slot)).findFirst().orElseThrow(()->new IllegalArgumentException("未知装备槽："+slot));require(living.canUseSlot(equip),"目标当前不能使用装备槽："+slot);living.setItemSlot(equip,decode(row.get("stack"),access,living.getItemBySlot(equip)));}
+            for(var raw:edit.getAsJsonArray("equipment")){var row=raw.getAsJsonObject();String slot=StackCodec.string(row,"slot");require(seen.add(slot),"装备槽重复");var equip=Arrays.stream(EquipmentSlot.values()).filter(s->s.getSerializedName().equals(slot)).findFirst().orElseThrow(()->new IllegalArgumentException("未知装备槽："+slot));require(living.canUseSlot(equip),"目标当前不能使用装备槽："+slot);living.setItemSlot(equip,EntityViewsHorse.equipment(living,equip,decode(row.get("stack"),access,living.getItemBySlot(equip))));}
         }
         var prepared=WorldTarget.saveEntity(copy,access);
         EntityViewsVehicle.verify(nbt,prepared,edit);
+        EntityViewsHorse.verify(source,nbt,prepared,access);
         if(nbt.contains("Passengers"))prepared.put("Passengers",nbt.get("Passengers").copy());
         // Only explicitly changed fields are required to survive vanilla loading. Pose/default/
         // transformation canonicalization is intentional and handled by the real codecs above.

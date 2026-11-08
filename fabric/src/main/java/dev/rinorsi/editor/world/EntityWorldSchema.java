@@ -44,6 +44,7 @@ public final class EntityWorldSchema {
         if(source instanceof AbstractVillager){var section=new JsonObject();section.addProperty("write","entity.offers");section.addProperty("serverOnly",true);section.addProperty("codec","MerchantOffers.CODEC");section.addProperty("maxEntries",256);section.addProperty("stackFormat","StackCodec");section.addProperty("fields","buy,buyB?,sell,uses,maxUses,rewardExp,xp,priceMultiplier,demand,specialPrice");out.add("trades",section);}
         EntityViewsVehicle.schema(out,source,access);
         EntityViewsSimple.schema(out,source,access);
+        EntityViewsHorse.schema(out,source,access);
         var ride=EntityWorldEdit.rideCheck();ride.remove("reason");out.add("riding",ride);return out;
     }
     private static JsonObject stackField(String path){var out=new JsonObject();out.addProperty("type","stack");out.addProperty("nbtPath",path);out.addProperty("codec","ItemStack.OPTIONAL_CODEC");return out;}

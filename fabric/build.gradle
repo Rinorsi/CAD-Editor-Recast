@@ -249,6 +249,15 @@ tasks.register('entityVehicleViewTest', JavaExec) {
 }
 tasks.named('check') { dependsOn('entityVehicleViewTest') }
 
+tasks.register('entityHorseViewTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.registry.EntityHorseViewTest'
+    workingDir = rootProject.projectDir
+    jvmArgs '-Djava.awt.headless=true'
+}
+tasks.named('check') { dependsOn('entityHorseViewTest') }
+
 ['playerWorldEditTest': 'dev.rinorsi.editor.registry.PlayerWorldEditTest',
  'editDispatchTest': 'dev.rinorsi.editor.registry.EditDispatchTest'].each { taskName, entry ->
     tasks.register(taskName, JavaExec) {
