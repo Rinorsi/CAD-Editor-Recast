@@ -357,3 +357,47 @@ Edits 示例：
 ```
 
 门禁：独立 `EntityVehicleViewTest` / JavaExec `entityVehicleViewTest` 挂到 check，覆盖真实读取、合法写入、错误实体类型、未知字段、null、容量末槽及越界、完整组件往返、只读拒绝、未展开战利品拒绝及已有 schema 覆盖回归。验证日志在 `logs/lane-vehicle/`；不启动 Minecraft、客户端或服务器探针。
+
+
+## P3-1 马与羊驼
+
+已有通用 schema 覆盖：`minecraft:horse/variant`（马颜色）与 `horse/markings`（斑纹）使用真实 enum/setter 探测 `Variant` packed int 及 mask；`minecraft:llama/variant` 使用真实数据组件枚举；`llama/strength` 使用 setter 端点和逐值 load/save 探测 `Strength`（26.1.2 为 1..5）。继续用 variants 的保存路径/值，不新增重复写入字段。`equipment` 已通过真实实体保存探测鞍/身体槽路径，26.1.2 为 `equipment.saddle` / `equipment.body`，不使用旧 `SaddleItem` / `ArmorItem`。
+
+### 可写视图
+
+`world.views.horse` / `entity_schema.views.horse` 适用全部 AbstractHorse：马、驴、骡、骷髅马、僵尸马、羊驼、行商羊驼、骆驼及继承此基类的实体。`world.views.chested` / `entity_schema.views.chested` 仅 AbstractChestedHorse（驴、骡、羊驼、行商羊驼）。分别写入 `entity.horse`、`entity.chested`。
+
+|视图|字段|类型、范围与 null 语义|
+|---|---|---|
+|horse|Tame|严格 boolean；null 拒绝|
+|horse|Temper|实际保存 int，Java signed int（-2147483648..2147483647）；原版 setTemper/load 不 clamp，不将 getMaxTemper 的玩法阈值当成存储范围；null 拒绝|
+|horse|Owner|规范 UUID 字符串或 null，经 EntityReference.codec()；只能新设提交时在线的玩家，原有离线主人允许原样保留；null 删除 Owner。马的 Tame 与 Owner 在原版独立保存，清除 Owner 保留 Tame；如需解除驯服，另发 Tame:false|
+|chested|ChestedHorse|严格 boolean；null 拒绝|
+|chested|Items|完整列表替换，`[{slot:int,stack:StackCodec}]`；slot 从 0 起，必须小于提交数据加载后真实 getInventorySize()，不得重复；stack 非空，保留组件/移除 patch/类型旁路。省略某槽即清空该槽，`[]` 清空整个箱子；null 拒绝|
+
+未提交字段保留原值。`horse.players` 为当前服务器 PlayerList 的 `{uuid,name}` 在线候选（跨维度），`available` 表示服务器列表可用；没有服务器时为 false 和空列表，不接受离线新主人。`chested.capacity` 是实时容器容量，只读；羊驼容量随 Strength 改变。Strength 通过现有 schema/NBT 提交，与 chested 在同一次 apply 内按修改后的容量校验。减小 Strength 或关闭箱子会丢弃旧物品时拒绝；应同次提交合法 Items 替换，拆除非空箱子须显式 `Items:[]`。
+
+### 鞍与身体装备
+
+继续用已有 `world.equipment` 栈视图和 `entity.equipment:[{slot,stack}]` 写入，`stack` 使用完整 StackCodec，`{empty:true}` 清空。`world.views.horse.equipment` 是这一路由的只读元数据：每行含 `slot`、`nbtPath`、`canHold`、`options` 和 `allowManual:true`，不作为 horse 可写字段。`canHold` 来自当前实体 `canUseSlot`（包含真实子类覆盖，不能统一假设所有马都要求先驯服；AbstractHorse 基类会检查鞍的 Tame/年龄等状态）；候选遍历实时 item 注册表并调用 `isEquippableInSlot`，提交时对实际组件栈再次校验，允许手动输入具备合法组件的物品。不会硬编码马铠或地毯目录。可在同次请求先设 Tame:true，再装备 saddle；全部装备写入仍在分离副本上进行并重新 load/save 校验。
+
+所有未知字段、错误实体类型、错误 JSON 类型、整数越界、非法/重复槽、未知物品、Codec 错误、不适配装备和原版未保留请求值均拒绝，沿用 invalid_nbt/参数错误映射。所有 readOnly 元数据均不可回写；UUID、位置与骑乘关系保护不变，骑乘仍用独立 riding 协议。
+
+视图示例（options 仅示意，实际以实时探测为准）：
+```json
+{"horse":{"Tame":true,"Temper":20,"Owner":null,"players":[],"available":true,"equipment":[{"slot":"saddle","nbtPath":"equipment.saddle","canHold":true,"options":["minecraft:saddle"],"allowManual":true}]},"chested":{"ChestedHorse":true,"capacity":3,"Items":[{"slot":2,"stack":{"id":"minecraft:diamond","count":2,"comps":{},"removed":{}}}]}}
+```
+Edits 示例：
+```json
+{"entity":{"horse":{"Tame":true,"Temper":20,"Owner":null},"equipment":[{"slot":"saddle","stack":{"id":"minecraft:saddle","count":1,"comps":{},"removed":{}}}]}}
+```
+```json
+{"entity":{"chested":{"ChestedHorse":true,"Items":[{"slot":0,"stack":{"id":"minecraft:diamond","count":2,"comps":{},"removed":{}}}]}}}
+```
+```json
+{"entity":{"chested":{"ChestedHorse":false,"Items":[]}}}
+```
+
+### 验证记录
+
+`EntityHorseViewTest` 的 212 项检查已通过，使用真实原版实体工厂、Codec 和 load/save 覆盖八类实体读取/合法写入/非法拒绝、装备兼容性、离线旧主人保留/清空、箱子容量边界、Strength 增减及物品不静默丢失。装备检查从当前依赖 JAR 加载真实 entity_type 标签，不使用测试白名单。通过 `entityHorseViewTest` JavaExec 挂到 check。字节码依据及 build/check 日志在 `logs/lane-horse/`；未启动 Minecraft、客户端、服务器或实机探针。在线新主人分配的联网验证留待最终统一实机验收。
