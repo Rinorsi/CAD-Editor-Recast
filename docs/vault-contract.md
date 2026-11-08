@@ -1,5 +1,24 @@
 # 本机保险库协议（26.1.2 / v1）
 
+## P4-6 方块与玩家预设（2026-11-08）
+
+新增 kind 为 block、player_preset。文件/导出版本升为 3，继续读取 1/2；旧程序与旧合并脚本安全拒绝新版本。消息回执仍 version:1。list.kind 接受四类及 all，默认仍 item；stats 新增 blocks/playerPresets。
+
+保存：`{op:"save",requestId,kind:"block",world:<当前服务端 world 快照>,name?,tags?,note?}`；玩家为 `{op:"save",requestId,kind:"player_preset",world,sections:["inventory","equipment","ender","attributes","effects","game_mode"],name?,tags?,note?}`。sections 必须非空且不重复，可选其中任意子集。装备槽位来自原版 Inventory.EQUIPMENT_SLOT_MAPPING（含副手）；属性/效果/游戏模式候选继续用实时注册表与 schema。
+
+也接受 template 代替 world。方块 template 为 `{block:"minecraft:chest",block_state:{facing:"north",type:"single",waterlogged:"false"},snbt:"{id:...}"}`；完整 typed SNBT 删除顶层 x/y/z，不保存位置或会话。玩家 template 为 `{sections:{effects:[],game_mode:"survival"}}`：inventory/equipment/ender 各为 `{slots:[{slot,stack}]}`，stack 保留完整 component_snbt、空槽为 `{empty:true}`；attributes 为原 player.attributes 数组，effects 为 player.active_effects 数组，game_mode 为 player.playerGameType 字符串。不保存玩家身份、位置、配方、成就或统计。
+
+两类 save 总是新增 UUID，duplicate:false；同名自动加 ` (2)`、` (3)`，不覆盖、不按内容去重。duplicate/import 同样给新增条目分配不冲突名称，import 同 UUID 仍拒绝。旧 item/entity 去重与读取不变。轻量行含 kind、summary（方块注册 ID/状态字段数/NBT字段数，或分区及槽位数），get/export 完整行含 template。update 仅改元数据。大模板用 upload 暂存 `{world,sections?}` 或 `{template}`，save 携带 kind/uploadToken。原配额不变。
+
+套用步骤：
+
+1. 打开现有世界编辑器的对准方块或在线玩家，取得服务端 world（slot/revision）；独立保险库先要求打开目标。
+2. 请求 `{op:"preview",requestId,id,world,sections?:[...已保存分区...]}`，缺省套用已保存的全部分区。大 world 可用 uploadToken 暂存 `{world,sections?}`。
+3. 回执含 `summary:{kind,target,overwrites:[{section,before,after}]}` 与 `apply:{slot,revision,vault_template:{kind,template,sections?}}`；before/after 是字段数、槽位数或条目数等有界摘要。页面显示摘要，等待用户确认。preview 不写世界，其 ok 不代表服务端已保存。
+4. 确认后给 apply 添加新 requestId，发送现有页面 apply 消息。宿主仍绑定真实 slot/revision；服务端在 EditorPolicy、可达性、在线状态和会话校验后展开 vault_template，复用 PlayerWorldEdit.prepare/write 或既有方块写入。回执与撤销沿用 result/world。
+
+方块 block 注册 ID 必须一致，即使共用方块实体类型也拒绝，服务端再次核对；错误码 block_type_mismatch。SNBT 套用时仅补回目标自身 id/x/y/z。玩家未选分区保持原值，权限/离线/冲突错误沿用世界编辑路径；本机 preview 用 wrong_kind、block_type_mismatch、BAD_REQUEST 等。未知字段/分区拒绝。过大 preview 明确 RESPONSE_LIMIT，不裁剪模板。
+
 实现：vault/VaultStore、vault/VaultStacks、registry/VaultChannel。2026-11-07。
 
 ## 传输与页面生命周期
