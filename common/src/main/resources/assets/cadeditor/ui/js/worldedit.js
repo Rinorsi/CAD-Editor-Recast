@@ -91,8 +91,9 @@ function drawWorldScreen() {
   });
   tabbar.classList.toggle('dense', weTabs().length >= 4);   // 和物品页一样：4 页以上只留当前页的名字，其余只显示图标
   var tools = h('div', { class: 'ed-tools', id: 'edtools' });
-  right.appendChild(tabbar); right.appendChild(tools); right.appendChild(body);
+  right.appendChild(edTabsScroll(tabbar)); right.appendChild(tools); right.appendChild(body);
   host.appendChild(hero); host.appendChild(makeSplit()); host.appendChild(right); ensureResize();
+  setTimeout(function () { edTabsFit(tabbar); }, 0);
   weHero();
   weTabBody(body);
 }

@@ -30,6 +30,14 @@ public final class VaultTemplates {
         return result;
     }
     private static JsonArray array(Collection<String> values) {var a=new JsonArray();values.forEach(a::add);return a;}
+    public static JsonArray allSections(){return array(new TreeSet<>(SECTIONS));}
+    /** Capture and select a read-only comparison without changing save's established defaults. */
+    public static JsonObject backupTemplate(JsonObject request) {
+        var r=request.deepCopy();if(!r.has("template")&&!r.has("sections"))r.add("sections",allSections());
+        var t=capture("player_preset",r);var sections=t.getAsJsonObject("sections");
+        var chosen=r.has("sections")?selected(r.get("sections"),sections.keySet()):new ArrayList<>(sections.keySet());
+        var filtered=new JsonObject();for(String key:chosen)filtered.add(key,sections.get(key));t.add("sections",filtered);return t;
+    }
     public static JsonObject capture(String kind,JsonObject request) {
         if(request.has("template")) return validate(kind,object(request,"template"));
         var world=object(request,"world");var t=new JsonObject();

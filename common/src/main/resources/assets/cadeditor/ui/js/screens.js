@@ -314,10 +314,30 @@ function drawEdit() {
   tabbar.addEventListener('wheel', tabsWheel);
   var tools = h('div', { class: 'ed-tools', id: 'edtools' });
   var body = h('div', { class: 'ed-body', id: 'edbody' });
-  right.appendChild(tabbar); right.appendChild(tools); right.appendChild(body);
+  right.appendChild(edTabsScroll(tabbar)); right.appendChild(tools); right.appendChild(body);
   host.appendChild(hero); host.appendChild(split); host.appendChild(right);
   ensureResize();
   drawHero(); drawTabbar(); drawTabBody();
+}
+/* 分页栏放不下时：两头出现 ‹ › 按钮横向滚动，当前页自动滚进可视范围，滚轮也能横向滚。世界页 / 玩家页 / 物品页共用 */
+function edTabsScroll(bar) {
+  var L = h('div', { class: 'ed-tarr', text: '‹', title: '向左滚动' }), R = h('div', { class: 'ed-tarr', text: '›', title: '向右滚动' });
+  function room() { return Math.max(0, bar.scrollWidth - bar.clientWidth); }
+  function go(d) { bar.scrollLeft = Math.max(0, Math.min(room(), bar.scrollLeft + d)); edTabsFit(bar); }
+  activate(L, function () { go(-140); }); activate(R, function () { go(140); });
+  bar.addEventListener('wheel', function (e) { if (!room()) return; if (e.preventDefault) e.preventDefault(); go((e.deltaY || e.deltaX) > 0 ? 90 : -90); });
+  bar._arrows = [L, R];
+  return h('div', { class: 'ed-tabwrap' }, [L, bar, R]);
+}
+function edTabsFit(bar) {
+  if (!bar || !bar._arrows) return;
+  var on = bar.querySelector('.ed-tab.on'), room = Math.max(0, bar.scrollWidth - bar.clientWidth);
+  if (on && room) {
+    var l = on.offsetLeft, r = l + on.offsetWidth;
+    if (l < bar.scrollLeft) bar.scrollLeft = Math.max(0, l - 14); else if (r > bar.scrollLeft + bar.clientWidth) bar.scrollLeft = Math.min(room, r - bar.clientWidth + 14);
+  }
+  bar._arrows[0].style.display = room > 1 && bar.scrollLeft > 0 ? '' : 'none';
+  bar._arrows[1].style.display = room > 1 && bar.scrollLeft < room - 1 ? '' : 'none';
 }
 function drawTabbar() {
   var bar = clear($('tabbar')), kind = kindOfItem(Store.doc().id), tabs = tabsOfKind(kind);
@@ -328,6 +348,7 @@ function drawTabbar() {
     activate(el, function () { UI.bodyScroll[UI.tab] = $('edbody').scrollTop; UI.tab = t.id; drawTabbar(); drawTabBody(); });
     bar.appendChild(el);
   });
+  setTimeout(function () { edTabsFit(bar); }, 0);
   if (hiddenUniTabs(kind).length) { var mo = h('div', { class: 'ed-tab more', title: '更多分页：功能、攻击与防御、放置与数据……' }, [uiIcon('plus', 12), h('span', { text: '更多' }), uiIcon('down', 10)]); activate(mo, function () { openMoreTabs(mo); }); bar.appendChild(mo); }
   /* 分页指示条：同一个节点跨重绘保留，宿主控制器（EditorPageController）收到 ed:tabs 后用 Motion.indicator 把它滑到选中的分页下；没有控制器时它是隐藏的 */
   if (!UI.ind) UI.ind = h('i', { class: 'm-indicator ed-ind' });

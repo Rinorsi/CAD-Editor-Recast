@@ -1645,3 +1645,9 @@ body.vault-only .ew { display: none; }
 .px-sum { display: flex; flex-wrap: wrap; gap: 4px 18px; padding: 4px 0 8px; }
 .px-sum .k-stat { display: flex; align-items: center; gap: 6px; }
 .px-eq { display: flex; gap: 2px; }
+
+/* 分页栏横向滚动：放不下时两头出现 ‹ › */
+.ed-tabwrap { flex: none; display: flex; align-items: flex-end; min-width: 0; background: var(--well); border-bottom: 1px solid var(--ln2); }
+.ed-tabwrap > .ed-tabs { flex: 1; min-width: 0; border-bottom: 0; }
+.ed-tarr { flex: none; width: 16px; height: 27px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--tx2); }
+.ed-tarr:hover { color: var(--tx); background: rgba(255, 255, 255, 0.08); }

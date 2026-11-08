@@ -3,6 +3,7 @@ package dev.rinorsi.editor.world;
 import com.google.gson.*;
 import com.mojang.authlib.GameProfile;
 import dev.rinorsi.editor.*;
+import dev.rinorsi.editor.vault.PermissionTest;
 import java.nio.file.*;
 import java.util.*;
 import net.minecraft.nbt.*;
@@ -28,10 +29,11 @@ public final class PlayerExtendedServerProbe {
         @SuppressWarnings("unchecked") var map=(Map<UUID,ServerPlayer>)field.get(server.getPlayerList());online=map;
         var p=player(server,"ExtendedProbe");var other=player(server,"ExtendedOther");
         try{
-            for(String view:List.of("position","respawn","recipes","advancements","stats","offline")){
+            for(String view:List.of("position","respawn","recipes","advancements","stats","offline","players")){
                 var request=request(p,"read",view);if(view.equals("offline")){request.getAsJsonObject("target").addProperty("offline",true);request.getAsJsonObject("target").addProperty("uuid",other.getStringUUID());}
                 code(call(p,request),"player_forbidden");request.addProperty("action","apply");request.addProperty("revision","not-authorized");request.add("patch",new JsonObject());code(call(p,request),"player_forbidden");
             }
+            var deniedExport=request(p,"export_preset","");deniedExport.remove("view");code(call(p,deniedExport),"player_forbidden");
             server.getPlayerList().getOps().add(new ServerOpListEntry(p.nameAndId(),LevelBasedPermissionSet.GAMEMASTER,false));
             var pos=read(p,"position");var patch=pos.getAsJsonObject("value").deepCopy();patch.addProperty("x",32.5);patch.addProperty("z",32.5);patch.addProperty("yaw",80.25);patch.addProperty("pitch",20.5);
             saved(apply(p,"position",pos,patch));check(p.getX()==32.5&&p.getYRot()==80.25f&&p.getXRot()==20.5f,"teleport loads chunk and applies rotation");
@@ -60,7 +62,9 @@ public final class PlayerExtendedServerProbe {
             stats=read(p,"stats");var samePath=stat.deepCopy();samePath.addProperty("value",44);PlayerExtendedEditor.prepare(p,"stats",entries(samePath)).run();stat.addProperty("value",45);code(apply(p,"stats",stats,entries(stat)),"target_changed");
             stats=read(p,"stats");stat.addProperty("value",-1);code(apply(p,"stats",stats,entries(stat)),"invalid_request");stat.addProperty("value",1);stat.addProperty("id","cadeditor:missing");code(apply(p,"stats",stats,entries(stat)),"unknown_stat");
             var pagination=request(p,"read","recipes");pagination.addProperty("limit",1);var page=opened(call(p,pagination));check(page.getAsJsonObject("value").getAsJsonArray("entries").size()==1&&!page.get("nextOffset").isJsonNull(),"real candidates paginated");
+            other.getInventory().setItem(0,PermissionTest.typed());other.getEnderChestInventory().setItem(2,PermissionTest.typed());other.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_HELMET));other.setItemSlot(net.minecraft.world.entity.EquipmentSlot.OFFHAND,PermissionTest.typed());other.getInventory().setSelectedSlot(3);other.setGameMode(net.minecraft.world.level.GameType.ADVENTURE);other.setHealth(17);other.getFoodData().setFoodLevel(12);other.experienceLevel=6;other.setServerLevel(nether);
             var offline=UUID.randomUUID();var directory=server.getWorldPath(LevelResource.PLAYER_DATA_DIR);Files.createDirectories(directory);var path=directory.resolve(offline+".dat");var out=TagValueOutput.createWithContext(ProblemReporter.DISCARDING,server.registryAccess());other.saveWithoutId(out);var data=out.buildResult();data.putString("cadeditor_probe_unknown","keep");data.putInt("DataVersion",net.minecraft.SharedConstants.getCurrentVersion().dataVersion().version());NbtIo.writeCompressed(data,path);
+            profiles(server,p,other,offline,path);
             var off=offlineRequest(p,offline,"read");var baseline=opened(call(p,off));var edit=WorldNbt.parse(baseline.getAsJsonObject("value").get("snbt").getAsString());edit.putInt("XpLevel",7);var opatch=new JsonObject();opatch.addProperty("snbt"," ".repeat(17000)+edit.toString());saved(offlineApply(p,offline,baseline,opatch));check(NbtIo.readCompressed(path,NbtAccounter.unlimitedHeap()).getIntOr("XpLevel",-1)==7,"offline vanilla load/save and atomic replacement");check(NbtIo.readCompressed(path,NbtAccounter.unlimitedHeap()).getStringOr("cadeditor_probe_unknown","").equals("keep"),"unknown field preserved");
             var backups=directory.resolve("cadeditor-backups").resolve(offline.toString());try(var list=Files.list(backups)){var backup=list.findFirst().orElseThrow();check(NbtIo.readCompressed(backup,NbtAccounter.unlimitedHeap()).equals(data),"backup is exact original NBT");}
             baseline=opened(call(p,off));byte[] before=Files.readAllBytes(path);edit=WorldNbt.parse(baseline.getAsJsonObject("value").get("snbt").getAsString());edit.putInt("XpLevel",-1);opatch.addProperty("snbt",edit.toString());code(offlineApply(p,offline,baseline,opatch),"invalid_nbt");check(Arrays.equals(before,Files.readAllBytes(path)),"failed validation leaves file byte-identical");
@@ -75,6 +79,45 @@ public final class PlayerExtendedServerProbe {
             var result=new JsonObject();result.addProperty("passed",true);result.addProperty("checks",checks);result.add("evidence",evidence);var sent=new JsonArray();packets.forEach(sent::add);result.add("packets",sent);return result;
         }finally{for(var player:List.of(p,other)){online.remove(player.getUUID());server.getPlayerList().getPlayers().remove(player);player.discard();}PlayerExtendedEditor.clear();}
     }
+    private static void profiles(MinecraftServer server,ServerPlayer p,ServerPlayer source,UUID offline,Path path)throws Exception {
+        var list=server.getPlayerList();var stats=new HashMap<>(list.stats);var advancements=new HashMap<>(list.advancements);var bytes=Files.readAllBytes(path);
+        var legacy=server.getWorldPath(LevelResource.PLAYER_STATS_DIR).resolve("ArchiveReader.json");Files.createDirectories(legacy.getParent());Files.writeString(legacy,"{}");
+        var statsFiles=archiveFiles(server.getWorldPath(LevelResource.PLAYER_STATS_DIR));var advancementFiles=archiveFiles(server.getWorldPath(LevelResource.PLAYER_ADVANCEMENTS_DIR));
+        var players=request(p,"read","players");players.remove("target");var page=opened(call(p,players));
+        check(page.get("revision").isJsonNull()&&page.getAsJsonObject("target").isEmpty(),"players read has no editing revision");
+        var rows=page.getAsJsonObject("value").getAsJsonArray("entries");
+        var self=profileRow(rows,p.getUUID());check(self.get("self").getAsBoolean()&&self.get("online").getAsBoolean()&&self.get("last_played_ms").isJsonNull(),"players self and online metadata");
+        var unknown=profileRow(rows,offline);check(unknown.get("name").isJsonNull()&&!unknown.get("online").getAsBoolean()&&!unknown.get("self").getAsBoolean()&&unknown.get("last_played_ms").getAsLong()==Files.getLastModifiedTime(path).toMillis(),"offline unknown name and file mtime");
+        var unnamed=opened(call(p,offlineRequest(p,offline,"read")));check(unnamed.getAsJsonObject("value").getAsJsonObject("summary").get("name").isJsonNull(),"offline summary preserves missing name null");
+        check(profileRow(rows,source.getUUID()).get("name").getAsString().equals(source.getGameProfile().name()),"online player included without a playerdata file");
+        list.getServer().services().nameToIdCache().add(new NameAndId(offline,"CachedArchive"));
+        players.addProperty("query","cAcHeDaRc");players.addProperty("limit",1);page=opened(call(p,players));check(page.get("total").getAsInt()==1&&profileRow(page.getAsJsonObject("value").getAsJsonArray("entries"),offline).get("name").getAsString().equals("CachedArchive"),"local cached name search case insensitive");
+        players.addProperty("query",offline.toString().substring(0,8));page=opened(call(p,players));check(page.get("total").getAsInt()==1,"UUID substring search");
+        players.remove("query");players.addProperty("offset",1);page=opened(call(p,players));check(page.getAsJsonObject("value").getAsJsonArray("entries").size()==1&&page.get("total").getAsInt()==rows.size(),"players filtered pagination");
+        players.addProperty("action","apply");code(call(p,players),"invalid_request");players.addProperty("action","read");players.remove("offset");players.remove("limit");
+        var savedOwner=server.getSingleplayerProfile();server.setSingleplayerProfile(p.getGameProfile());
+        try{var ownerPage=opened(call(p,players));check(profileRow(ownerPage.getAsJsonObject("value").getAsJsonArray("entries"),p.getUUID()).get("owner").getAsBoolean(),"singleplayer owner and self flags coexist");}finally{server.setSingleplayerProfile(savedOwner);}
+        var offlineRead=opened(call(p,offlineRequest(p,offline,"read")));var summary=offlineRead.getAsJsonObject("value").getAsJsonObject("summary");
+        check(summary.equals(PlayerProfiles.summary(source,"CachedArchive")),"offline summary exactly matches native loaded state");
+        check(summary.get("game_mode").getAsString().equals("adventure")&&summary.get("health").getAsInt()==17&&summary.get("food").getAsInt()==12&&summary.get("xp_level").getAsInt()==6,"summary mode health food experience");
+        check(summary.get("dimension").getAsString().equals("minecraft:the_nether")&&summary.get("selected_slot").getAsInt()==3&&summary.get("inventory_count").getAsInt()==1&&summary.get("ender_count").getAsInt()==1,"summary dimension selection counts");
+        check(summary.getAsJsonObject("equipment").get("head").getAsString().equals("minecraft:iron_helmet")&&summary.getAsJsonObject("equipment").get("feet").isJsonNull(),"summary equipped IDs and empty null");
+        var export=request(p,"export_preset","");export.remove("view");export.getAsJsonObject("target").addProperty("uuid",source.getStringUUID());
+        var onlineExport=call(p,export);check(onlineExport.get("status").getAsString().equals("exported"),"online preset exported without view");
+        export.getAsJsonObject("target").addProperty("uuid",offline.toString());export.getAsJsonObject("target").addProperty("offline",true);var offlineExport=call(p,export);
+        check(offlineExport.get("status").getAsString().equals("exported")&&offlineExport.get("template").equals(onlineExport.get("template")),"offline preset equals online VaultTemplates capture including typed stacks");
+        var capture=new JsonObject();capture.add("template",offlineExport.get("template"));check(dev.rinorsi.editor.vault.VaultTemplates.capture("player_preset",capture).equals(offlineExport.get("template")),"export VaultTemplates roundtrip");
+        export.add("sections",JsonParser.parseString("['inventory','effects']"));var partial=call(p,export);check(partial.getAsJsonObject("template").getAsJsonObject("sections").size()==2,"export selected sections only");
+        export.add("sections",JsonParser.parseString("['inventory','inventory']"));code(call(p,export),"invalid_request");export.remove("sections");
+        server.setSingleplayerProfile(new GameProfile(offline,"ArchiveOwner"));
+        try{page=opened(call(p,players));check(profileRow(page.getAsJsonObject("value").getAsJsonArray("entries"),offline).get("owner").getAsBoolean(),"offline owner listed");check(call(p,export).get("status").getAsString().equals("exported"),"offline owner native selected archive read only");code(call(p,offlineRequest(p,offline,"read")),"offline_owner_unsupported");}finally{server.setSingleplayerProfile(savedOwner);}
+        export.getAsJsonObject("target").addProperty("uuid",source.getStringUUID());code(call(p,export),"player_online");
+        var broken=OfflinePlayerEdit.readData(server,offline);broken.putString("Health","broken");reject(()->PlayerProfiles.loaded(server,broken,player->PlayerProfiles.summary(player,null)),"invalid_nbt");
+        check(Arrays.equals(bytes,Files.readAllBytes(path)),"all profile reads leave archive byte identical");check(stats.equals(list.stats)&&advancements.equals(list.advancements),"temporary player reads leave native caches unchanged");
+        check(Files.readString(legacy).equals("{}")&&statsFiles.equals(archiveFiles(server.getWorldPath(LevelResource.PLAYER_STATS_DIR)))&&advancementFiles.equals(archiveFiles(server.getWorldPath(LevelResource.PLAYER_ADVANCEMENTS_DIR))),"read-only profile never migrates legacy stats or writes stat/advancement files");
+    }
+    private static Map<String,String> archiveFiles(Path dir)throws Exception{var result=new TreeMap<String,String>();if(Files.isDirectory(dir))try(var paths=Files.walk(dir)){for(var path:paths.filter(Files::isRegularFile).toList())result.put(dir.relativize(path).toString(),PlayerExtendedEditor.hash(Files.readAllBytes(path)));}return result;}
+    private static JsonObject profileRow(JsonArray rows,UUID uuid){for(var raw:rows){var row=raw.getAsJsonObject();if(row.get("uuid").getAsString().equals(uuid.toString()))return row;}throw new AssertionError("missing profile "+uuid);}
     private static void displayMetadata(ServerPlayer p)throws Exception{
         var full=PlayerExtendedEditor.value(p,"advancements").getAsJsonObject().getAsJsonArray("entries");
         JsonObject root=null,recipe=null;int displayed=0;

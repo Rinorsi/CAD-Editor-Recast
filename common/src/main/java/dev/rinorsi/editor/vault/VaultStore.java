@@ -44,6 +44,8 @@ public final class VaultStore implements AutoCloseable {
   private record Cached(JsonObject source, Validator validator, JsonObject fields) {}
 
   private final Map<String, Cached> cachedRows = new HashMap<>();
+  private record PresetHashes(JsonObject source, Validator validator, Map<String,String> sections) {}
+  private final Map<String,PresetHashes> presetHashes = new HashMap<>();
   private String exportKey, exportText;
   private long exportRevision = -1;
   private List<JsonObject> deleted = List.of();
@@ -716,6 +718,7 @@ public final class VaultStore implements AutoCloseable {
 
   public synchronized void invalidateRows() {
     cachedRows.clear();
+    presetHashes.clear();
   }
 
   private JsonObject saveEntity(JsonObject request, Validator validator) {
@@ -783,6 +786,36 @@ public final class VaultStore implements AutoCloseable {
     var out = new JsonObject(); out.add("entry", row(e, validator, false)); out.addProperty("duplicate", false); return out;
   }
 
+  private JsonObject hasBackup(JsonObject request, Validator validator) {
+    if (!kind(request).equals("player_preset")) throw fail("wrong_kind", "备份检查只支持玩家预设");
+    var requested = VaultTemplates.backupTemplate(request).getAsJsonObject("sections");
+    var wanted = new TreeMap<String,String>();
+    for (var section : requested.entrySet()) wanted.put(section.getKey(), PlayerPresetHash.section(section.getKey(), section.getValue(), validator));
+    presetHashes.keySet().retainAll(entries.keySet());
+    var out = new JsonObject(); out.addProperty("backed_up", false);
+    for (var entry : entries.entrySet()) {
+      var e = entry.getValue(); if (!kind(e).equals("player_preset")) continue;
+      var saved = e.getAsJsonObject("template").getAsJsonObject("sections");
+      if (!saved.keySet().containsAll(wanted.keySet())) continue;
+      var cached = presetHashes.get(entry.getKey());
+      if (cached == null || cached.source != e || cached.validator != validator) {
+        cached = new PresetHashes(e, validator, new HashMap<>()); presetHashes.put(entry.getKey(), cached);
+      }
+      boolean matches = true;
+      for (var section : wanted.entrySet()) {
+        String digest = cached.sections.get(section.getKey());
+        if (digest == null) {
+          try { digest = PlayerPresetHash.section(section.getKey(), saved.get(section.getKey()), validator); }
+          catch (RuntimeException invalid) { matches = false; break; } // Old incompatible entries are not backups of validated data.
+          cached.sections.put(section.getKey(), digest);
+        }
+        if (!digest.equals(section.getValue())) { matches = false; break; }
+      }
+      if (matches) { out.addProperty("backed_up", true); out.add("id", e.get("id")); out.add("name", e.get("name")); break; }
+    }
+    return out;
+  }
+
   private static String searchableId(JsonObject e) {
     return switch (kind(e)) {
       case "block" -> object(e, "summary").get("block").getAsString();
@@ -839,6 +872,7 @@ public final class VaultStore implements AutoCloseable {
           lockUnavailable ? "STORAGE_LOCKED" : "STORAGE_READ_ONLY", "保险库只读：其他实例占用、目录权限不足或文件版本较新");
     switch (op) {
       case "save" -> out = save(request, validator);
+      case "has_backup" -> out = hasBackup(request, validator);
       case "preview" -> out = VaultTemplates.preview(require(text(request, "id", "", 36)), request);
       case "list" -> {
         String filter = text(request, "kind", "item", 16);

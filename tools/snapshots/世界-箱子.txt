@@ -46,13 +46,16 @@ div
         span "从保险库套用…"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabs
-      div.ed-tab.on [title="容器"]
-        img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
-        span "容器"
-      div.ed-tab [title="数据"]
-        img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
-        span "数据"
+    div.ed-tabwrap
+      div.ed-tarr [title="向左滚动"] "‹"
+      div.ed-tabs
+        div.ed-tab.on [title="容器"]
+          img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+          span "容器"
+        div.ed-tab [title="数据"]
+          img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
+          span "数据"
+      div.ed-tarr [title="向右滚动"] "›"
     div.ed-tools [style="display:none"]
       span.ed-tools-t "容器"
       div.grow
@@ -169,13 +172,16 @@ div
         span "从保险库套用…"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabs
-      div.ed-tab [title="容器"]
-        img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
-        span "容器"
-      div.ed-tab.on [title="数据"]
-        img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
-        span "数据"
+    div.ed-tabwrap
+      div.ed-tarr [title="向左滚动"] "‹"
+      div.ed-tabs
+        div.ed-tab [title="容器"]
+          img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+          span "容器"
+        div.ed-tab.on [title="数据"]
+          img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
+          span "数据"
+      div.ed-tarr [title="向右滚动"] "›"
     div.ed-tools [style="display:none"]
       span.ed-tools-t "数据"
       div.grow

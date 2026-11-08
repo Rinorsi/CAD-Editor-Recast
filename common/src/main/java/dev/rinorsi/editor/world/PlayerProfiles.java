@@ -88,8 +88,13 @@ public final class PlayerProfiles {
         var problems=new ProblemReporter.Collector();var input=TagValueInput.create(problems,server.registryAccess(),data.copy());
         var dimension=input.read("Dimension",ResourceKey.codec(Registries.DIMENSION)).orElse(Level.OVERWORLD);
         var level=server.getLevel(dimension);if(level==null)PlayerExtendedEditor.fail("unknown_dimension","玩家存档维度不在当前服务器中："+dimension.identifier());
-        UUID temporary;var list=server.getPlayerList();do{temporary=UUID.randomUUID();}while(list.stats.containsKey(temporary)||list.advancements.containsKey(temporary)||list.getPlayer(temporary)!=null);
+        UUID temporary;Path unused;var list=server.getPlayerList();
+        do{temporary=UUID.randomUUID();unused=server.getWorldPath(LevelResource.PLAYER_DATA_DIR).resolve(".cadeditor-read-"+temporary);}while(list.stats.containsKey(temporary)||list.advancements.containsKey(temporary)||list.getPlayer(temporary)!=null||Files.exists(unused,LinkOption.NOFOLLOW_LINKS));
         try {
+            // Bypass locateStatsFile's legacy-name migration and automatic advancement rewards.
+            // These native read-only instances have an absent path and an independent empty manager.
+            list.stats.put(temporary,new net.minecraft.stats.ServerStatsCounter(server,unused));
+            list.advancements.put(temporary,new net.minecraft.server.PlayerAdvancements(server.getFixerUpper(),list,new net.minecraft.server.ServerAdvancementManager(server.registryAccess()),unused,null));
             var player=new ServerPlayer(server,level,new GameProfile(temporary,"ArchiveReader"),ClientInformation.createDefault());
             player.load(input);
             if(!problems.isEmpty())PlayerExtendedEditor.fail("invalid_nbt","原版玩家加载校验失败："+problems.getReport());
@@ -98,7 +103,7 @@ public final class PlayerProfiles {
         finally {
             list.stats.remove(temporary);var advancements=list.advancements.remove(temporary);
             if(advancements!=null) {
-                //? if >=26.3 {
+                //? if >=26.2 {
                 advancements.clearTriggers();
                 //?} else {
                 /*advancements.stopListening();

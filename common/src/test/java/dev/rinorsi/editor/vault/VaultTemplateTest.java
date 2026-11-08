@@ -60,6 +60,7 @@ public final class VaultTemplateTest {
             var stats=store.execute(request("stats"),validator);check(stats.get("blocks").getAsInt()==3&&stats.get("playerPresets").getAsInt()==1&&stats.get("items").getAsInt()==0,"category stats exact");
             var list=request("list");list.addProperty("kind","all");list.addProperty("sort","item");check(store.execute(list,validator).get("total").getAsInt()==4,"mixed list/search/sort");
         }
+        backupChecks(dir,playerWorld,playerTemplate,validator);
         try(var store=new VaultStore(dir.resolve("warm.json"),1,"test",null,System::currentTimeMillis)) {
             for(int i=0;i<12;i++){var save=request("save");save.addProperty("kind","block");save.add("world",world);store.execute(save,validator);}
             store.invalidateRows();check(!store.warm(validator,8),"first tick respects prewarm budget");check(store.warm(validator,8),"next tick completes template prewarm");
@@ -70,4 +71,32 @@ public final class VaultTemplateTest {
         try(var store=new VaultStore(oldFile,1,"test",null,System::currentTimeMillis)){check(ItemStack.matches(typed,StackCodec.decode(store.stack(legacy.get("id").getAsString()),access)),"v1 no-kind item remains exact");}
         System.out.println("VaultTemplateTest: "+checks+" checks passed; fixtures="+dir);
     }
+    private static void backupChecks(Path dir,JsonObject world,JsonObject template,VaultStore.Validator validator)throws Exception {
+        var evidence=new JsonArray();int[] validations={0};VaultStore.Validator counted=s->{validations[0]++;return validator.validate(s);};
+        try(var store=new VaultStore(dir.resolve("backups.json"),1,"test",null,System::currentTimeMillis)) {
+            var r=request("has_backup");r.addProperty("kind","player_preset");r.add("world",world);
+            check(!backup(store,r,counted,evidence).get("backed_up").getAsBoolean(),"empty vault backup misses");
+            var save=request("save");save.addProperty("kind","player_preset");save.add("template",template);var saved=store.execute(save,validator);String id=saved.getAsJsonObject("entry").get("id").getAsString();long revision=saved.get("revision").getAsLong();
+            var hit=backup(store,r,counted,evidence);check(hit.get("backed_up").getAsBoolean()&&hit.get("id").getAsString().equals(id)&&hit.has("name"),"world capture backup hit with id and name");
+            check(hit.get("revision").getAsLong()==revision,"has_backup does not change revision");
+            int before=validations[0];backup(store,r,counted,evidence);int cachedCost=validations[0]-before;
+            int inputStacks=0;for(var raw:template.getAsJsonObject("sections").entrySet())if(raw.getValue().isJsonObject()&&raw.getValue().getAsJsonObject().has("slots"))for(var row:raw.getValue().getAsJsonObject().getAsJsonArray("slots"))if(!row.getAsJsonObject().getAsJsonObject("stack").has("empty"))inputStacks++;
+            check(cachedCost==inputStacks,"repeat backup normalizes input once and reuses saved hashes");
+            r.remove("world");r.add("template",template.deepCopy());r.add("sections",JsonParser.parseString("['inventory']"));check(backup(store,r,counted,evidence).get("backed_up").getAsBoolean(),"subset inventory matches a superset entry");
+            var altered=template.deepCopy();altered.getAsJsonObject("sections").addProperty("game_mode","creative");r.add("template",altered);check(backup(store,r,counted,evidence).get("backed_up").getAsBoolean(),"unselected changed section does not affect match");
+            r.remove("sections");check(!backup(store,r,counted,evidence).get("backed_up").getAsBoolean(),"selected changed section misses");
+            r.add("template",template.deepCopy());r.add("sections",JsonParser.parseString("['inventory']"));var slots=r.getAsJsonObject("template").getAsJsonObject("sections").getAsJsonObject("inventory").getAsJsonArray("slots");var reversed=new JsonArray();for(int i=slots.size()-1;i>=0;i--)reversed.add(slots.get(i));r.getAsJsonObject("template").getAsJsonObject("sections").getAsJsonObject("inventory").add("slots",reversed);
+            check(backup(store,r,counted,evidence).get("backed_up").getAsBoolean(),"slot array order is normalized");
+            var full=template.deepCopy();var row=full.getAsJsonObject("sections").getAsJsonObject("inventory").getAsJsonArray("slots").get(0).getAsJsonObject();row.getAsJsonObject("stack").addProperty("count",2);r.add("template",full);reject("INVALID_STACK",()->store.execute(r,counted));row.getAsJsonObject("stack").addProperty("id","minecraft:stone");check(!backup(store,r,counted,evidence).get("backed_up").getAsBoolean(),"changed valid item misses");
+            full=template.deepCopy();row=full.getAsJsonObject("sections").getAsJsonObject("inventory").getAsJsonArray("slots").get(0).getAsJsonObject();var sidecar=row.getAsJsonObject("stack").getAsJsonObject("component_snbt");String custom=sidecar.get("custom_data").getAsString();sidecar.addProperty("custom_data",custom.replace("9007199254740993L","9007199254740992L"));r.add("template",full);check(!backup(store,r,counted,evidence).get("backed_up").getAsBoolean(),"exact typed long change misses despite same browser numeric projection");
+            r.add("template",template);r.add("sections",JsonParser.parseString("['effects','effects']"));reject("BAD_REQUEST",()->store.execute(r,counted));r.add("sections",JsonParser.parseString("[]"));reject("BAD_REQUEST",()->store.execute(r,counted));
+            r.add("sections",JsonParser.parseString("['inventory']"));r.addProperty("kind","block");reject("wrong_kind",()->store.execute(r,counted));r.addProperty("kind","player_preset");
+            VaultStore.Validator unavailable=s->{throw new VaultStore.Failure("UNAVAILABLE","没有世界");};reject("UNAVAILABLE",()->store.execute(r,unavailable));
+            var delete=request("delete");delete.add("ids",JsonParser.parseString("['"+id+"']"));store.execute(delete,validator);check(!backup(store,r,counted,evidence).get("backed_up").getAsBoolean(),"deleted entry cannot hit a stale hash cache");
+            save.add("template",JsonParser.parseString("{sections:{effects:[]}}"));store.execute(save,validator);r.add("template",template);r.add("sections",JsonParser.parseString("['effects']"));check(backup(store,r,counted,evidence).get("backed_up").getAsBoolean(),"partial saved entry matches its selected section");r.remove("sections");check(!backup(store,r,counted,evidence).get("backed_up").getAsBoolean(),"partial saved entry cannot cover missing sections");
+        }
+        Files.writeString(dir.resolve("backup-evidence.json"),evidence.toString());
+        System.out.println("Backup evidence: "+dir.resolve("backup-evidence.json"));
+    }
+    private static JsonObject backup(VaultStore store,JsonObject request,VaultStore.Validator validator,JsonArray evidence){var response=store.execute(request,validator);var row=new JsonObject();row.add("request",request.deepCopy());row.add("response",response.deepCopy());evidence.add(row);return response;}
 }

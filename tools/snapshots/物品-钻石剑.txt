@@ -63,24 +63,27 @@ div
           div.tl [style="color:#00AA00"] "1.6 攻击速度"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.dense.ed-tabs
-      div.ed-tab.m-ripple.on [title="外观（Ctrl+1）"]
-        img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
-        span "外观"
-        b "1"
-      div.ed-tab.m-ripple [title="战斗（Ctrl+2）"]
-        img.o-ico [src="oriel:textures/icons/sword.png" style="height:16px;width:16px"]
-        span "战斗"
-      div.ed-tab.m-ripple [title="耐久（Ctrl+3）"]
-        img.o-ico [src="oriel:textures/icons/shield.png" style="height:16px;width:16px"]
-        span "耐久"
-      div.ed-tab.m-ripple [title="附魔（Ctrl+4）"]
-        img.o-ico [src="oriel:textures/icons/enchant.png" style="height:16px;width:16px"]
-        span "附魔"
-      div.ed-tab.m-ripple.more [title="更多分页：功能、攻击与防御、放置与数据……"]
-        img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
-        span "更多"
-        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+    div.ed-tabwrap
+      div.ed-tarr [title="向左滚动"] "‹"
+      div.dense.ed-tabs
+        div.ed-tab.m-ripple.on [title="外观（Ctrl+1）"]
+          img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
+          span "外观"
+          b "1"
+        div.ed-tab.m-ripple [title="战斗（Ctrl+2）"]
+          img.o-ico [src="oriel:textures/icons/sword.png" style="height:16px;width:16px"]
+          span "战斗"
+        div.ed-tab.m-ripple [title="耐久（Ctrl+3）"]
+          img.o-ico [src="oriel:textures/icons/shield.png" style="height:16px;width:16px"]
+          span "耐久"
+        div.ed-tab.m-ripple [title="附魔（Ctrl+4）"]
+          img.o-ico [src="oriel:textures/icons/enchant.png" style="height:16px;width:16px"]
+          span "附魔"
+        div.ed-tab.m-ripple.more [title="更多分页：功能、攻击与防御、放置与数据……"]
+          img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
+          span "更多"
+          img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      div.ed-tarr [title="向右滚动"] "›"
     div.ed-tools
       span.ed-tools-t "外观"
       div.grow
@@ -344,24 +347,27 @@ div
           div.tl [style="color:#00AA00"] "1.6 攻击速度"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.dense.ed-tabs
-      div.ed-tab.m-ripple [title="外观（Ctrl+1）"]
-        img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
-        span "外观"
-        b "1"
-      div.ed-tab.m-ripple.on [title="战斗（Ctrl+2）"]
-        img.o-ico [src="oriel:textures/icons/sword.png" style="height:16px;width:16px"]
-        span "战斗"
-      div.ed-tab.m-ripple [title="耐久（Ctrl+3）"]
-        img.o-ico [src="oriel:textures/icons/shield.png" style="height:16px;width:16px"]
-        span "耐久"
-      div.ed-tab.m-ripple [title="附魔（Ctrl+4）"]
-        img.o-ico [src="oriel:textures/icons/enchant.png" style="height:16px;width:16px"]
-        span "附魔"
-      div.ed-tab.m-ripple.more [title="更多分页：功能、攻击与防御、放置与数据……"]
-        img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
-        span "更多"
-        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+    div.ed-tabwrap
+      div.ed-tarr [title="向左滚动"] "‹"
+      div.dense.ed-tabs
+        div.ed-tab.m-ripple [title="外观（Ctrl+1）"]
+          img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
+          span "外观"
+          b "1"
+        div.ed-tab.m-ripple.on [title="战斗（Ctrl+2）"]
+          img.o-ico [src="oriel:textures/icons/sword.png" style="height:16px;width:16px"]
+          span "战斗"
+        div.ed-tab.m-ripple [title="耐久（Ctrl+3）"]
+          img.o-ico [src="oriel:textures/icons/shield.png" style="height:16px;width:16px"]
+          span "耐久"
+        div.ed-tab.m-ripple [title="附魔（Ctrl+4）"]
+          img.o-ico [src="oriel:textures/icons/enchant.png" style="height:16px;width:16px"]
+          span "附魔"
+        div.ed-tab.m-ripple.more [title="更多分页：功能、攻击与防御、放置与数据……"]
+          img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
+          span "更多"
+          img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      div.ed-tarr [title="向右滚动"] "›"
     div.ed-tools
       span.ed-tools-t "战斗"
       div.grow
@@ -762,24 +768,27 @@ div
           div.tl [style="color:#00AA00"] "1.6 攻击速度"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.dense.ed-tabs
-      div.ed-tab.m-ripple [title="外观（Ctrl+1）"]
-        img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
-        span "外观"
-        b "1"
-      div.ed-tab.m-ripple [title="战斗（Ctrl+2）"]
-        img.o-ico [src="oriel:textures/icons/sword.png" style="height:16px;width:16px"]
-        span "战斗"
-      div.ed-tab.m-ripple.on [title="耐久（Ctrl+3）"]
-        img.o-ico [src="oriel:textures/icons/shield.png" style="height:16px;width:16px"]
-        span "耐久"
-      div.ed-tab.m-ripple [title="附魔（Ctrl+4）"]
-        img.o-ico [src="oriel:textures/icons/enchant.png" style="height:16px;width:16px"]
-        span "附魔"
-      div.ed-tab.m-ripple.more [title="更多分页：功能、攻击与防御、放置与数据……"]
-        img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
-        span "更多"
-        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+    div.ed-tabwrap
+      div.ed-tarr [title="向左滚动"] "‹"
+      div.dense.ed-tabs
+        div.ed-tab.m-ripple [title="外观（Ctrl+1）"]
+          img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
+          span "外观"
+          b "1"
+        div.ed-tab.m-ripple [title="战斗（Ctrl+2）"]
+          img.o-ico [src="oriel:textures/icons/sword.png" style="height:16px;width:16px"]
+          span "战斗"
+        div.ed-tab.m-ripple.on [title="耐久（Ctrl+3）"]
+          img.o-ico [src="oriel:textures/icons/shield.png" style="height:16px;width:16px"]
+          span "耐久"
+        div.ed-tab.m-ripple [title="附魔（Ctrl+4）"]
+          img.o-ico [src="oriel:textures/icons/enchant.png" style="height:16px;width:16px"]
+          span "附魔"
+        div.ed-tab.m-ripple.more [title="更多分页：功能、攻击与防御、放置与数据……"]
+          img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
+          span "更多"
+          img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      div.ed-tarr [title="向右滚动"] "›"
     div.ed-tools
       span.ed-tools-t "耐久"
       div.grow
@@ -1084,24 +1093,27 @@ div
           div.tl [style="color:#00AA00"] "1.6 攻击速度"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.dense.ed-tabs
-      div.ed-tab.m-ripple [title="外观（Ctrl+1）"]
-        img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
-        span "外观"
-        b "1"
-      div.ed-tab.m-ripple [title="战斗（Ctrl+2）"]
-        img.o-ico [src="oriel:textures/icons/sword.png" style="height:16px;width:16px"]
-        span "战斗"
-      div.ed-tab.m-ripple [title="耐久（Ctrl+3）"]
-        img.o-ico [src="oriel:textures/icons/shield.png" style="height:16px;width:16px"]
-        span "耐久"
-      div.ed-tab.m-ripple.on [title="附魔（Ctrl+4）"]
-        img.o-ico [src="oriel:textures/icons/enchant.png" style="height:16px;width:16px"]
-        span "附魔"
-      div.ed-tab.m-ripple.more [title="更多分页：功能、攻击与防御、放置与数据……"]
-        img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
-        span "更多"
-        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+    div.ed-tabwrap
+      div.ed-tarr [title="向左滚动"] "‹"
+      div.dense.ed-tabs
+        div.ed-tab.m-ripple [title="外观（Ctrl+1）"]
+          img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
+          span "外观"
+          b "1"
+        div.ed-tab.m-ripple [title="战斗（Ctrl+2）"]
+          img.o-ico [src="oriel:textures/icons/sword.png" style="height:16px;width:16px"]
+          span "战斗"
+        div.ed-tab.m-ripple [title="耐久（Ctrl+3）"]
+          img.o-ico [src="oriel:textures/icons/shield.png" style="height:16px;width:16px"]
+          span "耐久"
+        div.ed-tab.m-ripple.on [title="附魔（Ctrl+4）"]
+          img.o-ico [src="oriel:textures/icons/enchant.png" style="height:16px;width:16px"]
+          span "附魔"
+        div.ed-tab.m-ripple.more [title="更多分页：功能、攻击与防御、放置与数据……"]
+          img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
+          span "更多"
+          img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      div.ed-tarr [title="向右滚动"] "›"
     div.ed-tools
       span.ed-tools-t "附魔"
       div.grow

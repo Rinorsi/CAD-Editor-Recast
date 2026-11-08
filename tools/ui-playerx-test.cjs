@@ -175,3 +175,13 @@ console.log('PASS player extension: position / respawn / recipes / advancements 
   c.Tr.accept({ map: { 'a.b': '甲' } }); c.Tr.accept({ entries: [{ id: 'c.d', name: '乙' }] });
   assert.equal(c.Tr.get('a.b'), '甲'); assert.equal(c.Tr.get('c.d'), '乙');
 }
+// ---- 分页栏放不下：两头的 ‹ › 按钮横向滚动，当前页滚进可视范围
+{
+  const bar = c.h('div', { class: 'ed-tabs' }, [c.h('div', { class: 'ed-tab' }), c.h('div', { class: 'ed-tab on' })]);
+  const wrap = c.edTabsScroll(bar), [L, R] = bar._arrows;
+  Object.assign(bar, { scrollWidth: 500, clientWidth: 200, scrollLeft: 0 }); c.edTabsFit(bar);
+  assert.equal(L.style.display, 'none', '在最左边不显示 ‹'); assert.notEqual(R.style.display, 'none', '右边还有就显示 ›');
+  R.fire('click'); assert.equal(bar.scrollLeft, 140, '点 › 向右滚'); assert.notEqual(L.style.display, 'none');
+  bar.scrollLeft = 300; c.edTabsFit(bar); assert.equal(R.style.display, 'none', '滚到头不显示 ›');
+  Object.assign(bar, { scrollWidth: 200, clientWidth: 200, scrollLeft: 0 }); c.edTabsFit(bar); assert.equal(L.style.display, 'none'); assert.equal(R.style.display, 'none', '放得下就一个箭头都不显示');
+}

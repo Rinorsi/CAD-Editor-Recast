@@ -252,8 +252,8 @@ public final class VaultChannel {
       remember(s, pageId, result);
     } else {
       if (r.has("uploadToken")) {
-        if (!Set.of("save", "import", "preview").contains(op))
-          throw new VaultStore.Failure("BAD_REQUEST", "上传仅支持 save/import/preview");
+        if (!Set.of("save", "import", "preview", "has_backup").contains(op))
+          throw new VaultStore.Failure("BAD_REQUEST", "上传仅支持 save/import/preview/has_backup");
         String token = VaultStore.text(r, "uploadToken", "", 36);
         if (!token.equals(s.uploadToken)
             || s.upload == null
@@ -261,8 +261,8 @@ public final class VaultChannel {
           throw new VaultStore.Failure("UPLOAD_EXPIRED", "上传已过期");
         JsonObject payload = VaultStore.parse(s.upload.toString());
         r = r.deepCopy();
-        if (op.equals("preview") || (op.equals("save") && VaultTemplates.supported(VaultStore.text(r, "kind", "item", 16)))) {
-          for (String key : List.of("world", "template", "sections")) if (payload.has(key)) r.add(key, payload.get(key));
+        if (op.equals("has_backup") || op.equals("preview") || (op.equals("save") && VaultTemplates.supported(VaultStore.text(r, "kind", "item", 16)))) {
+          for (String key : List.of("world", "template", "sections")) if (payload.has(key) && !(op.equals("has_backup") && key.equals("sections") && r.has(key))) r.add(key, payload.get(key));
         } else if (op.equals("save")) {
           if (VaultStore.text(r, "kind", "item", 16).equals("entity"))
             r.addProperty("snbt", VaultStore.text(payload, "snbt", "", VaultStore.MAX_FILE_BYTES));
