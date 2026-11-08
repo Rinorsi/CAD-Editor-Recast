@@ -36,7 +36,7 @@ function weViewsMsg(msg) {
 
 var WEV_INFO = { sign: ['告示牌', 'edit'], banner: ['旗帜图案', 'banner'], beehive: ['蜜蜂', 'flower'], lectern: ['讲台', 'book_open'], jukebox: ['唱片机', 'music'],
   decorated_pot: ['纹饰陶罐', 'gem'], chiseled_bookshelf: ['雕纹书架', 'book'], command_block: ['命令', 'terminal'], skull: ['头颅', 'skull'], furnace: ['熔炉进度', 'furnace'],
-  brewing_stand: ['酿造进度', 'flask'], campfire: ['营火', 'campfire'] };
+  brewing_stand: ['酿造进度', 'flask'], campfire: ['营火', 'campfire'], nameable: ['名称', 'tag'], hopper: ['漏斗', 'sliders'], beacon: ['信标', 'sparkle'], crafter: ['合成器', 'grid'] };
 function weViewTabInfo() { var g = weViewGroups(), n = g.length === 1 && WEV_INFO[g[0]] ? WEV_INFO[g[0]] : null; return { label: n ? n[0] : '方块设置', icon: n ? n[1] : 'sliders' }; }
 
 /* ---------- 小零件 ---------- */
@@ -197,6 +197,58 @@ WEV.campfire = function (body, g) {
     var y = kNumber(b[i] || 0, { min: 0, noSlider: true, step: 20, unit: '刻', onChange: function (v) { b[i] = v; weSetV(g, 'CookingTotalTimes', b.slice()); } });
     body.appendChild(xRow({ icon: false, title: '烤位 ' + (i + 1), sub: '已烤 / 一共要烤', right: h('div', { class: 'k-row' }, [x.el, y.el]) }));
   })(i);
+};
+
+/* ---------- 自定义名称（所有能改名的方块：箱子、熔炉、漏斗、附魔台……）---------- */
+WEV.nameable = function (body, g) {
+  body.appendChild(xSec('tag', '名称', '留空 = 用方块原来的名字'));
+  var cur = weVal(g, 'CustomName');
+  var r = kRich(cur === undefined || cur === null ? '' : cur, { placeholder: '输入新名称；留空 = 恢复默认名称',
+    onChange: function (v, empty) { weSetV(g, 'CustomName', empty ? null : v); } });
+  body.appendChild(r.el);
+};
+
+/* ---------- 漏斗：搬运冷却 ---------- */
+WEV.hopper = function (body, g) {
+  body.appendChild(xSec('sliders', '搬运', '单位：游戏刻（20 刻 = 1 秒）'));
+  body.appendChild(xNum({ title: '搬运冷却', sub: '还要等多久才搬下一个；0 = 马上', value: weVal(g, 'TransferCooldown'), def: 0, step: 1, unit: '刻', onChange: function (x) { weSetV(g, 'TransferCooldown', x); } }));
+  body.appendChild(kHint('游戏运行时会自己倒数；你没改这一项，保存时以当时的实际值为准。'));
+};
+
+/* ---------- 信标：主 / 副效果（候选来自游戏），等级只读 ---------- */
+WEV.beacon = function (body, g) {
+  body.appendChild(xSec('sparkle', '效果', '选了就写进信标；清除 = 不给这个效果'));
+  [['primary_effect', '主效果', '第一档就能给的效果'], ['secondary_effect', '副效果', '四级金字塔才有；可以和主效果相同']].forEach(function (d) {
+    var key = d[0], cands = (weViewField(g, key).candidates || []).slice(), cur = weVal(g, key) || '';
+    if (cur && cands.indexOf(cur) < 0) cands.push(cur);
+    var entries = cands.map(function (id) { return { v: id, label: Reg.nameOf('mob_effects', id) || (EFIDX[shortId(id)] || {}).name || humanId(shortId(id)), sub: id, icon: function () { return effectIcon(id, 16); } }; });
+    var sel = kSelect(entries, cur || null, function (v) { weSetV(g, key, v); weRender(); }, { width: 240, empty: '（无）', placeholder: '搜索效果' });
+    var right = [sel.el];
+    if (cur) right.push(kBtn('清除', function () { weSetV(g, key, null); weRender(); }, { icon: 'trash' }));
+    body.appendChild(xRow({ icon: false, title: d[1], sub: d[2], right: h('div', { class: 'k-row' }, right) }));
+  });
+  var lv = weViewOrig(g).Levels;
+  body.appendChild(xRow({ icon: false, title: '金字塔等级', sub: '由下面的金字塔算出来，不能直接改', right: h('span', { class: 'k-sub', text: String(lv === undefined ? 0 : lv) }) }));
+};
+
+/* ---------- 合成器：禁用格子 + 触发状态 ---------- */
+WEV.crafter = function (body, g) {
+  var f = weViewField(g, 'disabled_slots'), max = f.item_max === undefined ? 8 : f.item_max, min = f.item_min === undefined ? 0 : f.item_min;
+  var cur = clone(weVal(g, 'disabled_slots') || []);
+  function filled(i) { var s = (WE.w.container && WE.w.container.slots || []).filter(function (x) { return x.slot === i; })[0]; return !!s && !s.stack.empty; }
+  body.appendChild(xSec('grid', '禁用的格子', '点一下禁用 / 恢复；只有空格子能禁用'));
+  var grid = h('div', { class: 'k-cgrid tray', style: 'grid-template-columns:repeat(3,34px)' });
+  for (var i = min; i <= max; i++) (function (i) {
+    var off = cur.indexOf(i) >= 0, cell = h('div', { class: 'slot s34' + (off ? ' sel' : ''), title: '格子 ' + (i + 1) + (off ? '：已禁用' : filled(i) ? '：里面有东西，不能禁用' : '') }, off ? [uiIcon('close', 14)] : []);
+    activate(cell, function () {
+      if (cur.indexOf(i) < 0 && filled(i)) { toast('这一格里有东西，先在「容器」页清空才能禁用。', 'warn'); return; }
+      var next = cur.indexOf(i) >= 0 ? cur.filter(function (x) { return x !== i; }) : cur.concat([i]);
+      next.sort(function (a, b) { return a - b; }); weSetV(g, 'disabled_slots', next); weRender();
+    });
+    grid.appendChild(cell);
+  })(i);
+  body.appendChild(grid);
+  body.appendChild(wvToggle(g, 'triggered', '已触发', '合成器记着的触发状态；游戏的红石更新之后可能自己改回去'));
 };
 
 function weViewTab(body) {
