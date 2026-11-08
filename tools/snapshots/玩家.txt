@@ -64,40 +64,37 @@ div
         b "生存"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabwrap
-      div.ed-tarr [title="向左滚动"] "‹"
-      div.dense.ed-tabs
-        div.ed-tab.on [title="背包"]
-          img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
-          span "背包"
-        div.ed-tab [title="末影箱"]
-          img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
-          span "末影箱"
-        div.ed-tab [title="状态"]
-          img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
-          span "状态"
-        div.ed-tab [title="能力"]
-          img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
-          span "能力"
-        div.ed-tab [title="属性与效果"]
-          img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
-          span "属性与效果"
-        div.ed-tab [title="位置与重生"]
-          img.o-ico [src="oriel:textures/icons/compass.png" style="height:16px;width:16px"]
-          span "位置与重生"
-        div.ed-tab [title="配方"]
-          img.o-ico [src="oriel:textures/icons/book.png" style="height:16px;width:16px"]
-          span "配方"
-        div.ed-tab [title="成就"]
-          img.o-ico [src="oriel:textures/icons/trophy.png" style="height:16px;width:16px"]
-          span "成就"
-        div.ed-tab [title="统计"]
-          img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
-          span "统计"
-        div.ed-tab [title="存档玩家"]
-          img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
-          span "存档玩家"
-      div.ed-tarr [title="向右滚动"] "›"
+    div.dense.ed-tabs
+      div.ed-tab.on [title="背包"]
+        img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
+        span "背包"
+      div.ed-tab [title="末影箱"]
+        img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+        span "末影箱"
+      div.ed-tab [title="状态"]
+        img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
+        span "状态"
+      div.ed-tab [title="能力"]
+        img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
+        span "能力"
+      div.ed-tab [title="属性与效果"]
+        img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+        span "属性与效果"
+      div.ed-tab [title="位置与重生"]
+        img.o-ico [src="oriel:textures/icons/compass.png" style="height:16px;width:16px"]
+        span "位置与重生"
+      div.ed-tab [title="配方"]
+        img.o-ico [src="oriel:textures/icons/book.png" style="height:16px;width:16px"]
+        span "配方"
+      div.ed-tab [title="成就"]
+        img.o-ico [src="oriel:textures/icons/trophy.png" style="height:16px;width:16px"]
+        span "成就"
+      div.ed-tab [title="统计"]
+        img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
+        span "统计"
+      div.ed-tab [title="存档玩家"]
+        img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
+        span "存档玩家"
     div.ed-tools
       span.ed-tools-t "背包"
       div.grow
@@ -299,40 +296,37 @@ div
         b "生存"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabwrap
-      div.ed-tarr [title="向左滚动"] "‹"
-      div.dense.ed-tabs
-        div.ed-tab [title="背包"]
-          img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
-          span "背包"
-        div.ed-tab.on [title="末影箱"]
-          img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
-          span "末影箱"
-        div.ed-tab [title="状态"]
-          img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
-          span "状态"
-        div.ed-tab [title="能力"]
-          img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
-          span "能力"
-        div.ed-tab [title="属性与效果"]
-          img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
-          span "属性与效果"
-        div.ed-tab [title="位置与重生"]
-          img.o-ico [src="oriel:textures/icons/compass.png" style="height:16px;width:16px"]
-          span "位置与重生"
-        div.ed-tab [title="配方"]
-          img.o-ico [src="oriel:textures/icons/book.png" style="height:16px;width:16px"]
-          span "配方"
-        div.ed-tab [title="成就"]
-          img.o-ico [src="oriel:textures/icons/trophy.png" style="height:16px;width:16px"]
-          span "成就"
-        div.ed-tab [title="统计"]
-          img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
-          span "统计"
-        div.ed-tab [title="存档玩家"]
-          img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
-          span "存档玩家"
-      div.ed-tarr [title="向右滚动"] "›"
+    div.dense.ed-tabs
+      div.ed-tab [title="背包"]
+        img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
+        span "背包"
+      div.ed-tab.on [title="末影箱"]
+        img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+        span "末影箱"
+      div.ed-tab [title="状态"]
+        img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
+        span "状态"
+      div.ed-tab [title="能力"]
+        img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
+        span "能力"
+      div.ed-tab [title="属性与效果"]
+        img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+        span "属性与效果"
+      div.ed-tab [title="位置与重生"]
+        img.o-ico [src="oriel:textures/icons/compass.png" style="height:16px;width:16px"]
+        span "位置与重生"
+      div.ed-tab [title="配方"]
+        img.o-ico [src="oriel:textures/icons/book.png" style="height:16px;width:16px"]
+        span "配方"
+      div.ed-tab [title="成就"]
+        img.o-ico [src="oriel:textures/icons/trophy.png" style="height:16px;width:16px"]
+        span "成就"
+      div.ed-tab [title="统计"]
+        img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
+        span "统计"
+      div.ed-tab [title="存档玩家"]
+        img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
+        span "存档玩家"
     div.ed-tools [style="display:none"]
       span.ed-tools-t "末影箱"
       div.grow
@@ -462,40 +456,37 @@ div
         b "生存"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabwrap
-      div.ed-tarr [title="向左滚动"] "‹"
-      div.dense.ed-tabs
-        div.ed-tab [title="背包"]
-          img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
-          span "背包"
-        div.ed-tab [title="末影箱"]
-          img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
-          span "末影箱"
-        div.ed-tab.on [title="状态"]
-          img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
-          span "状态"
-        div.ed-tab [title="能力"]
-          img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
-          span "能力"
-        div.ed-tab [title="属性与效果"]
-          img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
-          span "属性与效果"
-        div.ed-tab [title="位置与重生"]
-          img.o-ico [src="oriel:textures/icons/compass.png" style="height:16px;width:16px"]
-          span "位置与重生"
-        div.ed-tab [title="配方"]
-          img.o-ico [src="oriel:textures/icons/book.png" style="height:16px;width:16px"]
-          span "配方"
-        div.ed-tab [title="成就"]
-          img.o-ico [src="oriel:textures/icons/trophy.png" style="height:16px;width:16px"]
-          span "成就"
-        div.ed-tab [title="统计"]
-          img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
-          span "统计"
-        div.ed-tab [title="存档玩家"]
-          img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
-          span "存档玩家"
-      div.ed-tarr [title="向右滚动"] "›"
+    div.dense.ed-tabs
+      div.ed-tab [title="背包"]
+        img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
+        span "背包"
+      div.ed-tab [title="末影箱"]
+        img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+        span "末影箱"
+      div.ed-tab.on [title="状态"]
+        img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
+        span "状态"
+      div.ed-tab [title="能力"]
+        img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
+        span "能力"
+      div.ed-tab [title="属性与效果"]
+        img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+        span "属性与效果"
+      div.ed-tab [title="位置与重生"]
+        img.o-ico [src="oriel:textures/icons/compass.png" style="height:16px;width:16px"]
+        span "位置与重生"
+      div.ed-tab [title="配方"]
+        img.o-ico [src="oriel:textures/icons/book.png" style="height:16px;width:16px"]
+        span "配方"
+      div.ed-tab [title="成就"]
+        img.o-ico [src="oriel:textures/icons/trophy.png" style="height:16px;width:16px"]
+        span "成就"
+      div.ed-tab [title="统计"]
+        img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
+        span "统计"
+      div.ed-tab [title="存档玩家"]
+        img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
+        span "存档玩家"
     div.ed-tools
       span.ed-tools-t "状态"
       div.grow
@@ -763,40 +754,37 @@ div
         b "生存"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabwrap
-      div.ed-tarr [title="向左滚动"] "‹"
-      div.dense.ed-tabs
-        div.ed-tab [title="背包"]
-          img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
-          span "背包"
-        div.ed-tab [title="末影箱"]
-          img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
-          span "末影箱"
-        div.ed-tab [title="状态"]
-          img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
-          span "状态"
-        div.ed-tab.on [title="能力"]
-          img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
-          span "能力"
-        div.ed-tab [title="属性与效果"]
-          img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
-          span "属性与效果"
-        div.ed-tab [title="位置与重生"]
-          img.o-ico [src="oriel:textures/icons/compass.png" style="height:16px;width:16px"]
-          span "位置与重生"
-        div.ed-tab [title="配方"]
-          img.o-ico [src="oriel:textures/icons/book.png" style="height:16px;width:16px"]
-          span "配方"
-        div.ed-tab [title="成就"]
-          img.o-ico [src="oriel:textures/icons/trophy.png" style="height:16px;width:16px"]
-          span "成就"
-        div.ed-tab [title="统计"]
-          img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
-          span "统计"
-        div.ed-tab [title="存档玩家"]
-          img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
-          span "存档玩家"
-      div.ed-tarr [title="向右滚动"] "›"
+    div.dense.ed-tabs
+      div.ed-tab [title="背包"]
+        img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
+        span "背包"
+      div.ed-tab [title="末影箱"]
+        img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+        span "末影箱"
+      div.ed-tab [title="状态"]
+        img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
+        span "状态"
+      div.ed-tab.on [title="能力"]
+        img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
+        span "能力"
+      div.ed-tab [title="属性与效果"]
+        img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+        span "属性与效果"
+      div.ed-tab [title="位置与重生"]
+        img.o-ico [src="oriel:textures/icons/compass.png" style="height:16px;width:16px"]
+        span "位置与重生"
+      div.ed-tab [title="配方"]
+        img.o-ico [src="oriel:textures/icons/book.png" style="height:16px;width:16px"]
+        span "配方"
+      div.ed-tab [title="成就"]
+        img.o-ico [src="oriel:textures/icons/trophy.png" style="height:16px;width:16px"]
+        span "成就"
+      div.ed-tab [title="统计"]
+        img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
+        span "统计"
+      div.ed-tab [title="存档玩家"]
+        img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
+        span "存档玩家"
     div.ed-tools [style="display:none"]
       span.ed-tools-t "能力"
       div.grow
@@ -956,40 +944,37 @@ div
         b "生存"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabwrap
-      div.ed-tarr [title="向左滚动"] "‹"
-      div.dense.ed-tabs
-        div.ed-tab [title="背包"]
-          img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
-          span "背包"
-        div.ed-tab [title="末影箱"]
-          img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
-          span "末影箱"
-        div.ed-tab [title="状态"]
-          img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
-          span "状态"
-        div.ed-tab [title="能力"]
-          img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
-          span "能力"
-        div.ed-tab.on [title="属性与效果"]
-          img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
-          span "属性与效果"
-        div.ed-tab [title="位置与重生"]
-          img.o-ico [src="oriel:textures/icons/compass.png" style="height:16px;width:16px"]
-          span "位置与重生"
-        div.ed-tab [title="配方"]
-          img.o-ico [src="oriel:textures/icons/book.png" style="height:16px;width:16px"]
-          span "配方"
-        div.ed-tab [title="成就"]
-          img.o-ico [src="oriel:textures/icons/trophy.png" style="height:16px;width:16px"]
-          span "成就"
-        div.ed-tab [title="统计"]
-          img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
-          span "统计"
-        div.ed-tab [title="存档玩家"]
-          img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
-          span "存档玩家"
-      div.ed-tarr [title="向右滚动"] "›"
+    div.dense.ed-tabs
+      div.ed-tab [title="背包"]
+        img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
+        span "背包"
+      div.ed-tab [title="末影箱"]
+        img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+        span "末影箱"
+      div.ed-tab [title="状态"]
+        img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
+        span "状态"
+      div.ed-tab [title="能力"]
+        img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
+        span "能力"
+      div.ed-tab.on [title="属性与效果"]
+        img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+        span "属性与效果"
+      div.ed-tab [title="位置与重生"]
+        img.o-ico [src="oriel:textures/icons/compass.png" style="height:16px;width:16px"]
+        span "位置与重生"
+      div.ed-tab [title="配方"]
+        img.o-ico [src="oriel:textures/icons/book.png" style="height:16px;width:16px"]
+        span "配方"
+      div.ed-tab [title="成就"]
+        img.o-ico [src="oriel:textures/icons/trophy.png" style="height:16px;width:16px"]
+        span "成就"
+      div.ed-tab [title="统计"]
+        img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
+        span "统计"
+      div.ed-tab [title="存档玩家"]
+        img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
+        span "存档玩家"
     div.ed-tools
       span.ed-tools-t "属性与效果"
       div.grow
@@ -1130,40 +1115,37 @@ div
         b "生存"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabwrap
-      div.ed-tarr [title="向左滚动"] "‹"
-      div.dense.ed-tabs
-        div.ed-tab [title="背包"]
-          img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
-          span "背包"
-        div.ed-tab [title="末影箱"]
-          img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
-          span "末影箱"
-        div.ed-tab [title="状态"]
-          img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
-          span "状态"
-        div.ed-tab [title="能力"]
-          img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
-          span "能力"
-        div.ed-tab [title="属性与效果"]
-          img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
-          span "属性与效果"
-        div.ed-tab.on [title="位置与重生"]
-          img.o-ico [src="oriel:textures/icons/compass.png" style="height:16px;width:16px"]
-          span "位置与重生"
-        div.ed-tab [title="配方"]
-          img.o-ico [src="oriel:textures/icons/book.png" style="height:16px;width:16px"]
-          span "配方"
-        div.ed-tab [title="成就"]
-          img.o-ico [src="oriel:textures/icons/trophy.png" style="height:16px;width:16px"]
-          span "成就"
-        div.ed-tab [title="统计"]
-          img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
-          span "统计"
-        div.ed-tab [title="存档玩家"]
-          img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
-          span "存档玩家"
-      div.ed-tarr [title="向右滚动"] "›"
+    div.dense.ed-tabs
+      div.ed-tab [title="背包"]
+        img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
+        span "背包"
+      div.ed-tab [title="末影箱"]
+        img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+        span "末影箱"
+      div.ed-tab [title="状态"]
+        img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
+        span "状态"
+      div.ed-tab [title="能力"]
+        img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
+        span "能力"
+      div.ed-tab [title="属性与效果"]
+        img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+        span "属性与效果"
+      div.ed-tab.on [title="位置与重生"]
+        img.o-ico [src="oriel:textures/icons/compass.png" style="height:16px;width:16px"]
+        span "位置与重生"
+      div.ed-tab [title="配方"]
+        img.o-ico [src="oriel:textures/icons/book.png" style="height:16px;width:16px"]
+        span "配方"
+      div.ed-tab [title="成就"]
+        img.o-ico [src="oriel:textures/icons/trophy.png" style="height:16px;width:16px"]
+        span "成就"
+      div.ed-tab [title="统计"]
+        img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
+        span "统计"
+      div.ed-tab [title="存档玩家"]
+        img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
+        span "存档玩家"
     div.ed-tools [style="display:none"]
       span.ed-tools-t "位置与重生"
       div.grow
@@ -1247,40 +1229,37 @@ div
         b "生存"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabwrap
-      div.ed-tarr [title="向左滚动"] "‹"
-      div.dense.ed-tabs
-        div.ed-tab [title="背包"]
-          img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
-          span "背包"
-        div.ed-tab [title="末影箱"]
-          img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
-          span "末影箱"
-        div.ed-tab [title="状态"]
-          img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
-          span "状态"
-        div.ed-tab [title="能力"]
-          img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
-          span "能力"
-        div.ed-tab [title="属性与效果"]
-          img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
-          span "属性与效果"
-        div.ed-tab [title="位置与重生"]
-          img.o-ico [src="oriel:textures/icons/compass.png" style="height:16px;width:16px"]
-          span "位置与重生"
-        div.ed-tab.on [title="配方"]
-          img.o-ico [src="oriel:textures/icons/book.png" style="height:16px;width:16px"]
-          span "配方"
-        div.ed-tab [title="成就"]
-          img.o-ico [src="oriel:textures/icons/trophy.png" style="height:16px;width:16px"]
-          span "成就"
-        div.ed-tab [title="统计"]
-          img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
-          span "统计"
-        div.ed-tab [title="存档玩家"]
-          img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
-          span "存档玩家"
-      div.ed-tarr [title="向右滚动"] "›"
+    div.dense.ed-tabs
+      div.ed-tab [title="背包"]
+        img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
+        span "背包"
+      div.ed-tab [title="末影箱"]
+        img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+        span "末影箱"
+      div.ed-tab [title="状态"]
+        img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
+        span "状态"
+      div.ed-tab [title="能力"]
+        img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
+        span "能力"
+      div.ed-tab [title="属性与效果"]
+        img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+        span "属性与效果"
+      div.ed-tab [title="位置与重生"]
+        img.o-ico [src="oriel:textures/icons/compass.png" style="height:16px;width:16px"]
+        span "位置与重生"
+      div.ed-tab.on [title="配方"]
+        img.o-ico [src="oriel:textures/icons/book.png" style="height:16px;width:16px"]
+        span "配方"
+      div.ed-tab [title="成就"]
+        img.o-ico [src="oriel:textures/icons/trophy.png" style="height:16px;width:16px"]
+        span "成就"
+      div.ed-tab [title="统计"]
+        img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
+        span "统计"
+      div.ed-tab [title="存档玩家"]
+        img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
+        span "存档玩家"
     div.ed-tools [style="display:none"]
       span.ed-tools-t "配方"
       div.grow
@@ -1364,40 +1343,37 @@ div
         b "生存"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabwrap
-      div.ed-tarr [title="向左滚动"] "‹"
-      div.dense.ed-tabs
-        div.ed-tab [title="背包"]
-          img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
-          span "背包"
-        div.ed-tab [title="末影箱"]
-          img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
-          span "末影箱"
-        div.ed-tab [title="状态"]
-          img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
-          span "状态"
-        div.ed-tab [title="能力"]
-          img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
-          span "能力"
-        div.ed-tab [title="属性与效果"]
-          img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
-          span "属性与效果"
-        div.ed-tab [title="位置与重生"]
-          img.o-ico [src="oriel:textures/icons/compass.png" style="height:16px;width:16px"]
-          span "位置与重生"
-        div.ed-tab [title="配方"]
-          img.o-ico [src="oriel:textures/icons/book.png" style="height:16px;width:16px"]
-          span "配方"
-        div.ed-tab.on [title="成就"]
-          img.o-ico [src="oriel:textures/icons/trophy.png" style="height:16px;width:16px"]
-          span "成就"
-        div.ed-tab [title="统计"]
-          img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
-          span "统计"
-        div.ed-tab [title="存档玩家"]
-          img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
-          span "存档玩家"
-      div.ed-tarr [title="向右滚动"] "›"
+    div.dense.ed-tabs
+      div.ed-tab [title="背包"]
+        img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
+        span "背包"
+      div.ed-tab [title="末影箱"]
+        img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+        span "末影箱"
+      div.ed-tab [title="状态"]
+        img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
+        span "状态"
+      div.ed-tab [title="能力"]
+        img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
+        span "能力"
+      div.ed-tab [title="属性与效果"]
+        img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+        span "属性与效果"
+      div.ed-tab [title="位置与重生"]
+        img.o-ico [src="oriel:textures/icons/compass.png" style="height:16px;width:16px"]
+        span "位置与重生"
+      div.ed-tab [title="配方"]
+        img.o-ico [src="oriel:textures/icons/book.png" style="height:16px;width:16px"]
+        span "配方"
+      div.ed-tab.on [title="成就"]
+        img.o-ico [src="oriel:textures/icons/trophy.png" style="height:16px;width:16px"]
+        span "成就"
+      div.ed-tab [title="统计"]
+        img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
+        span "统计"
+      div.ed-tab [title="存档玩家"]
+        img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
+        span "存档玩家"
     div.ed-tools [style="display:none"]
       span.ed-tools-t "成就"
       div.grow
@@ -1481,40 +1457,37 @@ div
         b "生存"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabwrap
-      div.ed-tarr [title="向左滚动"] "‹"
-      div.dense.ed-tabs
-        div.ed-tab [title="背包"]
-          img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
-          span "背包"
-        div.ed-tab [title="末影箱"]
-          img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
-          span "末影箱"
-        div.ed-tab [title="状态"]
-          img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
-          span "状态"
-        div.ed-tab [title="能力"]
-          img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
-          span "能力"
-        div.ed-tab [title="属性与效果"]
-          img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
-          span "属性与效果"
-        div.ed-tab [title="位置与重生"]
-          img.o-ico [src="oriel:textures/icons/compass.png" style="height:16px;width:16px"]
-          span "位置与重生"
-        div.ed-tab [title="配方"]
-          img.o-ico [src="oriel:textures/icons/book.png" style="height:16px;width:16px"]
-          span "配方"
-        div.ed-tab [title="成就"]
-          img.o-ico [src="oriel:textures/icons/trophy.png" style="height:16px;width:16px"]
-          span "成就"
-        div.ed-tab.on [title="统计"]
-          img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
-          span "统计"
-        div.ed-tab [title="存档玩家"]
-          img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
-          span "存档玩家"
-      div.ed-tarr [title="向右滚动"] "›"
+    div.dense.ed-tabs
+      div.ed-tab [title="背包"]
+        img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
+        span "背包"
+      div.ed-tab [title="末影箱"]
+        img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+        span "末影箱"
+      div.ed-tab [title="状态"]
+        img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
+        span "状态"
+      div.ed-tab [title="能力"]
+        img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
+        span "能力"
+      div.ed-tab [title="属性与效果"]
+        img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+        span "属性与效果"
+      div.ed-tab [title="位置与重生"]
+        img.o-ico [src="oriel:textures/icons/compass.png" style="height:16px;width:16px"]
+        span "位置与重生"
+      div.ed-tab [title="配方"]
+        img.o-ico [src="oriel:textures/icons/book.png" style="height:16px;width:16px"]
+        span "配方"
+      div.ed-tab [title="成就"]
+        img.o-ico [src="oriel:textures/icons/trophy.png" style="height:16px;width:16px"]
+        span "成就"
+      div.ed-tab.on [title="统计"]
+        img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
+        span "统计"
+      div.ed-tab [title="存档玩家"]
+        img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
+        span "存档玩家"
     div.ed-tools [style="display:none"]
       span.ed-tools-t "统计"
       div.grow
@@ -1598,40 +1571,37 @@ div
         b "生存"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabwrap
-      div.ed-tarr [title="向左滚动"] "‹"
-      div.dense.ed-tabs
-        div.ed-tab [title="背包"]
-          img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
-          span "背包"
-        div.ed-tab [title="末影箱"]
-          img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
-          span "末影箱"
-        div.ed-tab [title="状态"]
-          img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
-          span "状态"
-        div.ed-tab [title="能力"]
-          img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
-          span "能力"
-        div.ed-tab [title="属性与效果"]
-          img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
-          span "属性与效果"
-        div.ed-tab [title="位置与重生"]
-          img.o-ico [src="oriel:textures/icons/compass.png" style="height:16px;width:16px"]
-          span "位置与重生"
-        div.ed-tab [title="配方"]
-          img.o-ico [src="oriel:textures/icons/book.png" style="height:16px;width:16px"]
-          span "配方"
-        div.ed-tab [title="成就"]
-          img.o-ico [src="oriel:textures/icons/trophy.png" style="height:16px;width:16px"]
-          span "成就"
-        div.ed-tab [title="统计"]
-          img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
-          span "统计"
-        div.ed-tab.on [title="存档玩家"]
-          img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
-          span "存档玩家"
-      div.ed-tarr [title="向右滚动"] "›"
+    div.dense.ed-tabs
+      div.ed-tab [title="背包"]
+        img.o-ico [src="oriel:textures/icons/backpack.png" style="height:16px;width:16px"]
+        span "背包"
+      div.ed-tab [title="末影箱"]
+        img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+        span "末影箱"
+      div.ed-tab [title="状态"]
+        img.o-ico [src="oriel:textures/icons/heart.png" style="height:16px;width:16px"]
+        span "状态"
+      div.ed-tab [title="能力"]
+        img.o-ico [src="oriel:textures/icons/wind.png" style="height:16px;width:16px"]
+        span "能力"
+      div.ed-tab [title="属性与效果"]
+        img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+        span "属性与效果"
+      div.ed-tab [title="位置与重生"]
+        img.o-ico [src="oriel:textures/icons/compass.png" style="height:16px;width:16px"]
+        span "位置与重生"
+      div.ed-tab [title="配方"]
+        img.o-ico [src="oriel:textures/icons/book.png" style="height:16px;width:16px"]
+        span "配方"
+      div.ed-tab [title="成就"]
+        img.o-ico [src="oriel:textures/icons/trophy.png" style="height:16px;width:16px"]
+        span "成就"
+      div.ed-tab [title="统计"]
+        img.o-ico [src="oriel:textures/icons/scroll.png" style="height:16px;width:16px"]
+        span "统计"
+      div.ed-tab.on [title="存档玩家"]
+        img.o-ico [src="oriel:textures/icons/users.png" style="height:16px;width:16px"]
+        span "存档玩家"
     div.ed-tools [style="display:none"]
       span.ed-tools-t "存档玩家"
       div.grow

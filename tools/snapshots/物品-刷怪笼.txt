@@ -45,23 +45,20 @@ div
             span [style="color:#FFFFFF;"] "刷怪笼"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabwrap
-      div.ed-tarr [title="向左滚动"] "‹"
-      div.ed-tabs
-        div.ed-tab.m-ripple.on [title="刷怪设置（Ctrl+1）"]
-          img.o-ico [src="oriel:textures/icons/paw.png" style="height:16px;width:16px"]
-          span "刷怪设置"
-        div.ed-tab.m-ripple [title="外观（Ctrl+2）"]
-          img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
-          span "外观"
-        div.ed-tab.m-ripple [title="堆叠与耐久（Ctrl+3）"]
-          img.o-ico [src="oriel:textures/icons/layers.png" style="height:16px;width:16px"]
-          span "堆叠与耐久"
-        div.ed-tab.m-ripple.more [title="更多分页：功能、攻击与防御、放置与数据……"]
-          img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
-          span "更多"
-          img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
-      div.ed-tarr [title="向右滚动"] "›"
+    div.ed-tabs
+      div.ed-tab.m-ripple.on [title="刷怪设置（Ctrl+1）"]
+        img.o-ico [src="oriel:textures/icons/paw.png" style="height:16px;width:16px"]
+        span "刷怪设置"
+      div.ed-tab.m-ripple [title="外观（Ctrl+2）"]
+        img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
+        span "外观"
+      div.ed-tab.m-ripple [title="堆叠与耐久（Ctrl+3）"]
+        img.o-ico [src="oriel:textures/icons/layers.png" style="height:16px;width:16px"]
+        span "堆叠与耐久"
+      div.ed-tab.m-ripple.more [title="更多分页：功能、攻击与防御、放置与数据……"]
+        img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
+        span "更多"
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
     div.ed-tools
       span.ed-tools-t "刷怪设置"
       div.grow
@@ -293,23 +290,20 @@ div
             span [style="color:#FFFFFF;"] "刷怪笼"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabwrap
-      div.ed-tarr [title="向左滚动"] "‹"
-      div.ed-tabs
-        div.ed-tab.m-ripple [title="刷怪设置（Ctrl+1）"]
-          img.o-ico [src="oriel:textures/icons/paw.png" style="height:16px;width:16px"]
-          span "刷怪设置"
-        div.ed-tab.m-ripple.on [title="外观（Ctrl+2）"]
-          img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
-          span "外观"
-        div.ed-tab.m-ripple [title="堆叠与耐久（Ctrl+3）"]
-          img.o-ico [src="oriel:textures/icons/layers.png" style="height:16px;width:16px"]
-          span "堆叠与耐久"
-        div.ed-tab.m-ripple.more [title="更多分页：功能、攻击与防御、放置与数据……"]
-          img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
-          span "更多"
-          img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
-      div.ed-tarr [title="向右滚动"] "›"
+    div.ed-tabs
+      div.ed-tab.m-ripple [title="刷怪设置（Ctrl+1）"]
+        img.o-ico [src="oriel:textures/icons/paw.png" style="height:16px;width:16px"]
+        span "刷怪设置"
+      div.ed-tab.m-ripple.on [title="外观（Ctrl+2）"]
+        img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
+        span "外观"
+      div.ed-tab.m-ripple [title="堆叠与耐久（Ctrl+3）"]
+        img.o-ico [src="oriel:textures/icons/layers.png" style="height:16px;width:16px"]
+        span "堆叠与耐久"
+      div.ed-tab.m-ripple.more [title="更多分页：功能、攻击与防御、放置与数据……"]
+        img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
+        span "更多"
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
     div.ed-tools
       span.ed-tools-t "外观"
       div.grow
@@ -555,23 +549,20 @@ div
             span [style="color:#FFFFFF;"] "刷怪笼"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabwrap
-      div.ed-tarr [title="向左滚动"] "‹"
-      div.ed-tabs
-        div.ed-tab.m-ripple [title="刷怪设置（Ctrl+1）"]
-          img.o-ico [src="oriel:textures/icons/paw.png" style="height:16px;width:16px"]
-          span "刷怪设置"
-        div.ed-tab.m-ripple [title="外观（Ctrl+2）"]
-          img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
-          span "外观"
-        div.ed-tab.m-ripple.on [title="堆叠与耐久（Ctrl+3）"]
-          img.o-ico [src="oriel:textures/icons/layers.png" style="height:16px;width:16px"]
-          span "堆叠与耐久"
-        div.ed-tab.m-ripple.more [title="更多分页：功能、攻击与防御、放置与数据……"]
-          img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
-          span "更多"
-          img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
-      div.ed-tarr [title="向右滚动"] "›"
+    div.ed-tabs
+      div.ed-tab.m-ripple [title="刷怪设置（Ctrl+1）"]
+        img.o-ico [src="oriel:textures/icons/paw.png" style="height:16px;width:16px"]
+        span "刷怪设置"
+      div.ed-tab.m-ripple [title="外观（Ctrl+2）"]
+        img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
+        span "外观"
+      div.ed-tab.m-ripple.on [title="堆叠与耐久（Ctrl+3）"]
+        img.o-ico [src="oriel:textures/icons/layers.png" style="height:16px;width:16px"]
+        span "堆叠与耐久"
+      div.ed-tab.m-ripple.more [title="更多分页：功能、攻击与防御、放置与数据……"]
+        img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
+        span "更多"
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
     div.ed-tools
       span.ed-tools-t "堆叠与耐久"
       div.grow

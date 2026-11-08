@@ -58,19 +58,16 @@ div
         b "否"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabwrap
-      div.ed-tarr [title="向左滚动"] "‹"
-      div.ed-tabs
-        div.ed-tab.on [title="告示牌"]
-          img.o-ico [src="oriel:textures/icons/edit.png" style="height:16px;width:16px"]
-          span "告示牌"
-        div.ed-tab [title="方块状态"]
-          img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
-          span "方块状态"
-        div.ed-tab [title="数据"]
-          img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
-          span "数据"
-      div.ed-tarr [title="向右滚动"] "›"
+    div.ed-tabs
+      div.ed-tab.on [title="告示牌"]
+        img.o-ico [src="oriel:textures/icons/edit.png" style="height:16px;width:16px"]
+        span "告示牌"
+      div.ed-tab [title="方块状态"]
+        img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+        span "方块状态"
+      div.ed-tab [title="数据"]
+        img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
+        span "数据"
     div.ed-tools
       span.ed-tools-t "告示牌"
       div.grow
@@ -225,19 +222,16 @@ div
         b "否"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabwrap
-      div.ed-tarr [title="向左滚动"] "‹"
-      div.ed-tabs
-        div.ed-tab [title="告示牌"]
-          img.o-ico [src="oriel:textures/icons/edit.png" style="height:16px;width:16px"]
-          span "告示牌"
-        div.ed-tab.on [title="方块状态"]
-          img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
-          span "方块状态"
-        div.ed-tab [title="数据"]
-          img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
-          span "数据"
-      div.ed-tarr [title="向右滚动"] "›"
+    div.ed-tabs
+      div.ed-tab [title="告示牌"]
+        img.o-ico [src="oriel:textures/icons/edit.png" style="height:16px;width:16px"]
+        span "告示牌"
+      div.ed-tab.on [title="方块状态"]
+        img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+        span "方块状态"
+      div.ed-tab [title="数据"]
+        img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
+        span "数据"
     div.ed-tools [style="display:none"]
       span.ed-tools-t "方块状态"
       div.grow
@@ -358,19 +352,16 @@ div
         b "否"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabwrap
-      div.ed-tarr [title="向左滚动"] "‹"
-      div.ed-tabs
-        div.ed-tab [title="告示牌"]
-          img.o-ico [src="oriel:textures/icons/edit.png" style="height:16px;width:16px"]
-          span "告示牌"
-        div.ed-tab [title="方块状态"]
-          img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
-          span "方块状态"
-        div.ed-tab.on [title="数据"]
-          img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
-          span "数据"
-      div.ed-tarr [title="向右滚动"] "›"
+    div.ed-tabs
+      div.ed-tab [title="告示牌"]
+        img.o-ico [src="oriel:textures/icons/edit.png" style="height:16px;width:16px"]
+        span "告示牌"
+      div.ed-tab [title="方块状态"]
+        img.o-ico [src="oriel:textures/icons/sliders.png" style="height:16px;width:16px"]
+        span "方块状态"
+      div.ed-tab.on [title="数据"]
+        img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
+        span "数据"
     div.ed-tools [style="display:none"]
       span.ed-tools-t "数据"
       div.grow

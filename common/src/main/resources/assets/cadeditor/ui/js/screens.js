@@ -319,25 +319,26 @@ function drawEdit() {
   ensureResize();
   drawHero(); drawTabbar(); drawTabBody();
 }
-/* 分页栏放不下时：两头出现 ‹ › 按钮横向滚动，当前页自动滚进可视范围，滚轮也能横向滚。世界页 / 玩家页 / 物品页共用 */
+/* 分页栏放不下时：鼠标滚轮横向滚动，按住拖动也行；当前页自动滚进可视范围。没有额外按钮。世界页 / 玩家页 / 物品页共用 */
 function edTabsScroll(bar) {
-  var L = h('div', { class: 'ed-tarr', text: '‹', title: '向左滚动' }), R = h('div', { class: 'ed-tarr', text: '›', title: '向右滚动' });
   function room() { return Math.max(0, bar.scrollWidth - bar.clientWidth); }
-  function go(d) { bar.scrollLeft = Math.max(0, Math.min(room(), bar.scrollLeft + d)); edTabsFit(bar); }
-  activate(L, function () { go(-140); }); activate(R, function () { go(140); });
-  bar.addEventListener('wheel', function (e) { if (!room()) return; if (e.preventDefault) e.preventDefault(); go((e.deltaY || e.deltaX) > 0 ? 90 : -90); });
-  bar._arrows = [L, R];
-  return h('div', { class: 'ed-tabwrap' }, [L, bar, R]);
+  function to(x) { bar.scrollLeft = Math.max(0, Math.min(room(), x)); }
+  bar.addEventListener('wheel', function (e) { if (!room()) return; if (e.preventDefault) e.preventDefault(); to(bar.scrollLeft + ((e.deltaY || e.deltaX) > 0 ? 80 : -80)); });
+  var drag = null, moved = false;
+  bar.addEventListener('mousedown', function (e) { if (room()) { drag = { x: e.clientX, left: bar.scrollLeft }; moved = false; } });
+  bar.addEventListener('mousemove', function (e) { if (!drag) return; var dx = e.clientX - drag.x; if (Math.abs(dx) > 4) moved = true; if (moved) to(drag.left - dx); });
+  function end() { drag = null; }
+  bar.addEventListener('mouseup', end); bar.addEventListener('mouseleave', end);
+  bar.addEventListener('click', function (e) { if (moved) { moved = false; if (e.stopPropagation) e.stopPropagation(); if (e.preventDefault) e.preventDefault(); } }, true);   // 拖动结束不算点击切页
+  return bar;
 }
 function edTabsFit(bar) {
-  if (!bar || !bar._arrows) return;
+  if (!bar) return;
   var on = bar.querySelector('.ed-tab.on'), room = Math.max(0, bar.scrollWidth - bar.clientWidth);
   if (on && room) {
     var l = on.offsetLeft, r = l + on.offsetWidth;
     if (l < bar.scrollLeft) bar.scrollLeft = Math.max(0, l - 14); else if (r > bar.scrollLeft + bar.clientWidth) bar.scrollLeft = Math.min(room, r - bar.clientWidth + 14);
   }
-  bar._arrows[0].style.display = room > 1 && bar.scrollLeft > 0 ? '' : 'none';
-  bar._arrows[1].style.display = room > 1 && bar.scrollLeft < room - 1 ? '' : 'none';
 }
 function drawTabbar() {
   var bar = clear($('tabbar')), kind = kindOfItem(Store.doc().id), tabs = tabsOfKind(kind);

@@ -1653,5 +1653,3 @@ body.vault-only .ew { display: none; }
    带贴图的控件一律还原成白色（不染色），亮绿开关才是真正的亮绿。 */
 .k-toggle, .k-sw2, .ed-toggle, .k-xhead .k-btn, .k-xhead .k-seg, .k-xhead .k-sel, .k-xhead .k-mini, .k-xhead .k-xnum, .k-xhead .k-input { -mc-tint: #fff; }
 
-.px-msearch { max-width: none; margin-bottom: 6px; }
-.px-modal { max-height: 420px; overflow-y: auto; }

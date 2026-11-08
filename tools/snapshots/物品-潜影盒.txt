@@ -45,20 +45,17 @@ div
             span [style="color:#FFFFFF;"] "潜影盒"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabwrap
-      div.ed-tarr [title="向左滚动"] "‹"
-      div.ed-tabs
-        div.ed-tab.m-ripple.on [title="外观（Ctrl+1）"]
-          img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
-          span "外观"
-        div.ed-tab.m-ripple [title="内容（Ctrl+2）"]
-          img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
-          span "内容"
-        div.ed-tab.m-ripple.more [title="更多分页：功能、攻击与防御、放置与数据……"]
-          img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
-          span "更多"
-          img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
-      div.ed-tarr [title="向右滚动"] "›"
+    div.ed-tabs
+      div.ed-tab.m-ripple.on [title="外观（Ctrl+1）"]
+        img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
+        span "外观"
+      div.ed-tab.m-ripple [title="内容（Ctrl+2）"]
+        img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+        span "内容"
+      div.ed-tab.m-ripple.more [title="更多分页：功能、攻击与防御、放置与数据……"]
+        img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
+        span "更多"
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
     div.ed-tools
       span.ed-tools-t "外观"
       div.grow
@@ -304,20 +301,17 @@ div
             span [style="color:#FFFFFF;"] "潜影盒"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabwrap
-      div.ed-tarr [title="向左滚动"] "‹"
-      div.ed-tabs
-        div.ed-tab.m-ripple [title="外观（Ctrl+1）"]
-          img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
-          span "外观"
-        div.ed-tab.m-ripple.on [title="内容（Ctrl+2）"]
-          img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
-          span "内容"
-        div.ed-tab.m-ripple.more [title="更多分页：功能、攻击与防御、放置与数据……"]
-          img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
-          span "更多"
-          img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
-      div.ed-tarr [title="向右滚动"] "›"
+    div.ed-tabs
+      div.ed-tab.m-ripple [title="外观（Ctrl+1）"]
+        img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
+        span "外观"
+      div.ed-tab.m-ripple.on [title="内容（Ctrl+2）"]
+        img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+        span "内容"
+      div.ed-tab.m-ripple.more [title="更多分页：功能、攻击与防御、放置与数据……"]
+        img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
+        span "更多"
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
     div.ed-tools
       span.ed-tools-t "内容"
       div.grow
