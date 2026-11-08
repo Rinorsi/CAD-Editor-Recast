@@ -39,6 +39,8 @@
 
 ## P4-1 玩家扩展（2026-11-08）
 
+2026-11-09 档案只读入口：players 名单、offline.summary、export_preset 在线/离线导出均在 PlayerExtendedEditor.route 先执行 EditorPolicy.requirePlayerEdit；缺少 gamemaster 返回 player_forbidden。导出不执行服务端写入、不记录写审计、不刷新编辑基线。离线必须当前不在线；owner 仅允许导出，编辑依旧拒绝。本机保险库 has_backup 不写世界、不要求管理员，与本机 list/get 相同；物品规范化仍要求当前世界 Codec，失败不算命中。
+
 | 写操作 | 服务端权限与额外条件 | 路径 |
 |---|---|---|
 | player_extended position | EditorPolicy.requirePlayerEdit，每笔重查 COMMANDS_GAMEMASTER；实时维度、边界/高度、目标区块加载 | PlayerExtendedEditor.route/prepare |

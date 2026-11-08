@@ -2,6 +2,8 @@
 
 ## 存档玩家档案（2026-11-09）
 
+本轮后端证据：[player-profiles-verification.md](player-profiles-verification.md)。
+
 继续使用 player_extended 消息和 player_extended_result 回执；所有操作要求 EditorPolicy.requirePlayerEdit（拒绝 player_forbidden）。只读名单/导出遵守 500ms 间隔，不替换编辑会话基线。
 
 ### 名单
@@ -26,7 +28,7 @@ offline.value 保留 snbt，新增 summary：
 
 template 与 [vault-contract.md](vault-contract.md) 的 player_preset 完全相同，可用 {op:"save",kind:"player_preset",template,...} 保存：inventory/equipment/ender 为 {slots:[{slot,stack}]}，stack 含完整 component_snbt；attributes、effects 为原投影数组，game_mode 为原版模式名。分区复用 VaultTemplates，物品/属性/效果由原版实时注册表与 Codec 生成。
 
-在线目标必须在线；offline:true 必须不在线，先经原版加载再导出。单人 owner 的离线导出允许只读原版 level.dat Player 数据，但仍不能离线编辑。不登录临时玩家、不注册实体、不写玩家/统计/成就文件、不留下缓存条目。超出原有传输预算报 payload_too_large，可减少 sections 后重试，不截断模板。读取失败沿用 offline_missing / offline_io / invalid_nbt；无效分区返回 invalid_request（预设分区无效或重复）。
+在线目标必须在线；offline:true 必须不在线，先经原版加载再导出。单人 owner 的离线导出允许只读原版选择的存档，但仍不能离线编辑。已核实 26.1.2 / 26.2 / 26.3 的 PlayerList.loadPlayerData 按 WorldData.getSinglePlayerUUID 选择 playerdata 文件；导出沿用这个 UUID 选择规则，不把遗留 level.dat Player 当作当前权威数据。不登录临时玩家、不注册实体、不写玩家/统计/成就文件、不留下缓存条目。超出原有传输预算报 payload_too_large，可减少 sections 后重试，不截断模板。读取失败沿用 offline_missing / offline_io / invalid_nbt；无效分区返回 invalid_request（预设分区无效或重复）。
 
 本协议独立于原有 entity.player apply；已有背包/状态页不变。消息走 EditorPackets/WorldWire，服务端线程执行。页面向宿主发送 player_extended，宿主回传 player_extended_result；每笔带 requestId，只在 saved 后清草稿，拒绝/超时保留。
 
@@ -66,7 +68,7 @@ stats.value={entries:[{type:'minecraft:custom',id:'minecraft:jump',value:0}]}，
 
 目标为实际 playerdata/<uuid>.dat，不创建新玩家；UUID 手输，不接受路径。offline.value={snbt:'可编辑字段的类型保真 Compound SNBT'}，schema={source:'vanilla player load/save',editableKeys:['运行时实际存在的受支持键'],backupRetention:5}。patch={snbt:'完整可编辑字段复合'}。支持背包、末影箱、生命、饥饿、经验字段；身份、位置、骑乘、连接、成就和独立统计文件不通过此入口。未暴露/未知原始字段保持原 NBT 值。
 
-先用原版 DataFixer、临时 Player.load/save（避免污染 ServerPlayer 的统计/成就缓存） 验证每个被改字段，再写临时压缩 NBT 并读回校验。写前重查目标不在线、文件指纹未变，备份原文件到 playerdata/cadeditor-backups/<uuid>/（保留最近5份），同目录 ATOMIC_MOVE 替换，不支持则拒绝、不退化覆盖。单人 owner 的 level.dat Player 优先于 playerdata，因此拒绝其离线编辑，避免旧内嵌数据覆盖；其他单人访客和专服离线玩家可用。审计记录操作者/目标 UUID、操作、前后指纹、结果，不记录物品内容。
+先用原版 DataFixer、临时 Player.load/save（避免污染 ServerPlayer 的统计/成就缓存） 验证每个被改字段，再写临时压缩 NBT 并读回校验。写前重查目标不在线、文件指纹未变，备份原文件到 playerdata/cadeditor-backups/<uuid>/（保留最近5份），同目录 ATOMIC_MOVE 替换，不支持则拒绝、不退化覆盖。单人 owner 由原版单人存档身份管理，保留离线编辑拒绝；其他单人访客和专服离线玩家可用。owner 原版文件选择规则见上方档案导出说明。审计记录操作者/目标 UUID、操作、前后指纹、结果，不记录物品内容。
 
 ## 错误码
 

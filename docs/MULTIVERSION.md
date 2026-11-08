@@ -87,6 +87,8 @@ stonecutter.properties.toml   每个游戏版本的 MC / 加载器 / API / Oriel
 | 32 | 26.1 / 26.2+ | BlockEntityType 的二参数构造器及 supplier 在 26.1 非公开，26.2 起公开 | testFixtures 用 Stonecutter：26.1 反射访问实际私有构造器，26.2+ 调用公开构造器；生产统一使用注册表中类型的 create/isValid，无运行时版本分派、无 access widening |
 | 33 | 26.1.2 / 26.2 / 26.3 | entity_info 未暴露默认实体叫声 | 三版解析 jar 的 Mob.getAmbientSound()、LivingEntity.getHurtSound(DamageSource)、getDeathSound() 签名与 protected 可见性一致；common 反射调用真实虚方法（generic 伤害源），取得 SOUND_EVENT 注册 ID，无新增 Stonecutter 分支或加载器 import。反射避免为仅只读元数据扩大生产访问权限，也兼容 NeoForge 的 vanilla JVM 验证运行时；失败只省略 sounds。ArmorStand 实际继承 LivingEntity，保留其真实 hurt/death，ambient 为 null；ItemFrame/Item 全 null |
 | 34 | 26.3 | DisplayInfo.getTitle()/getDescription() | DisplayInfo 改为 record，使用 title()/description()；common PlayerExtendedEditor 通过 Stonecutter 条件分支，26.1.2 / 26.2 保留 getter。Language.has/getOrDefault 与 Advancement.display 在三版相同，翻译通道没有加载器分支 |
+| 35 | 26.2 / 26.3 | PlayerAdvancements.stopListening() | 改名 clearTriggers()；PlayerProfiles 通过 Stonecutter >=26.2 分支清理临时档案对象的监听。26.1.2 保留 stopListening；两加载器以既有 AW/AT 开放 PlayerList 的 stats/advancements，用于不保存地清理临时缓存 |
+| 36 | 26.3 | ServerAdvancementManager 构造即从 ADVANCEMENT 注册表读取定义 | PlayerProfiles.emptyAdvancements 在 >=26.3 提供独立空注册表，旧版构造器初始即为空；防止只读档案时执行数据包自动奖励。六目标玩家 JVM 测试直接检查该工厂为空 |
 
 2026-11-09 entity_info 叫声数据：六目标 `compileJava` / 完整 `codecVerification` 通过（14m 7s，214 tasks）。日志：`Oriel-UI-Workspace/daily/2026-11-09/logs/entity-sounds/matrix.log`。每目标的 client/server 两个 EntitySchemaTest 各增加 67 项声音断言，覆盖 pig/cow/wolf/cat/zombie 注册声音、ArmorStand 真实 hit/break、ItemFrame/Item 全 null、缺实例和声音方法抛异常；均为不启动游戏的 JVM 工厂测试，未运行客户端或最终实机验收。
 
@@ -133,6 +135,16 @@ stonecutter.properties.toml   每个游戏版本的 MC / 加载器 / API / Oriel
 首轮 map_color 超时根因尚未确定；完整复测同一组件三轮和其余 318 轮均通过，保留原失败及诊断入口，不能称为首轮全绿。
 
 ### P4-1 玩家扩展 API 核对
+
+### 存档玩家档案 API（2026-11-09）
+
+差异 #35：PlayerAdvancements 的无保存监听清理在 26.1.2 为 stopListening()，26.2 / 26.3 为 clearTriggers()；PlayerProfiles 使用 Stonecutter >=26.2 分支。ServerPlayer.load、ClientInformation、UUID 本地缓存 get(UUID)、WorldData.getSinglePlayerUUID 在三版共用。
+
+PlayerList 没有“不保存地移除构造缓存”的公开 API，remove 会保存玩家和统计；因此两加载器分别用现有 AW / AT 仅开放 stats、advancements Map。只在服务端线程以随机、不冲突 UUID 构造临时 ServerPlayer，finally 删除该 UUID 的缓存并清监听，不调用 remove/save。临时 load 后的真实玩家 UUID 不作为缓存删除键，不触碰目标的原缓存。纯 JVM 不需要加载此入口；隔离专服探针携带同一生产 AW。
+
+构造前预放独立 ServerStatsCounter 和 PlayerAdvancements：前者使用不存在的只读路径，后者使用空 ServerAdvancementManager（仍是原版 API）。这样不会经过 locateStatsFile 的旧名字文件迁移，也不会执行真实数据包中无条件成就的 rewards。临时对象从不登录、tick 或调用 save；读取后缓存和监听全部清理。
+
+三版原版 PlayerList.loadPlayerData 均按 getSinglePlayerUUID 选择 owner 的 playerdata 文件，不自行读取遗留 level.dat Player。档案读取使用相同选择规则、NbtIo/DataFixTypes.PLAYER/ServerPlayer.load；不调用会在损坏读取时创建备份的 PlayerDataStorage.load，保证只读不落盘。摘要从加载对象读取，维度用原版 ResourceKey Codec 解析并选择真实 ServerLevel。离线修改原有 detached Player 的字段往返校验仍保留。
 
 位置 teleportTo、RespawnConfig/LevelData.RespawnData、ServerRecipeBook.Packed/loadUntrusted/copyOverData、PlayerAdvancements.award/revoke、ServerStatsCounter、Player.load/saveWithoutId 在 26.1.2 / 26.2 / 26.3 的公开签名一致；本次暂不新增运行时反射或加载器分支。离线使用 detached Player（不是 ServerPlayer），避免构造 ServerPlayer 时污染 PlayerList 的统计/成就缓存。ServerRecipeBook.loadUntrusted 是追加加载，先加载独立书再 copyOverData 替换，确保撤销和取消高亮真实生效。后续编译验证发现的差异追加在此。
 
