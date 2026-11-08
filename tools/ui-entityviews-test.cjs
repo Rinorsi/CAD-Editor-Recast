@@ -76,4 +76,37 @@ const body = () => c.h('div');
   assert.ok(/red/.test(b.textContent) && /被拴着/.test(b.textContent), '队伍和拴绳只读显示');
   const m = {}; c.evMsg(m); assert.equal(json(m.entity), json({ owner: { Owner: null } }), '只读的队伍、拴绳不会进提交');
 }
-console.log('PASS entity views: tabs, dropped item, falling block state, enderman, cloud, arrow, owner and read-only relations.');
+// ---- 马：驯服、驯服进度、主人；驮兽箱子：格子数量来自后端，写格子不动别的格
+{
+  open({ horse: { Tame: false, Temper: 0, Owner: null, players: [{ uuid: '00000000-0000-0000-0000-000000000001', name: 'Steve' }], available: true },
+    chested: { ChestedHorse: true, capacity: 5, Items: [{ slot: 1, stack: { id: 'minecraft:diamond', count: 2, comps: {}, removed: {} } }] } },
+    { horse: { fields: { Temper: { min: -2147483648, max: 2147483647 } } } });
+  const tabs = c.weTabs(); assert.equal(tabs.find(x => x.id === 'ents').label, '实体设置', '驴同时有两组，合并');
+  const b = body(); c.EV_SIMPLE_TAB.horse(b); assert.ok(/已驯服/.test(b.textContent) && /驯服进度/.test(b.textContent) && /主人/.test(b.textContent));
+  qa(b, '.k-toggle')[0].fire('click'); assert.equal(c.WE.ent.horse.Tame, true);
+  const b2 = body(); c.EV_SIMPLE_TAB.chested(b2); assert.equal(qa(b2, '.slot').length, 5, '格子数 = 后端给的 capacity');
+  const grid = c.evSlotList('chested', 'Items', 5);
+  grid.setSlot(3, { id: 'minecraft:stick', count: 1, comps: {}, removed: {} });
+  assert.equal(json(c.WE.ent.chested.Items.map(x => x.slot)), json([1, 3]), '原来的第 1 格还在，加了第 3 格，按格号排序');
+  grid.setSlot(1, { empty: true }); assert.equal(json(c.WE.ent.chested.Items.map(x => x.slot)), json([3]), '清空某格 = 从列表里去掉');
+  const m = {}; c.evMsg(m); assert.ok(m.entity.horse.Tame === true && m.entity.chested.Items, '两组都进提交');
+}
+// ---- 载具容器：没展开的战利品不给格子
+{
+  open({ vehicle_container: { size: 27, unresolved_loot: true, slots: [] } });
+  const b = body(); c.EV_SIMPLE_TAB.vehicle_container(b); assert.equal(qa(b, '.slot').length, 0); assert.ok(/战利品/.test(b.textContent));
+  open({ vehicle_container: { size: 5, unresolved_loot: false, slots: [] } });
+  const b2 = body(); c.EV_SIMPLE_TAB.vehicle_container(b2); assert.equal(qa(b2, '.slot').length, 5);
+}
+// ---- 矿车显示方块：清除 = null；偏移恢复默认 = null；只读的船和僵尸村民转化没有写入控件
+{
+  open({ minecart_display: { CustomDisplayTile: true, DisplayState: { Name: 'minecraft:oak_log' }, DisplayOffset: 12 } });
+  const b = body(); c.EV_SIMPLE_TAB.minecart_display(b);
+  qa(b, '.k-btn').filter(x => x.textContent === '清除')[0].fire('click'); assert.equal(c.WE.ent.minecart_display.DisplayState, null);
+  const b2 = body(); c.EV_SIMPLE_TAB.minecart_display(b2); qa(b2, '.k-btn').filter(x => x.textContent === '恢复')[0].fire('click'); assert.equal(c.WE.ent.minecart_display.DisplayOffset, null);
+  open({ boat_type: { entityType: 'minecraft:bamboo_raft', readOnly: true }, zombie_conversion: { ConversionTime: 100, ConversionPlayer: null, readOnly: true } });
+  const r = body(); c.EV_SIMPLE_TAB.boat_type(r); c.EV_SIMPLE_TAB.zombie_conversion(r);
+  assert.equal(qa(r, '.k-toggle').length + qa(r, 'input').length + qa(r, '.k-btn').length, 0, '只读视图没有任何可点控件'); assert.ok(/100/.test(r.textContent));
+  const m = {}; c.evMsg(m); assert.equal(m.entity, undefined, '只读视图不会进提交');
+}
+console.log('PASS entity views: tabs, dropped item, falling block state, enderman, cloud, arrow, owner and read-only relations, horse / chested, vehicle container, minecart, read-only boat and conversion.');

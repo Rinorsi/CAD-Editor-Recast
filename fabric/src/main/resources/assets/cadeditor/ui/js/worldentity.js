@@ -161,7 +161,9 @@ function evDisplayTab(body) {
 /* ---------- 杂项实体视图：掉落物 / 下落方块 / TNT / 苦力怕 / 末影人 / 药水云 / 经验球 / 箭 / 交互实体
    后端视图和字段范围见 docs/world-entity-contract.md（P2-2 ~ P2-5）。范围读 schema.fields，游戏没给的不设限。 ---------- */
 var EV_SIMPLE = [['dropped_item', '掉落物', 'sword'], ['falling_block', '下落方块', 'cube'], ['tnt', 'TNT', 'flame'], ['creeper', '苦力怕', 'flame'],
-  ['enderman', '末影人', 'cube'], ['area_effect_cloud', '药水云', 'flask'], ['experience_orb', '经验球', 'sparkle'], ['arrow', '箭', 'sword'], ['interaction', '交互实体', 'sliders']];
+  ['enderman', '末影人', 'cube'], ['area_effect_cloud', '药水云', 'flask'], ['experience_orb', '经验球', 'sparkle'], ['arrow', '箭', 'sword'], ['interaction', '交互实体', 'sliders'],
+  ['horse', '驯服与骑乘', 'paw'], ['chested', '驮兽箱子', 'chest'], ['vehicle_container', '载具容器', 'chest'], ['minecart_display', '矿车显示的方块', 'cube'],
+  ['minecart_command', '命令矿车', 'terminal'], ['boat_type', '船', 'cart'], ['zombie_conversion', '僵尸村民转化', 'clock']];
 function evSimpleGroups() { return EV_SIMPLE.filter(function (g) { return evGroup(g[0]); }); }
 function evSimpleTabInfo() { var g = evSimpleGroups(); return g.length === 1 ? { label: g[0][1], icon: g[0][2] } : { label: '实体设置', icon: 'sliders' }; }
 /* 范围来自后端的字段元数据的数值行：o = { sub, unit, step, dec, def, nullAt（等于这个值时发 null）} */
@@ -170,6 +172,20 @@ function evNumF(g, k, label, o) {
   return evNum(label, typeof cur === 'number' ? cur : o.def, { min: f.min, max: f.max, step: o.step, dec: o.dec, unit: o.unit, sub: o.sub },
     function (x) { evSet(g, k, o.nullAt !== undefined && x === o.nullAt ? null : x); });
 }
+/* 一片格子，绑定到视图里的 [{slot, stack}] 列表（驮兽箱子的 Items、载具容器的 slots）：省略的格子 = 清空；草稿只在和原值不同时提交 */
+function evSlotList(g, key, count) {
+  function list() { var v = evGet(g, key); return Array.isArray(v) ? v : []; }
+  function stackAt(i) { var e = list().filter(function (x) { return x.slot === i; })[0]; return e && e.stack && !e.stack.empty ? e.stack : { empty: true }; }
+  var ix = []; for (var i = 0; i < count; i++) ix.push(i);
+  function setSlot(i, st) {
+    var l = list().filter(function (x) { return x.slot !== i; });
+    if (st && !st.empty && st.id) { var s = clone(st); delete s.slot; delete s.label; l.push({ slot: i, stack: s }); }
+    l.sort(function (a, b) { return a.slot - b.slot; }); evSet(g, key, l); weMarkDirty();
+  }
+  var grid = kSlotGrid({ tight: true, indices: ix, cols: count <= 9 ? count : 9, stackOf: stackAt, titleOf: function (i) { return '格子 ' + (i + 1); }, set: setSlot });
+  grid.setSlot = setSlot;
+  return grid;
+}
 var EV_PICKUP = { DISALLOWED: '不能拾起', ALLOWED: '都能拾起', CREATIVE_ONLY: '只有创造模式能拾起' };
 function evSimpleTab(body) {
   var gs = evSimpleGroups();
@@ -177,6 +193,50 @@ function evSimpleTab(body) {
   gs.forEach(function (info) { var fn = EV_SIMPLE_TAB[info[0]]; if (fn) { body.appendChild(xSec(info[2], info[1])); fn(body); } });
 }
 var EV_SIMPLE_TAB = {
+  /* 马 / 驴 / 骡 / 羊驼等：驯服状态、驯服进度、主人。鞍和身体装备在「属性」页的装备格里（同一次应用里先驯服再上鞍也可以） */
+  horse: function (body) {
+    var g = 'horse', own = evGroup(g) || {}, cur = evGet(g, 'Owner') || '', players = own.players || [];
+    body.appendChild(evBool('已驯服', evGet(g, 'Tame'), '', function (on) { evSet(g, 'Tame', on); }));
+    body.appendChild(evNumF(g, 'Temper', '驯服进度', { sub: '越高越容易被驯服' }));
+    var entries = players.map(function (p) { return { v: p.uuid, label: p.name, sub: p.uuid }; });
+    if (cur && !entries.some(function (e) { return e.v === cur; })) entries.push({ v: cur, label: '不在线的玩家', sub: cur });
+    var sel = kSelect(entries, cur || null, function (v) { evSet(g, 'Owner', v); weRender(); }, { width: 240, empty: '（无）', placeholder: '搜索在线玩家' });
+    var right = [sel.el]; if (cur) right.push(kBtn('清除', function () { evSet(g, 'Owner', null); weRender(); }, { icon: 'trash' }));
+    body.appendChild(xRow({ icon: false, title: '主人', sub: '清除不会取消驯服', right: h('div', { class: 'k-row' }, right) }));
+    body.appendChild(kHint('鞍、马铠在「属性」页的装备格里换。'));
+  },
+  chested: function (body) {
+    var g = 'chested', own = evGroup(g) || {}, cap = typeof own.capacity === 'number' ? own.capacity : 0, on = evGet(g, 'ChestedHorse');
+    body.appendChild(evBool('背着箱子', on, '去掉箱子会丢掉里面的东西', function (v) { evSet(g, 'ChestedHorse', v); if (!v) evSet(g, 'Items', []); weRender(); }));
+    if (on && cap > 0) { body.appendChild(weDndHint()); body.appendChild(evSlotList(g, 'Items', cap)); }
+    else if (on) body.appendChild(kHint('这个箱子暂时没有格子（羊驼的格数跟力量有关）。'));
+  },
+  vehicle_container: function (body) {
+    var g = 'vehicle_container', own = evGroup(g) || {};
+    if (own.unresolved_loot) { body.appendChild(kHint('里面还有没展开的战利品，先在游戏里打开一次再来改。')); return; }
+    body.appendChild(weDndHint()); body.appendChild(evSlotList(g, 'slots', own.size || 0));
+  },
+  minecart_display: function (body) {
+    var g = 'minecart_display', off = evGet(g, 'DisplayOffset');
+    body.appendChild(kBlockState(evGet(g, 'DisplayState'), function (v) { evSet(g, 'DisplayState', v); weRender(); }, { label: '显示的方块', sub: '清除 = 用矿车原来的样子', allowNone: true, empty: '（原样）' }));
+    body.appendChild(evNum('显示高度偏移', typeof off === 'number' ? off : 6, { sub: '原样是 6' }, function (x) { evSet(g, 'DisplayOffset', x); }));
+    if (typeof off === 'number') body.appendChild(xRow({ icon: false, title: '恢复默认偏移', right: kBtn('恢复', function () { evSet(g, 'DisplayOffset', null); weRender(); }, { icon: 'undo' }) }));
+  },
+  minecart_command: function (body) {
+    var g = 'minecart_command', own = evGroup(g) || {};
+    var ta = h('textarea', { class: 'ed-snbt we-cmd', spellcheck: 'false', placeholder: '命令，不用写开头的 /' }); ta.value = String(evGet(g, 'Command') || '');
+    ta.addEventListener('change', function () { evSet(g, 'Command', ta.value); });
+    body.appendChild(xRow({ icon: false, title: '命令' })); body.appendChild(ta);
+    var lo = own.LastOutput; body.appendChild(xRow({ icon: false, title: '上次输出', sub: '只读', right: h('span', { class: 'k-sub', text: lo ? msgText(lo) : '（没有）' }) }));
+  },
+  boat_type: function (body) {
+    var own = evGroup('boat_type') || {};
+    body.appendChild(xRow({ icon: false, title: '种类', sub: '由实体类型决定，不能换', right: h('span', { class: 'k-sub', text: own.entityType ? entityName(own.entityType) : '' }) }));
+  },
+  zombie_conversion: function (body) {
+    var own = evGroup('zombie_conversion') || {}, t = own.ConversionTime;
+    body.appendChild(xRow({ icon: false, title: '转化倒计时', sub: '只读', right: h('span', { class: 'k-sub', text: typeof t === 'number' && t >= 0 ? t + ' 刻' : '没在转化' }) }));
+  },
   dropped_item: function (body) {
     var g = 'dropped_item', st = evGet(g, 'Item') || { id: 'minecraft:stone', count: 1, comps: {}, removed: {} };
     body.appendChild(xRow({ icon: false, title: '物品', right: evStack(st, function (s) { evSet(g, 'Item', s); weRender(); }, { clear: false }) }));
