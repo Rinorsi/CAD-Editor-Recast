@@ -291,3 +291,69 @@ entity.minecraft.villager 的真实normalized视图：
 
     {"trades":{"available":true,"offers":[{"buy":{"id":"minecraft:emerald","count":2,"comps":{},"removed":{},"slot":{},"label":"","cost_predicate_snbt":"{}"},"sell":{"id":"minecraft:bread","count":3,"comps":{},"removed":{},"slot":{},"label":""},"uses":3,"maxUses":12,"rewardExp":true,"xp":5,"priceMultiplier":0.05,"demand":0,"specialPrice":0}]},"riding":{"passengers":[],"vehicle":null,"rideCheck":{"mode":"try-and-report","staticCanRideList":false,"reason":"canRide/canAddPassenger 动态检查"}}}
 
+## P3-3 矿车、船与村民
+
+### 已有通用 schema（不重复新增控件）
+
+下列字段继续使用 `entity_schema` 的 variants / extras 及已有 SNBT 编辑通路，真实保存类型、存储范围和 loader probes 以当前 schema 为准。不要把原始 NBT 字段提交到不存在的 `entity.furnace`、`entity.villager` 等区段。
+
+|适用实体|已有字段与来源|
+|---|---|
+|熔炉矿车|Fuel：真实 short；PushX / PushZ：有限 double；extras 来自实际 save/load 探针|
+|TNT 矿车|`fuse`：真实 signed int；26.1.2 不再使用旧名 `TNTFuse`|
+|刷怪笼矿车|Delay / MinSpawnDelay / MaxSpawnDelay / SpawnCount / MaxNearbyEntities / RequiredPlayerRange / SpawnRange：真实 short；复用 extras，不推断额外游戏范围。SpawnData 等复杂结构保持高级原始 NBT，本轮不新增结构化刷怪实体编辑器|
+|命令方块矿车|TrackOutput：保存 byte boolean，使用已有 extras；不要提交到 minecart_command|
+|村民、僵尸村民|VillagerData.type：`minecraft:villager/variant`；VillagerData.profession：`villager/profession`；VillagerData.level：`villager/level`。候选来自实时 VillagerType / VillagerProfession 注册表，等级来自 VillagerData.MIN_VILLAGER_LEVEL / MAX_VILLAGER_LEVEL 并逐值真实加载验证|
+|村民、僵尸村民|`Xp`：独立的真实 signed int extras，不是 VillagerData.xp，也不是交易 offers[].xp|
+
+通用 schema 暴露的 ConversionTime 原始探针不应生成额外可写转化控件；该功能的页面采用下面的只读 zombie_conversion。现有 trades/offers 协议保持不变。
+
+### 新增视图
+
+|视图 / edits|适用实体|字段、类型、范围与 null 语义|
+|---|---|---|
+|vehicle_container / entity.vehicle_container|实现 ContainerEntity 的箱子矿车、漏斗矿车、箱船、箱筏|视图 size 为真实 getContainerSize()；unresolved_loot 为只读 boolean；slots 为 `{slot,stack}` 数组。edits 仅接受 slots，slot 为 0..size-1 的整数，不重复；stack 为完整 StackCodec，`{empty:true}` 清空。所有 null 拒绝，未提交槽保持原内容|
+|minecart_display / entity.minecart_display|全部 AbstractMinecart|DisplayState：BlockState.CODEC `{Name,Properties?}` 或 null（清除自定义方块）；DisplayOffset：signed int 或 null（恢复该实体 getDefaultDisplayOffset()）。显式提交默认偏移会正规化为删除该可选 NBT 键；CustomDisplayTile 是只读派生 boolean，表示 DisplayState 是否存在，26.1.2 没有同名持久化键|
+|minecart_command / entity.minecart_command|命令方块矿车|Command：严格 string，空串允许，null 拒绝；LastOutput：只读 Component JSON 或 null（没有输出），不允许 edits|
+|boat_type（无合法 edits）|Boat / ChestBoat / Raft / ChestRaft，共同基类 AbstractBoat|entityType：实时实体类型注册表 ID；readOnly:true。木材和船/筏类别由实体类型决定，放置后不通过 NBT 换类型|
+|zombie_conversion（无合法 edits）|僵尸村民|ConversionTime：保存 int；ConversionPlayer：原版 UUID NBT 的四 int 数组或 null；readOnly:true。不允许修改计时或转化玩家，null 也不表示清除|
+
+只读 boat_type / zombie_conversion 元数据内联于 world.views，不重复加入 entity_schema.views，避免扩大村民 schema 分页预算。其它新视图的规格由 `schema` / `entity_schema.views` 给出。DisplayState 的方块与 Properties 来自实时 block 注册表及 StateDefinition，复用 block_properties；未知方块、未知属性和值拒绝。
+
+车辆容器沿用项目的 `{slot,stack}` 和 StackCodec 组件/移除 patch 格式；堆叠上限和可放入性来自真实容器。检查库存不展开 LootTable，unresolved_loot:true 时 slots:[] 表示尚不可读，不代表空库存；任何库存 edits 都拒绝，须先在游戏中打开容器。库存修改在分离实体副本完成，并再次用真实实体 loader 校验每个栈；最终所有修改仍通过 EntityWorldEdit 的分离实体加载/保留校验及 WorldNbt.protect。未知区段/字段、错误目标类型、null、小数槽号、越界/重复槽号、无效栈、原版未保留请求值均拒绝，错误沿用实体编辑的参数错误 / invalid_nbt 映射。
+
+视图示例（容量和类型取本次真实返回值；slots 实际列出每个槽）：
+```json
+{"vehicle_container":{"size":5,"unresolved_loot":false,"slots":[{"slot":0,"stack":{"id":"minecraft:diamond","count":2,"comps":{},"removed":{}}},{"slot":1,"stack":{"empty":true}},{"slot":2,"stack":{"empty":true}},{"slot":3,"stack":{"empty":true}},{"slot":4,"stack":{"empty":true}}]}}
+```
+Edits 示例：
+```json
+{"entity":{"vehicle_container":{"slots":[{"slot":4,"stack":{"id":"minecraft:diamond","count":2,"comps":{},"removed":{}}},{"slot":0,"stack":{"empty":true}}]}}}
+```
+```json
+{"minecart_display":{"CustomDisplayTile":false,"DisplayState":null,"DisplayOffset":6}}
+```
+```json
+{"entity":{"minecart_display":{"DisplayState":{"Name":"minecraft:oak_log","Properties":{"axis":"x"}},"DisplayOffset":12}}}
+```
+```json
+{"entity":{"minecart_display":{"DisplayState":null,"DisplayOffset":null}}}
+```
+```json
+{"minecart_command":{"Command":"say hello","LastOutput":null}}
+```
+```json
+{"entity":{"minecart_command":{"Command":"say hello"}}}
+```
+```json
+{"boat_type":{"entityType":"minecraft:bamboo_chest_raft","readOnly":true,"reason":"Wood and boat/raft kind are determined by entity type"}}
+```
+```json
+{"zombie_conversion":{"ConversionTime":-1,"ConversionPlayer":null,"readOnly":true}}
+```
+以下只读 edits 均拒绝：
+```json
+{"entity":{"boat_type":{},"zombie_conversion":{"ConversionTime":100},"minecart_command":{"LastOutput":null}}}
+```
+
+门禁：独立 `EntityVehicleViewTest` / JavaExec `entityVehicleViewTest` 挂到 check，覆盖真实读取、合法写入、错误实体类型、未知字段、null、容量末槽及越界、完整组件往返、只读拒绝、未展开战利品拒绝及已有 schema 覆盖回归。验证日志在 `logs/lane-vehicle/`；不启动 Minecraft、客户端或服务器探针。
