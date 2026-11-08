@@ -171,6 +171,15 @@ tasks.register('catalogMemoryBench', JavaExec) {
     workingDir = rootProject.projectDir
 }
 
+// SpawnData equipment contract, real Codecs and trial block load/save; no client window.
+tasks.register('spawnerEquipmentTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.registry.SpawnerEquipmentTest'
+    workingDir = rootProject.projectDir
+}
+tasks.named('check') { dependsOn('spawnerEquipmentTest') }
+
 // Native vanilla-tooltip projection; read-only, no client window in this check.
 tasks.register('tooltipTest', JavaExec) {
     dependsOn codecVerificationClasses

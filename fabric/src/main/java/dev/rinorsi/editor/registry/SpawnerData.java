@@ -42,7 +42,8 @@ public final class SpawnerData {
         addCodec(fields, "SpawnData", SpawnData.CODEC, new SpawnData(), lookup);
         addCodec(fields, "SpawnPotentials", SpawnData.LIST_CODEC, net.minecraft.util.random.WeightedList.<SpawnData>of(), lookup);
         for (var entry : fields.entrySet()) entry.getValue().getAsJsonObject().addProperty("present_by_default", defaults.contains(entry.getKey()));
-        classic.add("fields", fields); out.add(classic);
+        classic.add("fields", fields);
+        classic.add("spawn_data_schema", spawnDataSchema(lookup)); out.add(classic);
         JsonObject trial = new JsonObject(); trial.addProperty("id", net.minecraft.core.registries.BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(BlockEntityType.TRIAL_SPAWNER).toString());
         var block = new TrialSpawnerBlockEntity(BlockPos.ZERO, Blocks.TRIAL_SPAWNER.defaultBlockState());
         trial.addProperty("default_nbt", block.saveCustomOnly(lookup).toString());
@@ -56,7 +57,39 @@ public final class SpawnerData {
         trial.add("defaults", full);
         trial.addProperty("config_codec", "TrialSpawnerConfig.DIRECT_CODEC");
         trial.addProperty("state_codec", "TrialSpawnerStateData.Packed.MAP_CODEC");
+        trial.add("spawn_data_schema", spawnDataSchema(lookup));
         out.add(trial); return out;
+    }
+    private static JsonObject spawnDataSchema(HolderLookup.Provider lookup) {
+        var ops = lookup.createSerializationContext(JsonOps.INSTANCE);
+        JsonObject schema = new JsonObject();
+        schema.addProperty("codec", "SpawnData.CODEC");
+        schema.addProperty("entity_schema", "entity_schema");
+        JsonObject equipment = new JsonObject();
+        equipment.addProperty("codec", "EquipmentTable.CODEC");
+        equipment.addProperty("optional", true);
+        JsonObject lootTable = new JsonObject();
+        lootTable.addProperty("registry", "loot_table");
+        lootTable.addProperty("required", true);
+        equipment.add("loot_table", lootTable);
+        JsonObject chances = new JsonObject();
+        chances.addProperty("codec", "EquipmentTable.DROP_CHANCES_CODEC");
+        chances.addProperty("optional", true);
+        chances.add("default", net.minecraft.world.entity.EquipmentTable.DROP_CHANCES_CODEC.encodeStart(ops, java.util.Map.of()).getOrThrow());
+        JsonArray formats = new JsonArray(); formats.add("float"); formats.add("slot-map");
+        chances.add("formats", formats);
+        JsonArray slots = new JsonArray();
+        for (var slot : net.minecraft.world.entity.EquipmentSlot.values())
+            slots.add(net.minecraft.world.entity.EquipmentSlot.CODEC.encodeStart(ops, slot).getOrThrow());
+        chances.add("slots", slots);
+        equipment.add("slot_drop_chances", chances);
+        // Samples are encoded by the real Codec, not defaults to insert into an existing draft.
+        var sample = new net.minecraft.world.entity.EquipmentTable(
+                net.minecraft.world.level.storage.loot.BuiltInLootTables.EQUIPMENT_TRIAL_CHAMBER,
+                java.util.Map.of(net.minecraft.world.entity.EquipmentSlot.HEAD, 0.25f));
+        equipment.add("sample", net.minecraft.world.entity.EquipmentTable.CODEC.encodeStart(ops, sample).getOrThrow());
+        schema.add("equipment", equipment);
+        return schema;
     }
     // Explicit bindings to official 26.1.2 Codec fields, never a baked table of option/default values.
     private static JsonObject configDefaults(TrialSpawnerConfig c, HolderLookup.Provider lookup) {

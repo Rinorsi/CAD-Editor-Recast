@@ -142,6 +142,62 @@
 
     {"id":"minecraft:trial_spawner","defaults":{"normal_config":{"spawn_range":4,"total_mobs":6.0,"simultaneous_mobs":2.0,"total_mobs_added_per_player":2.0,"simultaneous_mobs_added_per_player":1.0,"ticks_between_spawn":40,"spawn_potentials":[]},"required_player_range":14,"target_cooldown_length":36000}}
 
+### SpawnData 装备（P2-6，26.1.2）
+
+`spawner_info` 的两个条目均新增 `spawn_data_schema`。经典与试炼共用实际 `SpawnData.CODEC`：
+
+```json
+{
+  "codec": "SpawnData.CODEC",
+  "entity_schema": "entity_schema",
+  "equipment": {
+    "codec": "EquipmentTable.CODEC",
+    "optional": true,
+    "loot_table": {"registry":"loot_table","required":true},
+    "slot_drop_chances": {
+      "codec":"EquipmentTable.DROP_CHANCES_CODEC",
+      "optional":true,
+      "default":{},
+      "formats":["float","slot-map"],
+      "slots":["mainhand","offhand","feet","legs","chest","head","body","saddle"]
+    },
+    "sample": {"loot_table":"minecraft:equipment/trial_chamber","slot_drop_chances":{"head":0.25}}
+  }
+}
+```
+
+`slots` 在运行时由 `EquipmentSlot.values()` 经官方 Codec 编码，并非固定前端清单。`sample` 也经官方 Codec 编码，只是样本，不是自动写入草稿的默认配置。实体可用的格子继续请求 `{name:'entity_schema',id:生物ID}`，使用其 `equipment` 行的 `slot / nbtPath / canHold / requiresSnbt / dropChancePath`，详见 [entity-schema-contract.md](entity-schema-contract.md)。全槽枚举不是某个生物实际可用槽的保证。
+
+两种 **equipment 必须区分**：
+
+| 编辑内容 | 相对每个 SpawnData 的路径 |
+| --- | --- |
+| 直接放入的完整物品栈 | `entity` + `entity_schema.equipment[].nbtPath`（通常 `entity.equipment.head`） |
+| 实体自身掉落概率 | `entity` + `dropChancePath`（通常 `entity.drop_chances.head`） |
+| 生成时额外应用的装备战利品表 | `equipment.loot_table`，不是物品格，不是 `entity.equipment.loot_table` |
+| 战利品装备的掉落覆盖值 | `equipment.slot_drop_chances`，数字或按槽映射 |
+
+试炼的完整前缀分别为 `normal_config.spawn_potentials[i].data` 与 `ominous_config.spawn_potentials[i].data`；两套配置独立保留。经典前缀为 `SpawnData` 或 `SpawnPotentials[i].data`。试炼状态中的 `spawn_data` 也是 SpawnData，但不是两套配置列表，不要误改。`spawn_potentials` 每项是 `{data:SpawnData,weight:正整数}`。
+
+`EquipmentTable.CODEC` 要求 `loot_table`；其 ID 使用现有 `{name:'loot_table'}` 选择器并允许手输数据包 ID。只填写 `slot_drop_chances` 而没有表是无效的。`slot_drop_chances` 省略时为 `{}`（不覆盖），不是所有槽0；数字形式如 `0.125` 为全部槽统一覆盖，映射形式如 `{head:0.25}` 只覆盖指定槽。Codec 是 `FLOAT` 或 `unboundedMap(EquipmentSlot.CODEC,FLOAT)`，**不是0..1范围 Codec**，不能把产品滑块范围冒充原版限制，也不能丢掉已有大于1的保证掉落值。未知槽或非数值被实际 Codec 拒绝。实体的 `drop_chances` 与此字段独立，不要混为一组路径；运行时战利品装备可能覆盖直接设置的槽，编辑器不能承诺同时设置时物品不被替换。
+
+物品组件 `minecraft:block_entity_data` 的 SNBT 形状示例（不是默认值）：
+
+```snbt
+{id:'minecraft:trial_spawner',
+ normal_config:{spawn_potentials:[{weight:1,data:{
+  entity:{id:'minecraft:zombie',equipment:{head:{id:'minecraft:iron_helmet',count:1,components:{'minecraft:custom_data':{n:9223372036854775807L}}}},drop_chances:{head:0.5f}},
+  equipment:{loot_table:'minecraft:equipment/trial_chamber',slot_drop_chances:{head:0.25f}}
+ }}]},
+ ominous_config:{spawn_potentials:[{weight:1,data:{
+  entity:{id:'minecraft:skeleton',equipment:{mainhand:{id:'minecraft:bow',count:1}}}
+ }}]}}
+```
+
+嵌套原版 ItemStack 使用 `components`，不是编辑器wire栈的 `comps`；从保险库取物品须按 [vault-contract.md](vault-contract.md) 保留完整typed侧车后转为嵌套SNBT。修改列表某格时保留权重、其它生物字段、另一套配置、未知字段与未修改的精确类型。`normal_config` / `ominous_config` 也可能是注册表引用字符串；不得把引用误当空对象覆盖。客户端缺少试炼配置注册表时不能自行展开引用，仍交权威服务端校验。
+
+验证：正式 `check` 包含 `spawnerEquipmentTest`，覆盖两类导出、全部实际槽、必填表/默认空覆盖、数字与映射及越界于0..1的原版有效值、无效槽/数值、typed long 嵌套物品、两套配置的官方 block load/save 与真实注册表分页预算；不生成实体、不启动游戏。实机前端格子留待统一验收。
+
 写回：StackCodec.decode 在原版 ItemStack.validateStrict 后调用 SpawnerData.validate，因此客户端预检和服务端权威解码均执行。BLOCK_ENTITY_DATA 的类型是 MOB_SPAWNER/TRIAL_SPAWNER 才触发；未知及其他方块类型不套用此规则。普通刷怪笼整体没有官方 Codec：SpawnData / SpawnPotentials 用其真实 Codec，实际保存的数值字段校验整数/short持久化范围（Delay允许-1，其余≥0）、MaxSpawnDelay≥MinSpawnDelay。试炼用 FullConfig.MAP_CODEC 和 StateData.Packed.MAP_CODEC，包含配置引用解析及各字段官方范围。SpawnData.entity 内的 id 另外校验当前 ENTITY_TYPE 存在性与字符串类型，乘客最多16层；这是因为 SpawnData 的 CompoundTag Codec 本身不检查实体内部id，会静默修复错误id。实体任意内部自定义NBT语义仍由游戏负责，不承诺完整实体NBT schema校验。失败抛出可读错误，调用方保留原物品/草稿；这里只验证物品组件，不放置方块、不生成实体。
 
 离线/远程服务器：没有宿主时前端不得伪造这些数据；没有客户端世界，entity_info / spawner_info 回 done:true、entries:[]、error；equipment_slot_groups / entity_base_attributes 可读本地已启动的注册表。多人环境用客户端同步的 RegistryAccess；服务端独有、未同步的模组/数据包信息无法凭空获得，配置引用无法解析时返回错误页，用户仍可手输id，但提交时由服务端当前 RegistryAccess 再次校验。无 supplier、无刷怪蛋、无变种应分别保留 {} / []，与模板失败区分。单实体模板超分页预算返回错误页，不截断NBT。
