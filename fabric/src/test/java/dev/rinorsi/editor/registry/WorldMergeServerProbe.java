@@ -18,7 +18,7 @@ public final class WorldMergeServerProbe implements ModInitializer {
     private final JsonObject receipt=new JsonObject();private int ticks,checks;
     private WorldTarget furnace,zombie,chest,stand;private CompoundTag fb,zb,cb,sb;
     public void onInitialize(){ServerLifecycleEvents.SERVER_STARTED.register(s->{try{setup(s);}catch(Throwable e){finish(s,e);}});ServerTickEvents.END_SERVER_TICK.register(s->{if(fb!=null)try{++ticks;if(ticks>200)throw new AssertionError("forced chunk entity did not tick");if(ticks>=20&&zombie.entity.tickCount>=10){run(s);finish(s,null);}}catch(Throwable e){finish(s,e);}});}
-    private WorldTarget target(net.minecraft.server.level.ServerLevel l,BlockEntity b,Entity e)throws Exception{var ctor=WorldTarget.class.getDeclaredConstructor(net.minecraft.server.level.ServerLevel.class,BlockEntity.class,Entity.class);ctor.setAccessible(true);return ctor.newInstance(l,b,e);}
+    private WorldTarget target(net.minecraft.server.level.ServerLevel l,BlockEntity b,Entity e)throws Exception{var ctor=WorldTarget.class.getDeclaredConstructor(net.minecraft.world.level.Level.class,BlockEntity.class,Entity.class);ctor.setAccessible(true);return ctor.newInstance(l,b,e);}
     private void setup(MinecraftServer server)throws Exception{
         var l=server.overworld();l.setChunkForced(0,0,true);l.getChunk(0,0);
         var fp=new BlockPos(2,65,2);l.setBlock(fp,Blocks.FURNACE.defaultBlockState(),3);var f=(AbstractFurnaceBlockEntity)l.getBlockEntity(fp);f.setItem(0,new ItemStack(Items.RAW_IRON,3));f.setItem(1,new ItemStack(Items.COAL,3));furnace=target(l,f,null);fb=furnace.sessionData();

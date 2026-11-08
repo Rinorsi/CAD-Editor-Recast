@@ -46,9 +46,36 @@ public final class WorldEditorClient {
     private static int queue(String kind, JsonObject pos) { queued = kind; queuedPos = pos; return 1; }
     public static void openSelf(){queue("player",null);}
     public static void openTarget(boolean entity){queue(entity?"entity":"block",null);}
+    private static HitResult editorHit(Minecraft mc) {
+        if (mc.player == null || mc.level == null || mc.hitResult instanceof EntityHitResult) return mc.hitResult;
+        // These editable entities deliberately do not participate in vanilla attack picking.
+        // Keep vanilla hits untouched; only the editor gets an additional, occluded ray query.
+        var eye = mc.player.getEyePosition();
+        double reach = mc.player.entityInteractionRange();
+        var end = eye.add(mc.player.getViewVector(1).scale(reach));
+        double nearest = reach * reach;
+        if (mc.hitResult != null && mc.hitResult.getType() != HitResult.Type.MISS)
+            nearest = Math.min(nearest, eye.distanceToSqr(mc.hitResult.getLocation()));
+        HitResult selected = mc.hitResult;
+        for (var entity : mc.level.getEntities(mc.player, new AABB(eye, end).inflate(1), e -> e.isAlive()
+                && (e instanceof net.minecraft.world.entity.item.ItemEntity
+                || e instanceof net.minecraft.world.entity.ExperienceOrb
+                || e instanceof net.minecraft.world.entity.AreaEffectCloud
+                || e instanceof net.minecraft.world.entity.projectile.arrow.AbstractArrow))) {
+            var box = entity.getBoundingBox();
+            var point = box.contains(eye) ? java.util.Optional.of(eye) : box.clip(eye, end);
+            if (point.isPresent() && eye.distanceToSqr(point.get()) < nearest
+                    && mc.player.isWithinEntityInteractionRange(entity, 0)) {
+                nearest = eye.distanceToSqr(point.get());
+                selected = new EntityHitResult(entity, point.get());
+            }
+        }
+        return selected;
+    }
     public static EditDispatch.Hit hit(){
         var mc=Minecraft.getInstance();if(mc.player==null||mc.level==null)return EditDispatch.Hit.NONE;
-        if(mc.hitResult instanceof EntityHitResult e)return mc.player.isWithinEntityInteractionRange(e.getEntity(),0)?EditDispatch.Hit.ENTITY:EditDispatch.Hit.NONE;
+        var picked=editorHit(mc);
+        if(picked instanceof EntityHitResult e)return mc.player.isWithinEntityInteractionRange(e.getEntity(),0)?EditDispatch.Hit.ENTITY:EditDispatch.Hit.NONE;
         if(mc.hitResult instanceof BlockHitResult b&&b.getType()!=HitResult.Type.MISS&&mc.player.isWithinBlockInteractionRange(b.getBlockPos(),0)){
             var state=mc.level.getBlockState(b.getBlockPos());if(state.hasBlockEntity())return EditDispatch.Hit.BLOCK_ENTITY;if(!state.getProperties().isEmpty())return EditDispatch.Hit.BLOCK_STATE;
         }return EditDispatch.Hit.NONE;
@@ -58,7 +85,8 @@ public final class WorldEditorClient {
         try {
             if (!ClientPlayNetworking.canSend(EditorPackets.Request.TYPE)) throw new EditorSessions.Failure("UNAVAILABLE", "服务器未安装物品工坊，无法读取或修改世界目标");
             var target = new JsonObject(); target.addProperty("dim", mc.level.dimension().identifier().toString());
-            if (kind.equals("crosshair")) kind = mc.hitResult instanceof EntityHitResult ? "entity" : "block";
+            var picked = editorHit(mc);
+            if (kind.equals("crosshair")) kind = picked instanceof EntityHitResult ? "entity" : "block";
             target.addProperty("kind", kind.equals("player")?"entity":kind);
             if(kind.equals("player")){target.addProperty("player",pos!=null?"name":"self");if(pos!=null)target.add("name",pos.get("name"));}
             else if (kind.equals("block")) {
@@ -68,7 +96,7 @@ public final class WorldEditorClient {
                     var p = hit.getBlockPos(); target.addProperty("x",p.getX()); target.addProperty("y",p.getY()); target.addProperty("z",p.getZ());
                 }
             } else {
-                if (!(mc.hitResult instanceof EntityHitResult hit)) throw new IllegalArgumentException("请将准星对准实体或玩家");
+                if (!(picked instanceof EntityHitResult hit)) throw new IllegalArgumentException("请将准星对准实体或玩家");
                 target.addProperty("uuid", hit.getEntity().getStringUUID()); target.addProperty("id", hit.getEntity().getId());
                 if(hit.getEntity() instanceof net.minecraft.world.entity.player.Player)target.addProperty("player","online");
             }
