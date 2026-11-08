@@ -239,13 +239,27 @@ function extraCompIds(d, kind) {
   return out;
 }
 var CAT_ICON = { look: 'palette', dura: 'shield', combat: 'sword', ench: 'enchant', use: 'apple', equip: 'helmet', cont: 'chest', book: 'book', fx: 'potion_round', variant: 'paw' };
+/* 变种类组件（cat/variant、wolf/collar、sheep/color ……）的卡片图标：用当前值渲染一个小的 <entity> 预览。
+   组件 id 形如 「生物/字段」，实体组件照 elements.md 的 components 属性传（和 esPreviewAttrs 同一种写法）。
+   没有可见外观的（声音变种）、不是生物的（画）、值不是字符串的返回 null，继续用原来的图标。 */
+var VAR_NO_PREVIEW = { 'painting/variant': 1 };
+function varEntityIcon(cid, v) {
+  var m = /^([a-z0-9_]+)\/([a-z0-9_]+)$/.exec(String(cid));
+  if (!m || VAR_NO_PREVIEW[cid] || /sound_variant$/.test(cid) || typeof v !== 'string' || !v) return null;
+  var comps = '{' + snbtStr('minecraft:' + cid) + ':' + snbtStr(v.indexOf(':') < 0 && m[2] === 'variant' ? 'minecraft:' + v : v) + '}';
+  var el = h('entity', { type: 'minecraft:' + m[1], components: comps, class: 'k-vent' });
+  el.setAttribute('style', 'width:24px;height:24px');
+  return el;
+}
 /* 通用卡片：按组件的数据结构自动生成表单。一行 = 标题 + 右侧开关；打开开关才展开设置 */
 CARDS.auto = function (cid) {
   if (cid === 'use_effects') return CARDS.useEffects();
   var c = CIDX[cid]; if (!c) return null;
   var unit = c.schema && c.schema.t === 'unit';
   var headK = HEAD_AUTO[cid] ? 'body' : scalarHead(c.schema);
-  var card = kCard({ id: 'auto-' + cid, icon: CAT_ICON[c.cat] || 'tag', title: c.name, desc: shortDesc(c.desc), comps: [cid], toggle: true, bare: unit, eager: !!headK }, Ctx);
+  var vIcon = null;
+  if (c.cat === 'variant') { var vd = Store.doc(), vv = vd.comps[cid] !== undefined ? vd.comps[cid] : Ctx.proto(cid); vIcon = varEntityIcon(cid, vv); }
+  var card = kCard({ id: 'auto-' + cid, icon: vIcon || CAT_ICON[c.cat] || 'tag', title: c.name, desc: shortDesc(c.desc), comps: [cid], toggle: true, bare: unit, eager: !!headK }, Ctx);
   if (cid === 'can_place_on' || cid === 'can_break') card.make = function () {
     worldBlockPicker(null, function (blocks) { Ctx.enable(cid, { blocks: blocks }, '启用 ' + c.name); openDetail({ cid: cid }); }, '选择' + c.name + '的目标方块');
   };

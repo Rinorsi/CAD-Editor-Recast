@@ -96,4 +96,16 @@ assert.deepEqual(Array.from(c.splitTags('a，b, c  d,,')), ['a', 'b', 'c', 'd'])
   assert.deepEqual(picked[1], ['a']); assert.ok(/添加/.test(add.textContent), '添加用的选完回到占位文字');
   c.kPopClose();
 }
-console.log('PASS components: xNum/xToggle/xText/xSeg/xSelect, kInput onCommit, xList extras, modalShell, kColorPop, combo, labels / names.');
+// ---- 变种组件卡片的实体预览图标
+{
+  const e = c.varEntityIcon('cat/variant', 'minecraft:black');
+  assert.equal(e.tagName, 'ENTITY'); assert.equal(e.getAttribute('type'), 'minecraft:cat');
+  assert.ok(/minecraft:cat\/variant/.test(e.getAttribute('components')) && /minecraft:black/.test(e.getAttribute('components')), '组件值传给预览');
+  assert.ok(/minecraft:wolf\/collar/.test(c.varEntityIcon('wolf/collar', 'red').getAttribute('components')), '项圈颜色也能预览');
+  assert.ok(/minecraft:cow\/variant/.test(c.varEntityIcon('cow/variant', 'warm').getAttribute('components')) && /minecraft:warm/.test(c.varEntityIcon('cow/variant', 'warm').getAttribute('components')), '没写命名空间的变种值自动补 minecraft:');
+  assert.equal(c.varEntityIcon('cat/sound_variant', 'minecraft:classic'), null, '声音变种看不出来，用原图标');
+  assert.equal(c.varEntityIcon('painting/variant', 'minecraft:kebab'), null, '画不是生物');
+  assert.equal(c.varEntityIcon('horse/variant', 7), null, '值不是字符串就不猜');
+  assert.equal(c.varEntityIcon('cat/variant', ''), null);
+}
+console.log('PASS components: xNum/xToggle/xText/xSeg/xSelect, kInput onCommit, xList extras, modalShell, kColorPop, combo, variant preview, labels / names.');
