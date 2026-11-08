@@ -80,7 +80,25 @@ export class Runner {
     }
     throw new Error('Escape did not return to world');
   }
-  async open() { await this.wait(5); await this.call('keybind', { name: 'key.cadeditor.edit', action: 'tap' }); await this.call('waitFor', { condition: 'screen:OrielScreen', timeoutTicks: 80 }); await this.wait(6); }
+  async open() {
+    await this.wait(5); await this.call('keybind', { name: 'key.cadeditor.edit', action: 'tap' });
+    await this.call('waitFor', { condition: 'screen:OrielScreen', timeoutTicks: 80 });
+    for (let i = 0; i < 30; i++) {
+      const header = await this.probe.inspect(controls.apply);
+      if (header && !header.error && header.w > 0) {
+        // Each case starts from its own fixture, never a prior case's draft.
+        const discard = { selector: '.k-narrow .k-btn', text: '丢弃' };
+        const offered = await this.probe.inspect(discard);
+        if (offered && !offered.error && offered.w > 0) {
+          await this.step('discard previous case draft', () => clickPage(this.mc, this.probe, discard));
+          await this.wait(4);
+        }
+        return;
+      }
+      await this.wait(2);
+    }
+    throw new Error('Editor header did not become ready');
+  }
   async ready(locator) {
     await this.call('hover', { x: 4, y: 4 }); await this.wait(2);
     let r;
@@ -117,7 +135,17 @@ export class Runner {
   async apply(item = false) {
     await this.step('click 应用修改', () => this.control('apply'));
     if (item) await this.step('click 应用到游戏', () => this.control('confirm'));
-    await this.wait(6); await this.close();
+    await this.step('server acknowledgement visible', async () => {
+      const confirmation = { selector: '#toasts .k-toast', contains: item ? '服务器已确认物品修改' : '游戏已确认修改' };
+      for (let i = 0; i < 60; i++) {
+        const toast = await this.probe.inspect(confirmation);
+        if (toast && !toast.error && toast.w > 0) return;
+        await this.wait(2);
+      }
+      throw new Error('No visible server save acknowledgement');
+    });
+    // Draft persistence debounces for 1500ms after the save acknowledgement.
+    await this.wait(35); await this.close();
   }
   async prepare(c) {
     await this.close();
@@ -126,7 +154,9 @@ export class Runner {
     if (c.effect.kind === 'eat') {
       await this.open();
       await this.fields([{ control: 'state' }, { control: 'current', expand: true }, { control: 'saturation', value: '0' }, { control: 'food', value: String(c.effect.initialFood) }]);
-      await this.apply(); expect((await this.call('player')).food, c.effect.initialFood, 'food fixture');
+      const apply = await this.probe.inspect(controls.apply);
+      if (apply.disabled) await this.close(); else await this.apply();
+      expect((await this.call('player')).food, c.effect.initialFood, 'food fixture');
     }
     if (c.base) await this.command(`item replace entity @s hotbar.0 with minecraft:${c.setupItem || c.base}`);
     for (const cmd of c.setup || []) await this.command(cmd);
@@ -178,11 +208,32 @@ export class Runner {
       const aiming = await this.call('player');
       expect(aiming.lookingAt?.pos, { x: 0, y: -60, z: 3 }, 'mining crosshair');
       await this.call('keybind', { name: 'attack', action: 'press' });
-      try { await this.call('waitFor', { condition: 'block:0,-60,3=minecraft:air', timeoutTicks: 80 }); }
+      const miningDeadline = Date.now() + 4000;
+      let mined;
+      try {
+        await this.call('waitFor', { condition: 'block:0,-60,3=minecraft:air', timeoutTicks: 80 });
+        // waitFor observes client prediction; retain the deadline and require server confirmation.
+        do {
+          mined = await this.call('block', { x: 0, y: -60, z: 3, source: 'server' });
+          if (mined.id === 'minecraft:air') break;
+          await this.wait(2);
+        } while (Date.now() < miningDeadline);
+      }
       finally { await this.call('keybind', { name: 'attack', action: 'release' }); }
-      expect((await this.call('block', { x: 0, y: -60, z: 3 })).id, 'minecraft:air', 'mined block');
-      const held = await this.held(); expect(held?.damage, e.damage, 'mining durability');
-      if (e.maxDamage) expect(held?.maxDamage, e.maxDamage, 'maximum durability');
+      expect(mined?.id, 'minecraft:air', 'server mined block');
+      await this.wait(4);
+      // MCTest omits damage fields for unbreakable items. Read the actual server
+      // stack instead; vanilla serialization omits the default damage of zero.
+      await this.command('setblock 2 -60 0 chest');
+      await this.command('item replace block 2 -60 0 container.0 from entity @s weapon.mainhand');
+      const stored = await this.call('block', { x: 2, y: -60, z: 0, source: 'server' });
+      const stack = parseSnbt(stored.blockEntity?.nbt || '{}').Items?.find(i => i.Slot === 0);
+      expect(stack?.id, `minecraft:${c.base}`, 'server mining tool');
+      expect(stack?.components?.['minecraft:damage'] ?? 0, e.damage, 'server mining durability');
+      if (c.components.includes('unbreakable')) {
+        expect(Object.hasOwn(stack.components || {}, 'minecraft:unbreakable'), true, 'server unbreakable component');
+      }
+      if (e.maxDamage) expect(stack.components?.['minecraft:max_damage'], e.maxDamage, 'maximum durability');
     } else if (e.kind === 'eat' || e.kind === 'drink') {
       await this.command('gamemode survival'); await this.call('keybind', { name: 'use', action: 'hold', ticks: e.ticks || 36 }); await this.wait(3);
       const p = await this.call('player');

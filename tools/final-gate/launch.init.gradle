@@ -1,5 +1,6 @@
 gradle.projectsEvaluated {
-    def p = gradle.rootProject.project(':fabric:26.1')
+    def p = gradle.rootProject.findProject(':fabric:26.1')
+    if (p == null) return // Init scripts also run for included build-logic builds.
     def world = gradle.startParameter.projectProperties['finalGateWorld']
     def day = java.time.LocalDate.now().toString()
     def run = gradle.rootProject.file('../Oriel-UI-Workspace/daily/' + day + '/run/editor-mod-client')

@@ -1,5 +1,6 @@
 gradle.projectsEvaluated {
-    def p = gradle.rootProject.project(':fabric:26.1')
+    def p = gradle.rootProject.findProject(':fabric:26.1')
+    if (p == null) return // Init scripts also run for included build-logic builds.
     def run = new File(gradle.startParameter.projectProperties['liveTestEvidence'] ?: gradle.rootProject.file('logs/live-test').absolutePath, 'mctest-run')
     def probe = p.tasks.register('liveTestWindowProbeJar', Jar) {
         dependsOn p.tasks.named('autotestClasses')
@@ -24,6 +25,7 @@ gradle.projectsEvaluated {
         runDirectory.set(run.absolutePath)
         vmArg('-Deditor.autotest=live-smoke')
         vmArg('-Deditor.liveTest.owner=' + gradle.startParameter.projectProperties['liveTestOwner'])
+        vmArg('-Dcadeditor.vault.dir=' + new File(run, 'test-vault').absolutePath)
         def inputEngine = gradle.startParameter.projectProperties['liveTestInput']
         if (inputEngine) vmArg('-Doriel.inputBackend=' + inputEngine)
         programArg('--username'); programArg('LiveTest')

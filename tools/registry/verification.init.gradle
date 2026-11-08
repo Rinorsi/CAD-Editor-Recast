@@ -1,5 +1,6 @@
 gradle.projectsEvaluated {
-    def p = gradle.rootProject.project(":fabric:26.1")
+    def p = gradle.rootProject.findProject(":fabric:26.1")
+    if (p == null) return // Init scripts also run for included build-logic builds.
     p.tasks.register("registryTest", JavaExec) {
         dependsOn p.tasks.named("codecVerificationClasses")
         classpath = p.sourceSets.codecVerification.runtimeClasspath

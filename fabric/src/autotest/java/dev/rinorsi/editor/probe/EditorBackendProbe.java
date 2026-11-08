@@ -55,7 +55,7 @@ public final class EditorBackendProbe implements ClientModInitializer {
             if (mode.equals("vanilla")) {
                 if (mc.screen != null) return;
                 if (stage == 1) { shot(mc, "vanilla-after-uninstall.png"); complete(); return; }
-                check(!FabricLoader.getInstance().isModLoaded("editor"), "editor_uninstalled");
+                check(!FabricLoader.getInstance().isModLoaded("cadeditor"), "editor_uninstalled");
                 check(!FabricLoader.getInstance().isModLoaded("oriel"), "oriel_uninstalled");
                 check(mc.player.getMainHandItem().is(Items.DIAMOND_SWORD), "vanilla_sword_restored");
                 check(NAME.equals(mc.player.getMainHandItem().getHoverName().getString()), "name_survives_uninstall");
@@ -64,7 +64,7 @@ public final class EditorBackendProbe implements ClientModInitializer {
             }
             switch (stage) {
                 case 0 -> {
-                    check(FabricLoader.getInstance().isModLoaded("editor"), "editor_loaded");
+                    check(FabricLoader.getInstance().isModLoaded("cadeditor"), "editor_loaded");
                     check(FabricLoader.getInstance().isModLoaded("oriel"), "oriel_loaded");
                     mc.player.connection.sendCommand("item replace entity @s weapon.mainhand with minecraft:diamond_sword");
                     stage = 1;

@@ -28,6 +28,7 @@ if (providers.gradleProperty('editorSmokeRun').isPresent()) {
         loom.runs.named('client') {
             runDirectory.set(runDir.absolutePath)
             vmArg('-Deditor.autotest=matrix-smoke')
+            vmArg('-Dcadeditor.vault.dir=' + new File(runDir, 'test-vault').absolutePath)
             programArg('--username'); programArg('MatrixSmoke')
             programArg('--quickPlaySingleplayer'); programArg('MatrixSmoke')
         }
@@ -43,6 +44,7 @@ if (providers.gradleProperty('editorSmokeRun').isPresent()) {
         neoForge.runs.named('client') {
             gameDirectory=runDir
             systemProperty('editor.autotest','matrix-smoke')
+            systemProperty('cadeditor.vault.dir', new File(runDir, 'test-vault').absolutePath)
             systemProperty('java.awt.headless','true')
             programArguments.addAll('--username','MatrixSmoke','--quickPlaySingleplayer','MatrixSmoke')
         }

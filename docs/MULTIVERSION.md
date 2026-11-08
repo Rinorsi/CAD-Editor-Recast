@@ -83,6 +83,7 @@ stonecutter.properties.toml   每个游戏版本的 MC / 加载器 / API / Oriel
 | 28 | NeoForge | 直接 JavaExec 启动 patched game 测试 | FML 未启动时 patched 类不可独立引导；Codec JVM 使用同版本 common NeoForm vanilla runtime，生产编译与客户端 smoke 使用真实 NeoForge |
 | 29 | NeoForge | 模组构造时立即初始化 HUD | 此时 Minecraft singleton 尚未建立；通过 ClientStartedEvent / Fabric CLIENT_STARTED 平台回调初始化 HUD |
 | 30 | 26.2 / NeoForge | GLFW 创建时隐藏即足够 | 26.2 Minecraft 构造器额外 glfwShowWindow；测试 mixin 拦截它。NeoForge 独立测试 config/fml.toml 关闭 earlyWindowControl，避免加载器先打开窗口；26.3 另拦截 EarlyWindowHandoff 的显示调用 |
+| 31 | 多模块构建 | 初始化脚本默认只作用于主构建 | Gradle -I 同时作用于 included build-logic；六个探针 init 脚本用 findProject 检查目标存在后才配置，避免初始化失败 |
 
 ## 实施约定
 
@@ -90,6 +91,8 @@ stonecutter.properties.toml   每个游戏版本的 MC / 加载器 / API / Oriel
 - Fabric 原有自动化探针包含 Fabric 入口/Mixin，保留 fabric/src/autotest；公共 test/testFixtures 在 common；matrix smoke 在 common/src/smoke，独立测试 jar，不进入发行包。
 - tools/build-all.ps1 执行根 build（六目标完整 check），收集六个发行 jar 并写 SHA256SUMS；不会把测试 jar 放进 dist。
 - tools/smoke-matrix.ps1 使用独立世界副本、隐藏窗口和游戏内部调用验证打开→页面发送保存→服务端物品→关闭重开；每目标输出 matrix-smoke.json，禁止操作外部输入。
+- 实机测试的初始化脚本跳过 included build-logic；live-test 使用独立保险库目录。测试 Mixin 仅模拟隐藏客户端的逻辑鼠标捕获状态以运行原版持续挖掘，不执行原生捕获；页面检查仍断言窗口不可见且无焦点。
+- effects 等到可见服务器保存回执与草稿防抖结束才关闭页面；每个夹具通过真实按钮丢弃前一案例草稿；挖掘需在原时限内收到服务端方块确认，并读取服务端 typed NBT 校验实际耐久。
 - 各版本 schema 与数值范围快照独立存储；-PwriteSchemaSnapshot=true 只用于审阅过的显式更新，普通 build 不自动改快照。
 - WorldEditTest 的 26.3 汇总证据超过单消息上限，逐目标验证真实传输往返；生产 192 KiB 展开上限保持不变。
 - Gradle 产物、测试运行目录、日志保持 daily/scratch 与 daily/logs；Stonecutter 的源码生成目录沿用 Oriel 默认的 versions/<版本>/build/generated，已被 gitignore 排除。
@@ -104,4 +107,22 @@ stonecutter.properties.toml   每个游戏版本的 MC / 加载器 / API / Oriel
 - UI 全门禁通过：daily/2026-11-08/logs/editor-final-ui.log；PowerShell 解析通过，基线 acceptance standalone javac 通过：editor-accept-compile-only2.log。
 - 六目标最终 build/check（含 codecVerification）全部通过：tools/build-all.ps1，BUILD SUCCESSFUL in 9m 33s，214 actionable tasks。完整日志在 Oriel-UI-Workspace/daily/2026-11-08/logs/editor-matrix/build-all.log，脚本回执 editor-distribution.log。
 - 发行目录：Oriel-UI-Workspace/dist/editor-0.99.2-20261108/；六个 cadeditor-<loader>-<mc>-0.99.2.jar、SHA256SUMS.txt、README.md。editor-jar-layout.json 已按发行目录重新校验全部六项 SHA256、UI、平台 services、metadata 和测试探针隔离。
-- 完整 Fabric 基线实机验收正在收尾；以上 smoke 不替代完整基线门禁或人工视觉验收。
+- 完整基线仅执行了一次 tools/accept-all.ps1 -Full：Editor/logs/accept-all/20261108-205352-695-d69da54c/report.json。UI、Java、world 首轮通过；其余失败保留原报告，没有改写为成功。随后只重跑失败阶段（以及测试配置改变后的 smoke）。
+- acceptance 全阶段复测通过：Editor/logs/accept-all/20261108-213714-769-188f4aa0/report.json；321/321 组件轮次、12/12 世界对象轮次通过；首轮 map_color 第三轮页面就绪超时未复现，原 15 秒时限未放宽，探针新增状态诊断。
+- effects：32/32 真实游戏效果通过，Editor/logs/accept-all/20261108-212800-806-4a0b6508/effects/report.json。pages：48/48 页面通过，Editor/logs/accept-all/20261108-213445-746-1ca61757/pages/report.json。测试输入始终通过独立隐藏客户端，不抢系统键鼠。
+- 最终 smoke 通过：Editor/logs/accept-all/20261108-215306-935-f7816577/report.json；所有 ownedRemaining / port25599 清理回执为空。
+- 旧 autotest 路径也通过：autotestJar / exportAutotestClasspath、server、edit、vanilla。日志在 Oriel-UI-Workspace/daily/2026-11-08/logs/editor-autotest-package-final.log、editor-autotest-server.log、editor-autotest-final-edit.log、editor-autotest-final-vanilla.log；编辑和卸载后数据保留回执在同日 run/editor-ds-client/。脚本按当前模组版本找探针，并从最近的独立测试世界复制，创建窗口前隐藏。
+- 最终逐阶段汇总：Oriel-UI-Workspace/daily/2026-11-08/logs/editor-final-summary.json，状态 PASS_AFTER_STAGE_RETRIES；记录首轮失败、每个阶段通过报告及矩阵证据。它是证据索引，不替换原始报告。
+
+| 目标 | build / check / Codec | 隐藏客户端打开、修改、保存 | 完整七阶段基线 |
+|---|---|---|---|
+| Fabric 26.1（MC 26.1.2） | 通过 | 通过（acceptance + smoke） | 通过（按阶段复测后） |
+| Fabric 26.2 | 通过 | 通过（fabric-26.2/matrix-smoke.json） | 未做：基线只要求 26.1.2 |
+| Fabric 26.3 | 通过 | 通过（fabric-26.3/matrix-smoke.json） | 未做：基线只要求 26.1.2 |
+| NeoForge 26.1（MC 26.1.2） | 通过 | 通过（neoforge-26.1/matrix-smoke.json） | 未做：基线只要求 Fabric |
+| NeoForge 26.2 | 通过 | 通过（neoforge-26.2/matrix-smoke.json） | 未做：基线只要求 Fabric |
+| NeoForge 26.3 | 通过 | 通过（neoforge-26.3/matrix-smoke.json） | 未做：基线只要求 Fabric |
+
+表内五份 matrix-smoke.json 均位于 Oriel-UI-Workspace/daily/2026-11-08/logs/editor-smoke-204031/；六目标构建任务索引为 editor-matrix/results.json。NeoForge 独立 JVM Codec 检查使用同版本 vanilla NeoForm，真实 FML 集成由各版本客户端保存 smoke 验证。人工视觉验收、其他五目标完整七阶段基线和 NeoForge 独立服务端长期运行未做，不由上述测试代替。
+
+首轮 map_color 超时根因尚未确定；完整复测同一组件三轮和其余 318 轮均通过，保留原失败及诊断入口，不能称为首轮全绿。

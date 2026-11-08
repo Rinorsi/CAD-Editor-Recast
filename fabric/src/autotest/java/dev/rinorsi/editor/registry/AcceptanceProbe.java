@@ -66,7 +66,7 @@ public final class AcceptanceProbe implements ClientModInitializer {
                 setup=mc.getSingleplayerServer().submit(()->{var p=mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());p.setGameMode(GameType.CREATIVE);p.getInventory().setItem(0,baseline.copy());p.inventoryMenu.broadcastChanges();});
                 phase=1;deadline=System.nanoTime()+15_000_000_000L;return;
             }
-            if(System.nanoTime()>deadline){row.addProperty("timeout",true);row.addProperty("failure","timeout phase="+phase);advance(mc);return;}
+            if(System.nanoTime()>deadline){row.addProperty("timeout",true);row.addProperty("failure","timeout phase="+phase);row.add("timeout_state",openState(mc));advance(mc);return;}
             if(phase==1){if(!setup.isDone()||!mc.player.isCreative())return;setup.join();mc.player.getInventory().setSelectedSlot(0);mc.player.getInventory().setItem(0,baseline.copy());pageStart=System.nanoTime();invoke(editor,"open");phase=2;return;}
             if(phase==2||phase==7){
                 if(!(mc.screen instanceof OrielScreen s)||s.driver().document()==null||!s.driver().settled())return;screen=s;
@@ -144,6 +144,19 @@ public final class AcceptanceProbe implements ClientModInitializer {
         for(var v:probes)try{if(n.codec.parse(access.createSerializationContext(JsonOps.INSTANCE),v).isSuccess())return v;}catch(RuntimeException ignored){}return null;
     }
     private static Tag typed(ItemStack s,Minecraft mc){return ItemStack.CODEC.encodeStart(mc.level.registryAccess().createSerializationContext(NbtOps.INSTANCE),s).getOrThrow();}
+    // Diagnostics only: retain the original timeout and all success assertions.
+    private static JsonObject openState(Minecraft mc)throws Exception{
+        var state=new JsonObject();
+        state.addProperty("screen",mc.screen==null?"none":mc.screen.getClass().getName());
+        state.addProperty("world_editor_active",dev.rinorsi.editor.client.WorldEditorClient.active());
+        state.addProperty("selected_slot",mc.player.getInventory().getSelectedSlot());
+        state.addProperty("held_stack",mc.player.getMainHandItem().isEmpty()?"empty":typed(mc.player.getMainHandItem(),mc).toString());
+        for(String name:List.of("screen","opening","openingFrom","pending")){
+            var field=EditorClient.class.getDeclaredField(name);field.setAccessible(true);var value=field.get(editor);
+            state.addProperty("editor_"+name,value==null?"none":value instanceof String text?text:value.getClass().getName());
+        }
+        return state;
+    }
     private static Object invoke(Object owner,String method)throws Exception{var m=owner.getClass().getDeclaredMethod(method);m.setAccessible(true);return m.invoke(owner);}
     private JsonElement eval(String js)throws Exception{Object page=((Optional<?>)Class.forName("dev.oriel.mod.client.OrielAutomation").getMethod("screen").invoke(null)).orElseThrow();return (JsonElement)((Optional<?>)page.getClass().getMethod("eval",String.class).invoke(page,js)).orElseThrow();}
     private void finish(Minecraft mc,String status){receipt.addProperty("status",status);receipt.add("searches",searches);write(mc);finished=true;}

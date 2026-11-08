@@ -2,6 +2,7 @@
 $ErrorActionPreference='Stop'
 if($PSVersionTable.PSVersion.Major -lt 7){throw '请用 PowerShell 7 执行静默自测。'}
 $Editor=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
+$EditorVersion=((Get-Content (Join-Path $Editor 'gradle.properties') | Where-Object { $_ -match '^version=' }) -split '=',2)[1].Trim()
 $Day=Join-Path ([IO.Path]::GetFullPath((Join-Path $Editor '../Oriel-UI-Workspace/daily'))) (Get-Date -Format 'yyyy-MM-dd')
 $Build=Join-Path $Day 'scratch/editor-mod/build/fabric-26.1.2/libs'
 $RunName=if($Mode -eq 'server'){'editor-ds-server'}elseif($Mode -eq 'live'){if($AssetsRoot){'editor-ds-assets'}else{'editor-ds-namespace'}}else{'editor-ds-client'}
@@ -28,6 +29,7 @@ $Jvm=@('-Xmx2G','--enable-native-access=ALL-UNNAMED','-Dfabric.development=false
 $CssProbe="`n/* editor-live-test-begin */`n#ed-live-css { width: 31px; height: 1px; }`n/* editor-live-test-end */`n"
 $JsProbe="`n/* editor-live-test-begin */`nvar EDITOR_LIVE_JS_PROBE = 'ready';`n/* editor-live-test-end */`n"
 $CssTouched=$false;$JsTouched=$false
+$Jvm=@('-Dcadeditor.vault.dir='+$Run+'/test-vault')+$Jvm
 if($Mode -eq 'server'){
     $Jvm+=('-Dlog4j.configurationFile='+(Join-Path $PSScriptRoot 'log4j2.xml'))
     [IO.File]::WriteAllText((Join-Path $Run 'eula.txt'),'eula=true')
@@ -36,9 +38,11 @@ if($Mode -eq 'server'){
 }else{
     if(!(Test-Path (Join-Path $Run 'saves/Editor-release-test/level.dat'))){
         New-Item -ItemType Directory -Force -Path (Join-Path $Run 'saves') | Out-Null
-        Copy-Item -LiteralPath (Join-Path $Day 'run/editor-autotest-client/saves/Editor-release-test') -Destination (Join-Path $Run 'saves') -Recurse
+        $Fixture=Get-ChildItem (Join-Path $Editor '../Oriel-UI-Workspace/daily/*/run/editor-autotest-client/saves/Editor-release-test/level.dat') | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1
+        if(!$Fixture){throw '缺少独立测试世界 Editor-release-test；请按 docs/TESTING.md 准备。'}
+        Copy-Item -LiteralPath $Fixture.Directory.FullName -Destination (Join-Path $Run 'saves') -Recurse
     }
-    Copy-Item -LiteralPath (Join-Path $Day 'scratch/editor-mod/autotest-only/editor-backend-probe-0.1.0.jar') -Destination $Mods -Force
+    Copy-Item -LiteralPath (Join-Path $Day ('scratch/editor-mod/autotest-only/editor-backend-probe-'+$EditorVersion+'.jar')) -Destination $Mods -Force
     if($Mode -eq 'live'){
         $NsRoot=Join-Path $Day ('scratch/editor-mod/'+$RunName+'-sources/assets/cadeditor')
         $Source=Join-Path $NsRoot 'ui'

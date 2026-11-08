@@ -87,6 +87,7 @@ Copy-Item -LiteralPath $World -Destination ($Run+'/saves/'+$WorldName) -Recurse
 $LaunchCp = @($Runtime | Where-Object { $_ -notmatch '/Editor/libs/|net.fabricmc.fabric-api' -and $_ -notmatch '\\Editor\\libs\\' })
 $Jvm = @('-Xmx2G','--enable-native-access=ALL-UNNAMED','-Dfabric.development=false','-Dfabric.defaultModDistributionNamespace=official',('-Dfabric.gameJarPath='+$Cache+'/26.1.2/minecraft-merged.jar'),'-Dfabric.gameVersion=26.1.2','-Deditor.autotest=registry-supplement','-cp',($LaunchCp -join ';'),'net.fabricmc.loader.impl.launch.knot.KnotClient','--username','Player13','--accessToken','0','--version','26.1.2','--gameDir',$Run,'--assetsDir',($Cache+'/assets'),'--assetIndex','26.1.2-30','--quickPlaySingleplayer',$WorldName)
 $ArgsFile = $Out+'/java.args'
+$Jvm=@('-Dcadeditor.vault.dir='+$Run+'/test-vault')+$Jvm
 if($WorldOnly){$Jvm=@('-Deditor.accept.worldOnly=true')+$Jvm}
 if($OnlyComponents){$Jvm=@('-Deditor.accept.only='+($OnlyComponents -join ','))+$Jvm}
 [IO.File]::WriteAllLines($ArgsFile, @($Jvm | ForEach-Object { '"'+$_.Replace('\','\\').Replace('"','\"')+'"' }), $Utf8)
