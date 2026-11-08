@@ -36,7 +36,9 @@ function weViewsMsg(msg) {
 
 var WEV_INFO = { sign: ['告示牌', 'edit'], banner: ['旗帜图案', 'banner'], beehive: ['蜜蜂', 'flower'], lectern: ['讲台', 'book_open'], jukebox: ['唱片机', 'music'],
   decorated_pot: ['纹饰陶罐', 'gem'], chiseled_bookshelf: ['雕纹书架', 'book'], command_block: ['命令', 'terminal'], skull: ['头颅', 'skull'], furnace: ['熔炉进度', 'furnace'],
-  brewing_stand: ['酿造进度', 'flask'], campfire: ['营火', 'campfire'], nameable: ['名称', 'tag'], hopper: ['漏斗', 'sliders'], beacon: ['信标', 'sparkle'], crafter: ['合成器', 'grid'] };
+  brewing_stand: ['酿造进度', 'flask'], campfire: ['营火', 'campfire'], nameable: ['名称', 'tag'], hopper: ['漏斗', 'sliders'], beacon: ['信标', 'sparkle'], crafter: ['合成器', 'grid'],
+  conduit: ['潮涌核心', 'sparkle'], end_gateway: ['折跃门', 'wind'], structure_block: ['结构方块', 'cube'], jigsaw: ['拼图方块', 'link'], sculk_sensor: ['幽匿感测体', 'sparkle'],
+  sculk_shrieker: ['幽匿尖啸体', 'sparkle'], sculk_catalyst: ['幽匿催生体', 'sparkle'], bell: ['钟', 'bell'], vault: ['宝库', 'chest'] };
 function weViewTabInfo() { var g = weViewGroups(), n = g.length === 1 && WEV_INFO[g[0]] ? WEV_INFO[g[0]] : null; return { label: n ? n[0] : '方块设置', icon: n ? n[1] : 'sliders' }; }
 
 /* ---------- 小零件 ---------- */
@@ -249,6 +251,114 @@ WEV.crafter = function (body, g) {
   })(i);
   body.appendChild(grid);
   body.appendChild(wvToggle(g, 'triggered', '已触发', '合成器记着的触发状态；游戏的红石更新之后可能自己改回去'));
+};
+
+/* ---------- 只读行：给出当前值，没有任何控件 ---------- */
+function wvReadonly(label, text, sub) { return xRow({ icon: false, title: label, sub: sub, right: h('span', { class: 'k-sub', text: text }) }); }
+/* 文本字段（失焦 / 回车才写草稿） */
+function wvText(g, k, label, o) {
+  o = o || {}; var v = weVal(g, k);
+  return xText({ title: label, sub: o.sub, value: v === undefined || v === null ? '' : String(v), placeholder: o.placeholder, onCommit: function (t) { weSetV(g, k, t); } });
+}
+/* 整数字段当前值超出 JS 能精确表示的范围时，不在这里改（会被四舍五入），提示去「数据」页 */
+function wvBigInt(g, k, label, o) {
+  o = o || {}; var v = weVal(g, k);
+  if (typeof v === 'number' && !(Math.abs(v) <= 9007199254740991)) return wvReadonly(label, String(v), '数值太大，在「数据」页改');
+  return xNum({ title: label, sub: o.sub, value: typeof v === 'number' ? v : 0, step: 1, unit: o.unit, noSlider: true, onChange: function (x) { weSetV(g, k, x); } });
+}
+/* 候选来自后端 schema.fields.KEY.candidates 的枚举字段（大小写按候选原样写回） */
+var WV_ENUM = { none: '无', clockwise_90: '顺时针 90°', clockwise_180: '180°', counterclockwise_90: '逆时针 90°', left_right: '左右', front_back: '前后',
+  save: '保存', load: '载入', corner: '角', data: '数据', rollable: '可滚动', aligned: '对齐' };
+function wvEnum(g, k, label, o) {
+  o = o || {}; var cands = weViewField(g, k).candidates || [], cur = weVal(g, k);
+  if (!cands.length) return wvText(g, k, label, o);
+  var opts = cands.map(function (c) { return { v: c, label: WV_ENUM[String(c).toLowerCase()] || String(c) }; });
+  if (cands.length <= 4) return xSeg({ title: label, sub: o.sub, options: opts, value: cur, onChange: function (x) { weSetV(g, k, x); } });
+  return xSelect({ title: label, sub: o.sub, options: opts, value: cur, width: 180, onChange: function (x) { weSetV(g, k, x); } });
+}
+
+/* ---------- 潮涌核心（只读） ---------- */
+WEV.conduit = function (body, g) {
+  var v = weViewOrig(g);
+  body.appendChild(xSec('sparkle', '潮涌核心', '这些都由游戏每刻算出来，不能改'));
+  body.appendChild(wvReadonly('已激活', v.Active ? '是' : '否'));
+  body.appendChild(wvReadonly('正在攻击', v.Hunting ? '是' : '否'));
+  body.appendChild(wvReadonly('锁定目标', v.Target ? '有' : '没有'));
+};
+/* ---------- 末地折跃门 ---------- */
+WEV.end_gateway = function (body, g) {
+  var ep = weVal(g, 'exit_portal'), has = Array.isArray(ep) && ep.length === 3;
+  body.appendChild(xSec('wind', '折跃门'));
+  body.appendChild(xToggle({ title: '指定出口', sub: '关掉 = 用游戏默认的出口', value: has, onChange: function (on) { weSetV(g, 'exit_portal', on ? [0, 64, 0] : null); weRender(); } }));
+  if (has) ['X', 'Y', 'Z'].forEach(function (ax, i) {
+    body.appendChild(xNum({ title: '出口 ' + ax, value: ep[i], step: 1, noSlider: true, onChange: function (x) { var a = (weVal(g, 'exit_portal') || ep).slice(); a[i] = x; weSetV(g, 'exit_portal', a); } }));
+  });
+  body.appendChild(wvToggle(g, 'ExactTeleport', '精确传送', '直接传到出口的位置，不再在附近找落点'));
+  body.appendChild(wvBigInt(g, 'Age', '已存在', { unit: '刻' }));
+};
+/* ---------- 结构方块 ---------- */
+WEV.structure_block = function (body, g) {
+  body.appendChild(xSec('cube', '结构'));
+  body.appendChild(wvText(g, 'name', '名字', { sub: '写资源 ID，如 minecraft:workshop；留空 = 没有' }));
+  body.appendChild(wvText(g, 'author', '作者'));
+  body.appendChild(wvText(g, 'metadata', '数据标记'));
+  body.appendChild(wvEnum(g, 'mode', '模式'));
+  body.appendChild(xSec('target', '范围', '单位：格'));
+  ['posX', 'posY', 'posZ'].forEach(function (k, i) { body.appendChild(wvNum(g, k, '偏移 ' + 'XYZ'.charAt(i))); });
+  ['sizeX', 'sizeY', 'sizeZ'].forEach(function (k, i) { body.appendChild(wvNum(g, k, '大小 ' + 'XYZ'.charAt(i))); });
+  body.appendChild(xSec('sliders', '放置'));
+  body.appendChild(wvEnum(g, 'rotation', '旋转'));
+  body.appendChild(wvEnum(g, 'mirror', '镜像'));
+  body.appendChild(xNum({ title: '完整度', sub: '1 = 全部放出来', value: typeof weVal(g, 'integrity') === 'number' ? weVal(g, 'integrity') : 1, step: 0.05, dec: 3, noSlider: true, onChange: function (x) { weSetV(g, 'integrity', x); } }));
+  body.appendChild(wvBigInt(g, 'seed', '随机种子'));
+  body.appendChild(wvToggle(g, 'ignoreEntities', '忽略实体'));
+  body.appendChild(wvToggle(g, 'showair', '显示空气'));
+  body.appendChild(wvToggle(g, 'showboundingbox', '显示边框'));
+  body.appendChild(wvToggle(g, 'powered', '已通电'));
+};
+/* ---------- 拼图方块 ---------- */
+WEV.jigsaw = function (body, g) {
+  body.appendChild(xSec('link', '拼图'));
+  body.appendChild(wvText(g, 'name', '名字', { sub: '资源 ID' }));
+  body.appendChild(wvText(g, 'target', '要接的名字', { sub: '资源 ID' }));
+  body.appendChild(wvText(g, 'pool', '模板池', { sub: '资源 ID，池子可以还没有' }));
+  body.appendChild(wvText(g, 'final_state', '生成后变成', { sub: '方块 ID，游戏不检查它写得对不对' }));
+  body.appendChild(wvEnum(g, 'joint', '连接方式'));
+};
+/* ---------- 幽匿感测体 / 校频幽匿感测体 / 幽匿尖啸体 ---------- */
+WEV.sculk_sensor = function (body, g) {
+  body.appendChild(xSec('sparkle', '振动'));
+  body.appendChild(wvNum(g, 'last_vibration_frequency', '上次振动频率'));
+  body.appendChild(wvNum(g, 'listener.event_delay', '事件延迟', { unit: '刻' }));
+};
+WEV.sculk_shrieker = function (body, g) {
+  body.appendChild(xSec('sparkle', '尖啸'));
+  body.appendChild(wvNum(g, 'warning_level', '警告等级'));
+  body.appendChild(wvNum(g, 'listener.event_delay', '事件延迟', { unit: '刻' }));
+  body.appendChild(kHint('能不能召唤守卫、是否正在尖啸在「方块状态」页。'));
+};
+WEV.sculk_catalyst = function (body, g) {
+  var c = weViewOrig(g).cursors;
+  body.appendChild(xSec('sparkle', '幽匿催生体', '正在扩散的电荷由游戏管，不能改'));
+  body.appendChild(wvReadonly('正在扩散', (Array.isArray(c) ? c.length : 0) + ' 个'));
+};
+/* ---------- 钟（只读） ---------- */
+WEV.bell = function (body, g) {
+  var v = weViewOrig(g);
+  body.appendChild(xSec('bell', '钟', '游戏没有保存这些，只能看'));
+  body.appendChild(wvReadonly('正在晃', v.shaking ? '是' : '否'));
+  body.appendChild(wvReadonly('晃动计时', String(typeof v.ticks === 'number' ? v.ticks : 0), '刻'));
+};
+/* ---------- 试炼宝库 / 不祥宝库（安全子集） ---------- */
+WEV.vault = function (body, g) {
+  body.appendChild(xSec('chest', '宝库', '只有这几项可以改，其余在「数据」页'));
+  body.appendChild(xRow({ icon: false, title: '钥匙物品', sub: '清空 = 不需要钥匙', right: wvItem(weVal(g, 'config.key_item'), function (v) { weSetV(g, 'config.key_item', v); weRender(); }) }));
+  var lt = kRegSelect({ reg: 'loot_table', value: weVal(g, 'config.loot_table') || '', title: '选择战利品表', empty: '（未选择）', onChange: function (x) { if (x) weSetV(g, 'config.loot_table', x); } });
+  body.appendChild(xRow({ icon: false, title: '战利品表', right: lt.el }));
+  body.appendChild(xNum({ title: '激活距离', sub: '玩家进入这个距离内才有反应，不能大于停用距离', value: weVal(g, 'config.activation_range'), def: 4, step: 0.5, dec: 3, unit: '格', noSlider: true, onChange: function (x) { weSetV(g, 'config.activation_range', x); } }));
+  body.appendChild(xNum({ title: '停用距离', value: weVal(g, 'config.deactivation_range'), def: 4.5, step: 0.5, dec: 3, unit: '格', noSlider: true, onChange: function (x) { weSetV(g, 'config.deactivation_range', x); } }));
+  var rp = weViewOrig(g)['server_data.rewarded_players'];
+  body.appendChild(wvReadonly('已领过奖励的玩家', (Array.isArray(rp) ? rp.length : 0) + ' 人', '只读'));
 };
 
 function weViewTab(body) {

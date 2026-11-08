@@ -136,7 +136,7 @@ function weSlotStack(i) {
 function weContainerTab(body) {
   var c = WE.w.container, n = c.size, cols = n <= 5 ? n : n <= 9 ? 3 : 9;
   if (c.unresolved_loot) { body.appendChild(xEmpty('这个容器里的战利品还没有生成（第一次打开时才会生成）。请先在游戏里打开一次，再回来编辑。')); return; }
-  body.appendChild(xSec('chest', '里面的物品', n + ' 格'));
+  body.appendChild(xSec('chest', '里面的物品', n + ' 格' + (c.double ? '，两个箱子合起来' : '')));
   body.appendChild(weDndHint());
   var ix = []; for (var i = 0; i < n; i++) ix.push(i);
   body.appendChild(kSlotGrid({ tight: true, indices: ix, cols: cols, stackOf: weSlotStack, titleOf: function (i) { return '格子 ' + (i + 1); },
