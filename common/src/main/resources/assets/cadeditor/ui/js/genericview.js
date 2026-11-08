@@ -23,12 +23,12 @@ function gxFields(body, g, fields, get, set) {
     } else if (kind === 'boolean') {
       body.appendChild(xToggle({ title: key, tip: key, value: /^(true|1b)$/.test(String(cur).trim()), onChange: function (on) { set(g, key, on ? 'true' : 'false'); } }));
     } else if (kind === 'string') {
-      body.appendChild(xText({ title: key, tip: key, value: gxDecode(cur), onCommit: function (v) { set(g, key, JSON.stringify(v)); } }));
+      body.appendChild(xText({ title: key, tip: key, value: gxDecode(cur), cls: 'we-in', onCommit: function (v) { set(g, key, JSON.stringify(v)); } }));
     } else if (kind === 'identifier' && (f.registry_matches || []).length === 1 && typeof Reg !== 'undefined' && Reg.live() && (Reg.options(f.registry_matches[0].replace(/^minecraft:/, '')) || Reg.isLazy(f.registry_matches[0].replace(/^minecraft:/, '')))) {
       var reg = f.registry_matches[0].replace(/^minecraft:/, '');
       body.appendChild(xRow({ icon: false, title: key, sub: f.registry_matches[0], tip: key, right: kRegSelect({ reg: reg, value: gxDecode(cur), title: key, empty: '（未设置）', onChange: function (id) { set(g, key, JSON.stringify(id)); } }).el }));
     } else {
-      body.appendChild(xText({ title: key, sub: kind + (nt ? ' · ' + nt : ''), tip: key, value: String(cur), placeholder: 'SNBT',
+      body.appendChild(xText({ title: key, sub: kind + (nt ? ' · ' + nt : ''), tip: key, value: String(cur), placeholder: 'SNBT', cls: 'we-in',
         onCommit: function (v) {
           var text = v.trim();
           try { parseSnbtUser(text); } catch (e) { toast('「' + key + '」不是有效的 SNBT：' + (e.message || e), 'error', 'gx-bad'); return; }
