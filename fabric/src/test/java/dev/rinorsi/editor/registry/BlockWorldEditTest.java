@@ -297,6 +297,9 @@ public final class BlockWorldEditTest {
             var saved=roundtrip(be,before,"{vault:{'config.activation_range':2,'config.deactivation_range':3,'config.key_item':{id:'minecraft:diamond',count:2},'config.loot_table':'minecraft:chests/simple_dungeon'}}",access);
             check(Objects.equals(before.get("shared_data"),saved.get("shared_data")) && Objects.equals(before.get("server_data"),saved.get("server_data")),"vault complex state preserved");
             var copy=(net.minecraft.world.level.block.entity.vault.VaultBlockEntity)WorldTarget.copyBlock(be,saved,access);check(copy.getConfig().keyItem().getCount()==2 && copy.getConfig().activationRange()==2,"vault readback");
+            var reset=saved.copy();reset.getCompound("config").orElseThrow().remove("activation_range");reset.getCompound("config").orElseThrow().remove("deactivation_range");
+            var combined=roundtrip(copy,reset,"{vault:{'config.key_item':{id:'minecraft:paper',count:1}}}",access);
+            check(((net.minecraft.world.level.block.entity.vault.VaultBlockEntity)WorldTarget.copyBlock(be,combined,access)).getConfig().activationRange()==original.getConfig().activationRange(),"vault SNBT reset plus view edit uses NBT baseline");
             var defaults=value.deepCopy();defaults.remove("server_data.rewarded_players");roundtrip(copy,saved,"{vault:"+defaults+"}",access);
             var cleared=roundtrip(copy,saved,"{vault:{'config.key_item':null}}",access);check(((net.minecraft.world.level.block.entity.vault.VaultBlockEntity)WorldTarget.copyBlock(be,cleared,access)).getConfig().keyItem().isEmpty(),"vault clear key");
             roundtrip(be,before,"{vault:{'config.activation_range':-1,'config.deactivation_range':-1}}",access);

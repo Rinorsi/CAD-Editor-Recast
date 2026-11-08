@@ -254,12 +254,13 @@ public final class BlockViews {
         if(block instanceof TheEndGatewayBlockEntity || block instanceof StructureBlockEntity || block instanceof JigsawBlockEntity || block instanceof SculkSensorBlockEntity || block instanceof SculkShriekerBlockEntity)
             WorldNbt.requireEditedFieldsRetained(nbt,result,WorldTarget.copyBlock(block,result,access).saveWithFullMetadata(access));
         if(block instanceof VaultBlockEntity && edits.has("vault")) {
+            var baseline=WorldTarget.copyBlock(block,nbt,access);
             var copy=WorldTarget.copyBlock(block,result,access);var saved=copy.saveWithFullMetadata(access);var changes=edits.getAsJsonObject("vault");
             // VaultConfig uses lenient defaults and omits default values. Compare semantic values
             // for ALL exposed config fields before adopting only edited canonical saved paths.
             for(var field:groups.get("vault")) {
                 if(!field.key.startsWith("config."))continue;
-                var expected=changes.has(field.key) && changes.get(field.key).isJsonNull() ? null : effectiveTag(block,result,field,access);
+                var expected=changes.has(field.key) && changes.get(field.key).isJsonNull() ? null : effectiveTag(baseline,result,field,access);
                 if(!Objects.equals(expected,effectiveTag(copy,saved,field,access)))throw new EditorSessions.Failure("invalid_nbt","原版宝库加载器未保留配置："+field.key);
             }
             for(var field:groups.get("vault"))if(changes.has(field.key))put(result,field,get(saved,field));
