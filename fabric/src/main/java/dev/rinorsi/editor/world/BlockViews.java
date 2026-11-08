@@ -26,13 +26,14 @@ public final class BlockViews {
         if (block instanceof ChiseledBookShelfBlockEntity) groups.put("chiseled_bookshelf",List.of(f("last_interacted_slot",Codec.INT)));
         if (block instanceof CommandBlockEntity) groups.put("command_block",List.of(f("Command",Codec.STRING),f("TrackOutput",Codec.BOOL),f("auto",Codec.BOOL),f("powered",Codec.BOOL)));
         if (block instanceof AbstractFurnaceBlockEntity) groups.put("furnace",List.of(f("cooking_time_spent",Codec.SHORT),f("cooking_total_time",Codec.SHORT),f("lit_time_remaining",Codec.SHORT),f("lit_total_time",Codec.SHORT)));
+        if (block instanceof BeaconBlockEntity) groups.put("beacon",List.of(f("primary_effect",net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.holderByNameCodec()),f("secondary_effect",net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.holderByNameCodec()),f("Levels",Codec.INT)));
         if (block instanceof HopperBlockEntity) groups.put("hopper",List.of(f("TransferCooldown",Codec.INT)));
         if (block instanceof BrewingStandBlockEntity) groups.put("brewing_stand",List.of(f("BrewTime",Codec.SHORT),f("Fuel",Codec.BYTE)));
         if (block instanceof CampfireBlockEntity) groups.put("campfire",List.of(f("CookingTimes",Codec.INT_STREAM),f("CookingTotalTimes",Codec.INT_STREAM)));
         if (block instanceof SkullBlockEntity) groups.put("skull",List.of(new Field("minecraft:profile",DataComponents.PROFILE.codec(),true),new Field("minecraft:custom_name",DataComponents.CUSTOM_NAME.codec(),true)));
         return groups;
     }
-    private static boolean nullable(Field field) { return field.component || field.codec == ItemStack.CODEC || field.key.equals("CustomName"); }
+    private static boolean nullable(Field field) { return field.component || field.codec == ItemStack.CODEC || field.key.equals("CustomName") || field.key.equals("primary_effect") || field.key.equals("secondary_effect"); }
     private static Field f(String key,Codec<?> codec) { return new Field(key,codec,false); }
     private static void requireInteger(JsonElement value,long min,long max) {
         try {
@@ -95,6 +96,10 @@ public final class BlockViews {
                 if(block instanceof ChiseledBookShelfBlockEntity && field.key.equals("last_interacted_slot")) {schema.addProperty("min",-1);schema.addProperty("max",WorldTarget.inventory(block).size()-1);schema.addProperty("bounds","runtime container slots or vanilla no-interaction sentinel");}
                 if(field.codec == Codec.INT_STREAM && tag instanceof IntArrayTag array) schema.addProperty("length",array.getAsIntArray().length);
                 if(field.codec == SignText.DIRECT_CODEC) { schema.addProperty("messages_length",SignText.LINES); var colors = new JsonArray(); for(var color:net.minecraft.world.item.DyeColor.values()) colors.add(color.getName());schema.add("colors",colors); }
+                if(block instanceof BeaconBlockEntity) {
+                    if(field.key.equals("Levels")) {schema.addProperty("read_only",true);schema.addProperty("source","vanilla pyramid calculation");}
+                    else {var candidates=new JsonArray();BeaconBlockEntity.BEACON_EFFECTS.stream().flatMap(List::stream).distinct().forEach(effect->candidates.add(net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.holderByNameCodec().encodeStart(access.createSerializationContext(JsonOps.INSTANCE),effect).getOrThrow()));schema.add("candidates",candidates);schema.addProperty("candidate_source","BeaconBlockEntity.BEACON_EFFECTS + MOB_EFFECT registry");}
+                }
                 properties.add(field.key,schema);
             }
             var schema = new JsonObject();schema.add("fields",properties);
@@ -114,6 +119,11 @@ public final class BlockViews {
             for(var entry:group.getValue().getAsJsonObject().entrySet()) {
                 var field=allowed.stream().filter(f->f.key.equals(entry.getKey())).findFirst().orElseThrow(()->new EditorSessions.Failure("invalid_request","未知视图字段："+entry.getKey()));
                 var json=entry.getValue();
+                if(block instanceof BeaconBlockEntity && field.key.equals("Levels"))throw new EditorSessions.Failure("invalid_request","信标等级由金字塔计算，只读");
+                if(block instanceof BeaconBlockEntity && !json.isJsonNull()) {
+                    var effect=net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.holderByNameCodec().parse(access.createSerializationContext(JsonOps.INSTANCE),json).getOrThrow(s->new EditorSessions.Failure("invalid_nbt",s));
+                    if(BeaconBlockEntity.BEACON_EFFECTS.stream().flatMap(List::stream).noneMatch(effect::equals))throw new EditorSessions.Failure("invalid_nbt","不是原版信标允许的效果");
+                }
                 if(json.isJsonNull()) {
                     if(nullable(field)) {put(result,field,null);continue;}
                     throw new EditorSessions.Failure("invalid_nbt","此字段不允许清空："+field.key);

@@ -22,6 +22,7 @@ public final class BlockWorldEditTest {
     public static void run(RegistryAccess access,Path output) throws Exception {
         nameableViews(access);
         hopperView(access);
+        beaconView(access);
         var samples=new JsonObject();var metadata=new JsonObject();metadata.addProperty("mode","pure-jvm-real-factories-and-codecs-not-live-ticks");metadata.add("command_block_types",BlockStateEdit.commandTypes());samples.add("capture_metadata",metadata);
         for(var block:List.of(Blocks.CHEST,Blocks.FURNACE,Blocks.OAK_DOOR,Blocks.STONE_SLAB,Blocks.OAK_STAIRS,Blocks.REPEATER,Blocks.COMMAND_BLOCK,Blocks.REDSTONE_WIRE)) {
             var state=block.defaultBlockState();var states=new JsonArray();
@@ -165,6 +166,28 @@ public final class BlockWorldEditTest {
         check(!new EditorPolicy(2,false).allows(false,false),"state envelope permission guard");reject("out_of_reach",()->WorldAccess.reach(false));reject("protected_area",()->WorldAccess.area(false));
         Files.createDirectories(output);Files.writeString(output.resolve("block-captured.json"),new GsonBuilder().setPrettyPrinting().create().toJson(samples));
         System.out.println("PASS BlockWorldEditTest "+checks+" checks; factory/codec/state data; real-client run pending");
+    }
+    private static void beaconView(RegistryAccess access) {
+        var be=new BeaconBlockEntity(BlockPos.ZERO,Blocks.BEACON.defaultBlockState());var before=be.saveWithFullMetadata(access);
+        var views=new JsonObject();BlockViews.add(views,be,access,before);var row=views.getAsJsonObject("beacon");
+        check(row.getAsJsonObject("value").get("primary_effect").isJsonNull(),"beacon absent primary");
+        check(row.getAsJsonObject("value").get("secondary_effect").isJsonNull(),"beacon absent secondary");
+        check(row.getAsJsonObject("schema").getAsJsonObject("fields").getAsJsonObject("Levels").get("read_only").getAsBoolean(),"beacon levels readonly");
+        for(String key:List.of("primary_effect","secondary_effect")) {
+            var candidates=row.getAsJsonObject("schema").getAsJsonObject("fields").getAsJsonObject(key).getAsJsonArray("candidates");
+            check(candidates.size()==BeaconBlockEntity.BEACON_EFFECTS.stream().flatMap(List::stream).distinct().count(),"beacon live candidates");
+            for(var effect:candidates) {
+                var saved=roundtrip(be,before,"{beacon:{"+key+":"+effect+"}}",access);
+                var reread=new JsonObject();BlockViews.add(reread,WorldTarget.copyBlock(be,saved,access),access,saved);
+                check(reread.getAsJsonObject("beacon").getAsJsonObject("value").get(key).equals(effect),"beacon effect readback");
+                check(!roundtrip(be,saved,"{beacon:{"+key+":null}}",access).contains(key),"beacon effect clear");
+            }
+            reject("invalid_nbt",()->BlockViews.apply(be,before,JsonParser.parseString("{beacon:{"+key+":'minecraft:__missing__'}}").getAsJsonObject(),access));
+            var disallowed=net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.listElements().filter(e->BeaconBlockEntity.BEACON_EFFECTS.stream().flatMap(List::stream).noneMatch(e::equals)).findFirst().orElseThrow();
+            var id=net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.holderByNameCodec().encodeStart(access.createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE),disallowed).getOrThrow();
+            reject("invalid_nbt",()->BlockViews.apply(be,before,JsonParser.parseString("{beacon:{"+key+":"+id+"}}").getAsJsonObject(),access));
+        }
+        for(String value:List.of("1","null"))reject("invalid_request",()->BlockViews.apply(be,before,JsonParser.parseString("{beacon:{Levels:"+value+"}}").getAsJsonObject(),access));
     }
     private static void hopperView(RegistryAccess access) {
         var be=new HopperBlockEntity(BlockPos.ZERO,Blocks.HOPPER.defaultBlockState());var before=be.saveWithFullMetadata(access);

@@ -49,7 +49,7 @@ world.views.GROUP 返回 {value,snbt,schema}。value 为真实 Codec JSON，snbt
 |brewing_stand|BrewTime、Fuel|实际 short/byte|
 |campfire|CookingTimes、CookingTotalTimes|真实 int 数组 Codec，不能保留/被截断的编辑由加载保存检查拒绝|
 
-Book、RecordItem、书架 Items 内容确实变化时，从副本自动更新 has_book / has_record / slot_*_occupied；单独状态编辑不强行覆盖用户值。Book、RecordItem、头颅组件及 nameable.CustomName 可 null，其他字段不允许 null。空旗帜图案/默认陶罐装饰按原版稀疏保存省略。
+Book、RecordItem、书架 Items 内容确实变化时，从副本自动更新 has_book / has_record / slot_*_occupied；单独状态编辑不强行覆盖用户值。Book、RecordItem、头颅组件、nameable.CustomName 及信标效果可 null，其他字段不允许 null。空旗帜图案/默认陶罐装饰按原版稀疏保存省略。
 
 蜡封标牌改文字须同一笔最终结果 is_waxed:false，否则 sign_waxed；完整 SNBT 同样受限。修改后含可执行命令的文本要求 ServerPlayer.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)，与创造/生存无关。命令方块、结构方块、拼图方块依据原版 GameMasterBlock 标记要求同一权限；有权限+生存允许，无权限+创造拒绝。其他权限/距离/区域保护守卫不变。
 
@@ -81,6 +81,22 @@ edits 示例：
 edits 示例：
 ```json
 {"views":{"hopper":{"TransferCooldown":0}}}
+```
+
+## beacon：信标效果和等级（P3-2 部分）
+
+`primary_effect` / `secondary_effect` 是实时 `BuiltInRegistries.MOB_EFFECT.holderByNameCodec()` 编解码的资源 ID 字符串或 null。候选从实际 `BeaconBlockEntity.BEACON_EFFECTS` 展平去重，再经注册表 Codec 输出至各字段 `schema.fields.KEY.candidates`，不手写效果表。两字段采用与原版 loadEffect 相同的允许集合；不强加 UI 选取时的等级门槛，效果是否生效仍由金字塔、光束和原版 tick 决定。`null` 删除该效果。不存在或非信标允许效果、类型非法为 `invalid_nbt`；未知字段为 `invalid_request`。
+
+`Levels` 为原版保存的当前金字塔计算等级 int，只读（`schema.fields.Levels.read_only:true`），提交任意值（含 null）返回 `invalid_request`。它不是可编辑增益倍率，也不经 detached 副本重新计算；下一次原版 tick 可能更新展示值。
+
+视图示例（候选必须使用实际返回值，以下省略列表）：
+```json
+{"beacon":{"value":{"primary_effect":null,"secondary_effect":null,"Levels":0},"snbt":"{Levels:0}","schema":{"fields":{"primary_effect":{"nullable":true,"candidates":[]},"secondary_effect":{"nullable":true,"candidates":[]},"Levels":{"nullable":false,"read_only":true,"source":"vanilla pyramid calculation"}}}}}
+```
+
+edits 示例（清空两项；设置时填写 candidates 中的 ID）：
+```json
+{"views":{"beacon":{"primary_effect":null,"secondary_effect":null}}}
 ```
 
 ## 动态字段白名单及来源
