@@ -163,7 +163,7 @@ function evDisplayTab(body) {
 var EV_SIMPLE = [['dropped_item', '掉落物', 'sword'], ['falling_block', '下落方块', 'cube'], ['tnt', 'TNT', 'flame'], ['creeper', '苦力怕', 'flame'],
   ['enderman', '末影人', 'cube'], ['area_effect_cloud', '药水云', 'flask'], ['experience_orb', '经验球', 'sparkle'], ['arrow', '箭', 'sword'], ['interaction', '交互实体', 'sliders'],
   ['horse', '驯服与骑乘', 'paw'], ['chested', '驮兽箱子', 'chest'], ['vehicle_container', '载具容器', 'chest'], ['minecart_display', '矿车显示的方块', 'cube'],
-  ['minecart_command', '命令矿车', 'terminal'], ['boat_type', '船', 'cart'], ['zombie_conversion', '僵尸村民转化', 'clock']];
+  ['minecart_command', '命令矿车', 'terminal'], ['boat_type', '船', 'cart'], ['zombie_conversion', '僵尸村民转化', 'clock'], ['generic', '其他设置', 'sliders']];
 function evSimpleGroups() { return EV_SIMPLE.filter(function (g) { return evGroup(g[0]); }); }
 function evSimpleTabInfo() { var g = evSimpleGroups(); return g.length === 1 ? { label: g[0][1], icon: g[0][2] } : { label: '实体设置', icon: 'sliders' }; }
 /* 范围来自后端的字段元数据的数值行：o = { sub, unit, step, dec, def, nullAt（等于这个值时发 null）} */

@@ -34,7 +34,7 @@ function weViewsMsg(msg) {
   if ((any || msg.block_type) && !WE.upd) msg.updateNeighbors = false;
 }
 
-var WEV_INFO = { sign: ['告示牌', 'edit'], banner: ['旗帜图案', 'banner'], beehive: ['蜜蜂', 'flower'], lectern: ['讲台', 'book_open'], jukebox: ['唱片机', 'music'],
+var WEV_INFO = { generic: ['其他设置', 'sliders'], sign: ['告示牌', 'edit'], banner: ['旗帜图案', 'banner'], beehive: ['蜜蜂', 'flower'], lectern: ['讲台', 'book_open'], jukebox: ['唱片机', 'music'],
   decorated_pot: ['纹饰陶罐', 'gem'], chiseled_bookshelf: ['雕纹书架', 'book'], command_block: ['命令', 'terminal'], skull: ['头颅', 'skull'], furnace: ['熔炉进度', 'furnace'],
   brewing_stand: ['酿造进度', 'flask'], campfire: ['营火', 'campfire'], nameable: ['名称', 'tag'], hopper: ['漏斗', 'sliders'], beacon: ['信标', 'sparkle'], crafter: ['合成器', 'grid'],
   conduit: ['潮涌核心', 'sparkle'], end_gateway: ['折跃门', 'wind'], structure_block: ['结构方块', 'cube'], jigsaw: ['拼图方块', 'link'], sculk_sensor: ['幽匿感测体', 'sparkle'],
