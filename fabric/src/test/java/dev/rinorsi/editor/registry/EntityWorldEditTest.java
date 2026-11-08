@@ -63,6 +63,7 @@ public final class EntityWorldEditTest {
         var cat=create(EntityType.CAT);var mount=create(EntityType.ZOMBIE);var unmounted=EntitySessionData.pack(WorldTarget.saveEntity(cat,access),cat);EntityRiding.tryRide(cat,mount);check(cat.getVehicle()==mount,"real vanilla cat rides zombie");
         var mounted=EntitySessionData.pack(WorldTarget.saveEntity(cat,access),cat);check(!WorldNbt.revision(unmounted).equals(WorldNbt.revision(mounted)),"vehicle relationship participates in rider revision without forged NBT");check(EntitySessionData.data(mounted).equals(WorldTarget.saveEntity(cat,access)),"internal relationship marker excluded from wire SNBT");
         capture("cat_riding_zombie",mount,WorldTarget.saveEntity(mount,access));reject(()->EntityRiding.tryRide(mount,cat),"cycle guard");var other=create(EntityType.CAT);reject(()->EntityRiding.tryRide(other,mount),"canAddPassenger capacity");cat.stopRiding();check(cat.getVehicle()==null,"dismount");EntityRiding.tryRide(other,mount);mount.ejectPassengers();check(other.getVehicle()==null,"eject");
+        ownerViews();
         var offers=new MerchantOffers();offers.add(new MerchantOffer(new ItemCost(Items.EMERALD,2),new ItemStack(Items.BREAD,3),12,5,0.05f));
         var raw=MerchantOffers.CODEC.encodeStart(access.createSerializationContext(NbtOps.INSTANCE),offers).getOrThrow();var normalized=EntityWorldEdit.offers(offers,access);var roundtrip=EntityWorldEdit.decodeOffers(normalized,access,raw);check(raw.equals(MerchantOffers.CODEC.encodeStart(access.createSerializationContext(NbtOps.INSTANCE),roundtrip).getOrThrow()),"trade cost predicate exact roundtrip");
         normalized.get(0).getAsJsonObject().addProperty("uses",2);var updated=EntityWorldEdit.decodeOffers(normalized,access,raw);check(updated.get(0).getUses()==2,"offer uses codec");normalized.get(0).getAsJsonObject().getAsJsonObject("buy").addProperty("count",0);reject(()->EntityWorldEdit.decodeOffers(normalized,access,raw),"trade stack guard");
@@ -72,6 +73,21 @@ public final class EntityWorldEditTest {
         var tradeCapture=new JsonObject();tradeCapture.add("codec",EntitySchema.json(raw));tradeCapture.add("offers",EntityWorldEdit.offers(offers,access));captured.add("trade_codec_only",tradeCapture);
         Path output=Path.of(args.length==0?"logs/world-entity/captured-jvm.json":args[0]);Files.createDirectories(output.toAbsolutePath().getParent());Files.writeString(output,new GsonBuilder().serializeNulls().setPrettyPrinting().create().toJson(captured));
         System.out.println("PASS EntityWorldEditTest "+checks+" checks; detached factories, no server/network/client started");
+    }
+    private static void ownerViews(){
+        for(var type:List.of(EntityType.WOLF,EntityType.CAT,EntityType.PARROT)){
+            var tame=(TamableAnimal)create(type);var id=UUID.randomUUID();tame.setOwnerReference(EntityReference.of(id));tame.setTame(true,false);tame.setOrderedToSit(true);
+            var saved=WorldTarget.saveEntity(tame,access);var view=EntityWorldEdit.views(tame,saved,access).getAsJsonObject("owner");
+            check(view.get("Owner").getAsString().equals(id.toString()),"owner UUID read");
+            check(edit(tame,"{owner:{Owner:'"+id+"'}}").contains("Owner"),"existing offline owner retained");
+            var cleared=edit(tame,"{owner:{Owner:null}}");check(!cleared.contains("Owner"),"owner cleared");
+            var copy=(TamableAnimal)create(type);EntityWorldEdit.load(copy,cleared,access);check(!copy.isTame()&&copy.isOrderedToSit(),"clear untames without altering Sitting");
+            check(saved.getBoolean("Sitting").orElseThrow(),"vanilla Sitting path");
+            reject(()->edit(tame,"{owner:{Owner:'not-a-uuid'}}"),"owner format");
+            reject(()->edit(tame,"{owner:{Owner:'00000000-0000-0000-0000-000000000001'}}"),"owner must be online");
+            reject(()->edit(tame,"{owner:{UUID:null}}"),"identity cannot masquerade as owner");
+        }
+        reject(()->edit(create(EntityType.ZOMBIE),"{owner:{Owner:null}}"),"owner target guard");
     }
     private static Entity create(EntityType<?> type){return EntitySchema.create(type,level);}
     private static CompoundTag edit(Entity e,String json){return EntityWorldEdit.prepare(e,WorldTarget.saveEntity(e,access),JsonParser.parseString(json).getAsJsonObject(),level,access);}

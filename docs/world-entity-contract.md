@@ -27,6 +27,23 @@ world.views 按类型出现 pose/item_frame/painting/display/trades，所有实�
 
 schema.fields 绑定真实保存路径；loaderProbes 是输入、实际保存值、retained或原版错误。不能从有限探针推断连续范围。枚举来自实际 enum.values()；选择器也应允许手动输入。Rotations.CODEC 的三个角度经真实构造器按 %360 正规化，非有限值归零；页面应发送有限数。
 
+## P2-1 驯服关系
+
+已有 schema 覆盖：狼/猫/鹦鹉等 TamableAnimal 的 `extras[id=sitting]` 由真实 setter 探测，26.1.2 实际保存键为 `Sitting`（boolean），不是 `OrderedToSit`；继续按该路径编辑，不新增重复控件。Owner 的 extras 仅为原始 UUID NBT 探针，补充以下关系接口。
+
+`world.views.owner` / `entity_schema.views.owner` 适用全部 TamableAnimal。视图字段 `Owner` 为规范 UUID 字符串或 null；`players` 为当前服务器 PlayerList 的 `{uuid,name}` 列表（跨维度在线玩家），`available` 表示存在服务器列表；这些候选/状态只读。无服务器时列表为空，不冒充完整在线名单。
+
+写入 `entity.owner` 仅接受 `Owner`。新主人必须是提交时仍在线的玩家；原有离线主人允许原样保留；严格校验 UUID 格式；null 清除主人，并由原版 loader 解除驯服，保留 Sitting。UUID/位置仍受 WorldNbt.protect 保护。未知字段、非字符串、缩写 UUID、离线新主人或错误实体类型拒绝，错误沿用实体编辑的 invalid_nbt/参数错误映射。没有手写玩家目录，NBT 经 EntityReference.codec()。
+
+视图示例：
+```json
+{"owner":{"Owner":null,"players":[{"uuid":"00000000-0000-0000-0000-000000000001","name":"Example"}],"available":true}}
+```
+Edits 示例（UUID 须替换为当前在线候选；null 可直接清除）：
+```json
+{"entity":{"owner":{"Owner":null}}}
+```
+
 ## 展示实体字段
 
 |entity.display字段|格式与校验|

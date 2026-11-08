@@ -64,6 +64,7 @@ public final class EntityWorldEdit {
             else view.addProperty("reason","交易仅能由安装模组的 ServerLevel 读取；客户端保存不含 Offers");
             out.add("trades",view);
         }
+        EntityViewsSimple.views(out,entity,saved,access);
         var riding=new JsonObject();riding.add("passengers",passengers(entity,0));
         riding.add("vehicle",entity.getVehicle()==null?JsonNull.INSTANCE:summary(entity.getVehicle()));
         riding.add("rideCheck",rideCheck());out.add("riding",riding);
@@ -80,7 +81,8 @@ public final class EntityWorldEdit {
     /** The returned compound remains identity protected and contains current runtime state. */
     public static CompoundTag prepare(Entity source, CompoundTag input, JsonObject edit, Level level, RegistryAccess access) {
         var nbt=input.copy();
-        for(String key:edit.keySet())if(!Set.of("pose","equipment","item_frame","painting","display","offers").contains(key))throw new IllegalArgumentException("未知实体编辑区段："+key);
+        for(String key:edit.keySet())if(!Set.of("pose","equipment","item_frame","painting","display","offers").contains(key)&&!EntityViewsSimple.supports(key))throw new IllegalArgumentException("未知实体编辑区段："+key);
+        EntityViewsSimple.apply(source,nbt,edit,level,access);
         if(edit.has("pose")){
             require(source instanceof ArmorStand,"仅盔甲架提供姿态");var data=edit.getAsJsonObject("pose");
             var pose=nbt.getCompound("Pose").map(CompoundTag::copy).orElseGet(CompoundTag::new);
