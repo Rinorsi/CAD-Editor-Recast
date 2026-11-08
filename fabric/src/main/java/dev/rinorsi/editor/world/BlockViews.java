@@ -13,6 +13,7 @@ import net.minecraft.world.level.block.entity.*;
 /** Normalized fields use vanilla codecs, then the existing detached loadWithComponents gate. */
 public final class BlockViews {
     private BlockViews() {}
+    private static final Codec<Boolean> CRAFTER_TRIGGERED = Codec.BOOL;
     private record Field(String key, Codec<?> codec, boolean component) {}
     private static Map<String,List<Field>> fields(BlockEntity block) {
         var groups = new LinkedHashMap<String,List<Field>>();
@@ -26,6 +27,7 @@ public final class BlockViews {
         if (block instanceof ChiseledBookShelfBlockEntity) groups.put("chiseled_bookshelf",List.of(f("last_interacted_slot",Codec.INT)));
         if (block instanceof CommandBlockEntity) groups.put("command_block",List.of(f("Command",Codec.STRING),f("TrackOutput",Codec.BOOL),f("auto",Codec.BOOL),f("powered",Codec.BOOL)));
         if (block instanceof AbstractFurnaceBlockEntity) groups.put("furnace",List.of(f("cooking_time_spent",Codec.SHORT),f("cooking_total_time",Codec.SHORT),f("lit_time_remaining",Codec.SHORT),f("lit_total_time",Codec.SHORT)));
+        if (block instanceof CrafterBlockEntity) groups.put("crafter",List.of(f("disabled_slots",Codec.INT_STREAM),f("triggered",CRAFTER_TRIGGERED)));
         if (block instanceof BeaconBlockEntity) groups.put("beacon",List.of(f("primary_effect",net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.holderByNameCodec()),f("secondary_effect",net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.holderByNameCodec()),f("Levels",Codec.INT)));
         if (block instanceof HopperBlockEntity) groups.put("hopper",List.of(f("TransferCooldown",Codec.INT)));
         if (block instanceof BrewingStandBlockEntity) groups.put("brewing_stand",List.of(f("BrewTime",Codec.SHORT),f("Fuel",Codec.BYTE)));
@@ -64,9 +66,13 @@ public final class BlockViews {
         }
     }
     // Skull's implicit components save to profile/custom_name, as proven by its vanilla saveAdditional.
-    private static Tag get(CompoundTag nbt,Field field) { return nbt.get(field.component ? field.key.substring(10) : field.key); }
+    private static Tag get(CompoundTag nbt,Field field) {
+        if(field.key.equals("triggered"))return ByteTag.valueOf(nbt.getInt("triggered").orElse(CrafterBlockEntity.SLOT_ENABLED)==CrafterBlockEntity.SLOT_DISABLED);
+        return nbt.get(field.component ? field.key.substring(10) : field.key);
+    }
     private static void put(CompoundTag nbt,Field field,Tag tag) {
         String key=field.component ? field.key.substring(10) : field.key;
+        if(field.key.equals("triggered") && tag instanceof ByteTag value) {nbt.putInt(key,value.byteValue()!=0 ? CrafterBlockEntity.SLOT_DISABLED : CrafterBlockEntity.SLOT_ENABLED);return;}
         if (tag == null) nbt.remove(key); else nbt.put(key,tag);
     }
     private static <T> Tag encode(Codec<T> codec,JsonElement json,RegistryAccess access) {
@@ -86,7 +92,7 @@ public final class BlockViews {
                 if (tag == null && block instanceof BannerBlockEntity b && field.key.equals("patterns")) tag = encode(field.codec, BannerPatternLayers.CODEC.encodeStart(access.createSerializationContext(JsonOps.INSTANCE),b.getPatterns()).getOrThrow(),access);
                 if (tag == null && block instanceof DecoratedPotBlockEntity p && field.key.equals("sherds")) tag = encode(field.codec,PotDecorations.CODEC.encodeStart(access.createSerializationContext(JsonOps.INSTANCE),p.getDecorations()).getOrThrow(),access);
                 value.add(field.key,tag == null ? JsonNull.INSTANCE : decode(field.codec,tag,access));
-                if(tag != null) subset.put(field.key,tag.copy());
+                if(tag != null) subset.put(field.key,field.key.equals("triggered") && nbt.get(field.key)!=null ? nbt.get(field.key).copy() : tag.copy());
                 var schema = new JsonObject(); schema.addProperty("authority","vanilla_codec_and_loadWithComponents"); schema.addProperty("codec",field.codec.toString()); schema.addProperty("nullable",nullable(field));
                 if(field.component) schema.addProperty("saved_path",field.key.substring(10));
                 if(field.codec == BeehiveBlockEntity.Occupant.LIST_CODEC) schema.addProperty("vanilla_max_occupants",BeehiveBlockEntity.MAX_OCCUPANTS);
@@ -98,7 +104,11 @@ public final class BlockViews {
                 if(field.codec == SignText.DIRECT_CODEC) { schema.addProperty("messages_length",SignText.LINES); var colors = new JsonArray(); for(var color:net.minecraft.world.item.DyeColor.values()) colors.add(color.getName());schema.add("colors",colors); }
                 if(block instanceof BeaconBlockEntity) {
                     if(field.key.equals("Levels")) {schema.addProperty("read_only",true);schema.addProperty("source","vanilla pyramid calculation");}
-                    else {var candidates=new JsonArray();BeaconBlockEntity.BEACON_EFFECTS.stream().flatMap(List::stream).distinct().forEach(effect->candidates.add(net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.holderByNameCodec().encodeStart(access.createSerializationContext(JsonOps.INSTANCE),effect).getOrThrow()));schema.add("candidates",candidates);schema.addProperty("candidate_source","BeaconBlockEntity.BEACON_EFFECTS + MOB_EFFECT registry");}
+                    else if(field.key.equals("primary_effect") || field.key.equals("secondary_effect")) {var candidates=new JsonArray();BeaconBlockEntity.BEACON_EFFECTS.stream().flatMap(List::stream).distinct().forEach(effect->candidates.add(net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.holderByNameCodec().encodeStart(access.createSerializationContext(JsonOps.INSTANCE),effect).getOrThrow()));schema.add("candidates",candidates);schema.addProperty("candidate_source","BeaconBlockEntity.BEACON_EFFECTS + MOB_EFFECT registry");}
+                }
+                if(block instanceof CrafterBlockEntity crafter) {
+                    if(field.key.equals("disabled_slots")) {schema.remove("length");schema.addProperty("type","array");schema.addProperty("item_min",0);schema.addProperty("item_max",crafter.getContainerSize()-1);schema.addProperty("unique_items",true);schema.addProperty("empty_slots_only",true);}
+                    if(field.key.equals("triggered")) {schema.addProperty("type","boolean");schema.addProperty("saved_type","int");}
                 }
                 properties.add(field.key,schema);
             }
@@ -120,7 +130,7 @@ public final class BlockViews {
                 var field=allowed.stream().filter(f->f.key.equals(entry.getKey())).findFirst().orElseThrow(()->new EditorSessions.Failure("invalid_request","未知视图字段："+entry.getKey()));
                 var json=entry.getValue();
                 if(block instanceof BeaconBlockEntity && field.key.equals("Levels"))throw new EditorSessions.Failure("invalid_request","信标等级由金字塔计算，只读");
-                if(block instanceof BeaconBlockEntity && !json.isJsonNull()) {
+                if(block instanceof BeaconBlockEntity && (field.key.equals("primary_effect") || field.key.equals("secondary_effect")) && !json.isJsonNull()) {
                     var effect=net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.holderByNameCodec().parse(access.createSerializationContext(JsonOps.INSTANCE),json).getOrThrow(s->new EditorSessions.Failure("invalid_nbt",s));
                     if(BeaconBlockEntity.BEACON_EFFECTS.stream().flatMap(List::stream).noneMatch(effect::equals))throw new EditorSessions.Failure("invalid_nbt","不是原版信标允许的效果");
                 }
@@ -134,8 +144,17 @@ public final class BlockViews {
                 if(field.codec==Codec.BYTE)requireInteger(json,Byte.MIN_VALUE,Byte.MAX_VALUE);
                 if(field.codec==Codec.INT)requireInteger(json,Integer.MIN_VALUE,Integer.MAX_VALUE);
                 if(block instanceof ChiseledBookShelfBlockEntity && field.key.equals("last_interacted_slot"))requireInteger(json,-1,WorldTarget.inventory(block).size()-1);
-                if(field.codec==Codec.BOOL && (!json.isJsonPrimitive() || !json.getAsJsonPrimitive().isBoolean()))throw new EditorSessions.Failure("invalid_nbt","布尔字段不能使用字符串或数字");
-                if(field.codec==Codec.INT_STREAM) {
+                if((field.codec==Codec.BOOL || field.codec==CRAFTER_TRIGGERED) && (!json.isJsonPrimitive() || !json.getAsJsonPrimitive().isBoolean()))throw new EditorSessions.Failure("invalid_nbt","布尔字段不能使用字符串或数字");
+                if(block instanceof CrafterBlockEntity && field.key.equals("disabled_slots")) {
+                    if(!json.isJsonArray())throw new EditorSessions.Failure("invalid_nbt","禁用槽位必须为数组");
+                    var crafter=(CrafterBlockEntity)WorldTarget.copyBlock(block,result,access);var slots=new TreeSet<Integer>();
+                    for(var slot:json.getAsJsonArray()) {
+                        requireInteger(slot,0,crafter.getContainerSize()-1);int index=slot.getAsInt();
+                        if(!slots.add(index) || !crafter.getItem(index).isEmpty())throw new EditorSessions.Failure("invalid_nbt","禁用槽位必须唯一且为空");
+                    }
+                    var sorted=new JsonArray();slots.forEach(sorted::add);json=sorted;
+                }
+                if(field.codec==Codec.INT_STREAM && !(block instanceof CrafterBlockEntity)) {
                     var original=get(result,field);
                     if(!json.isJsonArray() || (original instanceof IntArrayTag array && array.getAsIntArray().length!=json.getAsJsonArray().size()))throw new EditorSessions.Failure("invalid_nbt","进度数组长度必须与实际营火一致");
                     for(var element:json.getAsJsonArray())requireInteger(element,Integer.MIN_VALUE,Integer.MAX_VALUE);

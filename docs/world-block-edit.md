@@ -99,6 +99,24 @@ edits 示例（清空两项；设置时填写 candidates 中的 ID）：
 {"views":{"beacon":{"primary_effect":null,"secondary_effect":null}}}
 ```
 
+## crafter：禁用槽位与触发状态（P3-4 部分）
+
+`disabled_slots` 为 `Codec.INT_STREAM` 对应的整数数组，槽位范围来自实际 `CrafterBlockEntity.getContainerSize()`（26.1.2 为 0..8），元数据为 `item_min/item_max/unique_items/empty_slots_only`。必须唯一且为空槽；顺序不影响意义，后端按原版保存顺序升序规范化。`[]` 清空禁用状态（全部启用）；null 拒绝。写入前由当前编辑 NBT 的 detached 原版副本检查物品，不手写格数或物品表。
+
+`triggered` 是严格 JSON boolean，以原版 `SLOT_ENABLED/SLOT_DISABLED` 常量桥接真实 int 保存类型，schema 为 `type:boolean,saved_type:int`；`false` 清除触发状态，null 拒绝。它是 BE 保存状态，不等于独立的 `block_state.triggered`，不会调度一次合成或保证红石状态持续；后续原版红石更新可能改写。
+
+非法类型、null、重复/越界/非空槽为 `invalid_nbt`，未知字段为 `invalid_request`。仍经过原版加载保存与已有容器门禁；不声称已运行红石/合成 tick。
+
+视图示例：
+```json
+{"crafter":{"value":{"disabled_slots":[],"triggered":false},"snbt":"{disabled_slots:[I;],triggered:0}","schema":{"fields":{"disabled_slots":{"nullable":false,"type":"array","item_min":0,"item_max":8,"unique_items":true,"empty_slots_only":true},"triggered":{"nullable":false,"type":"boolean","saved_type":"int"}}}}}
+```
+
+edits 示例：
+```json
+{"views":{"crafter":{"disabled_slots":[0,2],"triggered":true}}}
+```
+
 ## 动态字段白名单及来源
 
 下表为内部数据指纹和动态合并语义；网络revision为冻结的不透明会话版本，详见 [world-revision-contract.md](world-revision-contract.md)。不因当前计时变化重新计算会话版本。

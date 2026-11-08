@@ -23,6 +23,7 @@ public final class BlockWorldEditTest {
         nameableViews(access);
         hopperView(access);
         beaconView(access);
+        crafterView(access);
         var samples=new JsonObject();var metadata=new JsonObject();metadata.addProperty("mode","pure-jvm-real-factories-and-codecs-not-live-ticks");metadata.add("command_block_types",BlockStateEdit.commandTypes());samples.add("capture_metadata",metadata);
         for(var block:List.of(Blocks.CHEST,Blocks.FURNACE,Blocks.OAK_DOOR,Blocks.STONE_SLAB,Blocks.OAK_STAIRS,Blocks.REPEATER,Blocks.COMMAND_BLOCK,Blocks.REDSTONE_WIRE)) {
             var state=block.defaultBlockState();var states=new JsonArray();
@@ -166,6 +167,22 @@ public final class BlockWorldEditTest {
         check(!new EditorPolicy(2,false).allows(false,false),"state envelope permission guard");reject("out_of_reach",()->WorldAccess.reach(false));reject("protected_area",()->WorldAccess.area(false));
         Files.createDirectories(output);Files.writeString(output.resolve("block-captured.json"),new GsonBuilder().setPrettyPrinting().create().toJson(samples));
         System.out.println("PASS BlockWorldEditTest "+checks+" checks; factory/codec/state data; real-client run pending");
+    }
+    private static void crafterView(RegistryAccess access) {
+        var be=new CrafterBlockEntity(BlockPos.ZERO,Blocks.CRAFTER.defaultBlockState());var before=be.saveWithFullMetadata(access);
+        var views=new JsonObject();BlockViews.add(views,be,access,before);var value=views.getAsJsonObject("crafter").getAsJsonObject("value");
+        check(value.getAsJsonArray("disabled_slots").isEmpty() && !value.get("triggered").getAsBoolean(),"crafter default read");
+        var saved=roundtrip(be,before,"{crafter:{disabled_slots:[2,0],triggered:true}}",access);
+        var copy=(CrafterBlockEntity)WorldTarget.copyBlock(be,saved,access);
+        check(copy.isSlotDisabled(0) && copy.isSlotDisabled(2) && copy.isTriggered(),"crafter runtime readback");
+        var reread=new JsonObject();BlockViews.add(reread,copy,access,saved);
+        check(reread.getAsJsonObject("crafter").getAsJsonObject("value").get("triggered").getAsBoolean(),"crafter bool view");
+        check(saved.get("triggered") instanceof IntTag,"crafter int storage");
+        var cleared=roundtrip(be,saved,"{crafter:{disabled_slots:[],triggered:false}}",access);
+        check(cleared.getIntArray("disabled_slots").orElseThrow().length==0 && cleared.getInt("triggered").orElseThrow()==CrafterBlockEntity.SLOT_ENABLED,"crafter clear explicit values");
+        for(String fields:List.of("disabled_slots:null","triggered:null","triggered:1","triggered:'true'","disabled_slots:[-1]","disabled_slots:["+be.getContainerSize()+"]","disabled_slots:[0,0]","disabled_slots:[1.5]","disabled_slots:['1']"))reject("invalid_nbt",()->BlockViews.apply(be,before,JsonParser.parseString("{crafter:{"+fields+"}}").getAsJsonObject(),access));
+        be.setItem(0,new ItemStack(Items.PAPER));var occupied=be.saveWithFullMetadata(access);
+        reject("invalid_nbt",()->BlockViews.apply(be,occupied,JsonParser.parseString("{crafter:{disabled_slots:[0]}}").getAsJsonObject(),access));
     }
     private static void beaconView(RegistryAccess access) {
         var be=new BeaconBlockEntity(BlockPos.ZERO,Blocks.BEACON.defaultBlockState());var before=be.saveWithFullMetadata(access);
