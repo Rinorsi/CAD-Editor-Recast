@@ -55,7 +55,7 @@ function kGrip() { return h('div', { class: 'k-grip', title: '按住拖动排序
 
 /* ---------- 右键菜单 ---------- */
 function kMenu(x, y, items) {
-  kPopClose(); popClose();
+  kPopClose();
   var box = h('div', { class: 'k-pop k-menu' });
   items.forEach(function (it) {
     if (it.sep) { box.appendChild(h('div', { class: 'k-msep' })); return; }

@@ -31,65 +31,27 @@ function activate(el, fn) {
 /* 展开/折叠状态跨重绘保留 */
 var UIOpen = {};
 
-/* ---------- 弹出候选（组合框） ---------- */
-var Pop = { el: null, owner: null };
-function popClose() { if (Pop.el) { Pop.el.remove(); Pop.el = null; Pop.owner = null; } }
-function popOpen(anchor, items, onPick, o) {
-  o = o || {};
-  popClose();
-  var box = h('div', { class: 'ed-pop' });
-  var sel = 0, shown = items.slice(0, 80);
-  function paint() {
-    clear(box);
-    if (!shown.length) box.appendChild(h('div', { class: 'ed-pop-empty', text: o.empty || '没有匹配项' }));
-    shown.forEach(function (it, i) {
-      var row = h('div', { class: 'ed-pop-item' + (i === sel ? ' on' : '') }, [
-        h('span', { class: 'lbl', text: it.label }),
-        it.sub ? h('span', { class: 'sub', text: it.sub }) : null,
-      ]);
-      row.addEventListener('mousedown', function (e) { e.preventDefault(); onPick(it); popClose(); });
-      row.addEventListener('mouseenter', function () { sel = i; var els = box.children; for (var j = 0; j < els.length; j++) els[j].classList.toggle('on', j === i); });
-      box.appendChild(row);
-    });
-  }
-  paint();
-  var r = anchor.getBoundingClientRect();
-  var vw = window.innerWidth, vh = window.innerHeight;
-  var w = Math.max(r.width, 140), left = Math.min(r.left, vw - w - 4);
-  var below = vh - r.bottom, up = r.top > below && below < 110;
-  box.setAttribute('style', 'left:' + Math.max(2, left) + 'px;width:' + w + 'px;' + (up ? 'bottom:' + (vh - r.top + 1) + 'px;max-height:' + Math.min(140, r.top - 6) + 'px' : 'top:' + (r.bottom + 1) + 'px;max-height:' + Math.min(140, below - 6) + 'px'));
-  document.getElementById('overlays').appendChild(box);
-  Pop.el = box; Pop.owner = anchor;
-  return {
-    update: function (list) { shown = list.slice(0, 80); sel = 0; paint(); },
-    move: function (d) { if (!shown.length) return; sel = (sel + d + shown.length) % shown.length; paint(); var c = box.children[sel]; if (c && c.scrollIntoView) c.scrollIntoView(); },
-    pick: function () { if (shown[sel]) { onPick(shown[sel]); popClose(); return true; } return false; },
-  };
-}
-document.addEventListener('mousedown', function (e) { if (Pop.el && !Pop.el.contains(e.target) && e.target !== Pop.owner) popClose(); });
-
-/* 带候选的输入：options = [{v,label,sub}]；free=true 允许自由输入 */
+/* ---------- 带候选的选择（通用表单用） ----------
+   options = [{v,label,sub}] 或返回它的函数；free=true 允许写入列表里没有的值（搜索框回车）；
+   reset=true 选完后按钮回到占位文字（用于「添加…」）。弹出层用公共的 pickFrom，和 kSelect 同一套外观。 */
 function combo(o) {
-  var input = h('input', { class: 'ore-field ed-in', type: 'text', value: o.value || '', placeholder: o.placeholder || '', spellcheck: 'false' });
-  var ctl = null;
-  function filter() {
-    var q = input.value.trim().toLowerCase();
-    var opts = typeof o.options === 'function' ? o.options() : o.options;
-    var list = opts.filter(function (x) { return !q || kMatch(x.v + ' ' + x.label + ' ' + (x.sub || ''), q); });
-    return list;
+  var cur = o.value === undefined || o.value === null ? '' : String(o.value);
+  var btn = h('div', { class: 'k-btn k-sel' });
+  function opts() { return typeof o.options === 'function' ? o.options() : o.options; }
+  function paint() {
+    clear(btn);
+    var e = null; if (cur !== '') opts().forEach(function (x) { if (String(x.v) === cur) e = x; });
+    btn.appendChild(h('span', { text: e ? e.label : (cur || o.placeholder || '请选择') }));
+    btn.appendChild(uiIcon('down', 10));
   }
-  function open() { if (!ctl || !Pop.el) ctl = popOpen(input, filter(), function (it) { input.value = it.v; o.onPick(it.v, it); }); else ctl.update(filter()); }
-  input.addEventListener('focus', function () { ctl = null; open(); });
-  input.addEventListener('input', function () { if (!Pop.el || Pop.owner !== input) ctl = null; open(); });
-  input.addEventListener('keydown', function (e) {
-    if (e.key === 'ArrowDown') { e.preventDefault(); if (!Pop.el) open(); else ctl && ctl.move(1); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); ctl && ctl.move(-1); }
-    else if (e.key === 'Enter') { if (Pop.el && ctl && ctl.pick()) { e.preventDefault(); e.stopPropagation(); } else if (o.free) { o.onPick(input.value.trim(), null); popClose(); } }
-    else if (e.key === 'Escape') { if (Pop.el) { e.stopPropagation(); popClose(); } }
+  activate(btn, function () {
+    pickFrom(btn, opts(), function (x) {
+      if (!o.reset) { cur = String(x.v); paint(); }
+      o.onPick(x.v, x.manual ? null : x);
+    }, { width: 260, placeholder: o.placeholder, manual: o.free ? { label: '列表里没有的值也可以', parse: function (t) { return t; } } : null });
   });
-  input.addEventListener('change', function () { if (o.free && !Pop.el) o.onPick(input.value.trim(), null); });
-  input.addEventListener('blur', function () { setTimeout(function () { if (Pop.owner === input) popClose(); }, 120); });
-  return input;
+  paint();
+  return btn;
 }
 
 /* 注册表候选 */
@@ -583,7 +545,7 @@ function wMap(sc, val, commit, ctx) {
     if (!Object.keys(cur).length) list.appendChild(h('div', { class: 'ed-empty', text: '空' }));
   }
   var addIn = ropts
-    ? combo({ value: '', options: ropts, free: true, placeholder: '添加键…', onPick: function (v) { if (v && cur[v] === undefined) { cur[v] = defaultFor(sc.v); commit(cur, {}); draw(); } } })
+    ? combo({ value: '', options: ropts, free: true, reset: true, placeholder: '添加键…', onPick: function (v) { if (v && cur[v] === undefined) { cur[v] = defaultFor(sc.v); commit(cur, {}); draw(); } } })
     : (function () { var i = h('input', { class: 'ore-field ed-in', type: 'text', placeholder: '新键名，回车添加' }); onKey(i, { Enter: function () { var v = i.value.trim(); if (v && cur[v] === undefined) { cur[v] = defaultFor(sc.v); i.value = ''; commit(cur, {}); draw(); } } }); return i; })();
   box.appendChild(list); box.appendChild(h('div', { class: 'ed-addrow' }, [icon('plus'), addIn])); draw();
   return box;
@@ -640,7 +602,7 @@ function wEnchants(c, val, commit, ctx) {
     if (!Object.keys(cur).length) list.appendChild(h('div', { class: 'ed-empty', text: '没有附魔' }));
   }
   var opts = EDATA.enchants.map(function (e) { return { v: e.id, label: e.name, sub: e.id + ' · 最高 ' + e.max + (e.items.indexOf(shortId(d.id)) >= 0 ? ' · 适用' : '') }; });
-  var addIn = combo({ value: '', options: opts, free: false, placeholder: '搜索并添加附魔…', onPick: function (id) { var key = 'minecraft:' + id; if (ENIDX[id] && cur[key] === undefined) { cur[key] = 1; commit(cur, {}); draw(); } } });
+  var addIn = combo({ value: '', options: opts, free: false, reset: true, placeholder: '搜索并添加附魔…', onPick: function (id) { var key = 'minecraft:' + id; if (ENIDX[id] && cur[key] === undefined) { cur[key] = 1; commit(cur, {}); draw(); } } });
   var tools = h('div', { class: 'ed-row wrap' });
   var maxb = h('div', { class: 'ed-mini wide', text: '全部设为自然上限' });
   activate(maxb, function () { Object.keys(cur).forEach(function (k) { var e = ENIDX[shortId(k)]; if (e) cur[k] = e.max; }); commit(cur, {}); draw(); });
@@ -681,7 +643,7 @@ function wAttrMods(c, val, commit, ctx) {
     });
     if (!cur.length) list.appendChild(h('div', { class: 'ed-empty', text: '没有属性修饰器（空列表会清除原型自带的修饰器）' }));
   }
-  var addIn = combo({ value: '', options: registryOptions('attribute'), free: false, placeholder: '搜索属性并添加…', onPick: function (v) { cur.push({ type: v, id: 'cadeditor:' + shortId(v) + '_' + (cur.length + 1), amount: 1, operation: 'add_value', slot: 'mainhand' }); commit(cur, {}); draw(); } });
+  var addIn = combo({ value: '', options: registryOptions('attribute'), free: false, reset: true, placeholder: '搜索属性并添加…', onPick: function (v) { cur.push({ type: v, id: 'cadeditor:' + shortId(v) + '_' + (cur.length + 1), amount: 1, operation: 'add_value', slot: 'mainhand' }); commit(cur, {}); draw(); } });
   box.appendChild(list); box.appendChild(h('div', { class: 'ed-addrow' }, [icon('plus'), addIn])); draw();
   return box;
 }

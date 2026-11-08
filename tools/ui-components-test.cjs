@@ -81,4 +81,19 @@ assert.deepEqual(Array.from(c.splitTags('a，b, c  d,,')), ['a', 'b', 'c', 'd'])
   assert.equal(c.Labels.rarityZh.epic, '史诗'); assert.equal(c.RARITY_ZH, c.Labels.rarityZh); assert.equal(c.SLOT_ZH, c.Labels.slot);
   assert.notEqual(c.Labels.opShort[0].label, c.Labels.opLong[0].label, '两张属性操作表措辞不同，是故意分开的');
 }
-console.log('PASS components: xNum/xToggle/xText/xSeg/xSelect, kInput onCommit, xList extras, modalShell, kColorPop, labels / names.');
+// ---- 通用表单的 combo：点开是公共 pickFrom 列表（以前的自搭弹层 .ed-pop 被样式隐藏，候选一直看不到）
+{
+  const picked = []; const ov = t.doc.getElementById('overlays');
+  const opts = [{ v: 'a', label: '甲' }, { v: 'b', label: '乙' }];
+  const cb = c.combo({ value: 'a', options: opts, free: true, placeholder: '选…', onPick: (v, it) => picked.push([v, it ? it.label : null]) });
+  ov.appendChild(cb); assert.ok(cb.classList.contains('k-sel')); assert.ok(/甲/.test(cb.textContent), '显示当前值的中文名');
+  cb.fire('click'); const pop = ov.querySelector('.k-pop'); assert.ok(pop, '点开有弹层');
+  const rows = pop.querySelectorAll('.k-prow'); assert.equal(rows.length, 2, '候选都列出来');
+  rows[1].fire('mousedown'); assert.deepEqual(picked, [['b', '乙']]); assert.ok(/乙/.test(cb.textContent));
+  assert.equal(ov.querySelector('.ed-pop'), null, '不再生成被隐藏的旧弹层');
+  const add = c.combo({ value: '', options: opts, reset: true, placeholder: '添加…', onPick: v => picked.push([v]) }); ov.appendChild(add);
+  add.fire('click'); ov.querySelector('.k-pop').querySelectorAll('.k-prow')[0].fire('mousedown');
+  assert.deepEqual(picked[1], ['a']); assert.ok(/添加/.test(add.textContent), '添加用的选完回到占位文字');
+  c.kPopClose();
+}
+console.log('PASS components: xNum/xToggle/xText/xSeg/xSelect, kInput onCommit, xList extras, modalShell, kColorPop, combo, labels / names.');

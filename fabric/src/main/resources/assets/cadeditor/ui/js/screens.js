@@ -53,7 +53,7 @@ function openModal(node, stacked) {
   if (stacked && previous != null) {
     ModalParents.push({ el: previous, focus: document.activeElement });
     previous.removeAttribute('id'); previous.style.display = 'none';
-    kPopClose(); popClose();
+    kPopClose();
   } else {
     ModalSwap = true; try { closeModal(); } finally { ModalSwap = false; }
     while (ModalParents.length) { var old = $('modal'); if (old != null) old.remove(); var p = ModalParents.pop(); p.el.remove(); }
@@ -66,7 +66,7 @@ function openModal(node, stacked) {
   return mask;
 }
 function closeModal() {
-  var m = $('modal'); if (m != null) m.remove(); kPopClose(); popClose();
+  var m = $('modal'); if (m != null) m.remove(); kPopClose();
   if (ModalParents.length) { var p = ModalParents.pop(); p.el.id = 'modal'; p.el.style.display = ''; if (p.focus != null && p.focus.focus) p.focus.focus(); }
   else if (VaultOnly && !ModalSwap && !$('modal') && typeof oriel !== 'undefined' && oriel.close) oriel.close();
 }

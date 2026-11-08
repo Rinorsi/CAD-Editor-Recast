@@ -19,7 +19,7 @@ function onStoreEvent(ev) {
 document.addEventListener('keydown', function (e) {
   var k = (e.key || '').toLowerCase(), ctrl = e.ctrlKey || e.metaKey;
   if (ctrl && k === 'k') { e.preventDefault(); if ($('modal')) closeModal(); else openPalette(); return; }
-  if (e.key === 'Escape') { if (KPop.el) { kPopClose(); return; } if (Pop.el) { popClose(); return; } if ($('modal')) { closeModal(); return; } }
+  if (e.key === 'Escape') { if (KPop.el) { kPopClose(); return; } if ($('modal')) { closeModal(); return; } }
   if ($('modal')) return;
   var tag = e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '', typing = tag === 'input' || tag === 'textarea';
   if (ctrl && k === 'i') { e.preventDefault(); openImport(); return; }

@@ -174,7 +174,8 @@ html, body { margin: 0; height: 100%; }
 .k-chev.up { transform: rotate(-90deg); }
 .k-csum { display: none; color: var(--tx3); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: right; padding-right: 4px; }
 .k-card.collapsed .k-csum { display: block; }
-.k-cbody { flex-direction: column; gap: 6px; min-width: 0; padding: 8px 8px 10px 8px; background: var(--well); border-top: 1px solid var(--ln2); box-shadow: inset 0 1px 0 var(--ln); }
+/* 卡片内容默认是块布局（间距用下面的 margin）；详情窗里会切回 flex，这时用上这里的方向、间距和不收缩 */
+.k-cbody { display: block; flex-direction: column; gap: 6px; min-width: 0; padding: 8px 8px 10px 8px; background: var(--well); border-top: 1px solid var(--ln2); box-shadow: inset 0 1px 0 var(--ln); }
 .k-cbody > * { flex-shrink: 0; }
 .k-card.collapsed .k-cbody, .k-card.off .k-cbody, .k-card.bare .k-cbody { display: none; }
 .k-card.off .k-chev, .k-card.bare .k-chev { display: flex; opacity: 0; }
@@ -519,7 +520,7 @@ textarea.ed-raw, textarea.ed-snbt, textarea.ed-out { width: 100%; color: var(--t
 .ed-diff .cols { display: flex; flex-direction: column; gap: 1px; padding: 0 6px 4px 20px; } .ed-diff .col { color: var(--tx2); word-break: break-all; line-height: 14px; } .ed-diff .col.b { color: var(--tx3); }
 .ed-diff .lb { display: inline-block; width: 20px; color: var(--tx3); }
 .ed-sbar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.ed-enrow, .ed-pop, .ed-pop-item { display: none; }
+.ed-enrow { display: none; }
 
 /* ======================= 响应式 ======================= */
 /* 小 GUI（比如 1080p 自动缩放 4 → 480×270）：窗口留 8，左栏收成图标条，分页只留当前页的名字 */
@@ -617,13 +618,9 @@ textarea.ed-code-in { min-height: 56px; }
 .k-pcell { min-width: 0; overflow: hidden; }
 .k-pickbox { min-width: 0; }
 .k-pickbox .k-input { width: 100%; }
-
-/* 引擎的弹性布局会把「max-height + 滚动」子元素按完整内容高度给父级留位（面板底部出现大片空白）。
-   凡是里面放了滚动框的容器（卡片内容、命令面板）改用普通块布局，间距用 margin。 */
-.k-cbody { display: block; }
+/* 卡片内容是块布局，子元素之间用 margin 隔开（放在这里以压过前面同级的单类规则） */
 .k-cbody > * { margin-bottom: 6px; }
 .k-cbody > :last-child { margin-bottom: 0; }
-.k-modal.k-pal { display: block; }
 
 
 /* ======================= 第三轮：可拖拽窗口 / 左栏、固定工具行、添加设置、原版精灵 ======================= */

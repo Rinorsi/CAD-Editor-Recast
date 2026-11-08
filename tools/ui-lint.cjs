@@ -59,9 +59,7 @@ const ALLOW = {
   'k-numwarn': 'JS 用 style.display 切换（kit.js 数字框的警告行）',
   'k-redit': 'JS 用 style.display 切换（kit2.js 富文本折叠编辑区）',
   'ed-tcpanel': 'JS 用 style.display 切换（forms.js 的文本组件折叠面板）',
-  'ed-enrow': '旧版 forms.js 附魔行，样式表自初始导入就是 display:none；第 5 步淘汰旧控件时一并处理',
-  'ed-pop': '旧版 forms.js 组合框弹层（Pop/popOpen），同上',
-  'ed-pop-item': '旧版 forms.js 组合框弹层条目，同上'
+  'ed-enrow': '旧版 forms.js 附魔行，样式表自初始导入就是 display:none；第 5 步淘汰旧控件时一并处理'
 };
 Object.keys(hidden).forEach(cls => {
   if (ALLOW[cls]) return;

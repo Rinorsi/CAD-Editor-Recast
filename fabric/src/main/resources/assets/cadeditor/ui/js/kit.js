@@ -89,7 +89,7 @@ var KPop = { el: null, owner: null, onClose: null };
 function kPopClose() { if (KPop.el) { KPop.el.remove(); KPop.el = null; if (KPop.onClose) KPop.onClose(); KPop.onClose = null; } KPop.owner = null; }
 function kPopover(anchor, node, o) {
   o = o || {};
-  kPopClose(); popClose();
+  kPopClose();
   var box = h('div', { class: 'k-pop' + (o.cls ? ' ' + o.cls : '') }, [node]);
   document.getElementById('overlays').appendChild(box);
   var r = anchor.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight;
