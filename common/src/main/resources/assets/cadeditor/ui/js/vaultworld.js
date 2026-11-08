@@ -77,7 +77,7 @@ function vwPreview(e, secs) {
     Vault.call('preview', f, function (r) {
       toastDismiss('vw-pre');
       if (!r.ok) { vwPreviewErr(r); return; }
-      vwConfirm(e, r);
+      if (vwKind() === 'player_preset') vwBackupGate(secs, function () { vwConfirm(e, r); }); else vwConfirm(e, r);
     });
   });
 }
@@ -93,4 +93,24 @@ function vwConfirm(e, r) {
     closeModal(); weSend('apply', msg, '正在套用「' + (e.name || '') + '」…');
   }, { cls: 'pri', icon: 'check' });
   openModal(modalShell('确认套用', e.name || '', rows, [h('div', { class: 'grow' }), kBtn('取消', closeModal), go]), true);
+}
+
+/* 覆盖玩家数据之前：保险库里有没有现在这份数据的备份？没有就问一句要不要先存。是 = 存进去再继续，否 = 直接继续，取消 = 不套用 */
+function vwBackupGate(secs, next) {
+  var pack = { world: WE.w }; if (secs) pack.sections = secs;
+  Vault.upload(JSON.stringify(pack), function (u) {
+    if (!u.ok) { next(); return; }   // 查不了就不拦着，照常往下走
+    var f = { kind: 'player_preset', uploadToken: u.token }; if (secs) f.sections = secs;
+    Vault.call('has_backup', f, function (r) {
+      if (!r.ok || r.backed_up) { next(); return; }
+      var rows = [h('div', { class: 'k-sub', text: '保险库里还没有现在这份数据。要先存入保险库吗？' })];
+      var yes = kBtn('是，先存入', function () {
+        Vault.call('save', { kind: 'player_preset', uploadToken: u.token, name: vwDefaultName('player_preset') + ' · 套用前备份', tags: ['备份'] }, function (sv) {
+          if (!sv.ok) { vaultErr(sv); return; }
+          closeModal(); toast('已存入保险库', 'ok'); next();
+        });
+      }, { cls: 'pri', icon: 'check' });
+      openModal(modalShell('当前数据没有备份', '', rows, [h('div', { class: 'grow' }), kBtn('取消', closeModal), kBtn('否，直接套用', function () { closeModal(); next(); }), yes]), true);
+    });
+  });
 }

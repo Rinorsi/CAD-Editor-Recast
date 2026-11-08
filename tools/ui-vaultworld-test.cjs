@@ -4,7 +4,7 @@ const H = require('./lib/ui-harness.cjs');
 const t = H.create(), c = t.c, sent = t.sent;
 c.snd = () => {}; c.Reg.meta = {};
 let toasts = []; c.toast = (m) => toasts.push(m);
-const uploads = [], calls = []; let reply = {};
+const uploads = [], calls = []; let reply = { has_backup: { ok: true, backed_up: true } };
 c.Vault.upload = (text, cb) => { uploads.push(JSON.parse(text)); cb({ ok: true, token: 'tok' }); };
 c.Vault.call = (op, f, cb) => { calls.push([op, f]); cb(reply[op] || { ok: true }); };
 const btn = (label) => t.root.querySelectorAll('.k-btn').filter(x => x.textContent.indexOf(label) >= 0)[0];
@@ -40,6 +40,23 @@ const player = () => { c.WE.w = { kind: 'entity', type: 'minecraft:player', slot
   assert.ok(btn('确认套用'), '显示确认'); assert.ok(/背包/.test(t.root.textContent) && /3/.test(t.root.textContent), '列出将被覆盖的内容');
   btn('确认套用').fire('click');
   const ap = sent.filter(s => s[0] === 'apply')[0][1]; assert.equal(ap.revision, 'rv9'); assert.equal(ap.slot.token, 'tk'); assert.equal(ap.vault_template.kind, 'player_preset'); assert.ok(/^w-/.test(ap.requestId));
+}
+// ---- 覆盖玩家数据前：没有备份就问「是否先存入」；是 = 先存再继续，否 = 直接继续
+{
+  player(); uploads.length = 0; calls.length = 0; sent.length = 0;
+  const apply = { slot: { kind: 'entity', token: 'tk' }, revision: 'rv9', vault_template: { kind: 'player_preset', template: {}, sections: ['inventory'] } };
+  reply.preview = { ok: true, summary: { kind: 'player_preset', target: 'Rinorsi', overwrites: [{ section: 'inventory', before: 3, after: 5 }] }, apply };
+  reply.has_backup = { ok: true, backed_up: false };
+  c.vwPreview({ id: 'e1', name: '生存套装' }, ['inventory']);
+  assert.ok(/没有备份/.test(t.root.textContent), '没有备份就先问'); assert.equal(btn('确认套用'), undefined, '问完之前不出现确认');
+  assert.equal(calls.filter(x => x[0] === 'has_backup').length, 1);
+  btn('是，先存入').fire('click');
+  const sv = calls.filter(x => x[0] === 'save').pop()[1]; assert.equal(sv.kind, 'player_preset'); assert.equal(sv.uploadToken, 'tok'); assert.ok(/备份/.test(sv.name));
+  assert.ok(btn('确认套用'), '存完继续到确认');
+  // 「否」：不存，直接到确认
+  calls.length = 0; c.closeModal(); c.vwPreview({ id: 'e1', name: '生存套装' }, ['inventory']); btn('否，直接套用').fire('click');
+  assert.equal(calls.filter(x => x[0] === 'save').length, 0, '选否不存'); assert.ok(btn('确认套用'));
+  reply.has_backup = { ok: true, backed_up: true };
 }
 // ---- 方块种类不符：当场拦住，不出现确认
 {
