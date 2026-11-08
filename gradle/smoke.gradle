@@ -1,0 +1,47 @@
+// Opt-in probe sources stay outside all release artifacts.
+configurations {
+    commonSmoke { canBeResolved=true; canBeConsumed=false }
+    commonSmokeResources { canBeResolved=true; canBeConsumed=false }
+}
+dependencies {
+    commonSmoke(project(path: ':common:' + project.name, configuration: 'commonSmoke'))
+    commonSmokeResources(project(path: ':common:' + project.name, configuration: 'commonSmokeResources'))
+}
+sourceSets { smoke {
+    compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+    runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+} }
+tasks.named('compileSmokeJava', JavaCompile) { source(configurations.commonSmoke) }
+tasks.named('processSmokeResources') { from(configurations.commonSmokeResources) }
+def smokeJar = tasks.register('smokeJar', Jar) {
+    dependsOn('smokeClasses')
+    archiveFileName='editor-matrix-smoke.jar'
+    destinationDirectory=layout.buildDirectory.dir('smoke-only')
+    from(sourceSets.smoke.output)
+}
+if (providers.gradleProperty('editorSmokeRun').isPresent()) {
+    def runDir=file(providers.gradleProperty('editorSmokeRun').get())
+    if (project.parent.name == 'fabric') {
+        loom.runs.named('client') {
+            runDirectory.set(runDir.absolutePath)
+            vmArg('-Deditor.autotest=matrix-smoke')
+            programArg('--username'); programArg('MatrixSmoke')
+            programArg('--quickPlaySingleplayer'); programArg('MatrixSmoke')
+        }
+        def prepare=tasks.register('prepareMatrixSmoke',Copy) {
+            dependsOn smokeJar
+            from(smokeJar.flatMap { it.archiveFile }); into(new File(runDir,'mods'))
+        }
+        tasks.named('prepareEditorClient') { into(new File(runDir,'mods')) }
+        tasks.named('isolateEditorClient') { enabled=false }
+        tasks.named('runClient') { dependsOn prepare; workingDir runDir }
+    } else {
+        neoForge.mods { editor_matrix_smoke { sourceSet sourceSets.smoke } }
+        neoForge.runs.named('client') {
+            gameDirectory=runDir
+            systemProperty('editor.autotest','matrix-smoke')
+            programArguments.addAll('--username','MatrixSmoke','--quickPlaySingleplayer','MatrixSmoke')
+        }
+        tasks.named('runClient') { dependsOn('smokeClasses') }
+    }
+}

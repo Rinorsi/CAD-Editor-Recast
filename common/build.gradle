@@ -1,0 +1,27 @@
+plugins { id 'multiloader-common'; id 'net.neoforged.moddev' }
+neoForge {
+    neoFormVersion = neo_form_version
+    accessTransformers.from(stonecutter.process(parent.file('src/main/resources/META-INF/accesstransformer.cfg'), 'build/stonecutter-processed/accesstransformer.cfg'))
+}
+dependencies { compileOnly files(rootProject.file("libs/oriel-fabric-${minecraft_version}-${oriel_version}.jar")) }
+sourceSets { testFixtures; smoke }
+// Shared verification sources are consumed and executed by each loader.
+tasks.named('compileTestJava') { enabled = false }
+tasks.named('test') { enabled = false }
+configurations {
+    commonSmoke { canBeResolved = false; canBeConsumed = true }
+    commonSmokeResources { canBeResolved = false; canBeConsumed = true }
+    commonTests { canBeResolved = false; canBeConsumed = true }
+    commonJava { canBeResolved = false; canBeConsumed = true }
+    commonResources { canBeResolved = false; canBeConsumed = true }
+}
+artifacts {
+    sourceSets.smoke.java.srcDirs.each { dir -> commonSmoke(dir) { builtBy(sourceSets.smoke.java.sourceDirectories) } }
+    sourceSets.smoke.resources.srcDirs.each { dir -> commonSmokeResources(dir) { builtBy(sourceSets.smoke.resources.sourceDirectories) } }
+    [sourceSets.test, sourceSets.testFixtures].each { set ->
+        set.java.srcDirs.each { dir -> commonTests(dir) { builtBy(set.java.sourceDirectories) } }
+    }
+    sourceSets.main.java.srcDirs.each { dir -> commonJava(dir) { builtBy(sourceSets.main.java.sourceDirectories) } }
+    sourceSets.main.resources.srcDirs.each { dir -> commonResources(dir) { builtBy(sourceSets.main.resources.sourceDirectories) } }
+}
+if (!stonecutter.current.isActive) tasks.named('createMinecraftArtifacts') { dependsOn('stonecutterGenerate') }

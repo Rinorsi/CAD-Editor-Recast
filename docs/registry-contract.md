@@ -276,7 +276,7 @@ RegistryBridge.initialize()幂等，只注册tick、客户端标签/资源重载
 - `logs/backend-b/backend-data-verification.json`：真实原版注册表/Codec、六类SNBT及试炼刷怪器、session确认、原版NBT持久化、权威快照无original时类型保真、运行时全部物品元信息；详细日志codec.log。
 - `logs/backend-b/backend-data-e2e.json`：7个真实applyToGame→Java→集成服务端→重新读取/原版持久化场景（刷怪蛋、刷怪笼、试炼刷怪器、鱼桶、装填弹药、锁、自定义数据），另1个component_formats显式SNBT的真实宿主apply，核对byte/超2^53长整数/int-array经过commit回执与创造槽位包仍精确一致；共8场景PASS，日志client.log/runner.log。验证物品组件，不放置/生成实体，不代表实际刷怪或视觉验收。
 - `node tools/audit-backend-status.cjs`从当前index.html真实脚本顺序重核70项数据来源及68项非CARDS组件入口，更新两份STATUS文档，源码SHA256在ui-source-audit.json；后续前端改动须重跑。
-- 当前有既有Gradle runClient wrapper进程在运行，遵守不并发启动Gradle规则，本worker没有另跑Gradle；执行全源javac与既有StackCodecTest/EditorSessionsTest/TestKitTest的结果见compile-all.log、regression.log。可在其他Gradle结束后执行 `bash tools/gw.sh -I tools/backend-data/verification.init.gradle :fabric:26.1.2:backendDataTest :fabric:26.1.2:build --no-problems-report` 重跑正式构建。
+- 当前有既有Gradle runClient wrapper进程在运行，遵守不并发启动Gradle规则，本worker没有另跑Gradle；执行全源javac与既有StackCodecTest/EditorSessionsTest/TestKitTest的结果见compile-all.log、regression.log。可在其他Gradle结束后执行 `bash tools/gw.sh -I tools/backend-data/verification.init.gradle :fabric:26.1:backendDataTest :fabric:26.1:build --no-problems-report` 重跑正式构建。
 
 ## 草稿持久化（v1扩展）
 

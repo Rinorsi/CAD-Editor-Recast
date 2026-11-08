@@ -5,7 +5,7 @@ import { MCTest, PageProbe, clickPage, fillPage, delay } from './lib.mjs';
 import { cases, controls, referencedControls } from './effects.cases.mjs';
 import { parseSnbt, assertSubset } from './effects.nbt.mjs';
 export const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const ui = join(root, 'fabric/src/main/resources/assets/cadeditor/ui');
+const ui = join(root, 'common/src/main/resources/assets/cadeditor/ui');
 function files(dir) { return readdirSync(dir, { withFileTypes: true }).flatMap(e => e.isDirectory() ? files(join(dir, e.name)) : [join(dir, e.name)]); }
 export function plan(tier = 'quick', only) {
   const schema = JSON.parse(readFileSync(join(root, 'docs/component-schema-26.1.2.json')));

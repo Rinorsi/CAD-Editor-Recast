@@ -13,7 +13,7 @@ public final class ResizePreviewProbe {
     private static final String SAMPLE = "(function(){var w=document.getElementById('win');var r=w.getBoundingClientRect();var sels=['.ed-stats','.ed-tags','.ed-tip','.ed-stagehead','.ed-addset span','.k-search span'];var h={};for(var i=0;i<sels.length;i++){var e=document.querySelector(sels[i]);h[sels[i]]=e!=null?getComputedStyle(e).display:'missing';}return {innerWidth:innerWidth,innerHeight:innerHeight,dpr:devicePixelRatio,width:r.width,classes:w.className,hidden:h,resizeEvents:resizeEvents};})()";
     public static void main(String[] args) throws Exception {
         Path root=Path.of(args[0]), out=root.resolve("logs/resize"); Files.createDirectories(out);
-        try(var assets=MinecraftAssets.openForPage(List.of(root.resolve("fabric/src/main/resources"),Path.of(args[1]).resolve("kit/src/main/resources")),Optional.of(Path.of(args[2])))) {
+        try(var assets=MinecraftAssets.openForPage(List.of(root.resolve("common/src/main/resources"),Path.of(args[1]).resolve("kit/src/main/resources")),Optional.of(Path.of(args[2])))) {
             var font=new MinecraftFont(assets); var host=new PreviewHost(assets,font);
             String url="cadeditor:ui/index.html", html=host.loadText(url);
             String data="""

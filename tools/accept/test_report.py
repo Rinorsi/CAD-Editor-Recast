@@ -4,7 +4,7 @@ from pathlib import Path
 
 root=Path(__file__).resolve().parents[2]
 with tempfile.TemporaryDirectory(prefix="cad-accept-report-") as d:
-    tmp=Path(d);ui=Path("fabric/src/main/resources/assets/cadeditor/ui/js/data.js")
+    tmp=Path(d);ui=Path("common/src/main/resources/assets/cadeditor/ui/js/data.js")
     (tmp/ui).parent.mkdir(parents=True);shutil.copyfile(root/ui,tmp/ui)
     rounds=[]
     for i in range(3):

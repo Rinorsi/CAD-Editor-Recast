@@ -1,6 +1,6 @@
 // 从调研基线生成编辑器 UI 的数据文件（26.1.2 精确版本）。
 // 用法：node tools/gen-ui-data.mjs
-// 输出：fabric/src/main/resources/assets/cadeditor/ui/js/data.js（全局 EDATA）。生成物不要手改。
+// 输出：common/src/main/resources/assets/cadeditor/ui/js/data.js（全局 EDATA）。生成物不要手改。
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
@@ -218,7 +218,7 @@ const kc = {}; for (const k of Object.values(ikind)) kc[k] = (kc[k] || 0) + 1;
 console.log('kinds', JSON.stringify(kc));
 
 const data = { version: V, cats: CATS, comps, enchants, attrs, effects, items, pt, ipt, ikind, iname, iblk, L };
-const outDir = path.join(root, 'fabric/src/main/resources/assets/cadeditor/ui/js');
+const outDir = path.join(root, 'common/src/main/resources/assets/cadeditor/ui/js');
 fs.mkdirSync(outDir, { recursive: true });
 const text = '// 自动生成：node tools/gen-ui-data.mjs。勿手改。\nvar EDATA = ' + JSON.stringify(data) + ';\n';
 fs.writeFileSync(path.join(outDir, 'data.js'), text);

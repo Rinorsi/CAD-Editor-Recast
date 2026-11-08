@@ -554,7 +554,7 @@ attributes 逐条走真实 Packed.CODEC；每个已注册 RangedAttribute 的 ba
 
 运行 `pwsh -NoProfile -File tools/entity/schema-test.ps1`：javac 编译全部生产源码，加原测试与 EntitySchemaDetailsTest；分别跑客户端/服务器语义 JVM fixtures；原有 EntitySchemaTest 文件未修改，继续完整回归；SpawnerApplyTest 继续回归。新增测试也已以 entitySchemaDetailsTest/entitySchemaDetailsServerTest 接入正式 Gradle check，集成 JVM 脚本包括新测试。每个完整实测 schema 经过真正 RegistryPages.split 检查（包括其单条22976字符阈值与24000字符总信封），不以裁切选项解决传输超限。
 
-开始工作时已有用户 Minecraft/runClient 运行，期间只做 javac/JVM；最终检查时该进程已自行退出（`logs/entity-schema/processes-extended.json` 为零进程回执）。随后通过 `tools/entity/build.ps1` 原子取得共享目录锁，执行最终 `:fabric:26.1.2:build`，**BUILD SUCCESSFUL**，并正常释放锁。全程未启动、附加、重启或关闭任何游戏。javac/JVM 完整结果见 `logs/entity-schema/extended-runner.log`、`compile-main.log`、`tests-client.log`、`tests-server.log`、`details-client.log`、`details-server.log`、`spawner-apply.log`；Gradle 完整输出 `logs/entity-schema/gradle-final.log`。正式 check 已实际执行新增的客户端/服务端测试及原有测试。第三方属性的实际整合包、真正 ServerLevel 村民交易回存、实体3D渲染/联网 apply 仍为 **real-client run pending**。
+开始工作时已有用户 Minecraft/runClient 运行，期间只做 javac/JVM；最终检查时该进程已自行退出（`logs/entity-schema/processes-extended.json` 为零进程回执）。随后通过 `tools/entity/build.ps1` 原子取得共享目录锁，执行最终 `:fabric:26.1:build`，**BUILD SUCCESSFUL**，并正常释放锁。全程未启动、附加、重启或关闭任何游戏。javac/JVM 完整结果见 `logs/entity-schema/extended-runner.log`、`compile-main.log`、`tests-client.log`、`tests-server.log`、`details-client.log`、`details-server.log`、`spawner-apply.log`；Gradle 完整输出 `logs/entity-schema/gradle-final.log`。正式 check 已实际执行新增的客户端/服务端测试及原有测试。第三方属性的实际整合包、真正 ServerLevel 村民交易回存、实体3D渲染/联网 apply 仍为 **real-client run pending**。
 
 ### 新字段的真实采集节选
  以下来自最终纯 JVM 采集；完整响应（包括所有属性、全部变种选项与高级元数据）见同目录 entity-schema-examples-26.1.2.json。JSON 只摘取响应中真实存在的字段，不作为静态运行时数据。

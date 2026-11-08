@@ -18,7 +18,7 @@ oriel.send('log', {level:'debug', msg:'调试信息'});
 无窗口验证入口是现有 `prefsTest`（包含 `EditorUiLogTest`）：布尔偏好及重启读回、非法消息、截断与控制字符、滚动限频/5秒汇总/队列上限、实际后台SLF4J→Log4j四级事件和独立临时 `latest.log` 文件输出。测试只写当天scratch临时文件并清理，不读取或修改用户游戏的日志。
 
 ```bash
-bash tools/gw.sh :fabric:26.1.2:build --no-problems-report
+bash tools/gw.sh :fabric:26.1:build --no-problems-report
 node tools/ui-contract-test.cjs
 ```
 

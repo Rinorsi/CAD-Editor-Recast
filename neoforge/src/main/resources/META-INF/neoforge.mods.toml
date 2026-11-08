@@ -1,0 +1,26 @@
+modLoader="javafml"
+loaderVersion="${neoforge_loader_version_range}"
+license="All Rights Reserved"
+[[mods]]
+modId="cadeditor"
+version="${version}"
+displayName="CAD Editor"
+description="Visual item, block and entity editor built on Oriel UI."
+[[dependencies.cadeditor]]
+modId="neoforge"
+type="required"
+versionRange="[${neoforge_version},)"
+ordering="NONE"
+side="BOTH"
+[[dependencies.cadeditor]]
+modId="minecraft"
+type="required"
+versionRange="${minecraft_version_range}"
+ordering="NONE"
+side="BOTH"
+[[dependencies.cadeditor]]
+modId="oriel"
+type="required"
+versionRange="[0.11.0,0.12.0)"
+ordering="AFTER"
+side="BOTH"

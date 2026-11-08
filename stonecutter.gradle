@@ -1,6 +1,42 @@
 plugins {
     id 'dev.kikugie.stonecutter'
     id 'net.fabricmc.fabric-loom' version '1.18.2' apply false
+    id 'net.neoforged.moddev' version '2.0.147' apply false
 }
-stonecutter.active '26.1.2'
+stonecutter.active '26.3'
 layout.buildDirectory.set(file('../Oriel-UI-Workspace/daily/' + java.time.LocalDate.now() + '/scratch/editor-mod/build/root'))
+stonecutter.parameters { sc ->
+    sc.properties.tags(sc.current.version)
+    // 26.2 moves GUI ownership and registry constants; mappings are reversible.
+    sc.replacements.regex(sc.current.parsed >= '26.2') { spec ->
+        spec.replace('\\b(?:net\\.minecraft\\.world\\.entity\\.)?EntityType\\.([A-Z][A-Z0-9_]*)\\b', 'net.minecraft.world.entity.EntityTypes.$1',
+            '\\bnet\\.minecraft\\.world\\.entity\\.EntityTypes\\.([A-Z][A-Z0-9_]*)\\b', 'net.minecraft.world.entity.EntityType.$1')
+    }
+    sc.replacements.regex(sc.current.parsed >= '26.2') { spec ->
+        spec.replace('\\bBlockEntityType\\.([A-Z][A-Z0-9_]*)\\b', 'BlockEntityTypes.$1', '\\bBlockEntityTypes\\.([A-Z][A-Z0-9_]*)\\b', 'BlockEntityType.$1')
+    }
+    sc.replacements.regex(sc.current.parsed >= '26.2') { spec ->
+        spec.replace('import net\\.minecraft\\.world\\.level\\.block\\.entity\\.BlockEntityType; // constants', 'import net.minecraft.world.level.block.entity.BlockEntityTypes;',
+            'import net\\.minecraft\\.world\\.level\\.block\\.entity\\.BlockEntityTypes;', 'import net.minecraft.world.level.block.entity.BlockEntityType; // constants')
+    }
+    sc.replacements.regex(sc.current.parsed >= '26.2') { spec ->
+        spec.replace('(?<![.\\w])(mc|client|Minecraft\\.getInstance\\(\\))\\.screen\\b', '$1.gui.screen()', '(?<![.\\w])(mc|client|Minecraft\\.getInstance\\(\\))\\.gui\\.screen\\(\\)', '$1.screen')
+    }
+    sc.replacements.string(sc.current.parsed >= '26.2') { replace('.setScreen(', '.gui.setScreen(') }
+    sc.replacements.string(sc.current.parsed >= '26.2') { replace('.gui.getChat()', '.gui.hud.getChat()') }
+    sc.replacements.string(sc.current.parsed >= '26.2') { replace('net.minecraft.advancements.criterion.', 'net.minecraft.advancements.predicates.') }
+    sc.replacements.string(sc.current.parsed >= '26.2') { replace('net.minecraft.world.entity.monster.Slime', 'net.minecraft.world.entity.monster.cubemob.Slime') }
+    sc.replacements.string(sc.current.parsed >= '26.2') { replace('.isInstantenous()', '.isInstantaneous()') }
+    sc.replacements.string(sc.current.parsed >= '26.2') { replace('Blocks.WHITE_BANNER', 'Blocks.BANNER.white()') }
+    sc.replacements.string(sc.current.parsed >= '26.2') { replace('Items.WHITE_BANNER', 'Items.BANNER.white()') }
+    sc.replacements.string(sc.current.parsed >= '26.3') { replace('VanillaRegistries.createLookup()', 'VanillaRegistries.createWorldLookup()') }
+    // 26.3 component/container and package renames (verified against the resolved game jar).
+    sc.replacements.string(sc.current.parsed >= '26.3') { replace('net.minecraft.resources.HolderSetCodec', 'net.minecraft.core.registries.codec.HolderSetCodec') }
+    sc.replacements.string(sc.current.parsed >= '26.3') { replace('net.minecraft.resources.RegistryFileCodec', 'net.minecraft.core.registries.codec.RegistryFileCodec') }
+    sc.replacements.string(sc.current.parsed >= '26.3') { replace('EnderMan', 'Enderman') }
+    sc.replacements.string(sc.current.parsed >= '26.3') { replace('.setInvulnerable(', '.setPermanentlyInvulnerable(') }
+    sc.replacements.string(sc.current.parsed >= '26.3') { replace('new BundleContents.Mutable(BundleContents.EMPTY)', 'new BundleContents.Mutable()') }
+    sc.replacements.string(sc.current.parsed >= '26.3') { replace('SignText.DIRECT_CODEC', 'SignText.CODEC') }
+    sc.replacements.string(sc.current.parsed >= '26.3') { replace('Recipe.CODEC.encodeStart', 'Recipe.DIRECT_CODEC.encodeStart') }
+    sc.replacements.string(sc.current.parsed >= '26.3') { replace('InputConstants.isKeyDown(mc.getWindow(),', 'InputConstants.isKeyDown(') }
+}

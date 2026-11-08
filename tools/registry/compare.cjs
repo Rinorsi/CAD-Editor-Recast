@@ -3,7 +3,7 @@ const vm = require("node:vm");
 const path = require("node:path");
 const root = path.resolve(__dirname, "../..");
 const run = path.resolve(root, "../Oriel-UI-Workspace/daily/2026-11-06/run/editor-registry-probe");
-const data = {}; vm.runInNewContext(fs.readFileSync(path.join(root, "fabric/src/main/resources/assets/cadeditor/ui/js/data.js"), "utf8"), data);
+const data = {}; vm.runInNewContext(fs.readFileSync(path.join(root, "common/src/main/resources/assets/cadeditor/ui/js/data.js"), "utf8"), data);
 const live = JSON.parse(fs.readFileSync(path.join(run, "registry-snapshot.json"), "utf8"));
 const out = {};
 for (const [kind, old] of Object.entries({items:"items", enchantments:"enchants", mob_effects:"effects", attributes:"attrs"})) {

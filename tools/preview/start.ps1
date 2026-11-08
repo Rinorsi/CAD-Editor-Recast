@@ -3,7 +3,7 @@ param([switch]$CheckOnly)
 $ErrorActionPreference='Stop'
 $Editor=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $Workspace=[IO.Path]::GetFullPath((Join-Path $Editor '../Oriel-UI-Workspace'))
-$Assets=Join-Path $Editor 'fabric/src/main/resources/assets/cadeditor'
+$Assets=Join-Path $Editor 'common/src/main/resources/assets/cadeditor'
 $Bash=Join-Path $env:ProgramFiles 'Git/bin/bash.exe'
 if(!(Test-Path $Bash)){$Bash=(Get-Command bash -ErrorAction Stop).Source}
 foreach($Required in @($Assets,(Join-Path $Editor 'libs/oriel-fabric-26.1.2-0.11.0.jar'),(Join-Path $Editor 'tools/gw.sh'))){if(!(Test-Path -LiteralPath $Required)){throw ('缺少文件：'+$Required)}}
@@ -25,7 +25,7 @@ Push-Location $Editor
 try{
     $ErrorActionPreference='Continue'
     Write-Host '[2/3] 正在启动 Gradle：请保持此窗口开启。'
-    $LaunchArgs=@(':fabric:26.1.2:runClient','-PmcTest=false','--no-problems-report')
+    $LaunchArgs=@(':fabric:26.1:runClient','-PmcTest=false','--no-problems-report')
     if($env:EDITOR_LAUNCHER_DEBUG -eq '1'){$LaunchArgs+='-PeditorLauncherDebug=true'}
     $GameStarting=$false
     & $Bash 'tools/gw.sh' @LaunchArgs 2>&1 | ForEach-Object {

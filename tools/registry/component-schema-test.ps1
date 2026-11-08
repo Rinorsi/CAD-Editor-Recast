@@ -11,9 +11,9 @@ if (!$ClasspathFile) {
 if (!$ClasspathFile) { throw '缺少已导出的 runtime-classpath.json；本脚本不会启动Gradle获取依赖。' }
 $Runtime = @(Get-Content -LiteralPath $ClasspathFile | ConvertFrom-Json)
 $Cp = $Runtime -join ';'
-$Sources = @('ComponentSchema.java','ComponentSchemaChannel.java','ComponentSchemaValidation.java','RegistryPages.java','SpawnerData.java') | ForEach-Object {Join-Path $Root ('fabric/src/main/java/dev/rinorsi/editor/registry/'+$_)}
-$Sources += @('ComponentValidation.java','StackCodec.java') | ForEach-Object {Join-Path $Root ('fabric/src/main/java/dev/rinorsi/editor/'+$_)}
-$Sources += Join-Path $Root 'fabric/src/test/java/dev/rinorsi/editor/registry/ComponentSchemaTest.java'
+$Sources = @('ComponentSchema.java','ComponentSchemaChannel.java','ComponentSchemaValidation.java','RegistryPages.java','SpawnerData.java') | ForEach-Object {Join-Path $Root ('common/versions/26.1/build/generated/stonecutter/main/java/dev/rinorsi/editor/registry/'+$_)}
+$Sources += @('ComponentValidation.java','StackCodec.java') | ForEach-Object {Join-Path $Root ('common/versions/26.1/build/generated/stonecutter/main/java/dev/rinorsi/editor/'+$_)}
+$Sources += Join-Path $Root 'common/versions/26.1/build/generated/stonecutter/test/java/dev/rinorsi/editor/registry/ComponentSchemaTest.java'
 Push-Location $Root
 try {
     & javac -proc:none -encoding UTF-8 -cp $Cp -d $Classes @Sources *> ($Out+'/schema-compile.log')

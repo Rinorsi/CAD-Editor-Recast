@@ -1,15 +1,45 @@
 pluginManagement {
     repositories {
-        maven { url = 'https://maven.fabricmc.net/' }
-        maven { url = 'https://maven.kikugie.dev/releases' }
         gradlePluginPortal()
+        mavenCentral()
+        exclusiveContent {
+            forRepository {
+                maven {
+                    name = 'Fabric'
+                    url = uri('https://maven.fabricmc.net')
+                }
+            }
+            filter {
+                includeGroupAndSubgroups('net.fabricmc')
+            }
+        }
+        exclusiveContent {
+            forRepository {
+                maven {
+                    name = 'KikuGie'
+                    url = uri('https://maven.kikugie.dev/releases')
+                }
+            }
+            filter {
+                includeGroupAndSubgroups('dev.kikugie')
+            }
+        }
     }
 }
-plugins { id 'dev.kikugie.stonecutter' version '0.9.8' }
+
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+    // https://maven.kikugie.dev/#/releases/dev/kikugie/stonecutter
+    id 'dev.kikugie.stonecutter' version '0.9.8'
+}
+
 rootProject.name = 'CAD-Editor-Recast'
+includeBuild('build-logic')
 stonecutter {
     create(rootProject) {
-        vcsVersion = '26.1.2'
-        branch('fabric') { version('26.1.2') }
+        vcsVersion = '26.3'
+        for (String name in ['common', 'fabric', 'neoforge']) {
+            branch(name) { for (String v in ['26.3', '26.2', '26.1']) version(v) }
+        }
     }
 }

@@ -22,7 +22,7 @@
 
 ## 107个持久组件
 
-目标固定为MC **26.1.2**。ID和名称以 [data.js](../fabric/src/main/resources/assets/cadeditor/ui/js/data.js) 为底稿，变种名译成中文；形态对照 [审计脚本](../tools/audit-backend-status.cjs) 输出：CARDS关联为专用卡片，AUTO_BODY/SPEC_FORMS为专用表单，schema及自动头部控件为通用表单。含局部SNBT不等于整项仅SNBT；核不准的写未核实。
+目标固定为MC **26.1.2**。ID和名称以 [data.js](../common/src/main/resources/assets/cadeditor/ui/js/data.js) 为底稿，变种名译成中文；形态对照 [审计脚本](../tools/audit-backend-status.cjs) 输出：CARDS关联为专用卡片，AUTO_BODY/SPEC_FORMS为专用表单，schema及自动头部控件为通用表单。含局部SNBT不等于整项仅SNBT；核不准的写未核实。
 
 component_schema来源只说明独立JVM核验的宿主Codec结构；full不代表玩法验收，partial/unknown仍有未导出约束，前端消费尚待接线。完整证据见 [component-schema-contract](component-schema-contract.md)。
 

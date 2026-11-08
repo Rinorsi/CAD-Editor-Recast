@@ -53,7 +53,7 @@ Preview CLI 的动作不提供 viewport resize，因此 Java probe 直接调用�
 
 ## 前端修改建议（本 worker 未修改前端）
 
-1. `fabric/src/main/resources/assets/cadeditor/ui/js/screens.js:180` 两个 class toggle 均能双向更新，不是单向切换错误。`:181` 原生 resize 只执行一次 scheduleFit，而 `:175–176` 的 applyWinStyle 另有 160/520ms 重测。对原生 resize 也执行最终防抖重测（大于 280ms，例如沿用 520ms），或在 #win 的几何 transitionend 后重测。更直接的方案是 viewport resize 时停用窗口边缘过渡，避免读动画宽度。单个 requestAnimationFrame/setTimeout(0) 不足。
+1. `common/src/main/resources/assets/cadeditor/ui/js/screens.js:180` 两个 class toggle 均能双向更新，不是单向切换错误。`:181` 原生 resize 只执行一次 scheduleFit，而 `:175–176` 的 applyWinStyle 另有 160/520ms 重测。对原生 resize 也执行最终防抖重测（大于 280ms，例如沿用 520ms），或在 #win 的几何 transitionend 后重测。更直接的方案是 viewport resize 时停用窗口边缘过渡，避免读动画宽度。单个 requestAnimationFrame/setTimeout(0) 不足。
 2. `editor.css:578` 的 left/right/top/bottom 280ms 过渡是上述测量竞态的条件。保持动画时要处理 resize 连续发生、取消/重定向过渡的最终重测。
 3. `editor.css:538–553` 的 `(max-width:540px), (max-height:290px)` 即使没有 narrow class 也隐藏 stats、tags、提示、预览标题、按钮/搜索文本；特别是短而宽的 GUI 也触发。`:831–840` 的 narrow 规则再次隐藏这些内容。需要同时调整两处：重要信息保留，通过换行、滚动或用户可展开区呈现；不能只修 JS class 或只改 420px 阈值。
 4. `:874–887` 的 snug 主要缩小 hero，不能把本实验的大窗口 snug 直接说成所有信息隐藏的充分原因。

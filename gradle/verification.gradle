@@ -1,0 +1,217 @@
+// Same headless regression tasks on every loader/version. No probes ship in release jars.
+def daily = rootProject.file('../Oriel-UI-Workspace/daily/' + java.time.LocalDate.now())
+configurations { commonTests { canBeResolved = true; canBeConsumed = false } }
+dependencies { commonTests(project(path: ':common:' + project.name, configuration: 'commonTests')) }
+sourceSets {
+    codecVerification {
+        java.setSrcDirs([])
+        java.exclude('dev/rinorsi/editor/probe/**')
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+}
+tasks.register('codecTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.StackCodecTest'
+    workingDir = new File(daily, 'scratch/editor-mod')
+}
+tasks.named('check') { dependsOn('codecTest') }
+tasks.register('prefsTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.client.EditorPrefsTest'
+    workingDir = new File(daily, 'scratch/editor-mod')
+}
+tasks.named('check') { dependsOn('prefsTest') }
+
+tasks.register('clipboardTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.client.EditorClipboardTest'
+    workingDir = new File(daily, 'scratch/editor-mod')
+}
+tasks.named('check') { dependsOn('clipboardTest') }
+
+tasks.register('searchTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.registry.search.SearchTest'
+    args rootProject.file('common/src/main/resources/assets/cadeditor/ui/js/pinyin-data.js').absolutePath
+    workingDir = rootProject.projectDir
+}
+tasks.named('check') { dependsOn('searchTest') }
+
+tasks.register('soundPreviewTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.client.EditorSoundPreviewTest'
+    workingDir = new File(daily, 'scratch/editor-mod')
+}
+tasks.named('check') { dependsOn('soundPreviewTest') }
+
+// Optional standalone probe: never included in the distributed Editor jar.
+// Standalone additive lazy-catalog policy/shape checks.
+tasks.register('lazyCatalogTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.registry.LazyCatalogTest'
+    args rootProject.file('common/src/main/resources/assets/cadeditor/ui/js/pinyin-data.js').absolutePath
+    workingDir = rootProject.projectDir
+}
+tasks.named('check') { dependsOn('lazyCatalogTest') }
+tasks.register('catalogMemoryBench', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.registry.CatalogMemoryBench'
+    args rootProject.file('common/src/main/resources/assets/cadeditor/ui/js/pinyin-data.js').absolutePath
+    maxHeapSize = '3G'
+    workingDir = rootProject.projectDir
+}
+
+// SpawnData equipment contract, real Codecs and trial block load/save; no client window.
+tasks.register('spawnerEquipmentTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.registry.SpawnerEquipmentTest'
+    workingDir = rootProject.projectDir
+}
+tasks.named('check') { dependsOn('spawnerEquipmentTest') }
+
+// Native vanilla-tooltip projection; read-only, no client window in this check.
+tasks.register('tooltipTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.registry.TooltipPreviewTest'
+    workingDir = rootProject.projectDir
+}
+tasks.named('check') { dependsOn('tooltipTest') }
+
+// Live-Codec schema snapshot drift gate; never regenerate snapshots implicitly.
+tasks.register('componentSchemaTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.registry.ComponentSchemaTest'
+    if (providers.gradleProperty('writeSchemaSnapshot').isPresent()) args '--write-snapshot'
+    workingDir = rootProject.projectDir
+}
+tasks.named('check') { dependsOn('componentSchemaTest') }
+
+// World/editor schema checks use real factories in a non-ticking JVM level.
+['entitySchemaTest': true, 'entitySchemaServerTest': false].each { taskName, clientSide ->
+    tasks.register(taskName, JavaExec) {
+        dependsOn codecVerificationClasses
+        classpath = sourceSets.codecVerification.runtimeClasspath
+        mainClass = 'dev.rinorsi.editor.registry.EntitySchemaTest'
+        workingDir = rootProject.projectDir
+        jvmArgs '-Djava.awt.headless=true', '-Dcadeditor.schema.client=' + clientSide
+        args rootProject.file('logs/final-gate/entity-schema-' + (clientSide ? 'client' : 'server') + '.json').absolutePath
+        doFirst { rootProject.file('logs/final-gate').mkdirs() }
+    }
+    tasks.named('check') { dependsOn(taskName) }
+}
+tasks.register('worldEditTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.registry.WorldEditTest'
+    workingDir = rootProject.projectDir
+    args rootProject.file('logs/final-gate/world-edit').absolutePath
+}
+tasks.named('check') { dependsOn('worldEditTest') }
+
+// Local vault persistence and typed stack round trips; no client window.
+tasks.register('vaultTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.vault.VaultTest'
+    workingDir = rootProject.projectDir
+    maxHeapSize = '2G'
+}
+tasks.named('check') { dependsOn('vaultTest') }
+
+// Entity attributes/effects use the same detached real-game JVM fixtures as the base schema.
+tasks.register('entityWorldEditTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.registry.EntityWorldEditTest'
+    workingDir = rootProject.projectDir
+    jvmArgs '-Djava.awt.headless=true'
+}
+tasks.named('check') { dependsOn('entityWorldEditTest') }
+
+tasks.register('entityVehicleViewTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.registry.EntityVehicleViewTest'
+    workingDir = rootProject.projectDir
+    jvmArgs '-Djava.awt.headless=true'
+}
+tasks.named('check') { dependsOn('entityVehicleViewTest') }
+
+tasks.register('entityHorseViewTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.registry.EntityHorseViewTest'
+    workingDir = rootProject.projectDir
+    jvmArgs '-Djava.awt.headless=true'
+}
+tasks.named('check') { dependsOn('entityHorseViewTest') }
+
+['playerWorldEditTest': 'dev.rinorsi.editor.registry.PlayerWorldEditTest',
+ 'editDispatchTest': 'dev.rinorsi.editor.registry.EditDispatchTest'].each { taskName, entry ->
+    tasks.register(taskName, JavaExec) {
+        dependsOn codecVerificationClasses
+        classpath = sourceSets.codecVerification.runtimeClasspath
+        mainClass = entry
+        workingDir = rootProject.projectDir
+        jvmArgs '-Djava.awt.headless=true'
+    }
+    tasks.named('check') { dependsOn(taskName) }
+}
+
+['entitySchemaDetailsTest': true, 'entitySchemaDetailsServerTest': false].each { taskName, clientSide ->
+    tasks.register(taskName, JavaExec) {
+        dependsOn codecVerificationClasses
+        classpath = sourceSets.codecVerification.runtimeClasspath
+        mainClass = 'dev.rinorsi.editor.registry.EntitySchemaDetailsTest'
+        workingDir = rootProject.projectDir
+        jvmArgs '-Djava.awt.headless=true', '-Dcadeditor.schema.client=' + clientSide
+        args rootProject.file('logs/entity-schema/details-' + (clientSide ? 'client' : 'server') + '.json').absolutePath
+    }
+    tasks.named('check') { dependsOn(taskName) }
+}
+
+// Server-side path merge, including unknown timers and keyed-list conflict paths.
+tasks.register('worldMergeTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.registry.WorldMergeTest'
+    workingDir = rootProject.projectDir
+    jvmArgs '-Djava.awt.headless=true'
+}
+tasks.named('check') { dependsOn('worldMergeTest') }
+
+// Session revision lifecycle and deterministic retry metadata, without a client.
+tasks.register('worldRevisionTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.registry.WorldRevisionTest'
+    workingDir = rootProject.projectDir
+    jvmArgs '-Djava.awt.headless=true'
+}
+tasks.named('check') { dependsOn('worldRevisionTest') }
+
+tasks.named('compileTestJava') { enabled = false }
+tasks.named('test') { enabled = false }
+tasks.named('compileCodecVerificationJava', JavaCompile) {
+    source(configurations.commonTests)
+    if (project.parent.name == 'fabric' && project.name == '26.1') source(sourceSets.test.java)
+}
+tasks.register('codecVerification') { group = 'verification'; dependsOn('check') }
+
+// Source wiring assertions must inspect the same version that was compiled.
+tasks.withType(JavaExec).configureEach {
+    if (name == 'editDispatchTest') doFirst {
+        systemProperty 'editor.sourceJava', configurations.commonJava.files.find { new File(it, 'dev/rinorsi/editor/client/EditorClient.java').exists() }.absolutePath
+    }
+}

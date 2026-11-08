@@ -1,5 +1,5 @@
 gradle.projectsEvaluated {
-    def p = gradle.rootProject.project(":fabric:26.1.2")
+    def p = gradle.rootProject.project(":fabric:26.1")
     ['entitySchemaTest':true, 'entitySchemaServerTest':false].each { taskName, clientSide ->
         if (!p.tasks.findByName(taskName)) p.tasks.register(taskName, JavaExec) {
             dependsOn p.tasks.named('codecVerificationClasses')

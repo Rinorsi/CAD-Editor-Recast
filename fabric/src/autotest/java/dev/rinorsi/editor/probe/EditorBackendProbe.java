@@ -241,7 +241,7 @@ public final class EditorBackendProbe implements ClientModInitializer {
         var box = stack.get(net.minecraft.core.component.DataComponents.CONTAINER);
         if (box != null) box.nonEmptyItemCopyStream().forEach(child -> kitNumbers(child, found));
         var bundle = stack.get(net.minecraft.core.component.DataComponents.BUNDLE_CONTENTS);
-        if (bundle != null) bundle.itemCopyStream().forEach(child -> kitNumbers(child, found));
+        if (bundle != null) dev.rinorsi.editor.ContainerCopies.copies(bundle).forEach(child -> kitNumbers(child, found));
     }
 
     private void command(Minecraft mc, String command) throws Exception {

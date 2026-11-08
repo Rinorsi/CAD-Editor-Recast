@@ -6,7 +6,7 @@
 //   node tools/css-dedupe.cjs --families 列出同一个选择器出现多次的「规则家族」，给人手工合并时参考
 const fs = require('node:fs');
 const path = require('node:path');
-const file = process.env.CSS_FILE || path.resolve(__dirname, '../fabric/src/main/resources/assets/cadeditor/ui/editor.css');
+const file = process.env.CSS_FILE || path.resolve(__dirname, '../common/src/main/resources/assets/cadeditor/ui/editor.css');
 const raw = fs.readFileSync(file, 'utf8'), crlf = raw.includes('\r\n'), src = raw.replace(/\r\n/g, '\n');
 const args = process.argv.slice(2), APPLY = args.includes('--apply'), FAM = args.includes('--families');
 

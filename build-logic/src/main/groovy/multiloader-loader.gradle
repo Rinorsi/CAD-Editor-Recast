@@ -1,0 +1,12 @@
+plugins { id 'multiloader-common'; id 'multiloader-publish' }
+configurations {
+    commonJava { canBeResolved = true; canBeConsumed = false }
+    commonResources { canBeResolved = true; canBeConsumed = false }
+}
+dependencies {
+    commonJava(project(path: ":common:${project.name}", configuration: 'commonJava'))
+    commonResources(project(path: ":common:${project.name}", configuration: 'commonResources'))
+    implementation files(rootProject.file("libs/oriel-${project.parent.name}-${minecraft_version}-${oriel_version}.jar"))
+}
+tasks.named('compileJava', JavaCompile) { source(configurations.commonJava) }
+processResources { from(configurations.commonResources) }

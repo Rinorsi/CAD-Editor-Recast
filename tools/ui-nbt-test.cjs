@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 const assert = require('node:assert/strict');
-const dir = path.resolve(__dirname, '../fabric/src/main/resources/assets/cadeditor/ui/js');
+const dir = path.resolve(__dirname, '../common/src/main/resources/assets/cadeditor/ui/js');
 const sent = [];
 const ctx = vm.createContext({ console, setTimeout: () => 1, clearTimeout() {}, document: { addEventListener() {}, getElementById() { return null; } },
   oriel: { data: {}, on() {}, send(k, v) { sent.push({ k, v }); return true; } } });

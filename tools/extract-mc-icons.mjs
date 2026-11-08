@@ -107,7 +107,7 @@ function cube(top, left, right) {
 }
 
 // ---- 处理物品 ----
-const data = fs.readFileSync(path.join(root, 'fabric/src/main/resources/assets/cadeditor/ui/js/data.js'), 'utf8');
+const data = fs.readFileSync(path.join(root, 'common/src/main/resources/assets/cadeditor/ui/js/data.js'), 'utf8');
 const items = JSON.parse(data.slice(data.indexOf('{'), data.lastIndexOf('}') + 1)).items;
 fs.rmSync(out, { recursive: true, force: true });
 const index = { items: {}, effects: {} };

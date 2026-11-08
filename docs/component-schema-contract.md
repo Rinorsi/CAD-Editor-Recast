@@ -207,6 +207,6 @@ pwsh -NoProfile -File tools/registry/component-schema-test.ps1 使用已导出�
 
 日志：logs/backend-g/schema-compile.log、schema-test.log、schema-drift-gate.log、schema-gradle-gate.log；静态审阅为 schema-review.log。范围对照机器文件由本轮快照生成。
 
-P3-5 组件车道补充：本轮只执行 Gradle 编译、`:fabric:26.1.2:build` 和 `:fabric:26.1.2:check`，遵守 `logs/.gradle.lock.d` 原子锁；日志在 `logs/lane-components/`。组件测试为每项断言 full 或精确限定的 partial 路径，使用导出的节点与实时注册表/方块状态定义合成合法样本，并验证非空列表、属性范围、损坏 SNBT、profile 容量、纹饰资源路径等反例。`predicates` 的专用值 Codec 尚未递归导出，保留局部 SNBT；不能把这种受约束的动态映射标成普通自由 NBT 或 full。快照更新轮 build/check 已通过（ComponentSchemaTest 972 条断言）；最后不带更新参数的 compileJava/build/check 也通过（974 条断言，包含快照与 UI 范围汇总漂移检查），见 `logs/lane-components/final-build.log`。
+P3-5 组件车道补充：本轮只执行 Gradle 编译、`:fabric:26.1:build` 和 `:fabric:26.1:check`，遵守 `logs/.gradle.lock.d` 原子锁；日志在 `logs/lane-components/`。组件测试为每项断言 full 或精确限定的 partial 路径，使用导出的节点与实时注册表/方块状态定义合成合法样本，并验证非空列表、属性范围、损坏 SNBT、profile 容量、纹饰资源路径等反例。`predicates` 的专用值 Codec 尚未递归导出，保留局部 SNBT；不能把这种受约束的动态映射标成普通自由 NBT 或 full。快照更新轮 build/check 已通过（ComponentSchemaTest 972 条断言）；最后不带更新参数的 compileJava/build/check 也通过（974 条断言，包含快照与 UI 范围汇总漂移检查），见 `logs/lane-components/final-build.log`。
 
 本轮未启动、关闭或重载用户 Minecraft；真实客户端通道、资源包语言切换、第三方 MOD 整合包与专服运行待验证。full 是 Codec 形状覆盖，COVERAGE 发布勾选保持不变。

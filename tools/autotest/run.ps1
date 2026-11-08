@@ -43,7 +43,7 @@ if($Mode -eq 'server'){
         $NsRoot=Join-Path $Day ('scratch/editor-mod/'+$RunName+'-sources/assets/cadeditor')
         $Source=Join-Path $NsRoot 'ui'
         New-Item -ItemType Directory -Force -Path $Source,(Join-Path $Run 'config/oriel') | Out-Null
-        Copy-Item -Path (Join-Path $Editor 'fabric/src/main/resources/assets/cadeditor/ui/*') -Destination $Source -Recurse -Force
+        Copy-Item -Path (Join-Path $Editor 'common/src/main/resources/assets/cadeditor/ui/*') -Destination $Source -Recurse -Force
         $Mapped=if($AssetsRoot){Split-Path $NsRoot -Parent}else{$NsRoot}
         [IO.File]::WriteAllText((Join-Path $Run 'config/oriel/dev-sources.properties'),('editor='+$Mapped.Replace([char]92,[char]47)+[Environment]::NewLine),[Text.UTF8Encoding]::new($false))
         $PhasePath=Join-Path $Run 'editor-live-phase.txt'

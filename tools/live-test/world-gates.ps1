@@ -22,7 +22,7 @@ foreach($Kind in @('revision','merge','permission','player','entity')){
     if($BuildDirectory){
         $RuntimeJson=Join-Path ([IO.Path]::GetFullPath($BuildDirectory)) '../../runtime-classpath.json'
         $Entries=@(Get-Content -LiteralPath $RuntimeJson -Raw | ConvertFrom-Json)
-        $Mc=Get-ChildItem (Join-Path $Root '.gradle/loom-cache/minecraftMaven') -Recurse -Filter '*.jar' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        $Mc=Get-ChildItem (Join-Path $Root '.gradle/loom-cache/minecraftMaven') -Recurse -Filter '*.jar' | Where-Object { $_.FullName -match '[\/]26[.]1[.]2[\/]' } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
         if(!$Mc){throw 'Missing current access-widened Minecraft jar'}
         $Cp=(@($Entries | Where-Object {$_ -notmatch 'minecraft-merged.*[.]jar$' -and $_ -notmatch 'mctest'})+@($Mc.FullName)) -join ';'
         Set-Content ($Log+'/classpath.txt') $Cp

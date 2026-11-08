@@ -8,7 +8,7 @@ import { execFileSync } from 'node:child_process';
 import { runInNewContext } from 'node:vm';
 import assert from 'node:assert/strict';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const output = join(root, 'fabric/src/main/resources/assets/cadeditor/ui/js/pinyin-data.js');
+const output = join(root, 'common/src/main/resources/assets/cadeditor/ui/js/pinyin-data.js');
 const revision = 'fe29ad32bdf352b31a02b9936e537f575432e9a6';
 const source = 'https://raw.githubusercontent.com/mozillazg/pinyin-data/' + revision + '/';
 const temporary = await mkdtemp(join(tmpdir(), 'editor-pinyin-'));

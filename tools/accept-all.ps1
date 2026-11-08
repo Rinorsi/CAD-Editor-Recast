@@ -29,11 +29,11 @@ function Get-Commands([string]$Id) {
     switch ($Id) {
         ui {
             Get-UiScripts | ForEach-Object { 'node tools/' + $_.Name }
-            Get-ChildItem (Join-Path $Root 'fabric/src/main/resources/assets/cadeditor/ui/js/*.js') | Sort-Object Name | ForEach-Object { 'node --check "' + $_.FullName + '"' }
+            Get-ChildItem (Join-Path $Root 'common/src/main/resources/assets/cadeditor/ui/js/*.js') | Sort-Object Name | ForEach-Object { 'node --check "' + $_.FullName + '"' }
         }
         java {
-            'gradlew.bat --console=plain --max-workers=2 -PmcTest=false :fabric:26.1.2:build'
-            'gradlew.bat --console=plain --max-workers=2 -PmcTest=false :fabric:26.1.2:check --rerun-tasks :fabric:26.1.2:autotestClasses :fabric:26.1.2:exportAutotestClasspath'
+            'gradlew.bat --console=plain --max-workers=2 -PmcTest=false :fabric:26.1:build'
+            'gradlew.bat --console=plain --max-workers=2 -PmcTest=false :fabric:26.1:check --rerun-tasks :fabric:26.1:autotestClasses :fabric:26.1:exportAutotestClasspath'
             'Inspect current release jar: gradle.properties version; no test/probe/evidence entries (including nested jars)'
         }
         world { 'pwsh -NoProfile -File tools/live-test/world-gates.ps1 -EvidenceRoot "' + $Out + '/world" -BuildDirectory "' + $Build + '"' }
@@ -45,7 +45,7 @@ function Get-Commands([string]$Id) {
 }
 if ($WhatIf) {
     Write-Output ('WHATIF tier=' + $Tier + '; no commands, process checks, locks or reports will be executed/written')
-    Write-Output 'Safety: check user Minecraft at start and before each game stage; sticky SKIP all game stages if found. Never kill preexisting Java; reuse silent launchers.'
+    Write-Output 'Safety: check ownership of the isolated acceptance directory; unrelated clients may keep running. Never kill preexisting Java; reuse silent launchers.'
     foreach ($Stage in $Stages) {
         $Reason = if ($Only -and $Stage.id -ne $Only) { '-Only ' + $Only } elseif ($Stage.game -and $SkipGame) { '-SkipGame' } elseif ($Stage.id -eq 'accept' -and !$Full) { 'requires -Full' } elseif ($Stage.id -eq 'effects' -and !(Test-Path tools/live-test/effects.ps1)) { 'script not yet provided' }
         Write-Output ($Stage.id + ' [' + $(if ($Reason) { 'SKIP: ' + $Reason } else { 'RUN' }) + '] timeout=' + $Stage.seconds + 's')
@@ -67,11 +67,11 @@ function Test-UserGame {
             $ArgPath = @($Match.Groups[1].Value, $Match.Groups[2].Value, $Match.Groups[3].Value) | Where-Object { $_ } | Select-Object -First 1
             if (Test-Path -LiteralPath $ArgPath -PathType Leaf) { $Command += ' ' + (Get-Content -LiteralPath $ArgPath -Raw) }
         }
-        $Command -notmatch 'agent[.]jar|GradleDaemon' -and $Command -match 'KnotClient|runClient|net[.]minecraft[.]client[.]main[.]Main'
+        $Command -notmatch 'agent[.]jar|GradleDaemon' -and $Command.Contains($Out) -and $Command -match 'KnotClient|runClient|net[.]minecraft[.]client[.]main[.]Main'
     })
     if ($Games.Count) {
         $Games | Select-Object ProcessId, CommandLine | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $Out 'blocked-processes.json')
-        $script:Blocked = 'User Minecraft detected (PID ' + ($Games.ProcessId -join ',') + '); all game stages skipped; no existing process touched'
+        $script:Blocked = 'Acceptance directory already in use (PID ' + ($Games.ProcessId -join ',') + '); all game stages skipped; no existing process touched'
     }
 }
 function Stop-OwnedTree([Diagnostics.Process]$Process) {
@@ -150,7 +150,7 @@ function Invoke-JavaStage([string]$Evidence) {
         }
         [IO.File]::WriteAllText($OwnerFile, $Token)
         foreach ($Task in @('build','check')) {
-            $Tasks = if ($Task -eq 'build') { ':fabric:26.1.2:build' } else { ':fabric:26.1.2:check --rerun-tasks :fabric:26.1.2:autotestClasses :fabric:26.1.2:exportAutotestClasspath' }
+            $Tasks = if ($Task -eq 'build') { ':fabric:26.1:build' } else { ':fabric:26.1:check --rerun-tasks :fabric:26.1:autotestClasses :fabric:26.1:exportAutotestClasspath' }
             Invoke-CommandLog $env:ComSpec @('/d','/s','/c', ('""' + (Join-Path $Root 'gradlew.bat') + '" --console=plain --max-workers=2 -PmcTest=false ' + $Tasks + '"')) (Join-Path $Evidence ($Task + '.log'))
         }
         $VersionLine = Get-Content (Join-Path $Root 'gradle.properties') | Where-Object { $_ -match '^version\s*=' } | Select-Object -First 1
@@ -202,7 +202,7 @@ foreach ($Stage in $Stages) {
                             catch { $Failures.Add($_.Exception.Message); if ($FailFast) { break } }
                         }
                         if (!$FailFast -or !$Failures.Count) {
-                            foreach ($File in Get-ChildItem (Join-Path $Root 'fabric/src/main/resources/assets/cadeditor/ui/js/*.js') | Sort-Object Name) {
+                            foreach ($File in Get-ChildItem (Join-Path $Root 'common/src/main/resources/assets/cadeditor/ui/js/*.js') | Sort-Object Name) {
                                 try { Invoke-CommandLog 'node' @('--check',$File.FullName) (Join-Path $Evidence ('syntax-' + $File.Name + '.log')) }
                                 catch { $Failures.Add($_.Exception.Message); if ($FailFast) { break } }
                             }

@@ -16,8 +16,8 @@ $Cache = Join-Path $env:USERPROFILE '.gradle/caches/fabric-loom'
 $Mc = Join-Path $Cache 'minecraftMaven/net/minecraft/minecraft-merged-deobf/26.1.2/minecraft-merged-deobf-26.1.2.jar'
 $Runtime = @(Get-Content $ClasspathFile | ConvertFrom-Json)
 $Cp = (@($BaseJar,$Mc) + $Runtime) -join ';'
-$Sources = @(Get-ChildItem ($Root+'/fabric/src/main/java/dev/rinorsi/editor/registry') -Recurse -Filter '*.java' | ForEach-Object FullName)
-$Sources += $Root+'/fabric/src/main/java/dev/rinorsi/editor/ComponentValidation.java'
+$Sources = @(Get-ChildItem ($Root+'/common/versions/26.1/build/generated/stonecutter/main/java/dev/rinorsi/editor/registry') -Recurse -Filter '*.java' | ForEach-Object FullName)
+$Sources += $Root+'/common/versions/26.1/build/generated/stonecutter/main/java/dev/rinorsi/editor/ComponentValidation.java'
 # Existing interactive Gradle runClient processes remain untouched; compile the registry package directly.
 if (!$UseReleaseJar) {
     & ($JavaBin+'/javac.exe') -proc:none -encoding UTF-8 -cp $Cp -d $Classes $Sources *> ($Out+'/compile.log')
@@ -29,7 +29,7 @@ if (!$UseReleaseJar) {
     & ($JavaBin+'/jar.exe') uf $EditorJar -C $Classes .
     if ($LASTEXITCODE) { throw '测试副本打包失败' }
 } elseif ((Get-FileHash -LiteralPath $EditorJar).Hash -ne (Get-FileHash -LiteralPath $BaseJar).Hash) { throw '发行jar复制后哈希不一致' }
-$TestSources = @(($Root+'/fabric/src/autotest/java/dev/rinorsi/editor/registry/SearchProbe.java'), ($Root+'/fabric/src/autotest/java/dev/rinorsi/editor/registry/supplementmixin/RegistrySupplementWindowMixin.java'), ($Root+'/fabric/src/autotest/java/dev/rinorsi/editor/probe/mixin/NoMouseCaptureMixin.java'))
+$TestSources = @(($Root+'/fabric/versions/26.1/build/generated/stonecutter/autotest/java/dev/rinorsi/editor/registry/SearchProbe.java'), ($Root+'/fabric/versions/26.1/build/generated/stonecutter/autotest/java/dev/rinorsi/editor/registry/supplementmixin/RegistrySupplementWindowMixin.java'), ($Root+'/fabric/versions/26.1/build/generated/stonecutter/autotest/java/dev/rinorsi/editor/probe/mixin/NoMouseCaptureMixin.java'))
 $ProbeCp = if ($UseReleaseJar) { $Cp } else { $Classes+';'+$Cp }
 & ($JavaBin+'/javac.exe') -proc:none -encoding UTF-8 -cp $ProbeCp -d $Probe $TestSources *> ($Out+'/probe-compile.log')
 if ($LASTEXITCODE) { throw ('探针 javac 失败；查看 '+$Out+'/probe-compile.log') }

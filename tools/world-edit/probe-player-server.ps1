@@ -11,7 +11,7 @@ Set-Content (Join-Path $Server 'eula.txt') 'eula=true'
 Set-Content (Join-Path $Server 'server.properties') @('online-mode=false','server-ip=127.0.0.1','server-port=0','view-distance=2','simulation-distance=2','level-type=minecraft:flat','generate-structures=false','spawn-protection=0','pause-when-empty-seconds=-1','max-tick-time=120000')
 $Meta=@{schemaVersion=1;id='cadeditor_player_server_probe';version='1.0.0';environment='server';entrypoints=@{main=@('dev.rinorsi.editor.registry.PlayerWorldEditServerProbe')};depends=@{fabricloader='>=0.19.5';'fabric-api'='*';minecraft='26.1.2';java='>=25'}}
 [IO.File]::WriteAllText((Join-Path $Server 'metadata/fabric.mod.json'),($Meta|ConvertTo-Json -Depth 5))
-& "$env:JAVA_HOME/bin/jar.exe" cf (Join-Path $Server 'mods/player-probe.jar') -C (Join-Path $Server 'metadata') fabric.mod.json -C (Join-Path $Work 'main') dev -C (Join-Path $Work 'test') dev/rinorsi/editor/registry/PlayerWorldEditServerProbe.class -C (Join-Path $Work 'test') 'dev/rinorsi/editor/registry/PlayerWorldEditServerProbe$RecordingListener.class'
+& "$env:JAVA_HOME/bin/jar.exe" cf (Join-Path $Server 'mods/player-probe.jar') -C (Join-Path $Server 'metadata') fabric.mod.json -C (Join-Path $Work 'main') dev -C ($Root+'/fabric/src/main/resources') META-INF/services -C (Join-Path $Work 'test') dev/rinorsi/editor/registry/PlayerWorldEditServerProbe.class -C (Join-Path $Work 'test') 'dev/rinorsi/editor/registry/PlayerWorldEditServerProbe$RecordingListener.class'
 if($LASTEXITCODE -ne 0){throw '服务端探针打包失败'}
 $Cp=(Get-Content (Join-Path $Log 'classpath.txt') -Raw).Trim()
 $Mc=($Cp -split ';' | Where-Object {$_ -match 'minecraft-merged.*[.]jar$'} | Select-Object -First 1)

@@ -23,14 +23,14 @@ function User-Games {
             $ArgPath=if($Matches[1]){$Matches[1]}elseif($Matches[2]){$Matches[2]}else{$Matches[3]}
             if(Test-Path -LiteralPath $ArgPath){$Command+=' '+(Get-Content -LiteralPath $ArgPath -Raw)}
         }
-        $Command -match 'KnotClient|runClient|net.minecraft.client.main.Main'
+        $Command.Contains($Out) -and $Command -match 'KnotClient|runClient|net.minecraft.client.main.Main'
     })
 }
 function Skip-Run([string]$Reason) {
     @('# 功能生效测试','',('SKIP: '+$Reason),'','未启动或连接游戏。') | Set-Content -LiteralPath (Join-Path $Out 'report.md') -Encoding utf8
     Write-Output ('SKIP: '+$Reason)
 }
-if((User-Games).Count){Skip-Run 'User Minecraft process exists';exit 2}
+if((User-Games).Count){Skip-Run 'This evidence directory already has a client';exit 2}
 if(Get-NetTCPConnection -LocalPort 25599 -State Listen -ErrorAction SilentlyContinue){Skip-Run 'MCTest port 25599 is occupied';exit 2}
 # Validate the plan before paying for a client startup. Kept separate from live report.
 $PreflightArgs=@($Driver,'--tier',$Tier,'--out',(Join-Path $Out 'preflight'),'--dry-run')
@@ -59,11 +59,11 @@ try {
         catch{if((Get-Date)-gt $Deadline){throw 'Timed out waiting for Gradle lock'};Write-Output 'Waiting for Gradle lock';Start-Sleep 5}
     }
     [IO.File]::WriteAllText($OwnerFile,$Owner)
-    if((User-Games).Count){Skip-Run 'User Minecraft started while waiting for Gradle lock';exit 2}
+    if((User-Games).Count){Skip-Run 'This evidence directory was claimed while waiting for Gradle lock';exit 2}
     if(Get-NetTCPConnection -LocalPort 25599 -State Listen -ErrorAction SilentlyContinue){Skip-Run 'MCTest port became occupied';exit 2}
     $Info=[Diagnostics.ProcessStartInfo]::new()
     $Info.FileName=$env:ComSpec
-    $Info.Arguments='/d /s /c ""'+(Join-Path $Root 'gradlew.bat')+'" --console=plain --max-workers=2 -PliveTestOwner='+$Owner+' "-PliveTestEvidence='+$Out+'" -I tools/live-test/launch.init.gradle :fabric:26.1.2:runClient"'
+    $Info.Arguments='/d /s /c ""'+(Join-Path $Root 'gradlew.bat')+'" --console=plain --max-workers=2 -PliveTestOwner='+$Owner+' "-PliveTestEvidence='+$Out+'" -I tools/live-test/launch.init.gradle :fabric:26.1:runClient"'
     $Info.WorkingDirectory=$Root;$Info.UseShellExecute=$false;$Info.CreateNoWindow=$true;$Info.WindowStyle='Hidden'
     $Info.RedirectStandardOutput=$true;$Info.RedirectStandardError=$true
     $Process=[Diagnostics.Process]::Start($Info)

@@ -8,16 +8,16 @@
 
 你接手 **CAD Editor · Recast**（Minecraft Fabric 模组，MC 26.1.2，基于 Oriel UI 0.11，模组 id `cadeditor`）的**界面层重构**。
 仓库：`C:\Storage\Minecraft\project\Mods\Editor`（私有 GitHub：Rinorsi/CAD-Editor-Recast，分支 `main`）。
-界面代码全部在 `fabric/src/main/resources/assets/cadeditor/ui/`：`index.html`、`editor.css`、`toast.html`、`js/*.js`（**ES5**，Rhino 引擎，全局函数，没有模块系统；脚本加载顺序见 `index.html`）。
+界面代码全部在 `common/src/main/resources/assets/cadeditor/ui/`：`index.html`、`editor.css`、`toast.html`、`js/*.js`（**ES5**，Rhino 引擎，全局函数，没有模块系统；脚本加载顺序见 `index.html`）。
 
 **问题**：同一种界面元素被各页面各写了好几套，样式和行为互相不一致，用户为此多次不满。你的任务是把它们收敛到**一套公共组件**，并且**界面看起来必须和现在完全一样**（除非下面明确说要改）。这是重构，不是美化。
 
 ## 绝对不能做的事
 
 1. **不要修改 Oriel UI 仓库**（`C:\Storage\Minecraft\project\Mods\Oriel-UI` 以及 `Oriel-UI-Workspace` 里除 `daily/` 输出外的东西）。只读可以。
-2. **不要启动、关闭或操作用户的 Minecraft**，不要杀进程，不要模拟鼠标键盘。用户正在用 `启动物品工坊预览.bat`（`:fabric:26.1.2:runClient` + 源码热更新）测试，**你改的界面文件保存后就会被他的游戏读到**。所以：每一步保存前都要确保脚本语法正确、测试通过；不要留下半成品状态；不要在同一个文件里长时间处于"改到一半"。
-3. **不要改 Java**（`fabric/src/main/java/**`、`fabric/src/test/**`、`build.gradle`、根包文件）。其他 worker 正在改后端。你只改 `ui/**`、`tools/ui-*.cjs`、`tools/preview/**`、`docs/` 里和界面相关的文档。
-4. **不要 `git add -A`**；只 `git add` 你改过的具体路径（`fabric/src/main/resources/assets/cadeditor/ui` 和 `tools/ui-*.cjs`）。每完成一个独立步骤提交一次，提交信息英文、一句话。**不要 push**（由用户决定）。
+2. **不要启动、关闭或操作用户的 Minecraft**，不要杀进程，不要模拟鼠标键盘。用户正在用 `启动物品工坊预览.bat`（`:fabric:26.1:runClient` + 源码热更新）测试，**你改的界面文件保存后就会被他的游戏读到**。所以：每一步保存前都要确保脚本语法正确、测试通过；不要留下半成品状态；不要在同一个文件里长时间处于"改到一半"。
+3. **不要改 Java**（`common/src/main/java/**`、`fabric/src/test/**`、`build.gradle`、根包文件）。其他 worker 正在改后端。你只改 `ui/**`、`tools/ui-*.cjs`、`tools/preview/**`、`docs/` 里和界面相关的文档。
+4. **不要 `git add -A`**；只 `git add` 你改过的具体路径（`common/src/main/resources/assets/cadeditor/ui` 和 `tools/ui-*.cjs`）。每完成一个独立步骤提交一次，提交信息英文、一句话。**不要 push**（由用户决定）。
 5. **不要新增手写的游戏数据清单**（物品/方块/实体/组件列表、范围、默认值）。这些来自游戏实时注册表和 Codec。界面文字标签（中文名）可以手写，但要放进统一的标签文件。
 6. **不要引入新的外部依赖、构建步骤或模块系统**。ES5，`var`，函数声明，不用箭头函数/`let`/`const`/模板字符串。
 

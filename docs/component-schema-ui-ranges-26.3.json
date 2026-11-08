@@ -1,0 +1,907 @@
+{
+  "ranges_for_ui": {
+    "minecraft:attack_animation": [
+      {
+        "path": "$.duration",
+        "min": 0,
+        "max": 2147483647,
+        "default": 6
+      }
+    ],
+    "minecraft:attack_range": [
+      {
+        "path": "$.min_reach",
+        "min": 0.0,
+        "max": 64.0,
+        "default": 0.0
+      },
+      {
+        "path": "$.max_reach",
+        "min": 0.0,
+        "max": 64.0,
+        "default": 3.0
+      },
+      {
+        "path": "$.min_creative_reach",
+        "min": 0.0,
+        "max": 64.0,
+        "default": 0.0
+      },
+      {
+        "path": "$.max_creative_reach",
+        "min": 0.0,
+        "max": 64.0,
+        "default": 5.0
+      },
+      {
+        "path": "$.hitbox_margin",
+        "min": 0.0,
+        "max": 1.0,
+        "default": 0.3
+      },
+      {
+        "path": "$.mob_factor",
+        "min": 0.0,
+        "max": 2.0,
+        "default": 1.0
+      }
+    ],
+    "minecraft:attribute_modifiers": [
+      {
+        "path": "$[].amount",
+        "min": null,
+        "max": null,
+        "default": null
+      }
+    ],
+    "minecraft:axolotl/variant": [],
+    "minecraft:banner_patterns": [],
+    "minecraft:base_color": [],
+    "minecraft:bees": [
+      {
+        "path": "$[].ticks_in_hive",
+        "min": null,
+        "max": null,
+        "default": null
+      },
+      {
+        "path": "$[].min_ticks_in_hive",
+        "min": null,
+        "max": null,
+        "default": null
+      }
+    ],
+    "minecraft:block_entity_data": [],
+    "minecraft:block_state": [],
+    "minecraft:block_transformer": [],
+    "minecraft:blocks_attacks": [
+      {
+        "path": "$.block_delay_seconds",
+        "min": 0.0,
+        "max": 3.4028235E38,
+        "default": 0.0
+      },
+      {
+        "path": "$.disable_cooldown_scale",
+        "min": 0.0,
+        "max": 3.4028235E38,
+        "default": 1.0
+      },
+      {
+        "path": "$.damage_reductions[].horizontal_blocking_angle",
+        "min": 0,
+        "max": 3.4028235E38,
+        "default": 90.0,
+        "min_exclusive": true
+      },
+      {
+        "path": "$.damage_reductions[].base",
+        "min": null,
+        "max": null,
+        "default": null
+      },
+      {
+        "path": "$.damage_reductions[].factor",
+        "min": null,
+        "max": null,
+        "default": null
+      },
+      {
+        "path": "$.item_damage.threshold",
+        "min": 0.0,
+        "max": 3.4028235E38,
+        "default": null
+      },
+      {
+        "path": "$.item_damage.base",
+        "min": null,
+        "max": null,
+        "default": null
+      },
+      {
+        "path": "$.item_damage.factor",
+        "min": null,
+        "max": null,
+        "default": null
+      },
+      {
+        "path": "$.block_sound.range",
+        "min": null,
+        "max": null,
+        "default": null
+      },
+      {
+        "path": "$.disabled_sound.range",
+        "min": null,
+        "max": null,
+        "default": null
+      }
+    ],
+    "minecraft:break_sound": [
+      {
+        "path": "$.range",
+        "min": null,
+        "max": null,
+        "default": null
+      }
+    ],
+    "minecraft:brewing_fuel": [
+      {
+        "path": "$.uses",
+        "min": null,
+        "max": null,
+        "default": null
+      },
+      {
+        "path": "$.speed_multiplier",
+        "min": null,
+        "max": null,
+        "default": null
+      }
+    ],
+    "minecraft:bucket_entity_data": [],
+    "minecraft:bundle_contents": [
+      {
+        "path": "$[].count",
+        "min": 1,
+        "max": 99,
+        "default": 1
+      }
+    ],
+    "minecraft:can_break": [],
+    "minecraft:can_place_on": [],
+    "minecraft:cat/collar": [],
+    "minecraft:cat/sound_variant": [],
+    "minecraft:cat/variant": [],
+    "minecraft:charged_projectiles": [
+      {
+        "path": "$[].count",
+        "min": 1,
+        "max": 99,
+        "default": 1
+      }
+    ],
+    "minecraft:chicken/sound_variant": [],
+    "minecraft:chicken/variant": [],
+    "minecraft:compostable": [
+      {
+        "path": "$.layers",
+        "min": null,
+        "max": null,
+        "default": null
+      }
+    ],
+    "minecraft:consumable": [
+      {
+        "path": "$.consume_seconds",
+        "min": 0.0,
+        "max": 3.4028235E38,
+        "default": 1.6
+      },
+      {
+        "path": "$.sound.range",
+        "min": null,
+        "max": null,
+        "default": null
+      },
+      {
+        "path": "$.on_consume_effects[].effects[].amplifier",
+        "min": 0,
+        "max": 255,
+        "default": 0
+      },
+      {
+        "path": "$.on_consume_effects[].effects[].duration",
+        "min": null,
+        "max": null,
+        "default": 0
+      },
+      {
+        "path": "$.on_consume_effects[].effects[].hidden_effect.amplifier",
+        "min": 0,
+        "max": 255,
+        "default": 0
+      },
+      {
+        "path": "$.on_consume_effects[].effects[].hidden_effect.duration",
+        "min": null,
+        "max": null,
+        "default": 0
+      },
+      {
+        "path": "$.on_consume_effects[].probability",
+        "min": 0.0,
+        "max": 1.0,
+        "default": 1.0
+      },
+      {
+        "path": "$.on_consume_effects[].sound.range",
+        "min": null,
+        "max": null,
+        "default": null
+      },
+      {
+        "path": "$.on_consume_effects[].diameter",
+        "min": 0,
+        "max": 3.4028235E38,
+        "default": 16.0,
+        "min_exclusive": true
+      }
+    ],
+    "minecraft:container": [
+      {
+        "path": "$[].slot",
+        "min": 0,
+        "max": 255,
+        "default": null
+      },
+      {
+        "path": "$[].item.count",
+        "min": 1,
+        "max": 99,
+        "default": 1
+      }
+    ],
+    "minecraft:container_loot": [
+      {
+        "path": "$.seed",
+        "min": null,
+        "max": null,
+        "default": 0
+      }
+    ],
+    "minecraft:cooking_fuel": [
+      {
+        "path": "$.burn_time",
+        "min": null,
+        "max": null,
+        "default": null
+      },
+      {
+        "path": "$.speed_multiplier",
+        "min": null,
+        "max": null,
+        "default": null
+      }
+    ],
+    "minecraft:cow/sound_variant": [],
+    "minecraft:cow/variant": [],
+    "minecraft:cushion/color": [],
+    "minecraft:custom_data": [],
+    "minecraft:custom_model_data": [
+      {
+        "path": "$.floats[]",
+        "min": null,
+        "max": null,
+        "default": null
+      },
+      {
+        "path": "$.colors[]",
+        "min": null,
+        "max": null,
+        "default": null
+      }
+    ],
+    "minecraft:custom_name": [],
+    "minecraft:damage": [
+      {
+        "path": "$",
+        "min": 0,
+        "max": 2147483647,
+        "default": null
+      }
+    ],
+    "minecraft:damage_resistant": [],
+    "minecraft:damage_type": [],
+    "minecraft:death_protection": [
+      {
+        "path": "$.death_effects[].effects[].amplifier",
+        "min": 0,
+        "max": 255,
+        "default": 0
+      },
+      {
+        "path": "$.death_effects[].effects[].duration",
+        "min": null,
+        "max": null,
+        "default": 0
+      },
+      {
+        "path": "$.death_effects[].effects[].hidden_effect.amplifier",
+        "min": 0,
+        "max": 255,
+        "default": 0
+      },
+      {
+        "path": "$.death_effects[].effects[].hidden_effect.duration",
+        "min": null,
+        "max": null,
+        "default": 0
+      },
+      {
+        "path": "$.death_effects[].probability",
+        "min": 0.0,
+        "max": 1.0,
+        "default": 1.0
+      },
+      {
+        "path": "$.death_effects[].sound.range",
+        "min": null,
+        "max": null,
+        "default": null
+      },
+      {
+        "path": "$.death_effects[].diameter",
+        "min": 0,
+        "max": 3.4028235E38,
+        "default": 16.0,
+        "min_exclusive": true
+      }
+    ],
+    "minecraft:debug_stick_state": [],
+    "minecraft:dye": [],
+    "minecraft:dyed_color": [
+      {
+        "path": "$",
+        "min": null,
+        "max": null,
+        "default": null
+      }
+    ],
+    "minecraft:enchantable": [
+      {
+        "path": "$.value",
+        "min": 1,
+        "max": 2147483647,
+        "default": null
+      }
+    ],
+    "minecraft:enchantment_glint_override": [],
+    "minecraft:enchantments": [
+      {
+        "path": "${value}",
+        "min": 1,
+        "max": 255,
+        "default": null
+      }
+    ],
+    "minecraft:entity_data": [],
+    "minecraft:equippable": [
+      {
+        "path": "$.equip_sound.range",
+        "min": null,
+        "max": null,
+        "default": null
+      },
+      {
+        "path": "$.shearing_sound.range",
+        "min": null,
+        "max": null,
+        "default": null
+      }
+    ],
+    "minecraft:firework_explosion": [
+      {
+        "path": "$.colors[]",
+        "min": null,
+        "max": null,
+        "default": null
+      },
+      {
+        "path": "$.fade_colors[]",
+        "min": null,
+        "max": null,
+        "default": null
+      }
+    ],
+    "minecraft:fireworks": [
+      {
+        "path": "$.flight_duration",
+        "min": 0,
+        "max": 255,
+        "default": 0
+      },
+      {
+        "path": "$.explosions[].colors[]",
+        "min": null,
+        "max": null,
+        "default": null
+      },
+      {
+        "path": "$.explosions[].fade_colors[]",
+        "min": null,
+        "max": null,
+        "default": null
+      }
+    ],
+    "minecraft:food": [
+      {
+        "path": "$.nutrition",
+        "min": 0,
+        "max": 2147483647,
+        "default": null
+      },
+      {
+        "path": "$.saturation",
+        "min": null,
+        "max": null,
+        "default": null
+      }
+    ],
+    "minecraft:fox/variant": [],
+    "minecraft:frog/variant": [],
+    "minecraft:glider": [],
+    "minecraft:horse/variant": [],
+    "minecraft:instrument": [
+      {
+        "path": "$.sound_event.range",
+        "min": null,
+        "max": null,
+        "default": null
+      },
+      {
+        "path": "$.use_duration",
+        "min": 0.0,
+        "max": 3.4028235E38,
+        "default": null
+      },
+      {
+        "path": "$.range",
+        "min": 0,
+        "max": 3.4028235E38,
+        "default": null,
+        "min_exclusive": true
+      },
+      {
+        "path": "$.durability_damage",
+        "min": 0,
+        "max": 2147483647,
+        "default": 0
+      }
+    ],
+    "minecraft:intangible_projectile": [],
+    "minecraft:interact_animation": [
+      {
+        "path": "$.duration",
+        "min": 0,
+        "max": 2147483647,
+        "default": 6
+      }
+    ],
+    "minecraft:item_model": [],
+    "minecraft:item_name": [],
+    "minecraft:jukebox_playable": [],
+    "minecraft:kinetic_weapon": [
+      {
+        "path": "$.contact_cooldown_ticks",
+        "min": 0,
+        "max": 2147483647,
+        "default": 10
+      },
+      {
+        "path": "$.delay_ticks",
+        "min": 0,
+        "max": 2147483647,
+        "default": 0
+      },
+      {
+        "path": "$.dismount_conditions.max_duration_ticks",
+        "min": 0,
+        "max": 2147483647,
+        "default": null
+      },
+      {
+        "path": "$.dismount_conditions.min_speed",
+        "min": null,
+        "max": null,
+        "default": 0.0
+      },
+      {
+        "path": "$.dismount_conditions.min_relative_speed",
+        "min": null,
+        "max": null,
+        "default": 0.0
+      },
+      {
+        "path": "$.knockback_conditions.max_duration_ticks",
+        "min": 0,
+        "max": 2147483647,
+        "default": null
+      },
+      {
+        "path": "$.knockback_conditions.min_speed",
+        "min": null,
+        "max": null,
+        "default": 0.0
+      },
+      {
+        "path": "$.knockback_conditions.min_relative_speed",
+        "min": null,
+        "max": null,
+        "default": 0.0
+      },
+      {
+        "path": "$.damage_conditions.max_duration_ticks",
+        "min": 0,
+        "max": 2147483647,
+        "default": null
+      },
+      {
+        "path": "$.damage_conditions.min_speed",
+        "min": null,
+        "max": null,
+        "default": 0.0
+      },
+      {
+        "path": "$.damage_conditions.min_relative_speed",
+        "min": null,
+        "max": null,
+        "default": 0.0
+      },
+      {
+        "path": "$.forward_movement",
+        "min": null,
+        "max": null,
+        "default": 0.0
+      },
+      {
+        "path": "$.damage_multiplier",
+        "min": null,
+        "max": null,
+        "default": 1.0
+      },
+      {
+        "path": "$.sound.range",
+        "min": null,
+        "max": null,
+        "default": null
+      },
+      {
+        "path": "$.hit_sound.range",
+        "min": null,
+        "max": null,
+        "default": null
+      }
+    ],
+    "minecraft:llama/variant": [],
+    "minecraft:lock": [
+      {
+        "path": "$.count.min",
+        "min": null,
+        "max": null,
+        "default": null
+      },
+      {
+        "path": "$.count.max",
+        "min": null,
+        "max": null,
+        "default": null
+      },
+      {
+        "path": "$.count",
+        "min": null,
+        "max": null,
+        "default": null
+      }
+    ],
+    "minecraft:lodestone_tracker": [
+      {
+        "path": "$.target.pos[]",
+        "min": null,
+        "max": null,
+        "default": null
+      }
+    ],
+    "minecraft:lore": [],
+    "minecraft:map_decorations": [
+      {
+        "path": "${value}.x",
+        "min": null,
+        "max": null,
+        "default": null
+      },
+      {
+        "path": "${value}.z",
+        "min": null,
+        "max": null,
+        "default": null
+      },
+      {
+        "path": "${value}.rotation",
+        "min": null,
+        "max": null,
+        "default": null
+      }
+    ],
+    "minecraft:map_id": [
+      {
+        "path": "$",
+        "min": -2147483648,
+        "max": 2147483647,
+        "default": null
+      }
+    ],
+    "minecraft:max_damage": [
+      {
+        "path": "$",
+        "min": 1,
+        "max": 2147483647,
+        "default": null
+      }
+    ],
+    "minecraft:max_stack_size": [
+      {
+        "path": "$",
+        "min": 1,
+        "max": 99,
+        "default": null
+      }
+    ],
+    "minecraft:minimum_attack_charge": [
+      {
+        "path": "$",
+        "min": 0.0,
+        "max": 1.0,
+        "default": null
+      }
+    ],
+    "minecraft:mob_visibility": [
+      {
+        "path": "$.visibility",
+        "min": 0.0,
+        "max": 10.0,
+        "default": null
+      }
+    ],
+    "minecraft:mooshroom/variant": [],
+    "minecraft:note_block_sound": [],
+    "minecraft:ominous_bottle_amplifier": [
+      {
+        "path": "$",
+        "min": 0,
+        "max": 4,
+        "default": null
+      }
+    ],
+    "minecraft:painting/variant": [],
+    "minecraft:parrot/variant": [],
+    "minecraft:piercing_weapon": [
+      {
+        "path": "$.sound.range",
+        "min": null,
+        "max": null,
+        "default": null
+      },
+      {
+        "path": "$.hit_sound.range",
+        "min": null,
+        "max": null,
+        "default": null
+      }
+    ],
+    "minecraft:pig/sound_variant": [],
+    "minecraft:pig/variant": [],
+    "minecraft:pot_decorations": [
+      {
+        "path": "$.back.count",
+        "min": 1,
+        "max": 99,
+        "default": 1
+      },
+      {
+        "path": "$.left.count",
+        "min": 1,
+        "max": 99,
+        "default": 1
+      },
+      {
+        "path": "$.right.count",
+        "min": 1,
+        "max": 99,
+        "default": 1
+      },
+      {
+        "path": "$.front.count",
+        "min": 1,
+        "max": 99,
+        "default": 1
+      }
+    ],
+    "minecraft:potion_contents": [
+      {
+        "path": "$.custom_color",
+        "min": null,
+        "max": null,
+        "default": null
+      },
+      {
+        "path": "$.custom_effects[].amplifier",
+        "min": 0,
+        "max": 255,
+        "default": 0
+      },
+      {
+        "path": "$.custom_effects[].duration",
+        "min": null,
+        "max": null,
+        "default": 0
+      },
+      {
+        "path": "$.custom_effects[].hidden_effect.amplifier",
+        "min": 0,
+        "max": 255,
+        "default": 0
+      },
+      {
+        "path": "$.custom_effects[].hidden_effect.duration",
+        "min": null,
+        "max": null,
+        "default": 0
+      }
+    ],
+    "minecraft:potion_duration_scale": [
+      {
+        "path": "$",
+        "min": 0.0,
+        "max": 3.4028235E38,
+        "default": null
+      }
+    ],
+    "minecraft:profile": [],
+    "minecraft:provides_banner_patterns": [],
+    "minecraft:provides_pottery_pattern": [],
+    "minecraft:provides_trim_material": [],
+    "minecraft:rabbit/variant": [],
+    "minecraft:rarity": [],
+    "minecraft:recipes": [],
+    "minecraft:repair_cost": [
+      {
+        "path": "$",
+        "min": 0,
+        "max": 2147483647,
+        "default": null
+      }
+    ],
+    "minecraft:repairable": [],
+    "minecraft:salmon/size": [],
+    "minecraft:sheep/color": [],
+    "minecraft:shulker/color": [],
+    "minecraft:sign_text_back": [],
+    "minecraft:sign_text_front": [],
+    "minecraft:stored_enchantments": [
+      {
+        "path": "${value}",
+        "min": 1,
+        "max": 255,
+        "default": null
+      }
+    ],
+    "minecraft:sulfur_cube_content": [
+      {
+        "path": "$.count",
+        "min": 1,
+        "max": 99,
+        "default": 1
+      }
+    ],
+    "minecraft:suspicious_stew_effects": [
+      {
+        "path": "$[].duration",
+        "min": null,
+        "max": null,
+        "default": 160
+      }
+    ],
+    "minecraft:tool": [
+      {
+        "path": "$.rules[].speed",
+        "min": 0,
+        "max": 3.4028235E38,
+        "default": null,
+        "min_exclusive": true
+      },
+      {
+        "path": "$.default_mining_speed",
+        "min": null,
+        "max": null,
+        "default": 1.0
+      },
+      {
+        "path": "$.damage_per_block",
+        "min": 0,
+        "max": 2147483647,
+        "default": 1
+      }
+    ],
+    "minecraft:tooltip_display": [],
+    "minecraft:tooltip_style": [],
+    "minecraft:trim": [],
+    "minecraft:tropical_fish/base_color": [],
+    "minecraft:tropical_fish/pattern": [],
+    "minecraft:tropical_fish/pattern_color": [],
+    "minecraft:unbreakable": [],
+    "minecraft:use_cooldown": [
+      {
+        "path": "$.seconds",
+        "min": 0,
+        "max": 3.4028235E38,
+        "default": null,
+        "min_exclusive": true
+      }
+    ],
+    "minecraft:use_effects": [
+      {
+        "path": "$.speed_multiplier",
+        "min": 0.0,
+        "max": 1.0,
+        "default": 0.2
+      }
+    ],
+    "minecraft:use_remainder": [
+      {
+        "path": "$.count",
+        "min": 1,
+        "max": 99,
+        "default": 1
+      }
+    ],
+    "minecraft:villager/variant": [],
+    "minecraft:villager_food": [
+      {
+        "path": "$.nutrition",
+        "min": 1,
+        "max": 2147483647,
+        "default": null
+      }
+    ],
+    "minecraft:waxed": [],
+    "minecraft:weapon": [
+      {
+        "path": "$.item_damage_per_attack",
+        "min": 0,
+        "max": 2147483647,
+        "default": 1
+      },
+      {
+        "path": "$.disable_blocking_for_seconds",
+        "min": 0.0,
+        "max": 3.4028235E38,
+        "default": 0.0
+      }
+    ],
+    "minecraft:wolf/collar": [],
+    "minecraft:wolf/sound_variant": [],
+    "minecraft:wolf/variant": [],
+    "minecraft:writable_book_content": [],
+    "minecraft:written_book_content": [
+      {
+        "path": "$.generation",
+        "min": 0,
+        "max": 3,
+        "default": 0
+      }
+    ],
+    "minecraft:zombie_nautilus/variant": []
+  },
+  "schema_version": 2
+}

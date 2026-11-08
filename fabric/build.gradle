@@ -1,26 +1,7 @@
-plugins { id 'net.fabricmc.fabric-loom' }
-base.archivesName = 'cadeditor-fabric-26.1.2'
-java.toolchain.languageVersion = JavaLanguageVersion.of(25)
-sourceSets {
-    main { java.srcDirs = [rootProject.file('fabric/src/main/java')]; resources.srcDirs = [rootProject.file('fabric/src/main/resources')] }
-    test { java.setSrcDirs([]) }
-    codecVerification {
-        java.srcDirs = [rootProject.file('fabric/src/test/java'), rootProject.file('fabric/src/testFixtures/java')]
-        java.exclude('dev/rinorsi/editor/probe/**')
-        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
-        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
-    }
-    autotest {
-        java.srcDirs = [rootProject.file('fabric/src/autotest/java'), rootProject.file('fabric/src/testFixtures/java')]
-        resources.srcDirs = [rootProject.file('tools/autotest/resources')]
-        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
-        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
-    }
-}
-def day = java.time.LocalDate.now().toString()
-def daily = rootProject.file('../Oriel-UI-Workspace/daily/' + day)
-def clientRun = new File(daily, 'run/editor-mod-client')
-layout.buildDirectory.set(new File(daily, 'scratch/editor-mod/build/fabric-26.1.2'))
+plugins { id 'multiloader-loader' }
+apply plugin: 'net.fabricmc.fabric-loom'
+def daily = rootProject.file('../Oriel-UI-Workspace/daily/' + java.time.LocalDate.now())
+def clientRun = new File(daily, project.name == '26.1' ? 'run/editor-mod-client' : "run/editor-fabric-${minecraft_version}-client")
 repositories {
     mavenCentral()
     maven {
@@ -32,19 +13,18 @@ dependencies {
     minecraft "com.mojang:minecraft:${minecraft_version}"
     implementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
     implementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
-    implementation files(rootProject.file('libs/oriel-fabric-26.1.2-0.11.0.jar'))
     // Development only: agent/MCP client control; never include or publish this dependency.
-    if (providers.gradleProperty('mcTest').orNull != 'false') {
+    if (project.name == '26.1' && providers.gradleProperty('mcTest').orNull != 'false') {
         localRuntime('com.coolerpromc.mctest:mctest-fabric-26.1.2:26.1.2.1') { transitive = false }
     }
 }
 loom {
     mods { editor { sourceSet(sourceSets.main) } }
-    accessWidenerPath.set(rootProject.file('fabric/src/main/resources/cadeditor.accesswidener'))
+    accessWidenerPath.set(stonecutter.process(rootProject.file('common/src/main/resources/cadeditor.accesswidener'), 'build/stonecutter-processed/cadeditor.accesswidener'))
     runs {
         client {
             runDirectory.set(clientRun.absolutePath)
-            vmArg('-Doriel.sourceRoot=' + rootProject.file('fabric').absolutePath)
+            vmArg('-Doriel.sourceRoot=' + rootProject.file('common').absolutePath)
             if (providers.gradleProperty('mcTestPort').isPresent()) {
                 vmArg('-Dmctest.port=' + providers.gradleProperty('mcTestPort').get())
             }
@@ -58,7 +38,7 @@ loom {
 
 // Keep the exact release jar in the standalone Editor run directory too.
 tasks.register('prepareEditorClient', Copy) {
-    from(rootProject.file('libs/oriel-fabric-26.1.2-0.11.0.jar'))
+    from(rootProject.file("libs/oriel-fabric-${minecraft_version}-${oriel_version}.jar"))
     into(new File(clientRun, 'mods'))
 }
 tasks.named('runClient') { dependsOn('prepareEditorClient') }
@@ -76,7 +56,7 @@ tasks.register('isolateEditorClient') {
                 def meta = archive.getEntry('fabric.mod.json')
                 if (meta != null) id = new groovy.json.JsonSlurper().parse(archive.getInputStream(meta)).id
             } finally { archive.close() }
-            if (id in ['editor_backend_probe', 'editor'] || (id == 'oriel' && candidate.name != 'oriel-fabric-26.1.2-0.11.0.jar')
+            if (id in ['editor_backend_probe', 'editor'] || (id == 'oriel' && candidate.name != "oriel-fabric-${minecraft_version}-${oriel_version}.jar")
                     || (id == 'cadeditor_final_gate_probe' && !providers.gradleProperty('finalGateWorld').isPresent())) {
                 def quarantine = new File(daily, 'scratch/editor-mod/launcher-quarantine/' + candidate.name)
                 quarantine.parentFile.mkdirs()
@@ -98,206 +78,8 @@ tasks.named('jar') { from(rootProject.file('NOTICE')) }
 if (providers.gradleProperty('editorUiApproved').orNull == 'true') {
     throw new GradleException('Use the documented Oriel integration workflow after user review; a build flag cannot approve UI.')
 }
-tasks.register('codecTest', JavaExec) {
-    dependsOn codecVerificationClasses
-    classpath = sourceSets.codecVerification.runtimeClasspath
-    mainClass = 'dev.rinorsi.editor.StackCodecTest'
-    workingDir = new File(daily, 'scratch/editor-mod')
-}
-tasks.named('check') { dependsOn('codecTest') }
-tasks.register('prefsTest', JavaExec) {
-    dependsOn codecVerificationClasses
-    classpath = sourceSets.codecVerification.runtimeClasspath
-    mainClass = 'dev.rinorsi.editor.client.EditorPrefsTest'
-    workingDir = new File(daily, 'scratch/editor-mod')
-}
-tasks.named('check') { dependsOn('prefsTest') }
 
-tasks.register('clipboardTest', JavaExec) {
-    dependsOn codecVerificationClasses
-    classpath = sourceSets.codecVerification.runtimeClasspath
-    mainClass = 'dev.rinorsi.editor.client.EditorClipboardTest'
-    workingDir = new File(daily, 'scratch/editor-mod')
-}
-tasks.named('check') { dependsOn('clipboardTest') }
+apply from: rootProject.file('gradle/verification.gradle')
+if (project.name == '26.1') apply from: rootProject.file('gradle/fabric-autotest.gradle')
 
-tasks.register('searchTest', JavaExec) {
-    dependsOn codecVerificationClasses
-    classpath = sourceSets.codecVerification.runtimeClasspath
-    mainClass = 'dev.rinorsi.editor.registry.search.SearchTest'
-    args rootProject.file('fabric/src/main/resources/assets/cadeditor/ui/js/pinyin-data.js').absolutePath
-    workingDir = rootProject.projectDir
-}
-tasks.named('check') { dependsOn('searchTest') }
-
-tasks.register('soundPreviewTest', JavaExec) {
-    dependsOn codecVerificationClasses
-    classpath = sourceSets.codecVerification.runtimeClasspath
-    mainClass = 'dev.rinorsi.editor.client.EditorSoundPreviewTest'
-    workingDir = new File(daily, 'scratch/editor-mod')
-}
-tasks.named('check') { dependsOn('soundPreviewTest') }
-
-// Optional standalone probe: never included in the distributed Editor jar.
-tasks.register('autotestJar', Jar) {
-    dependsOn(autotestClasses)
-    archiveBaseName.set('editor-backend-probe')
-    destinationDirectory.set(new File(daily, 'scratch/editor-mod/autotest-only'))
-    from(sourceSets.autotest.output)
-}
-tasks.register('exportAutotestClasspath') {
-    doLast {
-        def output = new File(daily, 'scratch/editor-mod/runtime-classpath.json')
-        output.parentFile.mkdirs()
-        output.text = groovy.json.JsonOutput.toJson(configurations.runtimeClasspath.files.collect { it.absolutePath })
-    }
-}
-
-// Standalone additive lazy-catalog policy/shape checks.
-tasks.register('lazyCatalogTest', JavaExec) {
-    dependsOn codecVerificationClasses
-    classpath = sourceSets.codecVerification.runtimeClasspath
-    mainClass = 'dev.rinorsi.editor.registry.LazyCatalogTest'
-    args rootProject.file('fabric/src/main/resources/assets/cadeditor/ui/js/pinyin-data.js').absolutePath
-    workingDir = rootProject.projectDir
-}
-tasks.named('check') { dependsOn('lazyCatalogTest') }
-tasks.register('catalogMemoryBench', JavaExec) {
-    dependsOn codecVerificationClasses
-    classpath = sourceSets.codecVerification.runtimeClasspath
-    mainClass = 'dev.rinorsi.editor.registry.CatalogMemoryBench'
-    args rootProject.file('fabric/src/main/resources/assets/cadeditor/ui/js/pinyin-data.js').absolutePath
-    maxHeapSize = '3G'
-    workingDir = rootProject.projectDir
-}
-
-// SpawnData equipment contract, real Codecs and trial block load/save; no client window.
-tasks.register('spawnerEquipmentTest', JavaExec) {
-    dependsOn codecVerificationClasses
-    classpath = sourceSets.codecVerification.runtimeClasspath
-    mainClass = 'dev.rinorsi.editor.registry.SpawnerEquipmentTest'
-    workingDir = rootProject.projectDir
-}
-tasks.named('check') { dependsOn('spawnerEquipmentTest') }
-
-// Native vanilla-tooltip projection; read-only, no client window in this check.
-tasks.register('tooltipTest', JavaExec) {
-    dependsOn codecVerificationClasses
-    classpath = sourceSets.codecVerification.runtimeClasspath
-    mainClass = 'dev.rinorsi.editor.registry.TooltipPreviewTest'
-    workingDir = rootProject.projectDir
-}
-tasks.named('check') { dependsOn('tooltipTest') }
-
-// Live-Codec schema snapshot drift gate; never regenerate snapshots implicitly.
-tasks.register('componentSchemaTest', JavaExec) {
-    dependsOn codecVerificationClasses
-    classpath = sourceSets.codecVerification.runtimeClasspath
-    mainClass = 'dev.rinorsi.editor.registry.ComponentSchemaTest'
-    workingDir = rootProject.projectDir
-}
-tasks.named('check') { dependsOn('componentSchemaTest') }
-
-// World/editor schema checks use real factories in a non-ticking JVM level.
-['entitySchemaTest': true, 'entitySchemaServerTest': false].each { taskName, clientSide ->
-    tasks.register(taskName, JavaExec) {
-        dependsOn codecVerificationClasses
-        classpath = sourceSets.codecVerification.runtimeClasspath
-        mainClass = 'dev.rinorsi.editor.registry.EntitySchemaTest'
-        workingDir = rootProject.projectDir
-        jvmArgs '-Djava.awt.headless=true', '-Dcadeditor.schema.client=' + clientSide
-        args rootProject.file('logs/final-gate/entity-schema-' + (clientSide ? 'client' : 'server') + '.json').absolutePath
-        doFirst { rootProject.file('logs/final-gate').mkdirs() }
-    }
-    tasks.named('check') { dependsOn(taskName) }
-}
-tasks.register('worldEditTest', JavaExec) {
-    dependsOn codecVerificationClasses
-    classpath = sourceSets.codecVerification.runtimeClasspath
-    mainClass = 'dev.rinorsi.editor.registry.WorldEditTest'
-    workingDir = rootProject.projectDir
-    args rootProject.file('logs/final-gate/world-edit').absolutePath
-}
-tasks.named('check') { dependsOn('worldEditTest') }
-
-// Local vault persistence and typed stack round trips; no client window.
-tasks.register('vaultTest', JavaExec) {
-    dependsOn codecVerificationClasses
-    classpath = sourceSets.codecVerification.runtimeClasspath
-    mainClass = 'dev.rinorsi.editor.vault.VaultTest'
-    workingDir = rootProject.projectDir
-    maxHeapSize = '2G'
-}
-tasks.named('check') { dependsOn('vaultTest') }
-
-// Entity attributes/effects use the same detached real-game JVM fixtures as the base schema.
-tasks.register('entityWorldEditTest', JavaExec) {
-    dependsOn codecVerificationClasses
-    classpath = sourceSets.codecVerification.runtimeClasspath
-    mainClass = 'dev.rinorsi.editor.registry.EntityWorldEditTest'
-    workingDir = rootProject.projectDir
-    jvmArgs '-Djava.awt.headless=true'
-}
-tasks.named('check') { dependsOn('entityWorldEditTest') }
-
-tasks.register('entityVehicleViewTest', JavaExec) {
-    dependsOn codecVerificationClasses
-    classpath = sourceSets.codecVerification.runtimeClasspath
-    mainClass = 'dev.rinorsi.editor.registry.EntityVehicleViewTest'
-    workingDir = rootProject.projectDir
-    jvmArgs '-Djava.awt.headless=true'
-}
-tasks.named('check') { dependsOn('entityVehicleViewTest') }
-
-tasks.register('entityHorseViewTest', JavaExec) {
-    dependsOn codecVerificationClasses
-    classpath = sourceSets.codecVerification.runtimeClasspath
-    mainClass = 'dev.rinorsi.editor.registry.EntityHorseViewTest'
-    workingDir = rootProject.projectDir
-    jvmArgs '-Djava.awt.headless=true'
-}
-tasks.named('check') { dependsOn('entityHorseViewTest') }
-
-['playerWorldEditTest': 'dev.rinorsi.editor.registry.PlayerWorldEditTest',
- 'editDispatchTest': 'dev.rinorsi.editor.registry.EditDispatchTest'].each { taskName, entry ->
-    tasks.register(taskName, JavaExec) {
-        dependsOn codecVerificationClasses
-        classpath = sourceSets.codecVerification.runtimeClasspath
-        mainClass = entry
-        workingDir = rootProject.projectDir
-        jvmArgs '-Djava.awt.headless=true'
-    }
-    tasks.named('check') { dependsOn(taskName) }
-}
-
-['entitySchemaDetailsTest': true, 'entitySchemaDetailsServerTest': false].each { taskName, clientSide ->
-    tasks.register(taskName, JavaExec) {
-        dependsOn codecVerificationClasses
-        classpath = sourceSets.codecVerification.runtimeClasspath
-        mainClass = 'dev.rinorsi.editor.registry.EntitySchemaDetailsTest'
-        workingDir = rootProject.projectDir
-        jvmArgs '-Djava.awt.headless=true', '-Dcadeditor.schema.client=' + clientSide
-        args rootProject.file('logs/entity-schema/details-' + (clientSide ? 'client' : 'server') + '.json').absolutePath
-    }
-    tasks.named('check') { dependsOn(taskName) }
-}
-
-// Server-side path merge, including unknown timers and keyed-list conflict paths.
-tasks.register('worldMergeTest', JavaExec) {
-    dependsOn codecVerificationClasses
-    classpath = sourceSets.codecVerification.runtimeClasspath
-    mainClass = 'dev.rinorsi.editor.registry.WorldMergeTest'
-    workingDir = rootProject.projectDir
-    jvmArgs '-Djava.awt.headless=true'
-}
-tasks.named('check') { dependsOn('worldMergeTest') }
-
-// Session revision lifecycle and deterministic retry metadata, without a client.
-tasks.register('worldRevisionTest', JavaExec) {
-    dependsOn codecVerificationClasses
-    classpath = sourceSets.codecVerification.runtimeClasspath
-    mainClass = 'dev.rinorsi.editor.registry.WorldRevisionTest'
-    workingDir = rootProject.projectDir
-    jvmArgs '-Djava.awt.headless=true'
-}
-tasks.named('check') { dependsOn('worldRevisionTest') }
+apply from: rootProject.file('gradle/smoke.gradle')

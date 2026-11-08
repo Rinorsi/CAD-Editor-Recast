@@ -72,7 +72,7 @@ function create(opts) {
   });
   // 固定时间与随机数：快照要逐字相同
   vm.runInContext('Math.random = function () { return 0.5; }; var __t = 1700000000000; Date.now = function () { return __t; };', ctx);
-  const dir = process.env.UI_DIR || path.resolve(__dirname, '../../fabric/src/main/resources/assets/cadeditor/ui');   // UI_DIR：对别的版本的 ui 目录跑同样的检查
+  const dir = process.env.UI_DIR || path.resolve(__dirname, '../../common/src/main/resources/assets/cadeditor/ui');   // UI_DIR：对别的版本的 ui 目录跑同样的检查
   const html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8'), files = [];
   html.replace(/<script src="(js\/[^"]+)"/g, (m, f) => { files.push(f); return m; });
   const skip = new Set(opts.skip || ['js/app.js']);

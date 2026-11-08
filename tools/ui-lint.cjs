@@ -6,7 +6,7 @@
 // 用法：node tools/ui-lint.cjs        有「错误」时退出码 1，警告不影响退出码
 const fs = require('node:fs');
 const path = require('node:path');
-const dir = process.env.UI_DIR || path.resolve(__dirname, '../fabric/src/main/resources/assets/cadeditor/ui');   // UI_DIR：对别的版本的 ui 目录做检查
+const dir = process.env.UI_DIR || path.resolve(__dirname, '../common/src/main/resources/assets/cadeditor/ui');   // UI_DIR：对别的版本的 ui 目录做检查
 const html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8'), order = [];
 html.replace(/<script src="(js\/[^"]+)"/g, (m, f) => { order.push(f); return m; });
 const src = {}; order.forEach(f => { src[f] = fs.readFileSync(path.join(dir, f), 'utf8').split(/\r?\n/); });

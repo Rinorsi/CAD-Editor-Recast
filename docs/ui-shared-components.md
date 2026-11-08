@@ -133,7 +133,7 @@
 
 对象：Oriel-UI `main` 的 `9254278`，新包替换了 `libs/oriel-fabric-26.1.2-0.11.0.jar`（版本号不变，依赖范围 `>=0.11.0 <0.12.0` 不用改）。
 
-- **构建与 Java 测试：** `:fabric:26.1.2:build` 通过；强制重跑 `check`，19 个 JavaExec 门禁全部通过。
+- **构建与 Java 测试：** `:fabric:26.1:build` 通过；强制重跑 `check`，19 个 JavaExec 门禁全部通过。
 - **API：** 检查了界面和 Java 侧用到的 18 个 Oriel 类，没有缺失、删除或签名变化，只新增 `Document.inputGeometryVersion()` 和 `Document.lazyImages()`。
 - **原生元素与属性没有改名或移除：** `<item> <entity> <model> <sprite> <player-head>`、`rotatable / follow-mouse / player / id`、所用七项 `-mc-*` 属性；字体 `oriel:pixel_12` 和 `ore.css` 逐字节不变。
 - **消息协议不变：** `oriel.send / on('data') / close / data` 与 patch key 协议；`OrielHud` 的 `register / isShown / show / push` 签名不变。

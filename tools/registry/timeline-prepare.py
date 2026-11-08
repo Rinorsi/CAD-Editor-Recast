@@ -6,7 +6,7 @@ root = Path.cwd()
 out = root / f'daily/{date.today().isoformat()}/registry-timeline'
 reg = out / 'src/dev/rinorsi/editor/registry'
 reg.mkdir(parents=True, exist_ok=True)
-for p in (root/'fabric/src/main/java/dev/rinorsi/editor/registry').glob('*.java'):
+for p in (root/'common/src/main/java/dev/rinorsi/editor/registry').glob('*.java'):
     shutil.copy2(p, reg/p.name)
 p = reg/'RegistryWarmup.java'; s = p.read_text(encoding='utf-8')
 s = s.replace('private int ticks;', 'private int ticks; private long sourceCpu, sourceWall; private int sourceRows;')
@@ -29,7 +29,7 @@ shutil.copy2(root/'tools/registry/timeline/TimelineTrace.java',reg/'TimelineTrac
 ui=out/'assets/cadeditor/ui'; ui.parent.mkdir(parents=True,exist_ok=True)
 assert ui.resolve().is_relative_to(out.resolve())
 if ui.exists(): shutil.rmtree(ui)
-shutil.copytree(root/'fabric/src/main/resources/assets/cadeditor/ui',ui,dirs_exist_ok=True)
+shutil.copytree(root/'common/src/main/resources/assets/cadeditor/ui',ui,dirs_exist_ok=True)
 hashes={}
 for p in ui.rglob('*'):
     if p.is_file(): hashes[str(p.relative_to(ui))]=hashlib.sha256(p.read_bytes()).hexdigest()
@@ -39,7 +39,7 @@ p=ui/'index.html'; s=p.read_text(encoding='utf-8'); s=s.replace('<script src="js
 (out/'source-hashes.json').write_text(json.dumps(hashes,indent=2),encoding='utf-8')
 s=(root/'tools/registry/supplement-run.ps1').read_text(encoding='utf-8')
 s=s.replace("'/registry-supplement'", "'/registry-timeline'")
-s=s.replace("($Root+'/fabric/src/main/java/dev/rinorsi/editor/registry/*.java')", "($Out+'/src/dev/rinorsi/editor/registry/*.java')")
+s=s.replace("($Root+'/common/src/main/java/dev/rinorsi/editor/registry/*.java')", "($Out+'/src/dev/rinorsi/editor/registry/*.java')")
 s=s.replace("($Root+'/fabric/src/autotest/java/dev/rinorsi/editor/registry/RegistrySupplementProbe.java')", "($Root+'/tools/registry/timeline/TimelineProbe.java')")
 s=s.replace('dev.rinorsi.editor.registry.RegistrySupplementProbe','dev.rinorsi.editor.registry.TimelineProbe')
 s=s.replace("uf $EditorJar -C $Classes .", "uf $EditorJar -C $Classes . -C $Out assets")

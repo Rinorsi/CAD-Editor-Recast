@@ -24,4 +24,4 @@
 - 新增 tools/world-edit/verify-merge.ps1、probe-merge-server.ps1、final-merge-gate.ps1。
 - 更新 docs/world-edit-contract.md、world-block-edit.md、world-entity-contract.md、world-player-contract.md；新增本报告、world-merge-contract.md、world-merge-samples.json。
 
-上述 Java 路径根分别为 fabric/src/main/java/dev/rinorsi/editor/ 和 fabric/src/test/java/dev/rinorsi/editor/。未改 UI、未 add/commit/push；仅按要求执行 git diff --check。
+上述 Java 路径根分别为 common/src/main/java/dev/rinorsi/editor/ 和 fabric/src/test/java/dev/rinorsi/editor/。未改 UI、未 add/commit/push；仅按要求执行 git diff --check。

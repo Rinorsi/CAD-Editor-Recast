@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const s = fs.readFileSync(path.join(root, 'fabric/src/main/resources/assets/cadeditor/ui/js/data.js'), 'utf8');
+const s = fs.readFileSync(path.join(root, 'common/src/main/resources/assets/cadeditor/ui/js/data.js'), 'utf8');
 const E = JSON.parse(s.slice(s.indexOf('{'), s.lastIndexOf('}') + 1));
 function sh(n, d = 0) {
   if (!n) return '?';

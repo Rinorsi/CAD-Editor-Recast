@@ -1,0 +1,1 @@
+{"required":true,"package":"dev.rinorsi.editor.smoke","compatibilityLevel":"JAVA_25","client":["SmokeTickMixin","SmokeCaptureMixin","NoMouseCaptureMixin","SmokeWindowMixin"],"injectors":{"defaultRequire":1}}

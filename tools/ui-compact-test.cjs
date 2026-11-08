@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
-const dir = path.resolve(__dirname, '../fabric/src/main/resources/assets/cadeditor/ui/js');
+const dir = path.resolve(__dirname, '../common/src/main/resources/assets/cadeditor/ui/js');
 function element(tag, props = {}, kids = []) {
   const e = { tag, className: props.class || '', attrs: {...props}, children: [], events: {}, style: {}, textContent: props.text || '',
     setAttribute(k,v) { this.attrs[k] = String(v); }, getAttribute(k) { return this.attrs[k] || null; },

@@ -5,5 +5,5 @@ for t in ui-components-test ui-slots-test ui-world-test ui-blockviews-test ui-en
   node tools/$t.cjs >"/tmp/ck-$t.log" 2>&1; rc=$?; [ $rc -ne 0 ] && bad=1
   echo "$t exit=$rc $(tail -1 /tmp/ck-$t.log | cut -c1-90)"
 done
-for f in fabric/src/main/resources/assets/cadeditor/ui/js/*.js; do node --check "$f" 2>/dev/null || { echo "语法错误 $f"; bad=1; }; done
+for f in common/src/main/resources/assets/cadeditor/ui/js/*.js; do node --check "$f" 2>/dev/null || { echo "语法错误 $f"; bad=1; }; done
 exit $bad

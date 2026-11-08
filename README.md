@@ -7,7 +7,7 @@ CAD Editor（Component And Data Editor）的换代重写，界面基于 [Oriel U
 
 ## 能改什么
 
-- **物品**：全部 107 个持久数据组件（含其他模组注册的组件）；刷怪蛋 / 刷怪笼（生物外观、体型、属性、状态效果、装备）；提示框预览用游戏自己生成的内容。数值范围来自游戏的真实 Codec，不是手写表。
+- **物品**：运行版本的全部持久数据组件（26.1.2 / 26.2 / 26.3 分别为 107 / 108 / 119 个原版组件，另支持模组注册的组件）；刷怪蛋 / 刷怪笼（生物外观、体型、属性、状态效果、装备）；提示框预览用游戏自己生成的内容。数值范围来自游戏的真实 Codec，不是手写表。
 - **世界里已放置的东西**（对准它按 **I**，或 `/cadeditor block|entity|player`）：方块实体（容器、告示牌、旗帜、蜂箱、讲台、唱片机、陶罐、命令方块、头颅、熔炉 / 酿造台 / 营火的进度……）、方块状态；实体（姿态、装备、属性、展示框 / 画、展示实体、村民交易、乘客）。
 - **保险库**（按 **O**，主菜单 / 暂停菜单也有按钮）：把改好的物品存在本机，之后取出放进任意物品槽或字段。
 
@@ -15,11 +15,11 @@ CAD Editor（Component And Data Editor）的换代重写，界面基于 [Oriel U
 
 ## 要求
 
-Minecraft 26.1.2 · Fabric Loader ≥ 0.19.5 · Fabric API · Java 25 · **Oriel UI 0.11.x（前置模组）**
+Minecraft 26.1.2 / 26.2 / 26.3 · Fabric 或 NeoForge · Java 25 · **对应版本的 Oriel UI 0.11.x（前置模组）**。Fabric 需 Loader ≥ 0.19.5 与匹配游戏版本的 Fabric API。
 
 ## 安装
 
-`mods/` 里放 CAD Editor、Oriel UI、Fabric API。创造模式直接写回；非创造模式，或要改容器里的物品，需要服务端也装本模组并授予权限。
+`mods/` 里放 与加载器及游戏版本匹配的 CAD Editor 和 Oriel UI；Fabric 还需 Fabric API。创造模式直接写回；非创造模式，或要改容器里的物品，需要服务端也装本模组并授予权限。
 
 ## 开发
 
@@ -37,12 +37,14 @@ Mods/
 **2. 准备**
 
 - JDK 25、Git Bash、Node.js 18+
-- 把 Oriel UI 发布包 `oriel-fabric-26.1.2-0.11.0.jar` 放进 `libs/`（不进 git）
+- 把 Oriel UI 0.11.0 的六个发布 jar 放进 libs/（文件名保留加载器和游戏版本，不进 git；详见 docs/MULTIVERSION.md）
 
 **3. 常用命令**（Git Bash，仓库根目录）
 
 ```bash
-bash tools/gw.sh :fabric:26.1.2:build --no-problems-report   # 构建
+bash tools/gw.sh :fabric:26.1:build --no-problems-report   # 构建
+bash tools/gw.sh build -PmcTest=false                       # 六目标构建与 JVM 检查
+# PowerShell: pwsh -File tools/build-all.ps1                  # 六 jar + SHA256SUMS
 node tools/ui-contract-test.cjs                              # 界面测试（另有 ui-world-test / ui-compact-test）
 ```
 

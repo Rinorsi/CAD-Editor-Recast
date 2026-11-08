@@ -1,0 +1,3 @@
+// Local publication only. Distribution is assembled by tools/build-all.ps1.
+plugins { id 'maven-publish' }
+publishing { publications { mavenJava(MavenPublication) { from components.java; artifactId = base.archivesName.get() } } }

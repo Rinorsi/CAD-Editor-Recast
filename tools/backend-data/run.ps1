@@ -8,25 +8,25 @@ $Java=Join-Path $env:JAVA_HOME 'bin/java.exe'
 $Javac=Join-Path $env:JAVA_HOME 'bin/javac.exe'
 $Jar=Join-Path $env:JAVA_HOME 'bin/jar.exe'
 $Runtime=@(Get-Content -LiteralPath $ClasspathJson | ConvertFrom-Json)
-$Mc=Get-ChildItem (Join-Path $Editor '.gradle/loom-cache/minecraftMaven/net/minecraft') -Recurse -Filter '*.jar' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+$Mc=Get-ChildItem (Join-Path $Editor '.gradle/loom-cache/minecraftMaven/net/minecraft') -Recurse -Filter '*.jar' | Where-Object { $_.FullName -match '[\/]26[.]1[.]2[\/]' } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 $Cp=@($Runtime | Where-Object {$_ -notmatch 'minecraft-merged'})+@($Mc.FullName)
 foreach($Dir in @('main','probe','test','jar-main','jar-probe','run/mods','run/saves')){New-Item -ItemType Directory -Force (Join-Path $Work $Dir) | Out-Null}
 New-Item -ItemType Directory -Force $Log | Out-Null
-$Sources=@(Get-ChildItem (Join-Path $Editor 'fabric/src/main/java') -Recurse -Filter '*.java' | ForEach-Object FullName)
+$Sources=@(Get-ChildItem (Join-Path $Editor 'common/versions/26.1/build/generated/stonecutter/main/java'),(Join-Path $Editor 'fabric/versions/26.1/build/generated/stonecutter/main/java') -Recurse -Filter '*.java' | ForEach-Object FullName)
 & $Javac -proc:none -encoding UTF-8 -cp ($Cp -join ';') -d (Join-Path $Work 'main') @Sources *> (Join-Path $Log 'compile-all.log')
 if($LASTEXITCODE -ne 0){throw 'Java 编译失败：logs/backend-b/compile-all.log'}
-$Probe=@('BackendDataProbe.java','mixin/NoMouseCaptureMixin.java','mixin/BackendProbeWindowMixin.java') | ForEach-Object {Join-Path $Editor ('fabric/src/autotest/java/dev/rinorsi/editor/probe/'+$_)}
-$Probe+=@(Get-ChildItem (Join-Path $Editor 'fabric/src/testFixtures/java') -Recurse -Filter '*.java' | ForEach-Object FullName)
+$Probe=@('BackendDataProbe.java','mixin/NoMouseCaptureMixin.java','mixin/BackendProbeWindowMixin.java') | ForEach-Object {Join-Path $Editor ('fabric/versions/26.1/build/generated/stonecutter/autotest/java/dev/rinorsi/editor/probe/'+$_)}
+$Probe+=@(Get-ChildItem (Join-Path $Editor 'common/versions/26.1/build/generated/stonecutter/testFixtures/java') -Recurse -Filter '*.java' | ForEach-Object FullName)
 & $Javac -proc:none -encoding UTF-8 -cp ((Join-Path $Work 'main')+';'+($Cp -join ';')) -d (Join-Path $Work 'probe') @Probe *> (Join-Path $Log 'compile-probe.log')
 if($LASTEXITCODE -ne 0){throw '探针编译失败：logs/backend-b/compile-probe.log'}
-& $Javac -proc:none -encoding UTF-8 -cp ((Join-Path $Work 'main')+';'+(Join-Path $Work 'probe')+';'+($Cp -join ';')) -d (Join-Path $Work 'test') (Join-Path $Editor 'fabric/src/test/java/dev/rinorsi/editor/BackendDataTest.java') (Join-Path $Editor 'fabric/src/test/java/dev/rinorsi/editor/ComplexStackRoundTripTest.java') *> (Join-Path $Log 'compile-test.log')
+& $Javac -proc:none -encoding UTF-8 -cp ((Join-Path $Work 'main')+';'+(Join-Path $Work 'probe')+';'+($Cp -join ';')) -d (Join-Path $Work 'test') (Join-Path $Editor 'common/versions/26.1/build/generated/stonecutter/test/java/dev/rinorsi/editor/BackendDataTest.java') (Join-Path $Editor 'common/versions/26.1/build/generated/stonecutter/test/java/dev/rinorsi/editor/ComplexStackRoundTripTest.java') *> (Join-Path $Log 'compile-test.log')
 if($LASTEXITCODE -ne 0){throw '测试编译失败：logs/backend-b/compile-test.log'}
 & $Java -cp ((Join-Path $Work 'test')+';'+(Join-Path $Work 'main')+';'+($Cp -join ';')) dev.rinorsi.editor.BackendDataTest $Log *> (Join-Path $Log 'codec.log')
 if($LASTEXITCODE -ne 0){throw 'Codec 测试失败：logs/backend-b/codec.log'}
 & $Java -cp ((Join-Path $Work 'test')+';'+(Join-Path $Work 'probe')+';'+(Join-Path $Work 'main')+';'+($Cp -join ';')) dev.rinorsi.editor.ComplexStackRoundTripTest *> (Join-Path $Log 'complex-after.log')
 if($LASTEXITCODE -ne 0){throw '复杂物品回归失败：logs/backend-b/complex-after.log'}
 Copy-Item -Path (Join-Path $Work 'main/*') -Destination (Join-Path $Work 'jar-main') -Recurse -Force
-Copy-Item -Path (Join-Path $Editor 'fabric/src/main/resources/*') -Destination (Join-Path $Work 'jar-main') -Recurse -Force
+Copy-Item -Path (Join-Path $Editor 'common/src/main/resources/*') -Destination (Join-Path $Work 'jar-main') -Recurse -Force
 $Meta=Join-Path $Work 'jar-main/fabric.mod.json'
 [IO.File]::WriteAllText($Meta,[IO.File]::ReadAllText($Meta).Replace('${version}','0.1.0'),[Text.UTF8Encoding]::new($false))
 Copy-Item -Path (Join-Path $Work 'probe/*') -Destination (Join-Path $Work 'jar-probe') -Recurse -Force

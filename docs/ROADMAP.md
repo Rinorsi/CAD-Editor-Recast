@@ -115,7 +115,7 @@ umField5 / fieldRow 的替换输出和 xRow 不同，换了会变外观，收益
 
 | 项目 | 结果 | 证据（`logs/` 不入库，在本机） |
 |---|---|---|
-| `:fabric:26.1.2:build` + `check`（19 个门禁） | 通过 | `logs/release-prep/`、`logs/live-test/` |
+| `:fabric:26.1:build` + `check`（19 个门禁） | 通过 | `logs/release-prep/`、`logs/live-test/` |
 | 隐藏真实客户端：107 组件 × 3 轮 | 321/321，未解决 / 拒绝 / 超时均为 0 | `logs/live-test/accept/` |
 | 世界编辑 4 条路径 × 3 轮 | 12/12 | 同上 |
 | 五个世界门禁 + 五个独立服务器探针（版本 / 合并 / 权限 / 玩家 / 实体） | 全部通过 | `logs/live-test/gate-*.log` |

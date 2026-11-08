@@ -1,6 +1,6 @@
 // Reads frontend assets, writes reports only. Never rewrites UI sources.
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),crypto=require('node:crypto');
-const root=path.resolve(__dirname,'..'),ui=path.join(root,'fabric/src/main/resources/assets/cadeditor/ui');
+const root=path.resolve(__dirname,'..'),ui=path.join(root,'common/src/main/resources/assets/cadeditor/ui');
 const files=[...fs.readFileSync(path.join(ui,'index.html'),'utf8').matchAll(/<script src="(js[/][^"]+)"/g)].map(m=>m[1]);
 const src=Object.fromEntries(files.map(f=>[f,fs.readFileSync(path.join(ui,f),'utf8')]));
 const ctx=vm.createContext({console,setTimeout(){return 1;},clearTimeout(){},document:{addEventListener(){},getElementById(){return null;}}});

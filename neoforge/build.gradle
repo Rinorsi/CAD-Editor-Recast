@@ -1,0 +1,23 @@
+plugins { id 'multiloader-loader'; id 'net.neoforged.moddev' }
+neoForge {
+    version = neoforge_version
+    accessTransformers.from(stonecutter.process(rootProject.file('common/src/main/resources/META-INF/accesstransformer.cfg'), 'build/stonecutter-processed/accesstransformer.cfg'))
+    runs {
+        client { client(); gameDirectory = rootProject.file('../Oriel-UI-Workspace/daily/' + java.time.LocalDate.now() + "/run/editor-neoforge-${minecraft_version}-client") }
+        server { server(); programArguments.add('--nogui'); gameDirectory = rootProject.file('../Oriel-UI-Workspace/daily/' + java.time.LocalDate.now() + "/run/editor-neoforge-${minecraft_version}-server") }
+    }
+    mods { cadeditor { sourceSet sourceSets.main } }
+}
+if (!stonecutter.current.isActive) tasks.named('createMinecraftArtifacts') { dependsOn('stonecutterGenerate') }
+apply from: rootProject.file('gradle/verification.gradle')
+
+// Standalone Codec/factory tests use the same version's vanilla NeoForm artifacts.
+// Patched NeoForge Minecraft requires an active FML launch, which is covered by client smoke.
+tasks.withType(JavaExec).configureEach {
+    if (name != 'runClient' && name != 'runServer') {
+        classpath = sourceSets.codecVerification.output + sourceSets.main.output +
+                project(':common:' + project.name).sourceSets.main.runtimeClasspath + sourceSets.main.runtimeClasspath
+    }
+}
+
+apply from: rootProject.file('gradle/smoke.gradle')

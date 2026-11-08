@@ -1,0 +1,25 @@
+def daily = rootProject.file('../Oriel-UI-Workspace/daily/' + java.time.LocalDate.now())
+sourceSets {
+    autotest {
+        // Stonecutter manages this source set; never point at the active version's raw Java.
+        resources.srcDirs = [rootProject.file('tools/autotest/resources')]
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+}
+tasks.named('compileAutotestJava', JavaCompile) { source(configurations.commonTests.filter { it.path.contains('testFixtures') }) }
+
+tasks.register('autotestJar', Jar) {
+    dependsOn(autotestClasses)
+    archiveBaseName.set('editor-backend-probe')
+    destinationDirectory.set(new File(daily, 'scratch/editor-mod/autotest-only'))
+    from(sourceSets.autotest.output)
+}
+tasks.register('exportAutotestClasspath') {
+    doLast {
+        def output = new File(daily, 'scratch/editor-mod/runtime-classpath.json')
+        output.parentFile.mkdirs()
+        output.text = groovy.json.JsonOutput.toJson(configurations.runtimeClasspath.files.collect { it.absolutePath })
+    }
+}
+

@@ -18,7 +18,7 @@ try {
     }
     Assert-NoUserGame
     Push-Location $Root
-    try { & .\gradlew.bat :fabric:26.1.2:build --no-problems-report *> ($Log+'/gradle-build.log');if($LASTEXITCODE){throw ('Gradle失败，exit='+$LASTEXITCODE)} }
+    try { & .\gradlew.bat :fabric:26.1:build --no-problems-report *> ($Log+'/gradle-build.log');if($LASTEXITCODE){throw ('Gradle失败，exit='+$LASTEXITCODE)} }
     finally {Pop-Location}
     Write-Output 'PASS vaultTest + build; logs/vault-persist/gradle-build.log'
 } catch {

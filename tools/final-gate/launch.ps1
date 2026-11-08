@@ -23,7 +23,7 @@ while($true){
     catch{if(!(Test-Path -LiteralPath $Lock) -or (Get-Date) -gt $Deadline){throw};Start-Sleep -Seconds 5}
 }
 try {
-    & ./gradlew.bat --console=plain --max-workers=2 -I tools/final-gate/launch.init.gradle ('-PfinalGateWorld='+$World) ('-PfinalGateCommit='+$Commit) :fabric:26.1.2:runClient *> logs/final-gate/runClient.log
+    & ./gradlew.bat --console=plain --max-workers=2 -I tools/final-gate/launch.init.gradle ('-PfinalGateWorld='+$World) ('-PfinalGateCommit='+$Commit) :fabric:26.1:runClient *> logs/final-gate/runClient.log
     if($LASTEXITCODE -ne 0){throw ('runClient退出码 '+$LASTEXITCODE+'；见 logs/final-gate/runClient.log')}
 } finally {
     # This is only the lock this launcher acquired; keep it while runClient owns Gradle.

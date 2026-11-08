@@ -25,12 +25,12 @@
 - WorldRevisionTest 27项 PASS：WorldRevisionTest.log，含冻结版本、真正stale、nonce/no-op推进、identity/路径/旧分支metadata、非滑动限流与边界。
 - WorldMergeTest、PlayerWorldEditTest、EntityWorldEditTest、WorldEditTest（含BlockWorldEditTest）、EntitySchemaTest、EntitySchemaDetailsTest、EditDispatchTest PASS：各同名Test.log；汇总 gates.log。
 - probe-revision-server.ps1 真实WorldEditor路由26项 PASS：server-probe.log / captured-server.json。马名称/属性base/Tags均成功，鸡在骑乘中真实运动/年龄/繁殖/下蛋计时；ACK前旧版本/ACK后新版本连续请求有retryAfterMs，限流后真正旧版本client_revision，新版本成功；ACK与服务端冻结baseline/版本逐笔一致。
-- gradlew.bat :fabric:26.1.2:build PASS（原子锁，1m36s）：gradle-build.log；worldRevisionTest已接入check。
+- gradlew.bat :fabric:26.1:build PASS（原子锁，1m36s）：gradle-build.log；worldRevisionTest已接入check。
 - git diff --check PASS：diff-check.log。人工代码审查：manual-review.log；无可调用/review工具。
 
 ## 文件与未验证边界
 
-main（fabric/src/main/java/dev/rinorsi/editor/）：新增 world/WorldEditError.java；修改 world/{WorldEditor,WorldEditSessions,WorldMerge,WorldTarget,WorldNbt}.java、client/WorldEditorClient.java。
+main（common/src/main/java/dev/rinorsi/editor/）：新增 world/WorldEditError.java；修改 world/{WorldEditor,WorldEditSessions,WorldMerge,WorldTarget,WorldNbt}.java、client/WorldEditorClient.java。
 
 test（fabric/src/test/java/dev/rinorsi/editor/registry/）：新增 WorldRevisionTest.java、WorldRevisionServerProbe.java；修改 WorldEditTest.java、EntityWorldEditTest.java、BlockWorldEditTest.java、PlayerWorldEditTest.java，使会话测试使用服务端opaque版本，内容指纹测试保留。
 

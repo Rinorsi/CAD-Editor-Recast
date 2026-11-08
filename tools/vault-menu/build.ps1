@@ -11,7 +11,7 @@ try {
         catch{if(!(Test-Path -LiteralPath $Lock)){throw};if([DateTime]::UtcNow -ge $Deadline){throw '等待Gradle锁超过20分钟'};Start-Sleep -Seconds 2}
     }
     Push-Location $Root
-    try { & ./gradlew.bat --console=plain --max-workers=2 :fabric:26.1.2:vaultTest :fabric:26.1.2:build *> ($Log+'/gradle-build.log');if($LASTEXITCODE){throw ('Gradle失败，exit='+$LASTEXITCODE)} }
+    try { & ./gradlew.bat --console=plain --max-workers=2 :fabric:26.1:vaultTest :fabric:26.1:build *> ($Log+'/gradle-build.log');if($LASTEXITCODE){throw ('Gradle失败，exit='+$LASTEXITCODE)} }
     finally {Pop-Location}
     Write-Output 'PASS vaultTest + build; logs/vault-menu/gradle-build.log'
 } catch {

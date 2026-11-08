@@ -1,6 +1,6 @@
 // 生成 docs/STATUS.md 的组件表。用法：node tools/gen-status.cjs   （每次完成一项后重跑）
 const fs = require('fs'), vm = require('vm'), path = require('path');
-const root = path.join(__dirname, '..'), U = path.join(root, 'fabric/src/main/resources/assets/cadeditor/ui/js/');
+const root = path.join(__dirname, '..'), U = path.join(root, 'common/src/main/resources/assets/cadeditor/ui/js/');
 const ctx = {}; vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(U + 'data.js', 'utf8') + ';this.E=EDATA;', ctx);
 const E = ctx.E;

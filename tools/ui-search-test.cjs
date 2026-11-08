@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 const assert = require('node:assert/strict');
-const dir = path.resolve(__dirname, '../fabric/src/main/resources/assets/cadeditor/ui/js');
+const dir = path.resolve(__dirname, '../common/src/main/resources/assets/cadeditor/ui/js');
 const timers = [];
 const ctx = vm.createContext({ console, Date, setTimeout(fn) { timers.push(fn); return timers.length; }, document: { addEventListener() {} } });
 for (const f of ['data.js', 'pinyin-data.js', 'search.js']) vm.runInContext(fs.readFileSync(path.join(dir, f), 'utf8'), ctx);

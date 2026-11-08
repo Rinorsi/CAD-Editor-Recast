@@ -125,7 +125,7 @@ limit=80、offset=0，不含UI、客户端tick或patch解析；单位ms（p50 / 
 
 ## 验证边界
 
-纯JVM覆盖排名、中文、拼音/首字母/混写/多音/ü、英文、namespace/tag、稳定分页、取消、构建中取消、reload、容量拒绝；全Java源独立javac通过。searchTest已加入Gradle check；实际执行 :fabric:26.1.2:searchTest 与 :fabric:26.1.2:build 通过，完整输出见logs/search/gradle-build.log。运行前检查未发现用户游戏进程，记录见logs/search/pre-gradle-processes.json。
+纯JVM覆盖排名、中文、拼音/首字母/混写/多音/ü、英文、namespace/tag、稳定分页、取消、构建中取消、reload、容量拒绝；全Java源独立javac通过。searchTest已加入Gradle check；实际执行 :fabric:26.1:searchTest 与 :fabric:26.1:build 通过，完整输出见logs/search/gradle-build.log。运行前检查未发现用户游戏进程，记录见logs/search/pre-gradle-processes.json。
 
 未验证：真实300–500模组包、远程服务器连接、真实资源热重载完整UI恢复、完整选择窗虚拟化/GPU帧率、三款配方查看器运行时总堆。通用mod注册表/其余资源类只有编译与共享实现覆盖，没有逐类真客户端穷举。未改Oriel库。
 

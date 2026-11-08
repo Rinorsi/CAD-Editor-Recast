@@ -1,4 +1,44 @@
-["26.1.2"]
-minecraft_version = "26.1.2"
+# Per-version build settings, read by Stonecutter into each version's subprojects as project properties.
+# Everything shared by all versions is in gradle.properties.
+
+["26.3"]
+minecraft_version = "26.3"
+minecraft_version_range = "[26.3, 26.4)"
+fabric_minecraft_version = "~26.3"
+java_version = "25"
+oriel_version = "0.11.0"
+neo_form_version = "26.3-1"
+# Fabric, see https://fabricmc.net/develop/
+fabric_version = "0.161.0+26.3"
 fabric_loader_version = "0.19.5"
+# NeoForge, see https://projects.neoforged.net/neoforged/neoforge
+neoforge_version = "26.3.0.26-beta"
+neoforge_loader_version_range = "[4,)"
+neoforge_logo_key = "iconFile"
+
+["26.2"]
+minecraft_version = "26.2"
+minecraft_version_range = "[26.2, 26.3)"
+fabric_minecraft_version = "~26.2"
+java_version = "25"
+oriel_version = "0.11.0"
+neo_form_version = "26.2-2"
+fabric_version = "0.161.0+26.2"
+fabric_loader_version = "0.19.5"
+neoforge_version = "26.2.0.88"
+neoforge_loader_version_range = "[4,)"
+# The mod list icon key in neoforge.mods.toml (logoFile elsewhere): NeoForge 26.2 deprecates logoFile, and its warning screen holds up the title screen.
+neoforge_logo_key = "iconFile"
+
+["26.1"]
+minecraft_version = "26.1.2"
+minecraft_version_range = "[26.1, 26.2)"
+fabric_minecraft_version = "~26.1"
+java_version = "25"
+oriel_version = "0.11.0"
+neo_form_version = "26.1.2-1"
 fabric_version = "0.155.3+26.1.2"
+fabric_loader_version = "0.19.5"
+neoforge_version = "26.1.2.126"
+neoforge_loader_version_range = "[4,)"
+neoforge_logo_key = "iconFile"

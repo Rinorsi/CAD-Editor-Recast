@@ -34,17 +34,17 @@ public final class WorldPermissionServerProbe implements ModInitializer {
         for(Block block:List.of(Blocks.COMMAND_BLOCK,Blocks.STRUCTURE_BLOCK,Blocks.JIGSAW)){
             require(block instanceof GameMasterBlock,"native game-master marker "+block);var pos=new BlockPos(x++,65,1);l.setBlock(pos,block.defaultBlockState(),3);positions.add(pos);
         }
-        var commandCart=EntityType.COMMAND_BLOCK_MINECART.create(l,EntitySpawnReason.COMMAND);commandCart.setPos(1,65,1);l.addFreshEntity(commandCart);require(commandCart.getType().onlyOpCanSetNbt(),"native restricted entity metadata");
-        var vehicle=EntityType.ARMOR_STAND.create(l,EntitySpawnReason.COMMAND);vehicle.setPos(1,65,0);l.addFreshEntity(vehicle);
+        var commandCart=net.minecraft.world.entity.EntityTypes.COMMAND_BLOCK_MINECART.create(l,EntitySpawnReason.COMMAND);commandCart.setPos(1,65,1);l.addFreshEntity(commandCart);require(commandCart.getType().onlyOpCanSetNbt(),"native restricted entity metadata");
+        var vehicle=net.minecraft.world.entity.EntityTypes.ARMOR_STAND.create(l,EntitySpawnReason.COMMAND);vehicle.setPos(1,65,0);l.addFreshEntity(vehicle);
         var signPos=new BlockPos(1,65,-1);l.setBlock(signPos,Blocks.OAK_SIGN.defaultBlockState(),3);var sign=(SignBlockEntity)l.getBlockEntity(signPos);var signTarget=resolve(p,signPos);
         var commandText=new SignText().setMessage(0,Component.literal("Run command").withStyle(style->style.withClickEvent(new ClickEvent.RunCommand("say permission probe"))));
-        var signNbt=signTarget.save();signNbt.put("front_text",SignText.DIRECT_CODEC.encodeStart(l.registryAccess().createSerializationContext(NbtOps.INSTANCE),commandText).getOrThrow());
+        var signNbt=signTarget.save();signNbt.put("front_text",SignText.CODEC.encodeStart(l.registryAccess().createSerializationContext(NbtOps.INSTANCE),commandText).getOrThrow());
         var ride=JsonParser.parseString("{action:'add',type:'minecraft:command_block_minecart'}").getAsJsonObject();
         p.setGameMode(GameType.CREATIVE);require(!EditorPolicy.gameMaster(p),"creative without OP has no game-master permission");
         for(var pos:positions)denied(()->resolve(p,pos),"creative no OP block "+pos);
         denied(()->resolve(p,commandCart),"creative no OP command minecart");denied(()->signTarget.checkCommandPrivileges(p,signNbt),"creative no OP executable sign text");denied(()->EntityRiding.apply(p,vehicle,ride,e->{}),"creative no OP restricted passenger");
         // Blank/plain text remains writable; command text is the sensitive operation.
-        var plain=signTarget.save();plain.put("front_text",SignText.DIRECT_CODEC.encodeStart(l.registryAccess().createSerializationContext(NbtOps.INSTANCE),new SignText().setMessage(0,Component.literal("Plain"))).getOrThrow());signTarget.checkCommandPrivileges(p,plain);checks++;
+        var plain=signTarget.save();plain.put("front_text",SignText.CODEC.encodeStart(l.registryAccess().createSerializationContext(NbtOps.INSTANCE),new SignText().setMessage(0,Component.literal("Plain"))).getOrThrow());signTarget.checkCommandPrivileges(p,plain);checks++;
         server.getPlayerList().getOps().add(new net.minecraft.server.players.ServerOpListEntry(p.nameAndId(),LevelBasedPermissionSet.GAMEMASTER,false));p.setGameMode(GameType.SURVIVAL);
         require(!p.isCreative()&&EditorPolicy.gameMaster(p),"survival with OP has actual game-master permission");require(!p.canUseGameMasterBlocks(),"vanilla creative-only helper remains false: editor must not use it");
         for(var pos:positions){require(resolve(p,pos).block!=null,"survival OP block accepted "+pos);}

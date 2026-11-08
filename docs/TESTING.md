@@ -95,7 +95,7 @@
 仅放jar的普通安装也可使用。在该游戏目录config/oriel/dev-sources.properties写：
 
 ```properties
-cadeditor=<本仓库>/fabric/src/main/resources/assets/cadeditor
+cadeditor=<本仓库>/common/src/main/resources/assets/cadeditor
 ```
 
 重启一次，I/cade仍打开cadeditor:ui/index.html；保存读过的CSS约1秒更新且不重建控制器，JS/HTML重建并走saveState/restoreState。不用复制、watch脚本或devPage开关。启动器tools/preview/start.ps1会自动确保此映射，只负责启动；用户用的控制台与游戏窗口保持正常可见。PNG/封面仍由jar提供，换图要重建；Java仍需重编重启。尚未提交给Store的输入、光标/临时弹窗不保证恢复。
@@ -105,7 +105,7 @@ cadeditor=<本仓库>/fabric/src/main/resources/assets/cadeditor
 在Editor目录Git Bash：
 
 ```bash
-bash tools/gw.sh :fabric:26.1.2:build --no-problems-report
+bash tools/gw.sh :fabric:26.1:build --no-problems-report
 node tools/ui-contract-test.cjs
 ```
 
@@ -127,3 +127,14 @@ node tools/ui-contract-test.cjs
 开发探针另有显式-Deditor.testkitProbe=true分支（仅独立autotest jar，不进入发行模组），在独立run/editor-testkit-client的集成服务端实际派发/cadeditor testkit/default/all/inventory/hotbar/clear，验证全满不丢普通物品、一空格包含45件、clear保留36组钻石、inventory不碰副手、hotbar前9件，以及非OP生存拒绝。12项断言PASSED，回执run/editor-testkit-client/editor-autotest-edit.json；日志logs/editor-testkit-client-edit.log。使用现有runner的当天独立副本scratch/editor-mod/run-testkit.ps1 -Mode edit（原tools/autotest未改），启动时窗口移出屏幕、禁止抓鼠标，不模拟系统输入；结束后该运行目录对应Java进程为0。完整build内TestKitTest为109项断言PASS。此回归未逐个点击107组件，不替用户勾选上面的表。
 
 请先从测0包装中取出编号道具，再按I测试；测0本身不是107组件样例，整套嵌套包的快照可能超过页面/网络消息上限。
+
+## 多版本门禁
+
+本表仍是 Fabric 26.1.2 的 107 组件基线，不自动勾选人工验收。
+
+- 基线：bash tools/gw.sh :fabric:26.1:build :fabric:26.1:codecVerification :fabric:26.1:autotestClasses :fabric:26.1:exportAutotestClasspath -PmcTest=false。
+- 发行矩阵：pwsh -File tools/build-all.ps1（六个目标 build/check、发行 jar 与 SHA256）。
+- 轻量实机：pwsh -File tools/smoke-matrix.ps1（其余五目标，独立世界副本，窗口隐藏且不获取输入）。
+- 完整基线实机：pwsh -File tools/accept-all.ps1 -Full；只在整轮实现完成后执行一次。
+- VCS 源码为 26.3。旧版 standalone javac 脚本依赖以上构建生成的 common/versions/26.1 和 fabric/versions/26.1 源码，不能直接编译 active 原始 Java。
+- 新版本新增组件从真实物品原型与 Codec 派生样例；26.3 旧样例使用原版 DataFixer 迁移。所有样例仍须非默认、持久化 NBT 类型保真往返。

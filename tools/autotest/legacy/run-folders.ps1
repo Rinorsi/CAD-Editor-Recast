@@ -19,7 +19,7 @@ if ($ConfigUi -or $BadConfigUi) {
 }
 $Mods = Join-Path $Run 'mods'
 $WatchScript = Join-Path $Editor 'tools/preview/watch-sync.ps1'
-$Source = Join-Path $Editor 'fabric/src/main/resources/assets/cadeditor/ui'
+$Source = Join-Path $Editor 'common/src/main/resources/assets/cadeditor/ui'
 if ($Mode -eq 'live' -or $DevPage -or $NativeSource -or $ConfigUi) {
     $SourceRoot = Join-Path $Day ('scratch/editor-mod/' + (Split-Path $Run -Leaf) + '-sources')
     $Snapshot = Join-Path $SourceRoot 'src/main/resources/assets/cadeditor/ui'

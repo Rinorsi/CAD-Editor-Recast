@@ -10,7 +10,7 @@ function Get-GameProcesses {
             $argPath=if($Matches[1]){$Matches[1]}elseif($Matches[2]){$Matches[2]}else{$Matches[3]}
             if(Test-Path -LiteralPath $argPath -PathType Leaf){$game=(Get-Content -LiteralPath $argPath -Raw) -match 'KnotClient|runClient|net.minecraft.client.main.Main'}
         }
-        $game
+        $game -and $Run -and $command.Contains($Run)
     })
 }
 $Games=Get-GameProcesses
@@ -38,10 +38,10 @@ if (!$ClasspathFile -or !$BaseJar -or !$World) { throw '缺少已构建的基础
 $JavaBin = Join-Path $env:USERPROFILE '.jdks/jdk-25.0.5+8/bin'
 $Cache = Join-Path $env:USERPROFILE '.gradle/caches/fabric-loom'
 $Mc = Join-Path $Cache 'minecraftMaven/net/minecraft/minecraft-merged-deobf/26.1.2/minecraft-merged-deobf-26.1.2.jar'
-$CompileMc = (Get-ChildItem ($Root+'/.gradle/loom-cache/minecraftMaven') -Recurse -Filter '*.jar' | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).FullName
+$CompileMc = (Get-ChildItem ($Root+'/.gradle/loom-cache/minecraftMaven') -Recurse -Filter '*.jar' | Where-Object { $_.FullName -match '[\/]26[.]1[.]2[\/]' } | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).FullName
 $Runtime = @(Get-Content $ClasspathFile | ConvertFrom-Json)
 $Cp = (@($BaseJar,$CompileMc,$Mc) + $Runtime) -join ';'
-$Sources = @(Get-ChildItem ($Root+'/fabric/src/main/java') -Recurse -Filter '*.java' | ForEach-Object FullName)
+$Sources = @(Get-ChildItem ($Root+'/common/versions/26.1/build/generated/stonecutter/main/java'),($Root+'/fabric/versions/26.1/build/generated/stonecutter/main/java') -Recurse -Filter '*.java' | ForEach-Object FullName)
 function Invoke-AcceptJava([string]$Tool, [string[]]$Arguments, [string]$Log) {
     $ArgumentsFile = $Log + '.args'
     [IO.File]::WriteAllLines($ArgumentsFile, @($Arguments | ForEach-Object { '"'+$_.Replace('\','\\').Replace('"','\"')+'"' }), [Text.UTF8Encoding]::new($false))
@@ -55,12 +55,12 @@ if (!$UseReleaseJar) {
 $EditorJar = Join-Path $Run 'mods/editor-supplement-under-test.jar'
 Copy-Item -LiteralPath $BaseJar -Destination $EditorJar -Force
 if (!$UseReleaseJar) {
-    & ($JavaBin+'/jar.exe') uf $EditorJar -C $Classes . -C ($Root+'/fabric/src/main/resources') assets
+    & ($JavaBin+'/jar.exe') uf $EditorJar -C $Classes . -C ($Root+'/common/src/main/resources') assets
     if ($LASTEXITCODE) { throw '测试副本打包失败' }
 } elseif ((Get-FileHash -LiteralPath $EditorJar).Hash -ne (Get-FileHash -LiteralPath $BaseJar).Hash) { throw '发行jar复制后哈希不一致' }
 $Manifest=[ordered]@{baseJar=$BaseJar;baseSha256=(Get-FileHash -LiteralPath $BaseJar).Hash;testedJar=$EditorJar;testedSha256=(Get-FileHash -LiteralPath $EditorJar).Hash;sourceOverlay=(!$UseReleaseJar);sourceFiles=@($Sources | ForEach-Object { [ordered]@{path=$_;sha256=(Get-FileHash -LiteralPath $_).Hash} })}
 $Manifest | ConvertTo-Json -Depth 5 | Set-Content ($Out+'/build-manifest.json')
-$TestSources = @('registry/AcceptanceProbe.java', 'registry/AcceptanceWorldProbe.java', 'registry/AcceptanceCodecTest.java', 'accept/mixin/AcceptanceClientMixin.java', 'registry/supplementmixin/RegistrySupplementWindowMixin.java', 'probe/mixin/NoMouseCaptureMixin.java') | ForEach-Object { $Root+'/fabric/src/autotest/java/dev/rinorsi/editor/'+$_ }
+$TestSources = @('registry/AcceptanceProbe.java', 'registry/AcceptanceWorldProbe.java', 'registry/AcceptanceCodecTest.java', 'accept/mixin/AcceptanceClientMixin.java', 'registry/supplementmixin/RegistrySupplementWindowMixin.java', 'probe/mixin/NoMouseCaptureMixin.java') | ForEach-Object { $Root+'/fabric/versions/26.1/build/generated/stonecutter/autotest/java/dev/rinorsi/editor/'+$_ }
 $ProbeCp = if ($UseReleaseJar) { $Cp } else { $Classes+';'+$Cp }
 Invoke-AcceptJava javac (@('-proc:none','-encoding','UTF-8','-cp',$ProbeCp,'-d',$Probe)+$TestSources) ($Out+'/probe-compile.log')
 Invoke-AcceptJava java @('-Xmx1G','-cp',($Probe+';'+$ProbeCp),'dev.rinorsi.editor.registry.AcceptanceCodecTest') ($Out+'/codec-boundaries.log')

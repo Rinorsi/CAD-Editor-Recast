@@ -1,5 +1,5 @@
 gradle.projectsEvaluated {
-    def p = gradle.rootProject.project(":fabric:26.1.2")
+    def p = gradle.rootProject.project(":fabric:26.1")
     p.tasks.register("registryTest", JavaExec) {
         dependsOn p.tasks.named("codecVerificationClasses")
         classpath = p.sourceSets.codecVerification.runtimeClasspath

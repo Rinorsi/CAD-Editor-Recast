@@ -24,7 +24,7 @@ function Signature {
     $Total = ($Files | Measure-Object Length -Sum).Sum
     $Max = ($Files | ForEach-Object { $_.LastWriteTimeUtc.Ticks } | Measure-Object -Maximum).Maximum
     $PerFile = ($Files | ForEach-Object { $_.FullName + ":" + $_.Length + ":" + $_.LastWriteTimeUtc.Ticks }) -join "|"
-    return "$($Files.Count):${Max}:${Total}:$PerFile"
+    return "$($Files.Count):@{Max}:@{Total}:$PerFile"
 }
 function Atomic-Write([string]$Target, [byte[]]$Bytes) {
     $Target = [IO.Path]::GetFullPath($Target)

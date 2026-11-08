@@ -23,9 +23,9 @@ $JavaBin = Join-Path $env:USERPROFILE '.jdks/jdk-25.0.5+8/bin'
 $Cache = Join-Path $env:USERPROFILE '.gradle/caches/fabric-loom'
 $Mc = Join-Path $Cache 'minecraftMaven/net/minecraft/minecraft-merged-deobf/26.1.2/minecraft-merged-deobf-26.1.2.jar'
 $Runtime = @(Get-Content $ClasspathFile | ConvertFrom-Json)
-$CompileMc=(Get-ChildItem (Join-Path $Root '.gradle/loom-cache/minecraftMaven') -Recurse -Filter '*.jar' | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).FullName
+$CompileMc=(Get-ChildItem (Join-Path $Root '.gradle/loom-cache/minecraftMaven') -Recurse -Filter '*.jar' | Where-Object { $_.FullName -match '[\/]26[.]1[.]2[\/]' } | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).FullName
 $Cp = (@($CompileMc,$BaseJar,$Mc) + $Runtime) -join ';'
-$Sources=@(Get-ChildItem (Join-Path $Root 'fabric/src/main/java') -Recurse -Filter '*.java' | ForEach-Object FullName)
+$Sources=@(Get-ChildItem (Join-Path $Root 'common/versions/26.1/build/generated/stonecutter/main/java'),(Join-Path $Root 'fabric/versions/26.1/build/generated/stonecutter/main/java') -Recurse -Filter '*.java' | ForEach-Object FullName)
 # Existing interactive Gradle runClient processes remain untouched; compile the owned entry/channel sources directly.
 if (!$UseReleaseJar) {
     & ($JavaBin+'/javac.exe') -proc:none -encoding UTF-8 -cp $Cp -d $Classes $Sources *> ($Out+'/compile.log')
@@ -36,11 +36,11 @@ Copy-Item -LiteralPath $BaseJar -Destination $EditorJar -Force
 if (!$UseReleaseJar) {
     & ($JavaBin+'/jar.exe') uf $EditorJar -C $Classes .
     if ($LASTEXITCODE) { throw '测试副本打包失败' }
-    & ($JavaBin+'/jar.exe') uf $EditorJar -C ($Root+'/fabric/src/main/resources') assets/cadeditor/lang
+    & ($JavaBin+'/jar.exe') uf $EditorJar -C ($Root+'/common/src/main/resources') assets/cadeditor/lang
     if ($LASTEXITCODE) { throw '测试副本语言资源打包失败' }
 } elseif ((Get-FileHash -LiteralPath $EditorJar).Hash -ne (Get-FileHash -LiteralPath $BaseJar).Hash) { throw '发行jar复制后哈希不一致' }
-$TestSources = @(($Root+'/fabric/src/autotest/java/dev/rinorsi/editor/registry/VaultMenuProbe.java'), ($Root+'/fabric/src/autotest/java/dev/rinorsi/editor/registry/supplementmixin/RegistrySupplementWindowMixin.java'), ($Root+'/fabric/src/autotest/java/dev/rinorsi/editor/probe/mixin/NoMouseCaptureMixin.java'))
-$TestSources += $Root+'/fabric/src/testFixtures/java/dev/rinorsi/editor/testing/TooltipFixtures.java'
+$TestSources = @(($Root+'/fabric/versions/26.1/build/generated/stonecutter/autotest/java/dev/rinorsi/editor/registry/VaultMenuProbe.java'), ($Root+'/fabric/versions/26.1/build/generated/stonecutter/autotest/java/dev/rinorsi/editor/registry/supplementmixin/RegistrySupplementWindowMixin.java'), ($Root+'/fabric/versions/26.1/build/generated/stonecutter/autotest/java/dev/rinorsi/editor/probe/mixin/NoMouseCaptureMixin.java'))
+$TestSources += $Root+'/common/versions/26.1/build/generated/stonecutter/testFixtures/java/dev/rinorsi/editor/testing/TooltipFixtures.java'
 $ProbeCp = if ($UseReleaseJar) { $Cp } else { $Classes+';'+$Cp }
 & ($JavaBin+'/javac.exe') -proc:none -encoding UTF-8 -cp $ProbeCp -d $Probe $TestSources *> ($Out+'/probe-compile.log')
 if ($LASTEXITCODE) { throw ('探针 javac 失败；查看 '+$Out+'/probe-compile.log') }

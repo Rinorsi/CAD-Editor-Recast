@@ -6,12 +6,12 @@
 
 - 构建输出、运行目录、日志、截图写在 `../Oriel-UI-Workspace/daily/<日期>/`（`fabric/build.gradle`、`stonecutter.gradle` 里是这个相对路径），所以仓库必须与 `Oriel-UI-Workspace` 同级。内部评估报告、阶段交接、状态审计也放在工作区的 `planning/cad-editor-recast/`，不进仓库。
 - `tools/gw.sh` 转交给 `Oriel-UI-Workspace/tools/gw.sh`，由它处理 JDK 与下载代理。作者只验证过这条路径；没有工作区时直接用 `./gradlew` 理论上可行但未验证，构建输出会写到上级目录的 `Oriel-UI-Workspace/daily/…`（Gradle 自动创建）。
-- Oriel UI 的 jar 获取：源码仓库 <https://github.com/Rinorsi/Oriel-UI>（目前私有）；维护者本机的发布包在 `Oriel-UI-Workspace/dist/oriel-0.11.0-<日期>/`，复制 `oriel-fabric-26.1.2-0.11.0.jar` 到本仓库 `libs/`。
+- Oriel UI 的 jar 获取：源码仓库 <https://github.com/Rinorsi/Oriel-UI>（目前私有）；维护者本机的发布包在 `Oriel-UI-Workspace/dist/oriel-0.11.0-<日期>/`，把六个对应加载器 / 游戏版本的 jar 复制到本仓库 libs/；版本矩阵、构建和 smoke 入口见 [MULTIVERSION.md](MULTIVERSION.md)。
 - 来源：CAD Editor 是作者自己的项目，本项目是它的换代重写；界面引擎 Oriel UI 基于 Vellum（MIT，Max Leiter），是外部必需依赖，声明见 `NOTICE`。
 
 ## 发布包与运行
 
-Oriel 发布包的维护者副本在 `../Oriel-UI-Workspace/dist/oriel-0.11.0-20261106/`（SHA256：`f3eeab2eadc710ab39a9710c21157524ac3c2f0730a131a7997cffc87c45860b`）。依赖范围：`>=0.11.0 <0.12.0`。页面随 CAD Editor jar 打包，真实入口为 `cadeditor:ui/index.html`。
+Oriel 发布包的维护者副本在 `../Oriel-UI-Workspace/dist/oriel-0.11.0-20261108/`（各目标使用对应 jar）。依赖范围：`>=0.11.0 <0.12.0`。页面随 CAD Editor jar 打包，真实入口为 `cadeditor:ui/index.html`。
 
 客户端运行目录：`../Oriel-UI-Workspace/daily/<今天>/run/editor-mod-client/`。Loom 加载 CAD Editor 开发模组，并安装同一份 Oriel 发布 jar；不要再把 CAD Editor jar 重复放进这个运行目录。普通玩家安装时 mods 里放 CAD Editor、Oriel 与 Fabric API。
 
@@ -24,7 +24,7 @@ Oriel 发布包的维护者副本在 `../Oriel-UI-Workspace/dist/oriel-0.11.0-20
 在游戏目录的 `config/oriel/dev-sources.properties` 写一行：
 
 ```properties
-cadeditor=<本仓库>/fabric/src/main/resources/assets/cadeditor
+cadeditor=<本仓库>/common/src/main/resources/assets/cadeditor
 ```
 
 值指向 `assets/cadeditor`，也可写它的父目录 `assets`。配置后重启一次游戏，手持物品按 I 或 `/cade`，真实页面始终是 `cadeditor:ui/index.html`；保存 CSS/JS 即可刷新，不需要启动器、复制页面或监视脚本。启动日志应出现 `Oriel: dev source: 'cadeditor:' pages are read from …`。这是 Oriel 0.11 的原生能力，**不要把开发机路径配置随模组分发给玩家**。
@@ -32,7 +32,7 @@ cadeditor=<本仓库>/fabric/src/main/resources/assets/cadeditor
 - 缺少的源码文件回退到 jar。CSS 只更新样式，不重建 Document / 控制器；HTML、JS 和页面读取的 JSON 整页重建，控制器恢复已保存的草稿、分页、筛选和折叠状态。未写入 Store 的输入文字、光标及临时弹窗不保证恢复。
 - PNG / 封面仍取自 jar，换图须重新构建；翻译、字体、纹理用 F3+T，不能承诺热更新；Java 仍需重编，结构变化可能需要重启。
 - 运行后才新建的文件不会主动触发刷新，可保存已有文件或重新开页。
-- `tools/preview/start.ps1` 只原子更新运行目录里上述配置（保留其他命名空间）并启动游戏，不复制页面、不开监视进程。Loom 另保留官方 `-Doriel.sourceRoot=<仓库>/fabric`，用于运行目录在工程外的情况。
+- `tools/preview/start.ps1` 只原子更新运行目录里上述配置（保留其他命名空间）并启动游戏，不复制页面、不开监视进程。Loom 另保留官方 `-Doriel.sourceRoot=<仓库>/common`，用于运行目录在工程外的情况。
 - 旧的 `editor.devPage`、`editor-dev.json`、`editor_dev:`、`oriel_mine` 真实编辑器分支已移除，旧配置不再读取。`tools/preview/legacy/` 保留已废弃的同步脚本备份，其中的夹具仅用于测试“真实宿主 apply 不能被覆盖”，不进入游戏或发布 jar。
 
 ## 依赖说明：页面控制器与动效
@@ -66,7 +66,7 @@ Oriel 锁定 `>=0.11.0 <0.12.0`。`EditorPageController` 使用发布 jar 中的
 
 MCTest 让 agent 通过 MCP / 本机 WebSocket 驱动真实 Minecraft 客户端。
 仅通过 Loom `localRuntime` 加载，关闭传递依赖，不进入发布 jar 或 POM；本工程另从 `runServer` 类路径排除它。
-启动：`./gradlew :fabric:26.1.2:runClient`（Windows 可使用 `./gradlew.bat`）。
-默认启用，控制地址为 `127.0.0.1:25599`；`-PmcTest=false` 从开发运行类路径移除 MCTest，`-PmcTestPort=25600` 为客户端添加 `-Dmctest.port=25600`（不改变启停状态）。例如 `./gradlew :fabric:26.1.2:runClient -PmcTestPort=25600`。
+启动：`./gradlew :fabric:26.1:runClient`（Windows 可使用 `./gradlew.bat`）。
+默认启用，控制地址为 `127.0.0.1:25599`；`-PmcTest=false` 从开发运行类路径移除 MCTest，`-PmcTestPort=25600` 为客户端添加 `-Dmctest.port=25600`（不改变启停状态）。例如 `./gradlew :fabric:26.1:runClient -PmcTestPort=25600`。
 日常 `启动物品工坊预览.bat` / `tools/preview/start.ps1` 固定传入 `-PmcTest=false`，不开控制端口；自动化 `tools/live-test` 不传该开关，保持默认启用。
 不要把控制端口转发到外网。构建通过不代表客户端交互已验收。

@@ -17,7 +17,7 @@ try {
     }
     Assert-NoUserGame
     Push-Location $Root
-    try { & bash tools/gw.sh :fabric:26.1.2:build --no-problems-report *> ($Log+'/gradle-final.log');if($LASTEXITCODE){throw ('Gradle失败，exit='+$LASTEXITCODE)} }
+    try { & bash tools/gw.sh :fabric:26.1:build --no-problems-report *> ($Log+'/gradle-final.log');if($LASTEXITCODE){throw ('Gradle失败，exit='+$LASTEXITCODE)} }
     finally {Pop-Location}
     Write-Output 'PASS Gradle build (including existing and new entity JVM tests); logs/entity-schema/gradle-final.log'
 } catch {

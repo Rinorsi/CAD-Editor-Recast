@@ -11,6 +11,6 @@
 
 全main/test javac 与 WorldMergeTest、PlayerWorldEditTest、EntityWorldEditTest、WorldEditTest（含BlockWorldEditTest）、EntitySchemaTest、EntitySchemaDetailsTest、EditDispatchTest 通过。日志 logs/world-permission/gates.log、compile.log、compile-tests.log、各同名Test.log；专用服日志 server-probe.log / captured-server.json。完整原子锁 build 与 git diff --check 的最终门禁行见 final-gates.log，完整Gradle输出 gradle-build.log。人工审查见 manual-review.log；没有可调用的 /review 工具。
 
-改动文件：main world/WorldTarget.java、EntityRiding.java；新增 test registry/WorldPermissionServerProbe.java；新增 tools/world-edit/{verify-permission,probe-permission-server,final-permission-gate}.ps1；更新 docs/world-edit-contract.md、world-block-edit.md、world-player-contract.md、permission-matrix.md；新增本报告及真实收据。Java路径根为 fabric/src/main/java/dev/rinorsi/editor/ 和 fabric/src/test/java/dev/rinorsi/editor/。
+改动文件：main world/WorldTarget.java、EntityRiding.java；新增 test registry/WorldPermissionServerProbe.java；新增 tools/world-edit/{verify-permission,probe-permission-server,final-permission-gate}.ps1；更新 docs/world-edit-contract.md、world-block-edit.md、world-player-contract.md、permission-matrix.md；新增本报告及真实收据。Java路径根为 common/src/main/java/dev/rinorsi/editor/ 和 fabric/src/test/java/dev/rinorsi/editor/。
 
 未验证：用户真实客户端交互/网络同步与第三方权限/领地插件。检测到运行中的Java/Minecraft环境，未启动或操作用户客户端；real-client run pending。未改UI/保险库持久化，未add/commit/push。

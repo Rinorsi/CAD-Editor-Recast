@@ -16,7 +16,7 @@ if a.additional_receipt:
     if extra.get("world"):r["world"]=extra["world"]
     r["additional_evidence"]={"receipt":str(a.additional_receipt),"build":extra.get("build"),"replaced_components":sorted(replaced),"superseded_world":previous_world if extra.get("world") else []}
     if extra.get("status")!="COMPLETE":r["status"]="INCOMPLETE"
-ui=(a.root/"fabric/src/main/resources/assets/cadeditor/ui/js/data.js").read_text(encoding="utf-8-sig")
+ui=(a.root/"common/src/main/resources/assets/cadeditor/ui/js/data.js").read_text(encoding="utf-8-sig")
 data=json.JSONDecoder().raw_decode(ui.split("var EDATA =",1)[1].lstrip())[0]
 known=["minecraft:"+c["id"] for c in data["comps"]]
 groups={k:[] for k in known}

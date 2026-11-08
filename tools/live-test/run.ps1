@@ -12,9 +12,9 @@ function Assert-NoGame {
             $Path=if($Matches[1]){$Matches[1]}elseif($Matches[2]){$Matches[2]}else{$Matches[3]}
             if(Test-Path -LiteralPath $Path){$Command+=' '+(Get-Content -LiteralPath $Path -Raw)}
         }
-        $Command -match 'KnotClient|runClient|net.minecraft.client.main.Main'
+        $Command.Contains($Out) -and $Command -match 'KnotClient|runClient|net.minecraft.client.main.Main'
     })
-    if($Games.Count){$Games | Select-Object ProcessId,CommandLine | ConvertTo-Json | Set-Content ($Out+'/blocked-processes.json');throw 'User Minecraft running; skipped without touching it'}
+    if($Games.Count){$Games | Select-Object ProcessId,CommandLine | ConvertTo-Json | Set-Content ($Out+'/blocked-processes.json');throw 'This evidence directory already has a client; refusing to attach'}
 }
 Assert-NoGame
 if(Get-NetTCPConnection -LocalPort 25599 -State Listen -ErrorAction SilentlyContinue){throw 'MCTest port occupied; refusing to attach'}
@@ -41,7 +41,7 @@ try {
     if(Get-NetTCPConnection -LocalPort 25599 -State Listen -ErrorAction SilentlyContinue){throw 'MCTest port became occupied; refusing to launch'}
     $Info=[Diagnostics.ProcessStartInfo]::new()
     $Info.FileName=$env:ComSpec
-    $Info.Arguments='/d /s /c ""'+(Join-Path $Root 'gradlew.bat')+'" --console=plain --max-workers=2 -PliveTestOwner='+$Owner+' "-PliveTestEvidence='+$Out+'" -PliveTestInput='+$InputEngine+' -I tools/live-test/launch.init.gradle :fabric:26.1.2:runClient"'
+    $Info.Arguments='/d /s /c ""'+(Join-Path $Root 'gradlew.bat')+'" --console=plain --max-workers=2 -PliveTestOwner='+$Owner+' "-PliveTestEvidence='+$Out+'" -PliveTestInput='+$InputEngine+' -I tools/live-test/launch.init.gradle :fabric:26.1:runClient"'
     $Info.WorkingDirectory=$Root;$Info.UseShellExecute=$false;$Info.CreateNoWindow=$true;$Info.WindowStyle='Hidden'
     $Info.RedirectStandardOutput=$true;$Info.RedirectStandardError=$true
     $Process=[Diagnostics.Process]::Start($Info)

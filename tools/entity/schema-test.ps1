@@ -9,8 +9,8 @@ New-Item -ItemType Directory -Force ($Out+'/classes') | Out-Null
 $Paths=@((Get-Content -LiteralPath $RuntimeClasspath | ConvertFrom-Json) | ForEach-Object { $_.Replace([char]92,[char]47) })
 $Paths+=Join-Path $env:USERPROFILE '.gradle/caches/fabric-loom/26.1.2/minecraft-merged.jar'
 $Cp=$Paths -join ';'
-$Sources=@(Get-ChildItem -LiteralPath ($Root+'/fabric/src/main/java') -Recurse -Filter '*.java' | ForEach-Object FullName)
-$Sources+=@('EntitySchemaTestLevel','EntitySchemaTest','EntitySchemaDetailsTest','SpawnerApplyTest') | ForEach-Object { $Root+'/fabric/src/test/java/dev/rinorsi/editor/registry/'+$_+'.java' }
+$Sources=@(Get-ChildItem -LiteralPath ($Root+'/common/versions/26.1/build/generated/stonecutter/main/java'),($Root+'/fabric/versions/26.1/build/generated/stonecutter/main/java') -Recurse -Filter '*.java' | ForEach-Object FullName)
+$Sources+=@('EntitySchemaTestLevel','EntitySchemaTest','EntitySchemaDetailsTest','SpawnerApplyTest') | ForEach-Object { $Root+'/common/versions/26.1/build/generated/stonecutter/test/java/dev/rinorsi/editor/registry/'+$_+'.java' }
 & javac -encoding UTF-8 -cp $Cp -d ($Out+'/classes') $Sources *> ($Out+'/compile-main.log')
 if($LASTEXITCODE){throw '实体schema编译失败，见 logs/entity-schema/compile-main.log'}
 Write-Output 'javac all production Java + entity tests -> PASS -> logs/entity-schema/compile-main.log'

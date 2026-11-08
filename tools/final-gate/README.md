@@ -3,7 +3,7 @@
 完整门禁：
 
 ```powershell
-./gradlew.bat --console=plain --max-workers=2 :fabric:26.1.2:build
+./gradlew.bat --console=plain --max-workers=2 :fabric:26.1:build
 node tools/ui-world-test.cjs
 node tools/ui-contract-test.cjs
 node tools/ui-compact-test.cjs
@@ -16,7 +16,7 @@ build/check 已包含 componentSchemaTest、entitySchemaTest、entitySchemaServe
 launch.init.gradle 仅添加测试 jar 与可选 runClient 参数，不把自动化/Mixin 打入发行 jar。先编译探针：
 
 ```powershell
-./gradlew.bat --console=plain -I tools/final-gate/launch.init.gradle :fabric:26.1.2:finalGateProbeJar
+./gradlew.bat --console=plain -I tools/final-gate/launch.init.gradle :fabric:26.1:finalGateProbeJar
 ```
 
 launch.ps1 接受有效单人世界目录，复制到全新 Editor-final-gate-时间戳 目录，不打开或改写源世界；启动本工程正常 runClient，读取当日构建输出与最新界面资源。新副本中切创造、放猫刷怪蛋到主手，执行真正的 cade，向实际页面发送 entity_schema minecraft:cat、component_schema minecraft:food、tooltip 请求。回执写 logs/final-gate/client-receipt.json，完整启动日志 runClient.log，准备信息 client-preparation.json。
