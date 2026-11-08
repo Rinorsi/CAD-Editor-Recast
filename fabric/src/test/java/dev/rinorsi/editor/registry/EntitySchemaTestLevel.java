@@ -5,7 +5,7 @@ import net.minecraft.world.level.*;
 import net.minecraft.world.level.storage.*;
 import net.minecraft.world.level.dimension.*;
 /** Pure-JVM factory fixture: client-side, no chunks, no entities registered or ticked. */
-final class EntitySchemaTestLevel extends Level {
+class EntitySchemaTestLevel extends Level {
  public boolean noCollision(net.minecraft.world.entity.Entity e,net.minecraft.world.phys.AABB box){return true;}
  public java.util.List<net.minecraft.world.entity.Entity> getEntities(net.minecraft.world.entity.Entity e,net.minecraft.world.phys.AABB box,java.util.function.Predicate<? super net.minecraft.world.entity.Entity> predicate){return java.util.List.of();}
  public <T extends net.minecraft.world.entity.Entity> java.util.List<T> getEntities(net.minecraft.world.level.entity.EntityTypeTest<net.minecraft.world.entity.Entity,T> test,net.minecraft.world.phys.AABB box,java.util.function.Predicate<? super T> predicate){return java.util.List.of();}

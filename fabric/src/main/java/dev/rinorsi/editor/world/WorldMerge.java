@@ -31,6 +31,7 @@ public final class WorldMerge {
         boolean entity=base.contains("cad_entity_nbt")||(!base.contains("cad_session_nbt")&&EntityVolatile.entity(b));
         if(entity&&!Objects.equals(b.get("UUID"),c.get("UUID")))conflicts.add(List.of("UUID"));
         if(!Objects.equals(base.get("cad_session_block"),current.get("cad_session_block")))conflicts.add(List.of("block"));
+        if(!Objects.equals(base.get(DoubleChestEdit.TOPOLOGY),current.get(DoubleChestEdit.TOPOLOGY)))conflicts.add(List.of("container","double"));
         if(!conflicts.isEmpty())throw new Conflict(conflicts,"identity");
     }
     private static CompoundTag entityOrBlock(CompoundTag tag){return tag.getCompound("cad_entity_nbt").orElseGet(()->tag.getCompound("cad_session_nbt").orElse(tag));}

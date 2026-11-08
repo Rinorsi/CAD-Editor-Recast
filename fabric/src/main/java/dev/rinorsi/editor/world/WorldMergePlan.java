@@ -4,9 +4,14 @@ import dev.rinorsi.editor.*;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.state.BlockState;
 /** Compile normalized edits on an opened copy, merge, then validate on a live copy. */
-public record WorldMergePlan(CompoundTag nbt,BlockState blockState) {
+public record WorldMergePlan(CompoundTag nbt,BlockState blockState,CompoundTag partnerNbt) {
+    public WorldMergePlan(CompoundTag nbt,BlockState state){this(nbt,state,null);}
     public static WorldMergePlan prepare(WorldTarget target,CompoundTag base,CompoundTag undo,JsonObject request){
-        var current=target.save();var currentSession=target.sessionData();var opened=data(base,target);
+        WorldMerge.requireIdentity(base,target.sessionData());
+        return target.partner==null?prepareSingle(target,base,undo,request):DoubleChestEdit.prepare(target,base,undo,request);
+    }
+    static WorldMergePlan prepareSingle(WorldTarget target,CompoundTag base,CompoundTag undo,JsonObject request){
+        var current=target.save();var currentSession=target.singleSessionData();var opened=data(base,target);
         var openedState=state(base,target.blockState());CompoundTag mine;BlockState mineState;
         if(undo!=null){mine=data(undo,target);mineState=state(undo,target.blockState());}
         else {
@@ -25,6 +30,10 @@ public record WorldMergePlan(CompoundTag nbt,BlockState blockState) {
         mine=BlockVolatile.merge(mine,opened,current);
         var mineSession=target.entity!=null?EntitySessionData.pack(mine,target.entity):BlockSessionData.pack(mine,mineState);
         var merged=WorldMerge.merge(base,mineSession,currentSession);var mergedData=data(merged,target);
+        // Slot-key merges retain current ordering; vanilla chest saves in slot order.
+        // Normalize that representational difference before the loader-retention check.
+        if(target.block instanceof net.minecraft.world.level.block.entity.ChestBlockEntity)
+            mergedData.getList("Items").ifPresent(items->items.sort(java.util.Comparator.comparingInt(item->((CompoundTag)item).getByte("Slot").orElse((byte)0)&255)));
         var next=target.prepare(mergedData,new JsonObject());WorldNbt.requireEditedFieldsRetained(current,mergedData,next);
         var nextState=state(merged,target.blockState());
         if(target.block!=null)nextState=BlockViews.contentState(target.block,current,next,nextState,target.level.registryAccess());

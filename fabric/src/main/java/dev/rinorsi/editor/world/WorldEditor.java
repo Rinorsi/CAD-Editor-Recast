@@ -34,6 +34,7 @@ public final class WorldEditor {
             id = StackCodec.string(request, "requestId"); if (id.length() > 80) throw new IllegalArgumentException("requestId 过长");
             op = StackCodec.string(request, "op");
             if (op.equals("close")) { SESSIONS.close(player.getUUID(), slot); return true; }
+            if(op.equals("apply")||op.equals("undo"))SESSIONS.requireDoubleChestPresent(player.getUUID(),slot,player.level());
             var target = WorldTarget.resolve(player, slot);
             try { policy.get().require(player); } catch (RuntimeException e) { EditorSessions.fail("not_allowed", e.getMessage()); }
             if (op.equals("open")) {
@@ -47,7 +48,7 @@ public final class WorldEditor {
             if(target.entity instanceof ServerPlayer && (request.has("snbt")||request.has("container")||request.has("views")||request.has("block_state")||request.has("block_type")||request.has("riding")))
                 EditorSessions.fail("protected_field","玩家仅支持 entity.player 规范化编辑，不能写入原始NBT、方块字段或骑乘关系");
             SESSIONS.rateLimit(player.getUUID());
-            var beforeSession = target.sessionData(); var before = target.entity!=null?EntitySessionData.data(beforeSession):BlockSessionData.data(beforeSession); var beforeState = target.blockState();
+            var beforeSession = target.sessionData(); var before = target.entity!=null?EntitySessionData.data(beforeSession):BlockSessionData.data(beforeSession);
             var state = SESSIONS.require(player.getUUID(), slot, StackCodec.string(request, "revision"), beforeSession);
             if(target.entity instanceof ServerPlayer && request.has("riding"))EditorSessions.fail("protected_field","玩家不支持 riding 编辑");
             if (request.has("riding")) {
@@ -67,18 +68,18 @@ public final class WorldEditor {
             if(request.has("updateNeighbors")&&(!request.get("updateNeighbors").isJsonPrimitive()||!request.getAsJsonPrimitive("updateNeighbors").isBoolean()))EditorSessions.fail("invalid_request","updateNeighbors 必须为布尔值");
             boolean updateNeighbors=!request.has("updateNeighbors")||request.get("updateNeighbors").getAsBoolean();
             var plan=WorldMergePlan.prepare(target,state.baseline,op.equals("undo")?state.preimage():null,request);
-            var prepared=plan.nbt();var nextState=plan.blockState();
+            var prepared=plan.nbt();
             WorldNbt.protect(before, prepared, target.entity != null);
             target.checkCommandPrivileges(player,prepared);
             // Loaders that silently ignore unknown/invalid values must not report a successful edit.
             if (prepared.toString().length() > WorldNbt.MAX_SNBT) EditorSessions.fail("payload_too_large", "修改后的 NBT 超出上限");
-            var preview = result("saved",id); preview.add("world",target.preview(prepared,state.slot,!op.equals("undo"),nextState)); checkSize(preview);
-            net.minecraft.nbt.CompoundTag after;JsonObject reply,world;
-            try {
-                target.write(prepared,nextState,updateNeighbors);
-                after=target.sessionData();world=target.snapshot(state.slot,!op.equals("undo"),after);reply=result("saved",id);reply.add("world",world);checkSize(reply);
-            }
-            catch (RuntimeException failure) { try { target.write(before,beforeState,false); } catch (RuntimeException rollback) { failure.addSuppressed(rollback); LOG.error("World edit rollback failed player={} slot={}", player.getUUID(), slot, rollback); } throw failure; }
+            var preview = result("saved",id); preview.add("world",DoubleChestEdit.preview(target,plan,state.slot,!op.equals("undo"))); checkSize(preview);
+            final String replyId=id;final boolean undoing=op.equals("undo");
+            var capturedAfter=new net.minecraft.nbt.CompoundTag[1];var capturedReply=new JsonObject[1];var capturedWorld=new JsonObject[1];
+            DoubleChestEdit.write(target,plan,updateNeighbors,()->{
+                capturedAfter[0]=target.sessionData();capturedWorld[0]=target.snapshot(state.slot,!undoing,capturedAfter[0]);capturedReply[0]=result("saved",replyId);capturedReply[0].add("world",capturedWorld[0]);checkSize(capturedReply[0]);
+            });
+            var after=capturedAfter[0];var world=capturedWorld[0];var reply=capturedReply[0];
             state.saved(beforeSession,after,op.equals("undo"));world.addProperty("revision",state.revision);
             LOG.info("[CAD-Editor-World] audit player={} op={} target={} before={} after={}", player.getUUID(), op, slot, WorldNbt.revision(beforeSession), WorldNbt.revision(state.baseline));
             replySink.accept(reply);

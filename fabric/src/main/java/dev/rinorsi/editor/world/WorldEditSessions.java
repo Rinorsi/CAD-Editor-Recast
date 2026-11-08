@@ -35,6 +35,10 @@ public final class WorldEditSessions {
         WorldMerge.requireIdentity(state.baseline,current);
         return state;
     }
+    public void requireDoubleChestPresent(UUID player,JsonObject slot,net.minecraft.world.level.Level level) {
+        var state=states.get(player);
+        if(state!=null&&sameTarget(state.slot,slot)&&Objects.equals(state.slot.get("token"),slot.get("token")))DoubleChestEdit.requirePresent(level,state.baseline);
+    }
     public void rateLimit(UUID player) {
         long now = clock.getAsLong(); Long last = lastWrite.get(player);
         if (last != null && now - last < 500_000_000L){

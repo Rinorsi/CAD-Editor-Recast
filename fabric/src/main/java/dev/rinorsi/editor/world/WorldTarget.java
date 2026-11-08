@@ -19,16 +19,26 @@ import net.minecraft.world.item.ItemStack;
 
 /** Resolves loaded world targets; online players use their native setter-only adapter. */
 public final class WorldTarget {
-    public final ServerLevel level;
+    public final net.minecraft.world.level.Level level;
+    WorldTarget partner;
     public BlockEntity block;
     public final Entity entity;
     public final BlockPos blockPos;
     private net.minecraft.world.level.block.state.BlockState previewState;
     private CompoundTag draftData;
-    private WorldTarget(ServerLevel level, BlockEntity block, Entity entity) { this(level,block,entity,block == null ? null : block.getBlockPos()); }
-    private WorldTarget(ServerLevel level, BlockEntity block, Entity entity, BlockPos pos) { this.level = level; this.block = block; this.entity = entity; this.blockPos = pos; }
+    private WorldTarget(net.minecraft.world.level.Level level, BlockEntity block, Entity entity) { this(level,block,entity,block == null ? null : block.getBlockPos()); }
+    private WorldTarget(net.minecraft.world.level.Level level, BlockEntity block, Entity entity, BlockPos pos) { this.level = level; this.block = block; this.entity = entity; this.blockPos = pos; }
     public net.minecraft.world.level.block.state.BlockState blockState() { return blockPos == null ? null : previewState != null ? previewState : level.getBlockState(blockPos); }
-    public CompoundTag sessionData() { return entity != null ? EntitySessionData.pack(save(),entity) : BlockSessionData.pack(save(),blockState()); }
+    public CompoundTag singleSessionData() { return entity != null ? EntitySessionData.pack(save(),entity) : BlockSessionData.pack(save(),blockState()); }
+    public CompoundTag sessionData() {
+        var data=singleSessionData();
+        if(partner!=null){data.put(DoubleChestEdit.PARTNER,partner.singleSessionData());data.put(DoubleChestEdit.TOPOLOGY,DoubleChestEdit.topology(this));}
+        return data;
+    }
+    public static WorldTarget forBlock(net.minecraft.world.level.Level level, BlockEntity block) {
+        var target=new WorldTarget(level,block,null);DoubleChestEdit.connect(target);return target;
+    }
+    WorldTarget half(BlockEntity other) { return new WorldTarget(level,other,null); }
     public static WorldTarget resolve(ServerPlayer player, JsonObject slot) {
         var level = (ServerLevel) player.level();
         boolean gameMaster=EditorPolicy.gameMaster(player);
@@ -64,7 +74,10 @@ public final class WorldTarget {
             WorldAccess.loaded(level.hasChunkAt(pos));
         } else throw new EditorSessions.Failure("slot_invalid", "未知世界目标类型");
         WorldAccess.area(level.getWorldBorder().isWithinBounds(pos) && player.mayInteract(level, pos) && level.mayInteract(player, pos) && (gameMaster || player.mayBuild()));
-        return new WorldTarget(level, block, entity, kind.equals("block") ? pos : null);
+        var target=new WorldTarget(level, block, entity, kind.equals("block") ? pos : null);
+        DoubleChestEdit.connect(target);
+        if(target.partner!=null){var p=target.partner.blockPos;WorldAccess.reach(player.isWithinBlockInteractionRange(p,0));WorldAccess.area(level.getWorldBorder().isWithinBounds(p)&&player.mayInteract(level,p)&&level.mayInteract(player,p)&&(gameMaster||player.mayBuild()));}
+        return target;
     }
     public CompoundTag save() {
         if(draftData!=null)return draftData.copy();
@@ -108,6 +121,7 @@ public final class WorldTarget {
             result.addProperty("has_block_entity",block != null);
             if(block instanceof CommandBlockEntity) result.add("block_type_schema",BlockStateEdit.commandTypes());
             if(block != null) addViews(result, block, level.registryAccess(), nbt);
+            if(partner!=null)DoubleChestEdit.addView(result,this,captured);
         } else if (entity instanceof LivingEntity living) {
             var equipment = new JsonArray();
             for (var equip : EquipmentSlot.values()) { var row = new JsonObject(); row.addProperty("slot", equip.getSerializedName()); row.add("stack", stack(living.getItemBySlot(equip), level.registryAccess())); equipment.add(row); }
@@ -178,7 +192,7 @@ public final class WorldTarget {
         json.add(id, codec.encodeStart(access.createSerializationContext(JsonOps.INSTANCE), component.value()).getOrThrow());
         snbt.addProperty(id, codec.encodeStart(access.createSerializationContext(NbtOps.INSTANCE), component.value()).getOrThrow().toString());
     }
-    private static JsonObject stack(ItemStack item, RegistryAccess access) {
+    static JsonObject stack(ItemStack item, RegistryAccess access) {
         if (item.isEmpty()) { var empty = new JsonObject(); empty.addProperty("empty", true); return empty; }
         return StackCodec.snapshot(item, access, new JsonObject(), "");
     }
@@ -274,7 +288,7 @@ public final class WorldTarget {
                 EditorSessions.fail("slot_invalid", "修改后的物品不符合该容器槽位限制");
             if (copy instanceof LecternBlockEntity && (!next.is(net.minecraft.tags.ItemTags.LECTERN_BOOKS) || next.getCount() != 1))
                 EditorSessions.fail("slot_invalid", "讲台仅接受实时 lectern_books 标签中的单本书");
-            if (copy instanceof CampfireBlockEntity && (next.getCount() != 1 || level.recipeAccess().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.CAMPFIRE_COOKING,new net.minecraft.world.item.crafting.SingleRecipeInput(next),level).isEmpty()))
+            if (copy instanceof CampfireBlockEntity && (next.getCount() != 1 || ((ServerLevel)level).recipeAccess().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.CAMPFIRE_COOKING,new net.minecraft.world.item.crafting.SingleRecipeInput(next),level).isEmpty()))
                 EditorSessions.fail("slot_invalid", "营火仅接受实时营火配方中的单件物品");
         }
     }
