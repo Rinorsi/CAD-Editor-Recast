@@ -74,7 +74,8 @@ function boot() {
   if (typeof Drafts !== 'undefined') Drafts.attach();
   if (typeof oriel !== 'undefined' && oriel.on) oriel.on('data', function (data, key) {
     if (!VaultOnly && ((key === 'mode' && data === 'vault') || (key === undefined && data && data.mode === 'vault'))) { enterVaultMode(); return; }
-    if (key === 'world' || (key === undefined && data.world)) weSaved(data.world || data);
+    if (key === 'player_extended_result' || (key === undefined && data.player_extended_result)) pxResult(data.player_extended_result || data);
+    else if (key === 'world' || (key === undefined && data.world)) weSaved(data.world || data);
     else if (key === 'result' || (key === undefined && data.result)) { if (weActive()) weResult(data.result); else receiveEditorResult(data.result); }
     else if (!Store.docs.length && data.stack) { Prefs.init(data); OrielEditor.open(data.stack); }
   });

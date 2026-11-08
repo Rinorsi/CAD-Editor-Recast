@@ -17,7 +17,7 @@ function weName() {
 }
 
 function weOpen(world) {
-  WE.w = world; WE.text = nbtPrint(nbtParse(world.snbt), true); WE.slots = {}; WE.err = ''; WE.obj = null; if (typeof weResetEdits === 'function') weResetEdits(); if (typeof weEntReset === 'function') weEntReset(); if (typeof wpReset === 'function') wpReset();
+  WE.w = world; WE.text = nbtPrint(nbtParse(world.snbt), true); WE.slots = {}; WE.err = ''; WE.obj = null; if (typeof weResetEdits === 'function') weResetEdits(); if (typeof weEntReset === 'function') weEntReset(); if (typeof wpReset === 'function') wpReset(); if (typeof pxReset === 'function') pxReset();
   var tabs = weTabs(); if (!tabs.some(function (t) { return t.id === WE.tab; })) WE.tab = tabs[0].id;
   weRender();
 }
@@ -29,7 +29,7 @@ function weTabs() {
   if (w.kind === 'block' && (weStateSchema().length || weTypeSchema().length > 1)) t.push({ id: 'state', label: '方块状态', icon: 'sliders' });
   if (noBE) return t;
   if (w.kind === 'entity' && w.player) {
-    return [{ id: 'pinv', label: '背包', icon: 'backpack' }, { id: 'pender', label: '末影箱', icon: 'chest' }, { id: 'pstat', label: '状态', icon: 'heart' }, { id: 'pabil', label: '能力', icon: 'wind' }, { id: 'pattr', label: '属性与效果', icon: 'sliders' }];
+    return [{ id: 'pinv', label: '背包', icon: 'backpack' }, { id: 'pender', label: '末影箱', icon: 'chest' }, { id: 'pstat', label: '状态', icon: 'heart' }, { id: 'pabil', label: '能力', icon: 'wind' }, { id: 'pattr', label: '属性与效果', icon: 'sliders' }, { id: 'ppos', label: '位置与重生', icon: 'compass' }, { id: 'prec', label: '配方', icon: 'book' }, { id: 'padv', label: '成就', icon: 'trophy' }, { id: 'pstats', label: '统计', icon: 'scroll' }, { id: 'poff', label: '离线玩家', icon: 'user' }];
   }
   if (w.kind === 'entity') {
     if (evGroup('pose')) t.push({ id: 'pose', label: '姿势', icon: 'user' });
@@ -96,6 +96,11 @@ function weTabBody(body) {
   else if (WE.tab === 'pstat') wpStatusTab(body);
   else if (WE.tab === 'pabil') wpAbilitiesTab(body);
   else if (WE.tab === 'pattr') wpAttrTab(body);
+  else if (WE.tab === 'ppos') pxPosition(body);
+  else if (WE.tab === 'prec') pxRecipes(body);
+  else if (WE.tab === 'padv') pxAdvancements(body);
+  else if (WE.tab === 'pstats') pxStats(body);
+  else if (WE.tab === 'poff') pxOffline(body);
   else if (WE.tab === 'pose') evPoseTab(body);
   else if (WE.tab === 'frame') evFrameTab(body);
   else if (WE.tab === 'painting') evPaintingTab(body);

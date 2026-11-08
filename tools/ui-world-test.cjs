@@ -30,7 +30,7 @@ const root=new Element('body'),overlays=new Element('div');overlays.id='overlays
 const doc={body:root,activeElement:null,addEventListener(){},createElement(tag){return new Element(tag);},createTextNode(t){const el=new Element('text');el.textContent=t;return el;},getElementById(id){return root.querySelector('#'+id);}};
 const c=vm.createContext({document:doc,window:{innerWidth:760,innerHeight:560},console,setTimeout(){},clearTimeout(){},oriel:{data:{},send(){return true;}}});
 const dir=path.resolve(__dirname,'../common/src/main/resources/assets/cadeditor/ui/js');
-for(const f of ['data','core','labels','pinyin-data','search','forms','kit','kit2','nbt','xlist','slots','reg','hostsearch','picker','cards1','cards2','cards3','cards5','world','rules','spawn','eschema','toastkit','screens','worldedit','worldview','worldentity','worldplayer','vault'])vm.runInContext(fs.readFileSync(path.join(dir,f+'.js'),'utf8'),c);
+for(const f of ['data','core','labels','pinyin-data','search','forms','kit','kit2','nbt','xlist','slots','reg','hostsearch','picker','cards1','cards2','cards3','cards5','world','rules','spawn','eschema','toastkit','screens','worldedit','worldview','worldentity','worldplayer','worldplayerx','vault'])vm.runInContext(fs.readFileSync(path.join(dir,f+'.js'),'utf8'),c);
 c.uiIcon=()=>new Element('i');c.itemIcon=()=>new Element('i');c.uiClick=()=>{};c.snd=()=>{};c.toast=()=>{};
 let saved,disabled=0,writes=0;
 c.autoPut=(cid,value)=>{saved=JSON.parse(JSON.stringify(value));writes++;};
@@ -858,7 +858,7 @@ console.log('PASS soak: caches stay bounded over 400 open/edit/save/registry cyc
       attributes: [{ id: 'minecraft:max_health', base: 20, min: 1, max: 1024 }], bounds: { Health: { min: 0, max: 20 }, 'food.foodLevel': { min: 0, max: 20 } } } };
   const w = { kind: 'entity', type: 'minecraft:player', slot: { kind: 'entity', dim: 'minecraft:overworld', player: 'self', token: 't' }, revision: 'r', canUndo: false, snbt: '{}', nbt: {}, player: { self: true, name: 'Rinorsi', uuid: 'u' }, views: { player } };
   c.weOpen(w);
-  assert.equal(JSON.stringify(c.weTabs().map(t => t.id)), '["pinv","pender","pstat","pabil","pattr"]'); assert.equal(c.weName(), 'Rinorsi（你）');
+  assert.equal(JSON.stringify(c.weTabs().map(t => t.id)), '["pinv","pender","pstat","pabil","pattr","ppos","prec","padv","pstats","poff"]'); assert.equal(c.weName(), 'Rinorsi（你）');
   for (const t of c.weTabs()) { c.WE.tab = t.id; c.weRender(); }
   assert.equal(c.weDirty(), false);
   c.wpSetSlot('container', 5, { id: 'minecraft:apple', count: 1, comps: {}, removed: {} }); c.wpSetSlot('ender', 2, { id: 'minecraft:diamond', count: 2, comps: {}, removed: {} });
