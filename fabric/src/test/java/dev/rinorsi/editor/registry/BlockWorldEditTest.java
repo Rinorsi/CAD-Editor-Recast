@@ -20,6 +20,7 @@ public final class BlockWorldEditTest {
         run(EntitySchemaTest.access(),Path.of("logs/block-edit"));
     }
     public static void run(RegistryAccess access,Path output) throws Exception {
+        sculkViews(access);
         structureViews(access);
         nameableViews(access);
         hopperView(access);
@@ -265,6 +266,21 @@ public final class BlockWorldEditTest {
             }
         }
         reject("invalid_nbt",()->BlockViews.apply(jigsaw,jigsawBefore,JsonParser.parseString("{jigsaw:{name:'invalid identifier'}}").getAsJsonObject(),access));
+    }
+    private static void sculkViews(RegistryAccess access) {
+        for(var block:List.of(Blocks.SCULK_SENSOR,Blocks.CALIBRATED_SCULK_SENSOR,Blocks.SCULK_SHRIEKER)) {
+            var be=((EntityBlock)block).newBlockEntity(BlockPos.ZERO,block.defaultBlockState());var before=be.saveWithFullMetadata(access);var group=be instanceof SculkSensorBlockEntity ? "sculk_sensor" : "sculk_shrieker";var key=be instanceof SculkSensorBlockEntity ? "last_vibration_frequency" : "warning_level";
+            var views=new JsonObject();BlockViews.add(views,be,access,before);check(views.getAsJsonObject(group).getAsJsonObject("value").get("listener.event_delay").getAsInt()==0,"listener default");
+            for(int value:new int[]{0,Integer.MAX_VALUE}) {var saved=roundtrip(be,before,"{"+group+":{'listener.event_delay':"+value+","+key+":"+value+"}}",access);check(saved.getCompound("listener").orElseThrow().getInt("event_delay").orElseThrow()==value,"listener boundary retained");check(Objects.equals(before.getCompound("listener").orElseThrow().get("selector"),saved.getCompound("listener").orElseThrow().get("selector")),"listener selector preserved");}
+            roundtrip(be,before,"{"+group+":{"+key+":"+Integer.MIN_VALUE+"}}",access);
+            for(String value:List.of("-1","2147483648","1.5","null","'1'"))reject("invalid_nbt",()->BlockViews.apply(be,before,JsonParser.parseString("{"+group+":{'listener.event_delay':"+value+"}}").getAsJsonObject(),access));
+            reject("invalid_request",()->BlockViews.apply(be,before,JsonParser.parseString("{"+group+":{listener:{}}}").getAsJsonObject(),access));
+        }
+        for(var block:List.of(Blocks.SCULK_CATALYST,Blocks.BELL)) {
+            var be=((EntityBlock)block).newBlockEntity(BlockPos.ZERO,block.defaultBlockState());var before=be.saveWithFullMetadata(access);var group=block==Blocks.BELL ? "bell" : "sculk_catalyst";var views=new JsonObject();BlockViews.add(views,be,access,before);
+            for(var field:views.getAsJsonObject(group).getAsJsonObject("schema").getAsJsonObject("fields").entrySet()) {check(field.getValue().getAsJsonObject().get("read_only").getAsBoolean(),"readonly state");reject("invalid_request",()->BlockViews.apply(be,before,JsonParser.parseString("{"+group+":{"+field.getKey()+":null}}").getAsJsonObject(),access));}
+            if(block==Blocks.BELL)check(!before.contains("ticks") && !before.contains("resonating"),"bell has no saved timers");
+        }
     }
     @SuppressWarnings({"rawtypes","unchecked"}) private static String propertyName(net.minecraft.world.level.block.state.properties.Property property,Object value){return property.getName((Comparable)value);}
     private static void check(boolean ok,String message){if(!ok)throw new AssertionError(message);checks++;}

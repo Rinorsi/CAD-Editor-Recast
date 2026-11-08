@@ -41,6 +41,8 @@ public final class BlockViews {
         if (block instanceof TheEndGatewayBlockEntity) groups.put("end_gateway",List.of(f("exit_portal",BlockPos.CODEC),f("ExactTeleport",Codec.BOOL),f("Age",Codec.LONG)));
         if (block instanceof StructureBlockEntity) groups.put("structure_block",List.of(f("name",Codec.STRING),f("author",Codec.STRING),f("metadata",Codec.STRING),f("posX",Codec.INT),f("posY",Codec.INT),f("posZ",Codec.INT),f("sizeX",Codec.INT),f("sizeY",Codec.INT),f("sizeZ",Codec.INT),f("rotation",Rotation.LEGACY_CODEC),f("mirror",Mirror.LEGACY_CODEC),f("mode",StructureMode.LEGACY_CODEC),f("ignoreEntities",Codec.BOOL),f("powered",Codec.BOOL),f("showair",Codec.BOOL),f("showboundingbox",Codec.BOOL),f("integrity",Codec.FLOAT),f("seed",Codec.LONG)));
         if (block instanceof JigsawBlockEntity) groups.put("jigsaw",List.of(f("name",Identifier.CODEC),f("target",Identifier.CODEC),f("pool",JigsawBlockEntity.POOL_CODEC),f("final_state",Codec.STRING),f("joint",JigsawBlockEntity.JointType.CODEC)));
+        if (block instanceof SculkSensorBlockEntity) groups.put("sculk_sensor",List.of(f("last_vibration_frequency",Codec.INT),f("listener.event_delay",net.minecraft.util.ExtraCodecs.NON_NEGATIVE_INT)));
+        if (block instanceof SculkShriekerBlockEntity) groups.put("sculk_shrieker",List.of(f("warning_level",Codec.INT),f("listener.event_delay",net.minecraft.util.ExtraCodecs.NON_NEGATIVE_INT)));
         return groups;
     }
     private static boolean nullable(Field field) { return field.component || field.codec == ItemStack.CODEC || field.key.equals("exit_portal") || field.key.equals("CustomName") || field.key.equals("primary_effect") || field.key.equals("secondary_effect"); }
@@ -75,10 +77,12 @@ public final class BlockViews {
     }
     // Skull's implicit components save to profile/custom_name, as proven by its vanilla saveAdditional.
     private static Tag get(CompoundTag nbt,Field field) {
+        if(field.key.contains(".")) {var path=field.key.split("\\.",2);return nbt.getCompound(path[0]).map(parent->parent.get(path[1])).orElse(null);}
         if(field.key.equals("triggered"))return ByteTag.valueOf(nbt.getInt("triggered").orElse(CrafterBlockEntity.SLOT_ENABLED)==CrafterBlockEntity.SLOT_DISABLED);
         return nbt.get(field.component ? field.key.substring(10) : field.key);
     }
     private static void put(CompoundTag nbt,Field field,Tag tag) {
+        if(field.key.contains(".")) {var path=field.key.split("\\.",2);var parent=nbt.getCompound(path[0]).orElseGet(CompoundTag::new);if(tag==null)parent.remove(path[1]);else parent.put(path[1],tag);nbt.put(path[0],parent);return;}
         String key=field.component ? field.key.substring(10) : field.key;
         if(field.key.equals("triggered") && tag instanceof ByteTag value) {nbt.putInt(key,value.byteValue()!=0 ? CrafterBlockEntity.SLOT_DISABLED : CrafterBlockEntity.SLOT_ENABLED);return;}
         if (tag == null) nbt.remove(key); else nbt.put(key,tag);
@@ -103,6 +107,8 @@ public final class BlockViews {
                 value.add(field.key,tag == null ? JsonNull.INSTANCE : decode(field.codec,tag,access));
                 if(tag != null) subset.put(field.key,field.key.equals("triggered") && nbt.get(field.key)!=null ? nbt.get(field.key).copy() : tag.copy());
                 var schema = new JsonObject(); schema.addProperty("authority","vanilla_codec_and_loadWithComponents"); schema.addProperty("codec",field.codec.toString()); schema.addProperty("nullable",nullable(field));
+                if(field.key.contains("."))schema.addProperty("saved_path",field.key);
+                if(field.codec==net.minecraft.util.ExtraCodecs.NON_NEGATIVE_INT) {schema.addProperty("type","integer");schema.addProperty("min",0);schema.addProperty("max",Integer.MAX_VALUE);}
                 if(field.component) schema.addProperty("saved_path",field.key.substring(10));
                 if(field.codec == BeehiveBlockEntity.Occupant.LIST_CODEC) schema.addProperty("vanilla_max_occupants",BeehiveBlockEntity.MAX_OCCUPANTS);
                 if(field.codec == Codec.SHORT) {schema.addProperty("min",Short.MIN_VALUE);schema.addProperty("max",Short.MAX_VALUE);schema.addProperty("bounds","NBT short storage; vanilla loader validates semantics");}
@@ -134,6 +140,14 @@ public final class BlockViews {
             if(block instanceof ChiseledBookShelfBlockEntity) schema.addProperty("items_write_path","container.slots");
             var row = new JsonObject();row.add("value",value);row.addProperty("snbt",subset.toString());row.add("schema",schema);views.add(group,row);
         });
+        if(block instanceof SculkCatalystBlockEntity) {
+            var value=new JsonObject();var cursors=nbt.get("cursors");value.add("cursors",cursors==null ? new JsonArray() : decode(net.minecraft.world.level.block.SculkSpreader.ChargeCursor.CODEC.listOf(),cursors,access));
+            readOnly(views,"sculk_catalyst",value,"SculkSpreader.ChargeCursor.CODEC; live spread cursors",nbt);
+        }
+        if(block instanceof BellBlockEntity bell) {
+            var value=new JsonObject();value.addProperty("ticks",bell.ticks);value.addProperty("shaking",bell.shaking);
+            readOnly(views,"bell",value,"Runtime only; vanilla BellBlockEntity has no saved timer fields",nbt);
+        }
         if(block instanceof ConduitBlockEntity conduit) {
             var value=new JsonObject();var target=nbt.get("Target");value.add("Target",target==null ? JsonNull.INSTANCE : NbtOps.INSTANCE.convertTo(JsonOps.INSTANCE,target));
             value.addProperty("Active",conduit.isActive());value.addProperty("Hunting",conduit.isHunting());
@@ -167,6 +181,7 @@ public final class BlockViews {
                 }
                 // Sign sides accept a partial object; unedited lines/filtered messages remain intact.
                 if(field.codec==SignText.DIRECT_CODEC)requireSignSide(json,access);
+                if(field.codec==net.minecraft.util.ExtraCodecs.NON_NEGATIVE_INT)requireInteger(json,0,Integer.MAX_VALUE);
                 if(field.codec==Codec.LONG)requireInteger(json,Long.MIN_VALUE,Long.MAX_VALUE);
                 if(field.codec==Codec.FLOAT && (!json.isJsonPrimitive() || !json.getAsJsonPrimitive().isNumber() || !Float.isFinite(json.getAsFloat())))throw new EditorSessions.Failure("invalid_nbt","必须为有限 float");
                 if(field.codec==Codec.STRING && (!json.isJsonPrimitive() || !json.getAsJsonPrimitive().isString()))throw new EditorSessions.Failure("invalid_nbt","必须为字符串");
@@ -205,7 +220,7 @@ public final class BlockViews {
         }
         if(block instanceof JukeboxBlockEntity && !Objects.equals(nbt.get("RecordItem"),result.get("RecordItem")))result.remove(JukeboxBlockEntity.TICKS_SINCE_SONG_STARTED_TAG_ID);
         requireUnwaxed(block,nbt,result);
-        if(block instanceof TheEndGatewayBlockEntity || block instanceof StructureBlockEntity || block instanceof JigsawBlockEntity)
+        if(block instanceof TheEndGatewayBlockEntity || block instanceof StructureBlockEntity || block instanceof JigsawBlockEntity || block instanceof SculkSensorBlockEntity || block instanceof SculkShriekerBlockEntity)
             WorldNbt.requireEditedFieldsRetained(nbt,result,WorldTarget.copyBlock(block,result,access).saveWithFullMetadata(access));
         return result;
     }

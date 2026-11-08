@@ -200,3 +200,49 @@ WorldEditTest 原420项保持通过，并调用 BlockWorldEditTest 扩展，覆�
 {"views":{"jigsaw":{"target":"minecraft:door","pool":"minecraft:empty","joint":"aligned","final_state":"minecraft:stone"}}}
 ```
 
+## sculk_sensor：幽匿感测体与校频幽匿感测体
+
+两种方块共用此组。`last_vibration_frequency` 为原版保存的 int（完整 signed int，加载器不限制到正常频率 0..15）；`listener.event_delay` 为扁平字段名，映射到 listener compound 中的 event_delay，来自 `VibrationSystem.Data.CODEC` 的 `ExtraCodecs.NON_NEGATIVE_INT`，范围 0..Integer.MAX_VALUE。只改该叶子，保留事件、selector 和其他 listener 数据。全部拒绝 null；零值用 0。无枚举候选。错误：未知字段/整 listener 提交 invalid_request；非整数、越界、null、原版加载未保留 invalid_nbt。power、sculk_sensor_phase 等走既有真实 block_state_schema。
+
+```json
+{"sculk_sensor":{"value":{"last_vibration_frequency":0,"listener.event_delay":0},"schema":{"fields":{"last_vibration_frequency":{"nullable":false,"min":-2147483648,"max":2147483647},"listener.event_delay":{"nullable":false,"min":0,"max":2147483647,"saved_path":"listener.event_delay"}}}}}
+```
+```json
+{"views":{"sculk_sensor":{"last_vibration_frequency":7,"listener.event_delay":4}}}
+```
+
+## sculk_shrieker：幽匿尖啸体
+
+`warning_level` 为原版 getIntOr/putInt 的完整 signed int，加载器不限制到正常警告级别；`listener.event_delay` 类型、范围、局部更新、null 和错误语义同 sculk_sensor。`can_summon/shrieking/waterlogged` 是方块状态，使用 block_state_schema 的实际 Property 候选和 block_state edits，不伪造 BE 字段。复杂 listener 仍仅 SNBT。
+
+```json
+{"sculk_shrieker":{"value":{"warning_level":0,"listener.event_delay":0},"schema":{"fields":{"warning_level":{"nullable":false,"min":-2147483648,"max":2147483647},"listener.event_delay":{"nullable":false,"min":0,"max":2147483647}}}}}
+```
+```json
+{"views":{"sculk_shrieker":{"warning_level":2,"listener.event_delay":0}},"block_state":{"can_summon":true}}
+```
+
+## sculk_catalyst：幽匿催生体（只读）
+
+`cursors` 是实际保存数据经 `SculkSpreader.ChargeCursor.CODEC.listOf()` 输出的对象数组，空为 []；不手写 cursor 字段或范围。涉及正在传播的电荷位置、方向与延迟，专用视图只读，任意 edits（含 null）返回 invalid_request，复杂写入仍仅 SNBT。bloom 等状态走真实 block_state_schema。schema.fields.cursors.read_only 为 true，无候选。
+
+```json
+{"sculk_catalyst":{"value":{"cursors":[]},"schema":{"fields":{"cursors":{"read_only":true,"nullable":false}}}}}
+```
+拒绝示例：
+```json
+{"views":{"sculk_catalyst":{"cursors":[]}}}
+```
+
+## bell：钟（只读）
+
+26.1.2 BellBlockEntity 没有 saveAdditional/loadAdditional 计时字段。`ticks`（int）和 `shaking`（boolean）来自当前实例公开字段，均只读，不能通过 SNBT 持久化；私有 resonating/resonationTicks 不暴露、不反射。无可写字段、无候选、无 null 清空操作；任意 bell edits（含 null）均 invalid_request。snbt 是实际完整快照，不含伪造计时值。
+
+```json
+{"bell":{"value":{"ticks":0,"shaking":false},"schema":{"fields":{"ticks":{"read_only":true,"nullable":false},"shaking":{"read_only":true,"nullable":false}}}}}
+```
+拒绝示例：
+```json
+{"views":{"bell":{"ticks":0}}}
+```
+
