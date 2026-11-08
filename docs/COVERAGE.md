@@ -82,15 +82,15 @@ component_schema来源只说明独立JVM核验的宿主Codec结构；full不代�
 | `minecraft:block_state` | 方块状态 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:bucket_entity_data` | 桶内实体数据 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:bundle_contents` | 收纳袋内容 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
-| `minecraft:can_break` | 可破坏方块 | 专用表单 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
-| `minecraft:can_place_on` | 可放置于 | 专用表单 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:can_break` | 可破坏方块 | 专用表单 | authoritative: component_schema（仅高级 predicates 为 partial/SNBT；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:can_place_on` | 可放置于 | 专用表单 | authoritative: component_schema（仅高级 predicates 为 partial/SNBT；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:charged_projectiles` | 已装填弹药 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:container` | 容器内容 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:container_loot` | 容器战利品 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:custom_data` | 自定义数据 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:debug_stick_state` | 调试棒状态 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:entity_data` | 实体数据 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
-| `minecraft:lock` | 容器锁 | 专用表单 | authoritative: component_schema（结构 partial；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
+| `minecraft:lock` | 容器锁 | 专用表单 | authoritative: component_schema（仅高级 predicates 为 partial/SNBT；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:pot_decorations` | 陶罐装饰 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:profile` | 头颅档案 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |
 | `minecraft:lodestone_tracker` | 磁石追踪 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 未核实 |

@@ -56,7 +56,7 @@ public final class ComponentSchema {
             root.json.addProperty("constraint_source", "int_storage_domain_boundary_probed_json_narrowing_allowed");
             root.json.addProperty("storage_boundary_probes_ok", safeParse(codec, new JsonPrimitive(Integer.MIN_VALUE), inspector.ops) && safeParse(codec, new JsonPrimitive(Integer.MAX_VALUE), inspector.ops));
         }
-        if (codec == net.minecraft.core.component.DataComponents.TRIM.codec() || codec == net.minecraft.core.component.DataComponents.PROVIDES_TRIM_MATERIAL.codec() || codec == net.minecraft.core.component.DataComponents.LOCK.codec()) annotateCandidates(root);
+        if (codec == net.minecraft.core.component.DataComponents.TRIM.codec() || codec == net.minecraft.core.component.DataComponents.PROVIDES_TRIM_MATERIAL.codec() || codec == net.minecraft.core.component.DataComponents.LOCK.codec() || codec == net.minecraft.core.component.DataComponents.CAN_BREAK.codec() || codec == net.minecraft.core.component.DataComponents.CAN_PLACE_ON.codec()) annotateCandidates(root);
         if (codec == net.minecraft.core.component.DataComponents.POTION_CONTENTS.codec()) annotateColor(root);
         // Observation matrix, not inferred limits: absence of a counterexample proves no new bound.
         var inputProbes = new JsonArray();
@@ -124,6 +124,12 @@ public final class ComponentSchema {
             node.json.addProperty("candidate_source", "runtime_registry");
             node.json.addProperty("candidate_route", registry);
             node.json.addProperty("allow_manual_id", true);
+            if (registry.equals(net.minecraft.world.item.equipment.EquipmentAssets.ROOT_ID.identifier().toString())) {
+                node.type("identifier"); node.json.remove("registry"); node.json.remove("candidate_route");
+                node.json.addProperty("resource_registry", registry);
+                node.json.addProperty("candidate_source", "manual_resource_identifier");
+                node.json.addProperty("constraint_notes", "Equipment asset ResourceKey codec accepts an identifier without registry lookup; this client resource catalog is not a RegistryAccess registry");
+            }
             if (node.json.get("kind").getAsString().equals("holder_set")) node.json.addProperty("tag_candidate_route", "tags:" + registry);
         }
         node.fields.values().forEach(ComponentSchema::annotateCandidates);
@@ -178,6 +184,26 @@ public final class ComponentSchema {
 
         Node inspect(Codec<?> outer, String path, int depth, Set<Object> ancestors) {
             Node n = inspectRaw(outer, path, depth, ancestors);
+            if (outer == net.minecraft.world.item.AdventureModePredicate.CODEC || outer == net.minecraft.core.component.DataComponents.CAN_BREAK.codec() || outer == net.minecraft.core.component.DataComponents.CAN_PLACE_ON.codec()) {
+                for (Node branch : n.alternatives) if (branch.element != null && branch.key == null
+                        && !safeParse(branch.codec, new JsonArray(), ops) && safeParse(branch.codec, array(new JsonObject()), ops)) {
+                    branch.json.addProperty("min_size", 1);
+                    branch.json.addProperty("constraint_source", "official_adventure_predicate_nonempty_list_boundary_decode");
+                    branch.json.remove("unknown"); branch.json.remove("reason");
+                }
+            }
+            if (outer == net.minecraft.advancements.criterion.StatePropertiesPredicate.CODEC && n.element != null) {
+                n.json.addProperty("candidate_source", "runtime_block_state_definition");
+                n.json.addProperty("candidate_route", "block_properties");
+                n.json.addProperty("candidate_context", "selected_block_ids");
+                n.json.addProperty("allow_manual_value", true);
+                n.json.addProperty("constraint_notes", "Property names and values are strings; exact value or inclusive min/max; candidates depend on selected blocks, codec does not require a matching block property");
+                // ExactMatcher is a package-private record with a plain Codec.STRING xmap.
+                for (Node branch : n.element.alternatives) if (branch.json.get("kind").getAsString().equals("string")) {
+                    branch.json.remove("unknown"); branch.json.remove("reason");
+                    branch.json.addProperty("constraint_source", "official_state_property_exact_matcher_string_xmap");
+                }
+            }
             if (outer == net.minecraft.util.ExtraCodecs.PLAYER_NAME) {
                 n.json.addProperty("format", "player_name");
                 n.json.addProperty("constraint_notes", "ExtraCodecs.PLAYER_NAME also applies StringUtil.isValidPlayerName; the length range alone does not authorize arbitrary characters");
@@ -229,7 +255,7 @@ public final class ComponentSchema {
                 n.type("map");
                 n.key = inspect(net.minecraft.core.component.predicates.DataComponentPredicate.Type.CODEC, path + "{key}", depth + 1, next);
                 n.json.addProperty("editable", "snbt_only");
-                n.json.addProperty("constraint_notes", "Object keys select runtime data_component_predicate_type codecs, with persistent data_component_type IDs as exact-match fallback; values are decoded by the selected codec, not plain IDs or arbitrary NBT");
+                n.json.addProperty("constraint_notes", "Object keys select runtime data_component_predicate_type codecs, with data_component_type IDs as presence-only fallback using an empty object; values are decoded by the selected codec, not plain IDs or arbitrary NBT");
                 n.unknown("dependent_component_predicate_value_schemas_not_exported"); return n;
             }
             if (outer == net.minecraft.core.component.DataComponentPatch.CODEC) {
@@ -246,6 +272,11 @@ public final class ComponentSchema {
                 if (safeParse(outer, new JsonPrimitive("00000000-0000-0000-0000-000000000001"), ops)) shapes.add("uuid_string");
                 if (safeParse(outer, JsonParser.parseString("[0,0,0,1]"), ops)) shapes.add("four_int_array");
                 n.json.add("shapes", shapes); return n;
+            }
+            if (outer == net.minecraft.nbt.TagParser.FLATTENED_CODEC) {
+                n.type("string"); n.json.addProperty("format", "snbt_compound");
+                n.json.addProperty("editable", "snbt_only");
+                n.json.addProperty("constraint_notes", "TagParser.FLATTENED_CODEC parses one complete SNBT compound; malformed, non-compound or trailing input is rejected"); return n;
             }
             if (outer == net.minecraft.world.item.component.CustomData.CODEC || outer == net.minecraft.nbt.CompoundTag.CODEC) {
                 n.type("nbt"); n.json.addProperty("additional_fields", "free_nbt"); return n;

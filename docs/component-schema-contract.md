@@ -39,12 +39,14 @@ RGB 是显示语义：potion_contents.custom_color 真实字段使用 Codec.INT�
 
 候选节点的 `candidate_source:runtime_registry`、`candidate_route` 指向现有 `registry_request` 名称，客户端按当前世界 generation 查询；`allow_manual_id:true` 要求选择器保留手动 ID 输入。`holder_set` 另有 `tag_candidate_route:tags:<registry>`，标签值提交时加 `#`。不把候选列表内嵌进组件行，也不从快照生成游戏数据。
 
-- `trim`：对象，必填 `material`（holder，`minecraft:trim_material`）与 `pattern`（holder，`minecraft:trim_pattern`）；均允许实时动态注册表 ID 或 Codec 内联对象。材料内联含必填 `asset_name:resource_path`、`description:text_component`，`override_armor_assets` 为装备资产 ID 到资源路径的映射（默认 `{}`）。图案内联字段按导出的 fields 渲染。示例 `{"material":"minecraft:quartz","pattern":"minecraft:sentry"}` 仅用于说明语法，候选必须实时查询。
+- `trim`：对象，必填 `material`（holder，`minecraft:trim_material`）与 `pattern`（holder，`minecraft:trim_pattern`）；均允许实时动态注册表 ID 或 Codec 内联对象。材料内联含必填 `asset_name:resource_path`、`description:text_component`，`override_armor_assets` 为装备资源 ID 到资源路径的映射（默认 `{}`）；键是只校验 ID 语法的 ResourceKey，导出 `identifier`、`resource_registry:minecraft:equipment_asset` 和 `candidate_source:manual_resource_identifier`，不伪造不存在的 RegistryAccess 候选目录。图案内联对象必填 `asset_id:identifier`、`description:text_component`、`decal:bool`（无默认值）。示例 `{"material":"minecraft:quartz","pattern":"minecraft:sentry"}` 仅用于说明语法，候选必须实时查询。
 - `provides_trim_material`：与上述 `material` 相同的 holder，示例 `"minecraft:quartz"`；内联资源路径使用官方 `MaterialAssetGroup.AssetInfo.CODEC`，不再误标为未知字符串约束。两项无通用组件默认值，必填字段不能填 JSON null；可省略字段以 `optional/default/default_absent` 为准。
 
 - `profile`：联合为玩家名字字符串（0..16 字符）或对象；对象的 `name`（0..16）、`id`（UUID 四整数数组）、`texture`/`cape`/`elytra`（identifier）、`model`（真实枚举 slim/wide）均可省略，不能用 null 代替省略。`properties` 默认 `[]`，接受属性名到字符串列表的映射（最多 16 个键，值列表无该项数限制），或最多 16 项的 `{name,value,signature?}` 列表（长度上限分别 64、32767、1024）。例如 `{"properties":[{"name":"textures","value":"<base64>"}]}`；纹理 payload 是不透明字符串，Codec 不验证其 Base64 内容或网络可用性。profile 不来自注册表，不应伪造玩家/皮肤候选目录。
 
-- `lock`：物品谓词对象；可省略 `items:holder_set`（实时 `minecraft:item` 与 `tags:minecraft:item`）、`count`（整数精确值或 `{min?,max?}`，含端点，默认 `{}`，min ≤ max）、`components`（默认 `{}`，组件 ID → 精确值）、`predicates`（默认 `{}`，高级谓词映射）。`components.value_schema_route` 指向既有 `component_schema:<component-id>`，键来自持久组件注册表，禁止 `!id` 删除语法。示例 `{"items":"minecraft:tripwire_hook","count":{"min":1},"components":{"minecraft:damage":0}}`。`predicates` 保留局部 `editable:snbt_only` 与 unknown 原因：键依赖运行时 `data_component_predicate_type` 的专用 Codec，也接受持久 `data_component_type` 的精确匹配回退；值不是普通 ID，也不能当任意 NBT 直接放行。该子树提交仍由完整组件 Codec 校验，因此本组件保持 partial，而其余字段可结构化编辑。
+- `lock`：物品谓词对象；可省略 `items:holder_set`（实时 `minecraft:item` 与 `tags:minecraft:item`）、`count`（整数精确值或 `{min?,max?}`，含端点，默认 `{}`，min ≤ max）、`components`（默认 `{}`，组件 ID → 精确值）、`predicates`（默认 `{}`，高级谓词映射）。`components.value_schema_route` 指向既有 `component_schema:<component-id>`（没有统一 element，按键请求相应值结构），键来自持久组件注册表，禁止 `!id` 删除语法。示例 `{"items":"minecraft:tripwire_hook","count":{"min":1},"components":{"minecraft:damage":0}}`。`predicates` 保留局部 `editable:snbt_only` 与 unknown 原因：键依赖运行时 `data_component_predicate_type` 的专用 Codec，也接受 `data_component_type` 的存在性匹配回退（`AnyValueType`，值为空对象 `{}`，不是精确值匹配）；值不是普通 ID，也不能当任意 NBT 直接放行。该子树提交仍由完整组件 Codec 校验，因此本组件保持 partial，而其余字段可结构化编辑。
+
+- `can_break` / `can_place_on`：单个方块谓词对象，或至少 1 项的谓词列表。谓词内 `blocks`、`state`、`nbt` 均可省略（无默认值、不是可填 null）；`components`、`predicates` 默认 `{}`。`blocks` 为 `minecraft:block` 的 holder_set（ID、ID 列表、`#tag`），候选分别来自 `minecraft:block` 和 `tags:minecraft:block`。`state` 为属性名 → 字符串精确值或 `{min?,max?}` 的映射；界限是属性的包含端点范围，可省略一侧，不应当成通用整数范围。`candidate_route:block_properties` 配合所选方块 ID 获取真实属性与取值；标签包含不同方块时按具体方块定义展示，始终允许手输。Codec 只解析属性字符串，属性是否属于目标方块由实际匹配决定。`nbt` 接受完整 SNBT compound 字符串或自由 NBT 对象；字符串分支是 `format:snbt_compound,editable:snbt_only`。`components` 和高级 `predicates` 规则同 lock；后者是唯一剩余 unknown 子树。示例 `[{"blocks":"minecraft:oak_log","state":{"axis":"y"},"nbt":"{}"}]`。方块 ID 与属性值示例不作为候选白名单。
 
 ## ranges_for_ui
 
@@ -78,8 +80,8 @@ path 使用 $、.field、[]、{value}。min/max/default 的 null 表示没有已
 | minecraft:break_sound | full | — |
 | minecraft:bucket_entity_data | full | — |
 | minecraft:bundle_contents | full | — |
-| minecraft:can_break | partial | $: outer_mapping_or_cross_field_constraint; $[].state{value}: string_mapping_constraints_not_exported; $[].nbt: string_mapping_constraints_not_exported; $[].predicates: dependent_component_predicate_value_schemas_not_exported; $.state{value}: string_mapping_constraints_not_exported; $.nbt: string_mapping_constraints_not_exported; $.predicates: dependent_component_predicate_value_schemas_not_exported |
-| minecraft:can_place_on | partial | $: outer_mapping_or_cross_field_constraint; $[].state{value}: string_mapping_constraints_not_exported; $[].nbt: string_mapping_constraints_not_exported; $[].predicates: dependent_component_predicate_value_schemas_not_exported; $.state{value}: string_mapping_constraints_not_exported; $.nbt: string_mapping_constraints_not_exported; $.predicates: dependent_component_predicate_value_schemas_not_exported |
+| minecraft:can_break | partial | $[].predicates、$.predicates: dependent_component_predicate_value_schemas_not_exported（其余字段完整） |
+| minecraft:can_place_on | partial | $[].predicates、$.predicates: dependent_component_predicate_value_schemas_not_exported（其余字段完整） |
 | minecraft:cat/collar | full | — |
 | minecraft:cat/sound_variant | full | — |
 | minecraft:cat/variant | full | — |
@@ -204,5 +206,7 @@ pwsh -NoProfile -File tools/registry/component-schema-test.ps1 使用已导出�
 测试末尾在独立 JVM 的真实 DATA_COMPONENT_TYPE 注册 schema_test:strength 与 schema_test:opaque，证明 bulk 包含 MOD、source:mod:schema_test、真实范围2..9/默认4、未知翻译为null、opaque走snbt_only，以及实际Codec拒绝越界。证据：logs/backend-g/schema-mod-evidence.json。仅在自己的测试 JVM 暂开 registry frozen 标记并绑定新 holder，随后恢复；不触碰运行中的游戏。
 
 日志：logs/backend-g/schema-compile.log、schema-test.log、schema-drift-gate.log、schema-gradle-gate.log；静态审阅为 schema-review.log。范围对照机器文件由本轮快照生成。
+
+P3-5 组件车道补充：本轮只执行 Gradle 编译、`:fabric:26.1.2:build` 和 `:fabric:26.1.2:check`，遵守 `logs/.gradle.lock.d` 原子锁；日志在 `logs/lane-components/`。组件测试为每项断言 full 或精确限定的 partial 路径，使用导出的节点与实时注册表/方块状态定义合成合法样本，并验证非空列表、属性范围、损坏 SNBT、profile 容量、纹饰资源路径等反例。`predicates` 的专用值 Codec 尚未递归导出，保留局部 SNBT；不能把这种受约束的动态映射标成普通自由 NBT 或 full。快照更新轮 build/check 已通过（ComponentSchemaTest 972 条断言）；最后不带更新参数的 compileJava/build/check 也通过（974 条断言，包含快照与 UI 范围汇总漂移检查），见 `logs/lane-components/final-build.log`。
 
 本轮未启动、关闭或重载用户 Minecraft；真实客户端通道、资源包语言切换、第三方 MOD 整合包与专服运行待验证。full 是 Codec 形状覆盖，COVERAGE 发布勾选保持不变。

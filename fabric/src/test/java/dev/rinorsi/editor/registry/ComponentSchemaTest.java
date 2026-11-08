@@ -154,6 +154,16 @@ public final class ComponentSchemaTest {
             JsonElement sample = sample(schema.root(), access);
             check(schema.root().codec.parse(access.createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE), sample).isSuccess(), "schema-generated sample parses " + id + ": " + sample);
         }
+        var trimMaterial = ComponentSchema.derive("provides_trim_material", access).root();
+        var inlineMaterial = trimMaterial.alternatives.getFirst();
+        var assetKey = inlineMaterial.fields.get("override_armor_assets").key;
+        check(assetKey.json.get("kind").getAsString().equals("identifier") && !assetKey.json.has("candidate_route") && assetKey.json.get("allow_manual_id").getAsBoolean(), "equipment resource keys do not advertise a nonexistent runtime registry");
+        var inlineInput = sample(inlineMaterial, access).getAsJsonObject();
+        var overrides = new JsonObject(); overrides.addProperty("schema_test:unlisted_asset", "schema_probe"); inlineInput.add("override_armor_assets", overrides);
+        check(trimMaterial.codec.parse(access.createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE), inlineInput).isSuccess(), "inline trim material accepts manually entered resource keys");
+        inlineInput.addProperty("asset_name", "invalid path with spaces");
+        check(!trimMaterial.codec.parse(access.createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE), inlineInput).isSuccess(), "trim material uses real resource path validation");
+        adventureComponents(access);
         var lock = ComponentSchema.derive("lock", access);
         check(lock.entry().get("coverage").getAsString().equals("partial"), "lock explicitly retains advanced predicate fallback");
         check(lock.entry().getAsJsonArray("unknown_paths").toString().equals("[\"$.predicates\"]"), "lock only advanced predicate values remain unknown");
@@ -188,6 +198,39 @@ public final class ComponentSchemaTest {
             check(profile.codec.parse(access.createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE), input).isSuccess(), "profile textures schema sample " + input);
         }
     }
+    private static void adventureComponents(RegistryAccess access) {
+        var ops = access.createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE);
+        var block = BuiltInRegistries.BLOCK.entrySet().stream().filter(e -> !e.getValue().defaultBlockState().getProperties().isEmpty()).findFirst().orElseThrow();
+        var stateEntry = block.getValue().defaultBlockState().getValues().findFirst().orElseThrow();
+        String property = stateEntry.property().getName(), value = stateEntry.valueName();
+        for (String id : List.of("can_break", "can_place_on")) {
+            var schema = ComponentSchema.derive(id, access);
+            check(schema.entry().get("coverage").getAsString().equals("partial"), "adventure exposes explicit advanced predicate fallback " + id);
+            var unknown = schema.entry().getAsJsonArray("unknown_paths");
+            check(unknown.size() == 2 && unknown.toString().contains("$[].predicates") && unknown.toString().contains("$.predicates"), "only dependent predicate values remain unknown " + id + ": " + schema.entry().get("unknown_details"));
+            var list = schema.root().alternatives.stream().filter(n -> n.element != null).findFirst().orElseThrow();
+            check(list.json.get("min_size").getAsInt() == 1 && !schema.root().codec.parse(ops, new JsonArray()).isSuccess(), "adventure list is nonempty " + id);
+            var object = list.element;
+            var blocks = object.fields.get("blocks");
+            check(blocks.json.get("registry").getAsString().equals("minecraft:block") && blocks.json.get("candidate_route").getAsString().equals("minecraft:block")
+                    && blocks.json.get("tag_candidate_route").getAsString().equals("tags:minecraft:block") && blocks.json.get("allow_manual_id").getAsBoolean(), "live block and tag candidate routes " + id);
+            check(object.fields.get("state").json.get("candidate_route").getAsString().equals("block_properties"), "state choices use live block definitions " + id);
+            var input = new JsonObject(); input.addProperty("blocks", block.getKey().identifier().toString());
+            var state = new JsonObject(); state.addProperty(property, value); input.add("state", state); input.addProperty("nbt", "{}");
+            check(schema.root().codec.parse(ops, input).isSuccess(), "adventure exact-state and SNBT sample " + id);
+            var range = new JsonObject(); range.addProperty("min", value); range.addProperty("max", value); state.add(property, range);
+            var inputs = new JsonArray(); inputs.add(input);
+            check(schema.root().codec.parse(ops, inputs).isSuccess(), "adventure list and ranged-state sample " + id);
+            input.add("nbt", new JsonObject());
+            check(schema.root().codec.parse(ops, input).isSuccess(), "adventure NBT object alternative " + id);
+            input.addProperty("nbt", "{broken:");
+            check(!schema.root().codec.parse(ops, input).isSuccess(), "adventure malformed SNBT rejected " + id);
+            input.remove("nbt"); input.add("predicates", JsonParser.parseString("{\"minecraft:repair_cost\":{}}"));
+            check(schema.root().codec.parse(ops, input).isSuccess(), "advanced map accepts component presence fallback " + id);
+            input.addProperty("predicates", "minecraft:repair_cost");
+            check(!schema.root().codec.parse(ops, input).isSuccess(), "advanced predicate is not a plain registry ID " + id);
+        }
+    }
     private static JsonElement sample(ComponentSchema.Node node, RegistryAccess access) {
         String kind = node.json.get("kind").getAsString();
         if (node.json.has("default")) return node.json.get("default").deepCopy();
@@ -199,6 +242,8 @@ public final class ComponentSchemaTest {
             var lookup = fixtureLookup.lookupOrThrow(key);
             return new JsonPrimitive(lookup.listElements().findFirst().orElseThrow().key().identifier().toString());
         }
+        if (kind.equals("resource_path")) return new JsonPrimitive("schema_probe");
+        if (kind.equals("text_component")) return new JsonPrimitive("");
         if (kind.equals("int")) return new JsonPrimitive(node.json.has("min") ? node.json.get("min").getAsInt() : 0);
         if (kind.equals("string")) return new JsonPrimitive("a".repeat(node.json.has("min_length") ? node.json.get("min_length").getAsInt() : 0));
         if (kind.equals("union")) return sample(node.alternatives.getFirst(), access);
