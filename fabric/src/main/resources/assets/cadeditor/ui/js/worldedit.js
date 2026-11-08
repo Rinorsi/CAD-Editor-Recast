@@ -37,6 +37,8 @@ function weTabs() {
     if (evGroup('painting')) t.push({ id: 'painting', label: '画', icon: 'image' });
     if (evGroup('display')) t.push({ id: 'display', label: '展示', icon: 'cube' });
     if (evGroup('trades')) t.push({ id: 'trades', label: '交易', icon: 'coins' });
+    if (evSimpleGroups().length) { var si = evSimpleTabInfo(); t.push({ id: 'ents', label: si.label, icon: si.icon }); }
+    if (evHasRelations()) t.push({ id: 'relations', label: '关系', icon: 'users' });
     t.push({ id: 'entity', label: '属性', icon: 'paw' });
     if (evGroup('riding')) t.push({ id: 'riding', label: '乘客', icon: 'users' });
   }
@@ -99,6 +101,8 @@ function weTabBody(body) {
   else if (WE.tab === 'painting') evPaintingTab(body);
   else if (WE.tab === 'display') evDisplayTab(body);
   else if (WE.tab === 'trades') evTradeTab(body);
+  else if (WE.tab === 'ents') evSimpleTab(body);
+  else if (WE.tab === 'relations') evRelationTab(body);
   else if (WE.tab === 'riding') evRidingTab(body);
   else if (WE.tab === 'view') weViewTab(body);
   else if (WE.tab === 'state') weStateTab(body);

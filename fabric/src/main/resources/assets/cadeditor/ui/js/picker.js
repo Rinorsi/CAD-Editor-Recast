@@ -323,6 +323,42 @@ function kRegSelect(o) {
   paint();
   return { el: h("div", { class: "k-row rs-field" }, kids), set: function (v) { cur = v || ""; paint(); } };
 }
+/* ---- 方块状态（BlockState.CODEC 的 {Name, Properties?}）：选方块 + 每个属性一行选值 ----
+   属性名和可选值读游戏的方块属性表（Reg.blockProps）；选回默认值就不再写进 Properties，和原版保存一致。换了方块就清掉旧属性。
+   o: { label:'行标题（默认「方块」）', sub, allowNone:true （显示「清除」，清除后 onChange(null)）, empty:'（未选择）', title }。返回元素（标题行 + 每个属性一行），直接 appendChild 到页面上。 */
+function kBlockState(value, onChange, o) {
+  o = o || {};
+  var cur = value && value.Name ? { Name: Reg.full(value.Name), Properties: clone(value.Properties || {}) } : null;
+  var box = h('div', { class: 'k-bstate' });
+  var off = Reg.on(function (kind, kinds) { if (!inDocument(box)) { off(); return; } if ((kinds || []).indexOf('block_properties') >= 0) draw(); });
+  function emit() {
+    if (!cur) { onChange(null); return; }
+    var out = { Name: cur.Name }; if (Object.keys(cur.Properties).length) out.Properties = clone(cur.Properties);
+    onChange(out);
+  }
+  function draw() {
+    clear(box);
+    var sel = kRegSelect({ reg: 'block', value: cur ? cur.Name : '', title: o.title || '选择方块', empty: o.empty, allowClear: false,
+      onChange: function (id) { cur = id ? { Name: Reg.full(id), Properties: {} } : null; emit(); draw(); } });
+    var top = [sel.el]; if (o.allowNone && cur) top.push(kBtn('清除', function () { cur = null; emit(); draw(); }, { icon: 'trash' }));
+    box.appendChild(xRow({ icon: false, title: o.label || '方块', sub: o.sub, right: h('div', { class: 'k-row' }, top) }));
+    if (!cur) return;
+    var p = Reg.blockProps(cur.Name);
+    if (p === null) { box.appendChild(kHint('正在读取方块状态…')); return; }
+    if (!p || !Object.keys(p).length) return;
+    Object.keys(p).forEach(function (name) {
+      var info = p[name], vals = (info.values || []).slice(), now = cur.Properties[name] !== undefined ? cur.Properties[name] : info.default;
+      function set(v) { if (v === info.default) delete cur.Properties[name]; else cur.Properties[name] = v; emit(); }
+      var ctl;
+      if (info.values.length === 2 && info.values.indexOf('true') >= 0) ctl = kToggle(now === 'true', function (on) { set(on ? 'true' : 'false'); }).el;
+      else if (vals.length <= 4) ctl = kSeg(vals.map(function (x) { return { v: x, label: wePropVal(x) }; }), now, set).el;
+      else ctl = kSelect(vals.map(function (x) { return { v: x, label: wePropVal(x) }; }), now, set, { width: 200 }).el;
+      box.appendChild(xRow({ icon: false, title: wePropName(name), sub: '默认 ' + wePropVal(info.default), tip: name, right: ctl }));
+    });
+  }
+  draw();
+  return box;
+}
 /* ---- 属性：读游戏当前的 attribute 注册表（含模组属性） ---- */
 function openAttrPicker(o) {   /* o: { exclude:[short ids], onConfirm(fullIds) } */
   var live = Reg.options('attribute');

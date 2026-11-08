@@ -158,6 +158,107 @@ function evDisplayTab(body) {
   }
 }
 
+/* ---------- 杂项实体视图：掉落物 / 下落方块 / TNT / 苦力怕 / 末影人 / 药水云 / 经验球 / 箭 / 交互实体
+   后端视图和字段范围见 docs/world-entity-contract.md（P2-2 ~ P2-5）。范围读 schema.fields，游戏没给的不设限。 ---------- */
+var EV_SIMPLE = [['dropped_item', '掉落物', 'sword'], ['falling_block', '下落方块', 'cube'], ['tnt', 'TNT', 'flame'], ['creeper', '苦力怕', 'flame'],
+  ['enderman', '末影人', 'cube'], ['area_effect_cloud', '药水云', 'flask'], ['experience_orb', '经验球', 'sparkle'], ['arrow', '箭', 'sword'], ['interaction', '交互实体', 'sliders']];
+function evSimpleGroups() { return EV_SIMPLE.filter(function (g) { return evGroup(g[0]); }); }
+function evSimpleTabInfo() { var g = evSimpleGroups(); return g.length === 1 ? { label: g[0][1], icon: g[0][2] } : { label: '实体设置', icon: 'sliders' }; }
+/* 范围来自后端的字段元数据的数值行：o = { sub, unit, step, dec, def, nullAt（等于这个值时发 null）} */
+function evNumF(g, k, label, o) {
+  o = o || {}; var f = evFields(g)[k] || {}, cur = evGet(g, k);
+  return evNum(label, typeof cur === 'number' ? cur : o.def, { min: f.min, max: f.max, step: o.step, dec: o.dec, unit: o.unit, sub: o.sub },
+    function (x) { evSet(g, k, o.nullAt !== undefined && x === o.nullAt ? null : x); });
+}
+var EV_PICKUP = { DISALLOWED: '不能拾起', ALLOWED: '都能拾起', CREATIVE_ONLY: '只有创造模式能拾起' };
+function evSimpleTab(body) {
+  var gs = evSimpleGroups();
+  if (!gs.length) { body.appendChild(xEmpty('这个实体没有专用设置。')); return; }
+  gs.forEach(function (info) { var fn = EV_SIMPLE_TAB[info[0]]; if (fn) { body.appendChild(xSec(info[2], info[1])); fn(body); } });
+}
+var EV_SIMPLE_TAB = {
+  dropped_item: function (body) {
+    var g = 'dropped_item', st = evGet(g, 'Item') || { id: 'minecraft:stone', count: 1, comps: {}, removed: {} };
+    body.appendChild(xRow({ icon: false, title: '物品', right: evStack(st, function (s) { evSet(g, 'Item', s); weRender(); }, { clear: false }) }));
+    body.appendChild(evNum('数量', st.count, { min: 1, max: 99 }, function (x) { var n = clone(evGet(g, 'Item') || st); n.count = x; evSet(g, 'Item', n); }));
+    body.appendChild(evNumF(g, 'PickupDelay', '拾取延迟', { unit: '刻', sub: '32767 = 永远捡不起来' }));
+    body.appendChild(evNumF(g, 'Age', '已存在', { unit: '刻', sub: '6000 刻后消失；-32768 永不消失' }));
+  },
+  falling_block: function (body) {
+    var g = 'falling_block';
+    body.appendChild(kBlockState(evGet(g, 'BlockState'), function (v) { evSet(g, 'BlockState', v || { Name: 'minecraft:sand' }); }, { label: '方块', title: '选择方块' }));
+    body.appendChild(evNumF(g, 'Time', '已经掉了', { unit: '刻' }));
+    body.appendChild(evNumF(g, 'FallHurtAmount', '每格砸伤害', { step: 0.1, dec: 3 }));
+    body.appendChild(evNumF(g, 'FallHurtMax', '砸伤害上限'));
+    body.appendChild(evBool('落地时掉出物品', evGet(g, 'DropItem'), '', function (on) { evSet(g, 'DropItem', on); }));
+    body.appendChild(evBool('砸到的生物受伤', evGet(g, 'HurtEntities'), '', function (on) { evSet(g, 'HurtEntities', on); }));
+    body.appendChild(evBool('取消掉落', evGet(g, 'CancelDrop'), '', function (on) { evSet(g, 'CancelDrop', on); }));
+  },
+  tnt: function (body) { body.appendChild(evNumF('tnt', 'fuse', '引信', { unit: '刻', sub: '20 刻 = 1 秒，倒数到 0 爆炸' })); },
+  creeper: function (body) {
+    body.appendChild(evNumF('creeper', 'Fuse', '引爆倒数', { unit: '刻', sub: '点燃后多久爆炸' }));
+    body.appendChild(evNumF('creeper', 'ExplosionRadius', '爆炸威力'));
+  },
+  enderman: function (body) {
+    var g = 'enderman';
+    body.appendChild(kBlockState(evGet(g, 'carriedBlockState'), function (v) { evSet(g, 'carriedBlockState', v); }, { label: '手里拿的方块', sub: '清除 = 什么都没拿', allowNone: true, empty: '（没拿）' }));
+  },
+  area_effect_cloud: function (body) {
+    var g = 'area_effect_cloud', pc = evGet(g, 'potion_contents');
+    var pot = typeof pc === 'string' ? pc : (pc && pc.potion) || '';
+    var sel = kRegSelect({ reg: 'potion', value: pot, title: '选择药水', empty: '（无）', allowClear: true,
+      onChange: function (id) { var o = pc && typeof pc === 'object' ? clone(pc) : {}; if (id) o.potion = id; else delete o.potion; evSet(g, 'potion_contents', Object.keys(o).length ? o : null); } });
+    var extra = pc && typeof pc === 'object' && Array.isArray(pc.custom_effects) && pc.custom_effects.length ? '另有 ' + pc.custom_effects.length + ' 个自定义效果，在「数据」页改' : '';
+    body.appendChild(xRow({ icon: false, title: '药水', right: sel.el }));
+    if (extra) body.appendChild(kHint(extra));
+    body.appendChild(evNumF(g, 'Radius', '半径', { step: 0.1, dec: 3 }));
+    body.appendChild(evNumF(g, 'RadiusOnUse', '每次生效后半径变化', { step: 0.1, dec: 3 }));
+    body.appendChild(evNumF(g, 'RadiusPerTick', '每刻半径变化', { step: 0.01, dec: 4 }));
+    body.appendChild(evNumF(g, 'Duration', '总时长', { unit: '刻' }));
+    body.appendChild(evNumF(g, 'Age', '已存在', { unit: '刻' }));
+    body.appendChild(evNumF(g, 'WaitTime', '生效前等待', { unit: '刻' }));
+    body.appendChild(evNumF(g, 'ReapplicationDelay', '同一生物的间隔', { unit: '刻' }));
+    body.appendChild(evNumF(g, 'DurationOnUse', '每次生效后时长变化', { unit: '刻' }));
+    var ds = evGet(g, 'potion_duration_scale');
+    body.appendChild(evNum('效果时长倍数', typeof ds === 'number' ? ds : 1, { step: 0.1, dec: 3, sub: '1 = 原样' }, function (x) { evSet(g, 'potion_duration_scale', x === 1 ? null : x); }));
+  },
+  experience_orb: function (body) { body.appendChild(evNumF('experience_orb', 'Value', '经验值')); },
+  arrow: function (body) {
+    var g = 'arrow', opts = (evFields(g).pickup || {}).options || [];
+    body.appendChild(evNumF(g, 'damage', '伤害', { step: 0.5, dec: 3 }));
+    if (opts.length) body.appendChild(xSeg({ title: '拾取方式', options: opts.map(function (o) { return { v: o.value, label: EV_PICKUP[o.label] || o.label }; }), value: evGet(g, 'pickup'), onChange: function (x) { evSet(g, 'pickup', x); } }));
+  },
+  interaction: function (body) {
+    var g = 'interaction';
+    body.appendChild(evNumF(g, 'width', '宽度', { step: 0.1, dec: 3 }));
+    body.appendChild(evNumF(g, 'height', '高度', { step: 0.1, dec: 3 }));
+    body.appendChild(evBool('点击有反应', evGet(g, 'response'), '点它的时候游戏会给出反馈', function (on) { evSet(g, 'response', on); }));
+  }
+};
+
+/* ---------- 关系：主人（可改）、队伍和拴绳（只读） ---------- */
+function evHasRelations() {
+  var team = evGroup('team'), leash = evGroup('leash');
+  return !!evGroup('owner') || !!(leash && leash.data) || !!(team && team.name);
+}
+function evRelationTab(body) {
+  var own = evGroup('owner');
+  if (own) {
+    var cur = evGet('owner', 'Owner') || '', players = own.players || [];
+    body.appendChild(xSec('user', '主人'));
+    if (own.available === false) body.appendChild(xRow({ icon: false, title: '主人', sub: '没有服务器时不能换，只能清除', right: h('span', { class: 'k-sub', text: cur || '（无）' }) }));
+    var entries = players.map(function (p) { return { v: p.uuid, label: p.name, sub: p.uuid }; });
+    if (cur && !entries.some(function (e) { return e.v === cur; })) entries.push({ v: cur, label: '不在线的玩家', sub: cur });
+    var sel = kSelect(entries, cur || null, function (v) { evSet('owner', 'Owner', v); weRender(); }, { width: 240, empty: '（无）', placeholder: '搜索在线玩家' });
+    var right = [sel.el]; if (cur) right.push(kBtn('清除', function () { evSet('owner', 'Owner', null); weRender(); }, { icon: 'trash' }));
+    body.appendChild(xRow({ icon: false, title: '玩家', sub: '只能选在线的；清除后不再被驯服', right: h('div', { class: 'k-row' }, right) }));
+  }
+  var team = evGroup('team'), leash = evGroup('leash');
+  body.appendChild(xSec('users', '只读'));
+  if (team) body.appendChild(xRow({ icon: false, title: '队伍', sub: team.available === false ? '这个世界没有记分板' : '', right: h('span', { class: 'k-sub', text: team.name || '（没有队伍）' }) }));
+  if (leash) body.appendChild(xRow({ icon: false, title: '拴绳', sub: leash.data ? '连接和解除还不能改' : '', right: h('span', { class: 'k-sub', text: leash.data ? '被拴着' : '没有拴着' }) }));
+}
+
 /* ---------- 村民 / 流浪商人交易（只有服务端能改） ---------- */
 function evOffers() { if (WE.offers === null) WE.offers = clone(evOffersOrig()); return WE.offers; }
 function evTradeTab(body) {
