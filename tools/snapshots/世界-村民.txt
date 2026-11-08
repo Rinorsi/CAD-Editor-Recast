@@ -767,10 +767,10 @@ div
             div.kc
               div.kc-bar
                 div.k-seg
-                  div.k-segi.on
+                  div.k-segi.on [title="彩色显示；点哪一行就直接改哪一行"]
                     "高亮"
-                  div.k-segi
-                    "编辑"
+                  div.k-segi [title="整段文本编辑，适合粘贴多行或大段修改"]
+                    "整段"
                 div.k-btn [title="按层级缩进重新排版（保留所有类型后缀）"]
                   img.o-ico [src="oriel:textures/icons/refresh.png" style="height:16px;width:16px"]
                   span "格式化"

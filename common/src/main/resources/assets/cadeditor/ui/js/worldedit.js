@@ -89,7 +89,7 @@ function drawWorldScreen() {
   weTabBody(body);
 }
 function weTabBody(body) {
-  ES_WAIT = false;
+  ES_WAIT = false; WE.toolsExtra = null;   // 本页要放进工具行的控件，由标签页的画法填
   if (typeof weDndReset === 'function') weDndReset();
   if (WE.tab === 'pinv') wpInventoryTab(body);
   else if (WE.tab === 'pender') wpEnderTab(body);
@@ -122,8 +122,9 @@ function weTabLabel() { var tab = weTabs().filter(function (x) { return x.id ===
 function weTools() {
   var t = $('edtools'); if (!t) return; clear(t);
   var cards = Array.prototype.slice.call(($('edbody') || document).querySelectorAll('.w-card')), tab = weTabs().filter(function (x) { return x.id === WE.tab; })[0];
-  t.style.display = cards.length > 1 ? '' : 'none';
+  t.style.display = cards.length > 1 || WE.toolsExtra ? '' : 'none';
   t.appendChild(h('span', { class: 'ed-tools-t', text: tab ? tab.label : '' })); t.appendChild(h('div', { class: 'grow' }));
+  if (WE.toolsExtra) WE.toolsExtra.forEach(function (n) { t.appendChild(n); });
   crumbLast = ''; crumbBind($('edbody'), null); setTimeout(updateCrumb, 0);
   var all = h('div', { class: 'k-mini', title: '折叠 / 展开本页全部卡片' }, [uiIcon('layers', 14)]);
   activate(all, function () { var collapse = cards.some(function (c) { return !c.classList.contains('collapsed'); }); cards.forEach(function (c) { if (c._card) c._card.setCollapsed(collapse); }); });

@@ -43,7 +43,15 @@ const SAMPLE = '{id:"minecraft:diamond_sword",count:1,components:{"minecraft:dam
   assert.equal(qa(code.el, '.kc-fd.on').length >= 2, true, '有可折叠的行');
   qa(code.el, '.kc-fd.on')[0].fire('click'); assert.ok(/行/.test(code.el.textContent) && qa(code.el, '.kc-r').length < 4, '折叠后只剩开头一行');
   qa(code.el, '.kc-fd.on')[0].fire('click'); assert.ok(qa(code.el, '.kc-r').length > 5, '再点展开');
-  qa(code.el, '.kc-r')[1].fire('click'); const ta = qa(code.el, 'textarea')[0]; assert.ok(ta.style.display !== 'none', '点一行进入编辑');
+  // 点一行：这一行就地变成输入框，其余行仍是彩色
+  qa(code.el, '.kc-r')[1].fire('click'); const li = qa(code.el, '.kc-li')[0]; assert.ok(li, '点一行就地编辑'); assert.ok(qa(code.el, '.kc-key').length > 3, '其余行仍然彩色');
+  li.value = '  id: "minecraft:stone",'; li.fire('blur');
+  assert.ok(code.get().indexOf('"minecraft:stone"') > 0, '失焦提交这一行'); assert.equal(got[got.length - 1][1], null, '回调带检查结果（有效）');
+  // Enter 新起一行并沿用缩进；回车后新行进入编辑
+  qa(code.el, '.kc-r')[0].fire('click'); const l0 = qa(code.el, '.kc-li')[0]; l0.fire('keydown', { key: 'Enter' });
+  assert.equal(code.get().split(String.fromCharCode(10))[1], '  ', '{ 之后新行多缩进两格'); assert.ok(qa(code.el, '.kc-li')[0], '新行自动进入编辑');
+  // 切到整段模式：普通文本框，输入时回调带检查结果
+  code.focus(); const ta = qa(code.el, 'textarea')[0]; assert.ok(ta.style.display !== 'none', '整段模式');
   ta.value = '{a:'; ta.fire('input'); assert.equal(got[got.length - 1][0], '{a:'); assert.ok(got[got.length - 1][1], '回调里有检查结果');
   assert.equal(code.get(), '{a:');
 }

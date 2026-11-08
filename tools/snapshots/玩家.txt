@@ -1630,7 +1630,7 @@ div
                 div.tx
                   div.z "玩家 UUID"
                   div.s "完整的 36 位 UUID"
-                input.k-input [placeholder="00000000-0000-0000-0000-000000000000" type="text"]
+                input.k-input.we-in [placeholder="00000000-0000-0000-0000-000000000000" type="text"]
             div.world-actions
               div.k-btn
                 img.o-ico [src="oriel:textures/icons/search.png" style="height:16px;width:16px"]

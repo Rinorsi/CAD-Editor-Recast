@@ -32,7 +32,7 @@ class Element {
   remove() { if (this.parentNode) this.parentNode.removeChild(this); }
   addEventListener(k, fn) { (this.events[k] = this.events[k] || []).push(fn); }
   removeEventListener(k, fn) { this.events[k] = (this.events[k] || []).filter(f => f !== fn); }
-  fire(k) { for (const fn of this.events[k] || []) fn({ target: this, key: '', clientX: 0, clientY: 0, preventDefault() {}, stopPropagation() {} }); }
+  fire(k, extra) { for (const fn of this.events[k] || []) fn(Object.assign({ target: this, key: '', clientX: 0, clientY: 0, preventDefault() {}, stopPropagation() {} }, extra)); }
   click() { this.fire('click'); }
   focus() { this.ownerDoc.activeElement = this; }
   getBoundingClientRect() { return { left: 0, top: 0, width: 400, height: 300, right: 400, bottom: 300 }; }

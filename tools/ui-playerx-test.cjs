@@ -10,6 +10,7 @@ const qa = (el, sel) => el.querySelectorAll(sel), json = x => JSON.stringify(x);
 const body = () => c.h('div');
 const px = () => sent.filter(s => s[0] === 'player_extended').map(s => s[1]);
 const last = () => px()[px().length - 1];
+const tbtn = (label) => (c.WE.toolsExtra || []).filter(n => n.classList.contains('k-btn') && n.textContent.indexOf(label) >= 0)[0];
 const btn = (el, label) => qa(el, '.k-btn').filter(x => x.textContent.indexOf(label) >= 0)[0];
 function open(self) {
   c.WE.w = { kind: 'entity', type: 'minecraft:player', slot: { kind: 'entity', uuid: self ? 'self-uuid' : '11111111-2222-3333-4444-555555555555' }, player: { self } };
@@ -68,7 +69,7 @@ function opened(req, view, value, schema, extra) {
   const d = c.pxState('recipes').dirty['minecraft:stick'];
   assert.equal(json(d), json({ id: 'minecraft:stick', unlocked: true, highlighted: true }), '高亮会同时解锁');
   b = body(); c.pxRecipes(b);
-  qa(b, '.k-btn').filter(x => /应用 1 项/.test(x.textContent))[0].fire('click');
+  tbtn('应用 1 项').fire('click');
   assert.equal(json(last().patch), json({ entries: [{ id: 'minecraft:stick', unlocked: true, highlighted: true }] }), '只发改过的');
   const st = c.pxState('recipes');
   for (let i = 0; i < 70; i++) st.dirty['r' + i] = { id: 'r' + i, unlocked: true, highlighted: false };
@@ -101,7 +102,7 @@ function opened(req, view, value, schema, extra) {
   let b = body(); c.pxStats(b);
   opened(last(), 'stats', { entries: [{ type: 'minecraft:custom', id: 'minecraft:jump', value: 3 }] }, { min: 0, max: 2147483647 });
   b = body(); c.pxStats(b); const n = px().length;
-  btn(b, '应用修改').fire('click');
+  tbtn('应用').fire('click');
   assert.equal(px().length, n, '没有修改不发请求'); assert.ok(toasts.some(x => /还没有修改/.test(x)));
 }
 
@@ -123,6 +124,25 @@ function opened(req, view, value, schema, extra) {
   assert.ok(toasts.some(x => /已经上线/.test(x)));
 }
 
+// ---- 列表页：搜索框和应用按钮在顶部工具行；名字走游戏语言（翻译键）；成就能点开看条件
+{
+  open(true); c.Reg.live = () => true; c.Tr.map['advancements.story.root.title'] = '我的世界'; c.Tr.map['advancements.story.root.description'] = '游戏的核心与目标';
+  c.Tr.map['stat.minecraft.jump'] = '跳跃次数'; c.Tr.map['stat_type.minecraft.custom'] = '通用';
+  let b = body(); c.pxAdvancements(b);
+  assert.equal(last().displayed, true, '成就默认只要玩家界面里看得见的');
+  opened(last(), 'advancements', { entries: [{ id: 'minecraft:story/root', title_key: 'advancements.story.root.title', description_key: 'advancements.story.root.description', has_display: true, done: false, criteria: [{ name: 'crafting_table', done: false }] }] }, {});
+  c.WE.toolsExtra = null; b = body(); c.pxAdvancements(b);
+  assert.ok(c.WE.toolsExtra && c.WE.toolsExtra.some(n => n.querySelector && n.querySelector('input')), '搜索框在工具行里，不在滚动区里'); assert.equal(qa(b, 'input').length, 0, '滚动区里没有搜索框');
+  assert.ok(/我的世界/.test(b.textContent) && /游戏的核心与目标/.test(b.textContent), '用翻译后的中文名和说明');
+  assert.ok(/含内部成就/.test(c.WE.toolsExtra.map(n => n.textContent).join('')), '有内部成就开关');
+  assert.equal(qa(b, '.k-toggle').length, 0, '没展开时不显示条件');
+  qa(b, '.k-xhead')[0].fire('click'); // 点开：记下展开状态并重画
+  assert.equal(c.pxState('advancements').open['minecraft:story/root'], true, '点一下就展开');
+  b = body(); c.pxAdvancements(b); assert.equal(qa(b, '.k-toggle').length, 1, '展开后列出条件开关');
+  // 统计的名字
+  open(true); b = body(); c.pxStats(b); opened(last(), 'stats', { entries: [{ type: 'minecraft:custom', id: 'minecraft:jump', value: 3 }] }, {});
+  b = body(); c.pxStats(b); assert.ok(/跳跃次数/.test(b.textContent) && /通用/.test(b.textContent), '统计用翻译后的中文名');
+}
 // ---- 回执只认自己发的请求；陌生 requestId 被忽略
 {
   open(true);

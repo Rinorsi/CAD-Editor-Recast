@@ -3,6 +3,7 @@
 var Reg = {
   meta: null, kinds: {}, subs: [], cache: {},
   ingest: function (key, val) {
+    if (key === 'registry.translate') { if (typeof Tr !== 'undefined') Tr.accept(val); return; }
     if (key === 'vault.result') { if (typeof Vault !== 'undefined') Vault.receive(val); return; }
     if (key === 'tooltip.result') { if (typeof HostTip !== 'undefined') HostTip.receive(val); return; }
     if (key === 'search.result') { if (typeof HostSearch !== 'undefined') HostSearch.receive(val); return; }

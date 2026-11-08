@@ -72,7 +72,7 @@ function kCode(o) {
   var text = o.value === undefined || o.value === null ? '' : String(o.value), mode = o.mode || 'view', err = null, folded = {}, limit = KC_CHUNK, timer = null;
   var root = h('div', { class: 'kc' }), view = h('div', { class: 'kc-view' }), ta = h('textarea', { class: 'ed-snbt kc-ta', spellcheck: 'false', placeholder: o.placeholder || '' });
   var status = h('div', { class: 'kc-st k-sub' });
-  var height = o.height || 320; view.style.height = height + 'px'; ta.style.height = height + 'px'; ta.style.minHeight = height + 'px';
+  var rowEls = {}, rawLines = [], height = o.height || 320; view.style.height = height + 'px'; ta.style.height = height + 'px'; ta.style.minHeight = height + 'px';
   if (o.readonly) ta.setAttribute('readonly', 'true');
   ta.value = text;
 
@@ -86,6 +86,7 @@ function kCode(o) {
     clear(view);
     if (!text.length) { view.appendChild(h('div', { class: 'kc-empty k-sub', text: o.placeholder || '（空）' })); return; }
     var L = kcLines(kcTokens(text)), lines = L.lines, shown = 0, i = 0;
+    rowEls = {}; rawLines = text.split(String.fromCharCode(10));
     while (i < lines.length && shown < limit) {
       var row = h('div', { class: 'kc-r' + (err && err.line === i + 1 ? ' bad' : '') }), foldTo = L.fold[i];
       var fd = h('span', { class: 'kc-fd' });
@@ -103,14 +104,33 @@ function kCode(o) {
         for (; ci < tail.length; ci++) if (tail[ci].t !== 'ws') code.appendChild(h('span', { class: 'kc-' + tail[ci].t, text: tail[ci].s }));
         i = foldTo;
       }
-      row.appendChild(code);
-      if (!o.readonly) (function (line) { activate(row, function () { setMode('edit', line); }); })(i);
+      row.appendChild(code); rowEls[i] = { row: row, code: code };
+      if (!o.readonly) (function (line) { activate(row, function () { editLine(line); }); })(i);
       view.appendChild(row); shown++; i++;
     }
     if (i < lines.length) {
       var more = h('div', { class: 'kc-more k-sub', text: '还有 ' + (lines.length - i) + ' 行 · 点这里再显示 ' + KC_CHUNK + ' 行' });
       activate(more, function () { limit += KC_CHUNK; drawView(); }); view.appendChild(more);
     }
+  }
+  /* 就地编辑一行：这一行变成输入框，其余行保持彩色。Enter 新起一行（沿用缩进，遇到 { [ 多缩进两格），上下箭头换行，
+     行首空行按退格删掉这一行，Esc 放弃这一行的改动。要粘贴多行或大段改动，用「整段」模式。 */
+  function applyLines() { text = rawLines.join(String.fromCharCode(10)); ta.value = text; runCheck(); drawView(); if (o.onInput) o.onInput(text, err); }
+  function editLine(i) {
+    var r = rowEls[i]; if (!r || o.readonly) return;
+    var inp = h('input', { class: 'k-input kc-li', type: 'text', spellcheck: 'false', value: rawLines[i] }), done = false;
+    clear(r.code); r.code.appendChild(inp); r.row.classList.add('editing');
+    inp.focus();
+    function go(next, mutate) { done = true; if (mutate) mutate(); applyLines(); if (next !== undefined) editLine(next); }
+    inp.addEventListener('keydown', function (e) {
+      var k = e.key, v = inp.value;
+      if (k === 'Enter') { e.preventDefault(); var ind = /^ */.exec(v)[0] + (/[\[{]\s*$/.test(v) ? '  ' : ''); go(i + 1, function () { rawLines[i] = v; rawLines.splice(i + 1, 0, ind); }); }
+      else if (k === 'ArrowDown' && i + 1 < rawLines.length) { e.preventDefault(); go(i + 1, function () { rawLines[i] = v; }); }
+      else if (k === 'ArrowUp' && i > 0) { e.preventDefault(); go(i - 1, function () { rawLines[i] = v; }); }
+      else if (k === 'Backspace' && v === '' && rawLines.length > 1) { e.preventDefault(); go(Math.max(0, i - 1), function () { rawLines.splice(i, 1); }); }
+      else if (k === 'Escape') { e.preventDefault(); if (e.stopPropagation) e.stopPropagation(); done = true; drawView(); }
+    });
+    inp.addEventListener('blur', function () { if (done) return; done = true; if (inp.value !== rawLines[i]) { rawLines[i] = inp.value; applyLines(); } });
   }
   function setMode(m, line) {
     mode = m; seg.set(m);
@@ -123,7 +143,7 @@ function kCode(o) {
     if (mode === 'view') drawView();
     if (!silent && o.onInput) o.onInput(text, err);
   }
-  var seg = kSeg([{ v: 'view', label: '高亮' }, { v: 'edit', label: '编辑' }], mode, function (v) { setMode(v); });
+  var seg = kSeg([{ v: 'view', label: '高亮', title: '彩色显示；点哪一行就直接改哪一行' }, { v: 'edit', label: '整段', title: '整段文本编辑，适合粘贴多行或大段修改' }], mode, function (v) { setMode(v); });
   function act(fn) { return function () { try { fn(); } catch (e) { toast('无法处理：' + (e.message || e), 'warn', 'kc-bad'); } }; }
   var bFmt = kBtn('格式化', act(function () { set(kcFormat(text, false)); }), { icon: 'refresh', title: '按层级缩进重新排版（保留所有类型后缀）' });
   var bCmp = kBtn('压缩', act(function () { set(kcFormat(text, true)); }), { icon: 'layers', title: '压成一行，方便粘进命令' });
