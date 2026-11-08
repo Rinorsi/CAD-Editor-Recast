@@ -1,5 +1,33 @@
 # P4-1 玩家扩展协议
 
+## 存档玩家档案（2026-11-09）
+
+继续使用 player_extended 消息和 player_extended_result 回执；所有操作要求 EditorPolicy.requirePlayerEdit（拒绝 player_forbidden）。只读名单/导出遵守 500ms 间隔，不替换编辑会话基线。
+
+### 名单
+
+请求：{op:"player_extended",requestId,action:"read",view:"players",target?:{},offset?:0,limit?:32,query?:""}。target 可省略且不影响名单。响应：
+
+    {"status":"opened","requestId":"list-1","playerExtended":{"target":{},"view":"players","revision":null,"value":{"entries":[{"uuid":"UUID","name":null,"online":false,"self":false,"owner":false,"last_played_ms":1794153600000}]},"schema":{"source":"PlayerList / playerdata / singleplayer owner / local profile cache","readOnly":true,"manualId":true},"offset":0,"total":1,"nextOffset":null}}
+
+合并本存档在线玩家、playerdata 下合法 UUID 的 .dat 文件及单人所有者，按 UUID 去重和排序。query 对名字或 UUID 做不区分大小写子串匹配，再分页；limit 1..64。名字只从在线 profile、单人 owner profile 或服务器 UUID 本地缓存读取，不发网络请求；缺失返回 JSON null。self 表示请求者，owner 只表示单人所有者；在线 last_played_ms 为 null，其他为存档文件修改时间（owner 使用 level.dat；文件缺失则 null）。损坏文件在打开时报告错误。players 不接受 apply。
+
+### 离线摘要
+
+offline.value 保留 snbt，新增 summary：
+
+    {"snbt":"{...}","summary":{"name":null,"game_mode":"survival","health":20,"food":20,"xp_level":0,"dimension":"minecraft:overworld","x":0.5,"y":64,"z":0.5,"selected_slot":0,"inventory_count":0,"ender_count":0,"equipment":{"head":null,"chest":null,"legs":null,"feet":null,"offhand":null}}}
+
+摘要由原版加载后的临时 ServerPlayer 读取；inventory_count 是主背包/快捷栏非空槽数（不含装备和副手），ender_count 是末影箱非空槽数。装备为物品注册 ID 或 JSON null。name 遵循名单缓存规则。patch 仍仅 {snbt}，不能回传 summary；原子写入、备份和 owner 离线编辑拒绝不变。
+
+### 导出预设
+
+请求：{op:"player_extended",requestId,action:"export_preset",target:{uuid,offline?:false},sections?:["inventory","equipment","ender","attributes","effects","game_mode"]}；不需要 view/revision/patch。sections 缺省全部，显式值须为六分区的非空、不重复子集。响应：{status:"exported",requestId,template:{sections:{...}},summary:{...}}；summary 同上。失败仍为 {status:"rejected",requestId,code,reason}。
+
+template 与 [vault-contract.md](vault-contract.md) 的 player_preset 完全相同，可用 {op:"save",kind:"player_preset",template,...} 保存：inventory/equipment/ender 为 {slots:[{slot,stack}]}，stack 含完整 component_snbt；attributes、effects 为原投影数组，game_mode 为原版模式名。分区复用 VaultTemplates，物品/属性/效果由原版实时注册表与 Codec 生成。
+
+在线目标必须在线；offline:true 必须不在线，先经原版加载再导出。单人 owner 的离线导出允许只读原版 level.dat Player 数据，但仍不能离线编辑。不登录临时玩家、不注册实体、不写玩家/统计/成就文件、不留下缓存条目。超出原有传输预算报 payload_too_large，可减少 sections 后重试，不截断模板。读取失败沿用 offline_missing / offline_io / invalid_nbt；无效分区返回 invalid_request（预设分区无效或重复）。
+
 本协议独立于原有 entity.player apply；已有背包/状态页不变。消息走 EditorPackets/WorldWire，服务端线程执行。页面向宿主发送 player_extended，宿主回传 player_extended_result；每笔带 requestId，只在 saved 后清草稿，拒绝/超时保留。
 
 ## 请求、响应和会话

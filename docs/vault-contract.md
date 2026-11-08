@@ -1,5 +1,11 @@
 # 本机保险库协议（26.1.2 / v1）
 
+## 玩家预设备份检查（2026-11-09）
+
+只读 has_backup：{op:"has_backup",requestId,kind:"player_preset",template:{sections:{...}},sections?:[...分区...]}；也接受 world 或 uploadToken（上传包 {world,sections?} / {template,sections?}）。显式请求 sections 优先于上传包 sections；省略时 template 使用自身全部分区，world 使用全部六分区。选择须非空、不重复且存在于输入模板，非法返回 BAD_REQUEST（预设分区无效或缺失）；其他 kind 返回 wrong_kind。上传仍有原期限和大小限制。
+
+成功为现有共同外壳加 {backed_up:false}，或 {backed_up:true,id:"已存条目UUID",name:"已存名称"}。按所选分区规范化物品/字段后比较 SHA-256 摘要，已存条目可包含额外分区；仅请求分区必须全部匹配。槽位及属性/效果按身份排序，JSON 对象键顺序无关，typed component_snbt 保留数值类型差异。无世界无法完成物品 Codec 验证时返回 UNAVAILABLE，不能把未验证数据报为命中。操作不改变 revision、不落盘；命中的是当前内存条目，是否已持久化仍以 persisted 为准。
+
 ## P4-6 方块与玩家预设（2026-11-08）
 
 新增 kind 为 block、player_preset。文件/导出版本升为 3，继续读取 1/2；旧程序与旧合并脚本安全拒绝新版本。消息回执仍 version:1。list.kind 接受四类及 all，默认仍 item；stats 新增 blocks/playerPresets。
