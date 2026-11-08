@@ -25,14 +25,13 @@ function worldError() { return h('div',{class:'world-error',role:'status'}); }
 /* SNBT 文本框（写入前先解析 / 校验，错了不写，有「撤回输入」和「写入草稿」）。要让用户直接改一段 NBT / SNBT 时用它，不要再手搭 textarea。
    value 当前值，set(新值) 写入，validate?(新值) 不合格就 throw */
 function kSnbtEditor(value, set, validate) {
-  var box=h('div',{class:'world-raw'}), ta=h('textarea',{class:'ed-snbt world-snbt',spellcheck:'false'}), msg=worldError();
-  var saved=toSnbt(value === undefined ? {} : value,null,true); ta.value=saved;
-  var save=kBtn('写入草稿',function () {
-    try { var next=parseSnbtUser(ta.value); if(validate) validate(next); set(next); saved=ta.value; msg.textContent='已写入草稿'; ta.classList.remove('bad'); }
-    catch(e) { msg.textContent='未写入：'+(e.message||e); ta.classList.add('bad'); }
-  },{cls:'pri'});
-  ta.addEventListener('input',function () { msg.textContent='尚未写入草稿'; ta.classList.remove('bad'); });
-  box.appendChild(ta); box.appendChild(h('div',{class:'world-actions'},[msg,kBtn('撤回输入',function(){ta.value=saved;msg.textContent='';ta.classList.remove('bad');}),save]));
+  var box = h('div', { class: 'world-raw' }), msg = worldError(), saved = toSnbt(value === undefined ? {} : value, null, true);
+  var code = kCode({ value: saved, height: 220, validate: function (t) { parseSnbtUser(t); }, onInput: function () { msg.textContent = '尚未写入草稿'; } });
+  var save = kBtn('写入草稿', function () {
+    try { var next = parseSnbtUser(code.get()); if (validate) validate(next); set(next); saved = code.get(); msg.textContent = '已写入草稿'; }
+    catch (e) { msg.textContent = '未写入：' + (e.message || e); }
+  }, { cls: 'pri' });
+  box.appendChild(code.el); box.appendChild(h('div', { class: 'world-actions' }, [msg, kBtn('撤回输入', function () { code.set(saved, true); msg.textContent = ''; }), save]));
   return box;
 }
 /* 实体“常用字段”：来自游戏里新建的临时实体的默认 NBT（entity_info.default_nbt），不是手写清单 */

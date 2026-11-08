@@ -30,7 +30,7 @@ const root=new Element('body'),overlays=new Element('div');overlays.id='overlays
 const doc={body:root,activeElement:null,addEventListener(){},createElement(tag){return new Element(tag);},createTextNode(t){const el=new Element('text');el.textContent=t;return el;},getElementById(id){return root.querySelector('#'+id);}};
 const c=vm.createContext({document:doc,window:{innerWidth:760,innerHeight:560},console,setTimeout(){},clearTimeout(){},oriel:{data:{},send(){return true;}}});
 const dir=path.resolve(__dirname,'../common/src/main/resources/assets/cadeditor/ui/js');
-for(const f of ['data','core','labels','pinyin-data','search','forms','kit','kit2','nbt','xlist','slots','reg','hostsearch','picker','cards1','cards2','cards3','cards5','world','rules','spawn','eschema','toastkit','screens','worldedit','worldview','worldentity','worldplayer','worldplayerx','vault'])vm.runInContext(fs.readFileSync(path.join(dir,f+'.js'),'utf8'),c);
+for(const f of ['data','core','labels','pinyin-data','search','forms','kit','kit2','nbt','code','xlist','slots','reg','hostsearch','picker','cards1','cards2','cards3','cards5','world','rules','spawn','eschema','toastkit','screens','worldedit','worldview','worldentity','worldplayer','worldplayerx','vault'])vm.runInContext(fs.readFileSync(path.join(dir,f+'.js'),'utf8'),c);
 c.uiIcon=()=>new Element('i');c.itemIcon=()=>new Element('i');c.uiClick=()=>{};c.snd=()=>{};c.toast=()=>{};
 let saved,disabled=0,writes=0;
 c.autoPut=(cid,value)=>{saved=JSON.parse(JSON.stringify(value));writes++;};
@@ -57,8 +57,8 @@ a=card();c.blockPredList(a,'can_break',{blocks:'minecraft:stone'});click(a.body,
 let committed;
 let raw=c.kSnbtEditor({keep:1},x=>committed=x,c.worldCompound),ta=raw.querySelector('textarea');
 ta.value='{broken';ta.fire('input');click(raw,'写入草稿');assert.equal(committed,undefined);assert.match(raw.querySelector('.world-error').textContent,/未写入/);
-ta.value='{keep:2}';click(raw,'写入草稿');assert.equal(committed.keep,2);ta.value='{keep:3}';click(raw,'撤回输入');assert.equal(ta.value,'{keep:2}');
-ta.value='[]';click(raw,'写入草稿');assert.equal(committed.keep,2);
+ta.value='{keep:2}';ta.fire('input');click(raw,'写入草稿');assert.equal(committed.keep,2);ta.value='{keep:3}';ta.fire('input');click(raw,'撤回输入');assert.equal(ta.value,'{keep:2}');
+ta.value='[]';ta.fire('input');click(raw,'写入草稿');assert.equal(committed.keep,2);
 
 // Duplicate data fields and duplicate map names are rejected without replacing existing values.
 let map=c.worldMap({axis:'y'},x=>committed=x,true),ins=map.querySelector('.world-new').querySelectorAll('input');

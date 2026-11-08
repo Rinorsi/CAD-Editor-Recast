@@ -70,10 +70,8 @@ AUTO_BODY.item_name = function (card, cid, v) {
       var add = h("div", { class: "k-add" }, [uiIcon("plus", 12), "添加参数"]); activate(add, function () { args.push(""); put(); drawArgs(); });
       drawArgs(); body.appendChild(fieldRow("文字参数", h("div", {}, [list, add]), "替换翻译里的 %s"));
     } else {
-      var ta = h("textarea", { class: "ed-snbt tc-raw", spellcheck: "false" }), msg = h("div", { class: "k-sub" });
-      ta.value = toSnbt(v === undefined ? "" : v, null, true);
-      ta.addEventListener("input", function () { try { var pv = parseSnbtUser(ta.value); v = pv; msg.textContent = ""; autoPut(cid, pv); } catch (e) { msg.textContent = "SNBT 有误：" + (e.message || e); } });
-      body.appendChild(ta); body.appendChild(msg);
+      var code = kCode({ value: toSnbt(v === undefined ? "" : v, null, true), height: 180, validate: function (t) { parseSnbt(t); }, onInput: function (t, err) { if (err) return; try { var pv = parseSnbtUser(t); v = pv; autoPut(cid, pv); } catch (e) {} } });
+      body.appendChild(code.el);
       setTimeout(function () { if (typeof growable === "function") growable(body); }, 0);
     }
   }

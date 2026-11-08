@@ -385,8 +385,76 @@ div
             div.k-chev [title="折叠 / 展开"]
               img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
           div.k-cbody
-            textarea.ed-snbt [value="{\n  id: \"minecraft:sign\",\n  x: 1,\n  y: 2,\n  z: 3\n}"]
-            div.k-sub
+            div.kc
+              div.kc-bar
+                div.k-seg
+                  div.k-segi.on
+                    "高亮"
+                  div.k-segi
+                    "编辑"
+                div.k-btn [title="按层级缩进重新排版（保留所有类型后缀）"]
+                  img.o-ico [src="oriel:textures/icons/refresh.png" style="height:16px;width:16px"]
+                  span "格式化"
+                div.k-btn [title="压成一行，方便粘进命令"]
+                  img.o-ico [src="oriel:textures/icons/layers.png" style="height:16px;width:16px"]
+                  span "压缩"
+                div.k-btn
+                  img.o-ico [src="oriel:textures/icons/copy.png" style="height:16px;width:16px"]
+                  span "复制"
+                div.k-btn [title="折叠 / 展开除最外层以外的所有括号"]
+                  img.o-ico [src="oriel:textures/icons/down.png" style="height:16px;width:16px"]
+              div.kc-view [style="height:360px"]
+                div.kc-r
+                  span.kc-no "1"
+                  span.kc-fd.on "▾"
+                  span.kc-code
+                    span.kc-o0 "{"
+                div.kc-r
+                  span.kc-no "2"
+                  span.kc-fd
+                  span.kc-code
+                    span.kc-ind [style="width:14px"]
+                    span.kc-key "id"
+                    span.kc-p ":"
+                    span
+                    span.kc-sid ""minecraft:sign""
+                    span.kc-p ","
+                div.kc-r
+                  span.kc-no "3"
+                  span.kc-fd
+                  span.kc-code
+                    span.kc-ind [style="width:14px"]
+                    span.kc-key "x"
+                    span.kc-p ":"
+                    span
+                    span.kc-num "1"
+                    span.kc-p ","
+                div.kc-r
+                  span.kc-no "4"
+                  span.kc-fd
+                  span.kc-code
+                    span.kc-ind [style="width:14px"]
+                    span.kc-key "y"
+                    span.kc-p ":"
+                    span
+                    span.kc-num "2"
+                    span.kc-p ","
+                div.kc-r
+                  span.kc-no "5"
+                  span.kc-fd
+                  span.kc-code
+                    span.kc-ind [style="width:14px"]
+                    span.kc-key "z"
+                    span.kc-p ":"
+                    span
+                    span.kc-num "3"
+                div.kc-r
+                  span.kc-no "6"
+                  span.kc-fd
+                  span.kc-code
+                    span.kc-c0 "}"
+              textarea.ed-snbt.kc-ta [value="{\n  id: \"minecraft:sign\",\n  x: 1,\n  y: 2,\n  z: 3\n}" style="display:none;height:360px;minHeight:360px"]
+              div.k-sub.kc-st "✓ SNBT 有效 · 6 行"
             div.k-btn
               img.o-ico [src="oriel:textures/icons/undo.png" style="height:16px;width:16px"]
               span "放弃这里的修改"

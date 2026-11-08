@@ -795,19 +795,17 @@ function stackSnbt(d) {
 }
 function stackNbt(d) { var comps = {}; Object.keys(d.comps).sort().forEach(function (k) { comps['minecraft:' + k] = d.comps[k]; }); Object.keys(d.removed).sort().forEach(function (k) { comps['!minecraft:' + k] = {}; }); return { id: d.id, count: d.count, components: comps }; }
 function advSnbt(host) {
-  var d = Store.doc(), ta = h('textarea', { class: 'ed-snbt', spellcheck: 'false' }), err = h('div', { class: 'ed-err' });
-  ta.value = stackSnbt(d);
+  var d = Store.doc(), err = h('div', { class: 'ed-err' }), code = kCode({ value: stackSnbt(d), height: 420, onApply: function () { apply(); } });
   function apply() {
     try {
-      var p = parseSnbtUser(ta.value); if (!isObj(p)) throw new Error('顶层需要是 {…}');
+      var p = parseSnbtUser(code.get()); if (!isObj(p)) throw new Error('顶层需要是 {…}');
       var comps = {}, removed = {}, src = p.components || {};
       Object.keys(src).forEach(function (k) { if (k.charAt(0) === '!') removed[shortId(k.substring(1))] = 1; else comps[shortId(k)] = src[k]; });
       var id = typeof p.id === 'string' ? fullId(p.id) : d.id; if (!ITEMSET[shortId(id)]) throw new Error('未知物品 ' + id);
       d.id = id; d.count = typeof p.count === 'number' ? p.count : d.count; Store.replace(comps, removed, '通过 SNBT 修改'); err.textContent = ''; toast('SNBT 已应用', 'ok');
-    } catch (e) { var b = ta.value.substring(0, e.pos || 0), ln = b.split(NL).length, col = b.length - b.lastIndexOf(NL); err.textContent = '第 ' + ln + ' 行第 ' + col + ' 列：' + e.message; }
+    } catch (e) { var b = code.get().substring(0, e.pos || 0), ln = b.split(NL).length, col = b.length - b.lastIndexOf(NL); err.textContent = '第 ' + ln + ' 行第 ' + col + ' 列：' + e.message; }
   }
-  ta.addEventListener('keydown', function (e) { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); apply(); } });
-  host.appendChild(h('div', { class: 'pad' }, [h('div', { class: 'ed-sbar' }, [h('span', { class: 'ed-hint grow', text: 'id、数量和全部组件；以 ! 开头的键表示移除组件' }), kBtn('应用 Ctrl+Enter', apply, { cls: 'pri' })]), ta, err]));
+  host.appendChild(h('div', { class: 'pad' }, [h('div', { class: 'ed-sbar' }, [h('span', { class: 'ed-hint grow', text: 'id、数量和全部组件；以 ! 开头的键表示移除组件' }), kBtn('应用 Ctrl+Enter', apply, { cls: 'pri' })]), code.el, err]));
 }
 function advCmd(host) {
   var d = Store.doc(), out = h('textarea', { class: 'ed-out', readonly: true, rows: '6', spellcheck: 'false' });

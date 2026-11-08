@@ -185,14 +185,10 @@ function weEntityTab(body) {
 function weDataTab(body) {
   if (weTabs().length === 1) body.appendChild(kHint('这个' + (WE.w.kind === 'block' ? '方块' : '实体') + '没有可视化的设置，可以在下面直接改带类型的数据（SNBT）。'));
   body.appendChild(xSec('code', '完整数据', '带类型的 SNBT'));
-  var ta = h('textarea', { class: 'ed-snbt', spellcheck: 'false' }); ta.value = WE.text;
-  var msg = h('div', { class: 'k-sub' });
-  ta.addEventListener('input', function () {
-    WE.text = ta.value;
-    try { nbtParse(ta.value); msg.textContent = ''; WE.err = ''; } catch (e) { msg.textContent = 'SNBT 有误：' + (e.message || e); WE.err = ''; }
-    WE.obj = null; weMarkDirty();
-  });
-  body.appendChild(ta); body.appendChild(msg);
+  var code = kCode({ value: WE.text, height: 360, validate: function (t) { nbtParse(t); }, onInput: function (t) {
+    WE.text = t; WE.err = ''; WE.obj = null; weMarkDirty();
+  } });
+  body.appendChild(code.el);
   body.appendChild(kBtn('放弃这里的修改', function () { WE.text = nbtPrint(nbtParse(WE.w.snbt), true); WE.obj = null; weRender(); }, { icon: 'undo' }));
 }
 

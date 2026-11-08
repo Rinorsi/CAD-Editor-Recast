@@ -1590,3 +1590,43 @@ body.vault-only .ew { display: none; }
 
 .vt-msg { display: flex; align-items: center; gap: 6px; padding: 3px 6px; color: var(--tx2); }
 .vt-msg.bad { color: var(--bad); }
+
+/* SNBT 代码视图（js/code.js） */
+.kc { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.kc-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.kc-st { min-height: 14px; }
+.kc-st.bad { color: var(--bad); }
+.kc-view { overflow-y: auto; overflow-x: auto; padding: 3px 0; border: 2px solid transparent; border-image: url(oriel:textures/ore/field.png) 2 fill; }
+.kc-ta { width: 100%; }
+.kc-r { display: flex; align-items: flex-start; min-height: 14px; line-height: 14px; cursor: text; white-space: nowrap; }
+.kc-r:hover { background: rgba(255, 255, 255, 0.05); }
+.kc-r.bad { background: rgba(255, 70, 70, 0.22); }
+.kc-no { flex: none; width: 34px; padding-right: 6px; text-align: right; color: var(--tx3); }
+.kc-fd { flex: none; width: 12px; color: var(--tx3); }
+.kc-fd.on { cursor: pointer; color: var(--tx2); }
+.kc-fd.on:hover { color: var(--tx); }
+.kc-code { flex: 1; min-width: 0; padding-left: 2px; }
+.kc-ind { display: inline-block; height: 1px; }
+.kc-empty, .kc-more { padding: 6px; cursor: pointer; }
+.kc-fold { color: var(--tx3); background: rgba(255, 255, 255, 0.08); }
+.kc-key { color: #7fc8ff; }
+.kc-str { color: #e6b673; }
+.kc-sid { color: #5fd3c0; }
+.kc-num { color: #b5e07a; }
+.kc-bool, .kc-kw { color: #d98cff; }
+.kc-p { color: var(--tx3); }
+.kc-word { color: var(--tx); }
+.kc-bad { color: #ff6b6b; text-decoration: underline; }
+.kc-o0, .kc-c0 { color: #ffd866; }
+.kc-o1, .kc-c1 { color: #c792ea; }
+.kc-o2, .kc-c2 { color: #6ec0ff; }
+[data-theme=light] .kc-key { color: #0b62a8; }
+[data-theme=light] .kc-str { color: #9a5b00; }
+[data-theme=light] .kc-sid { color: #0b7a6c; }
+[data-theme=light] .kc-num { color: #3f7a0c; }
+[data-theme=light] .kc-bool, [data-theme=light] .kc-kw { color: #8a2fb0; }
+[data-theme=light] .kc-o0, [data-theme=light] .kc-c0 { color: #9a7400; }
+[data-theme=light] .kc-o1, [data-theme=light] .kc-c1 { color: #7a3ea0; }
+[data-theme=light] .kc-o2, [data-theme=light] .kc-c2 { color: #0b62a8; }
+[data-theme=light] .kc-r:hover { background: rgba(0, 0, 0, 0.06); }
+[data-theme=light] .kc-r.bad { background: rgba(220, 40, 40, 0.18); }
