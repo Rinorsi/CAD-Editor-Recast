@@ -30,7 +30,7 @@ public final class PlayerExtendedServerProbe {
         try{
             for(String view:List.of("position","respawn","recipes","advancements","stats","offline")){
                 var request=request(p,"read",view);if(view.equals("offline")){request.getAsJsonObject("target").addProperty("offline",true);request.getAsJsonObject("target").addProperty("uuid",other.getStringUUID());}
-                code(call(p,request),"player_forbidden");
+                code(call(p,request),"player_forbidden");request.addProperty("action","apply");request.addProperty("revision","not-authorized");request.add("patch",new JsonObject());code(call(p,request),"player_forbidden");
             }
             server.getPlayerList().getOps().add(new ServerOpListEntry(p.nameAndId(),LevelBasedPermissionSet.GAMEMASTER,false));
             var pos=read(p,"position");var patch=pos.getAsJsonObject("value").deepCopy();patch.addProperty("x",32.5);patch.addProperty("z",32.5);patch.addProperty("yaw",80);patch.addProperty("pitch",20);
@@ -65,6 +65,7 @@ public final class PlayerExtendedServerProbe {
             edit.putInt("XpLevel",8);opatch.addProperty("snbt",edit.toString());var snap=OfflinePlayerEdit.read(server,offline);var plan=OfflinePlayerEdit.prepare(server,offline,snap,opatch);online.put(offline,other);try{reject(plan,"player_online");}finally{online.remove(offline);}check(Arrays.equals(before,Files.readAllBytes(path)),"login between prepare and commit rejects without disk mutation");
             var changed=NbtIo.readCompressed(path,NbtAccounter.unlimitedHeap());changed.putInt("XpLevel",9);NbtIo.writeCompressed(changed,path);reject(plan,"target_changed");check(NbtIo.readCompressed(path,NbtAccounter.unlimitedHeap()).getIntOr("XpLevel",0)==9,"external file conflict retained");
             for(int i=10;i<16;i++){snap=OfflinePlayerEdit.read(server,offline);edit=snap.editable().copy();edit.putInt("XpLevel",i);opatch.addProperty("snbt",edit.toString());OfflinePlayerEdit.prepare(server,offline,snap,opatch).run();}try(var list=Files.list(backups)){check(list.count()==OfflinePlayerEdit.RETENTION,"backup retention bounded");}
+            var latest=NbtIo.readCompressed(path,NbtAccounter.unlimitedHeap());var future=latest.copy();future.putInt("DataVersion",Integer.MAX_VALUE);NbtIo.writeCompressed(future,path);reject(()->OfflinePlayerEdit.read(server,offline),"invalid_nbt");NbtIo.writeCompressed(latest,path);
             var savedOwner=server.getSingleplayerProfile();server.setSingleplayerProfile(new GameProfile(offline,"OfflineOwner"));try{reject(()->OfflinePlayerEdit.read(server,offline),"offline_owner_unsupported");}finally{server.setSingleplayerProfile(savedOwner);}
             var liveOffline=offlineRequest(p,other.getUUID(),"read");code(call(p,liveOffline),"player_online");var missing=offlineRequest(p,UUID.randomUUID(),"read");code(call(p,missing),"offline_missing");
             var deniedBase=read(p,"stats");server.getPlayerList().getOps().remove(p.nameAndId());code(apply(p,"stats",deniedBase,entries(stat)),"player_forbidden");

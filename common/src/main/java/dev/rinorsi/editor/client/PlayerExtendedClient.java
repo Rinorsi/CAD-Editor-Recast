@@ -23,20 +23,21 @@ public final class PlayerExtendedClient {
     public static void clear(){owner=null;revisions.clear();pending=null;pageId=null;pendingKey=null;}
     public static void tick(){if(pending!=null&&System.nanoTime()>deadline){var result=new JsonObject();result.addProperty("status","rejected");result.addProperty("code","request_timeout");result.addProperty("reason","服务器未确认玩家编辑结果；请重新读取核对，保留草稿");result.addProperty("requestId",pageId);pending=null;if(owner!=null)owner.driver().patch("player_extended_result",result);}}
     private static void request(OrielScreen screen,JsonElement raw){
-        if(owner!=screen)return;String id="";
+        if(owner!=screen)return;String id="";boolean reserved=false;
         try{
             var r=raw.getAsJsonObject().deepCopy();id=StackCodec.string(r,"requestId");
             if(pending!=null)throw new IllegalArgumentException("上一笔玩家请求尚未收到回执");
             if(!ClientPlatform.get().canSend(EditorPackets.Request.TYPE))throw new EditorSessions.Failure("UNAVAILABLE","服务器未安装物品工坊");
             String action=StackCodec.string(r,"action"),view=StackCodec.string(r,"view");var target=StackCodec.object(r,"target");
             if(!target.has("uuid"))target.addProperty("uuid",Minecraft.getInstance().player.getStringUUID());
+            target.addProperty("uuid",UUID.fromString(StackCodec.string(target,"uuid")).toString());
             if(!target.has("offline"))target.addProperty("offline",false);
             String key=target.get("uuid").getAsString()+"/"+target.get("offline").getAsBoolean()+"/"+view;
             if(action.equals("apply")){String revision=revisions.get(key);if(revision==null)throw new EditorSessions.Failure("session_lost","请先读取玩家视图");r.addProperty("revision",revision);}
             String wireId="player-extended-"+UUID.randomUUID();r.addProperty("op","player_extended");r.addProperty("requestId",wireId);
-            String payload=WorldWire.encode(r);pending=wireId;pageId=id;pendingKey=key;deadline=System.nanoTime()+10_000_000_000L;
+            String payload=WorldWire.encode(r);pending=wireId;pageId=id;pendingKey=key;reserved=true;deadline=System.nanoTime()+10_000_000_000L;
             ClientPlatform.get().send(new EditorPackets.Request(payload));
-        }catch(RuntimeException e){var result=new JsonObject();result.addProperty("status","rejected");result.addProperty("requestId",id);result.addProperty("code",e instanceof EditorSessions.Failure f?f.code:"invalid_request");result.addProperty("reason",e.getMessage());screen.driver().patch("player_extended_result",result);}
+        }catch(RuntimeException e){if(reserved)pending=null;var result=new JsonObject();result.addProperty("status","rejected");result.addProperty("requestId",id);result.addProperty("code",reserved?"request_timeout":e instanceof EditorSessions.Failure f?f.code:"invalid_request");result.addProperty("reason",reserved?"发送请求时连接异常，结果未确认；请重新读取核对，保留草稿":e.getMessage());screen.driver().patch("player_extended_result",result);}
     }
     public static boolean receive(JsonObject result){
         if(pending==null||!pending.equals(result.has("requestId")?result.get("requestId").getAsString():""))return false;

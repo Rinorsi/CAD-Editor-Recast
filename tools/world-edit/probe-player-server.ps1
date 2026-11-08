@@ -22,6 +22,10 @@ if($Extended){
     $Log=Join-Path $Root 'logs/player-extended'
     New-Item -ItemType Directory -Force $Log | Out-Null
     $Receipt=Join-Path $Log 'captured-server.json'
+    if(Test-Path -LiteralPath $Receipt){
+        Copy-Item -LiteralPath $Receipt -Destination (Join-Path $Log ('captured-server-'+(Get-Date -Format 'yyyyMMdd-HHmmss-fff')+'.json'))
+        Remove-Item -LiteralPath $Receipt
+    }
 }
 $ArgsFile=Join-Path $Server 'java.args'
 $JavaArgs=@('-Xmx2G','--enable-native-access=ALL-UNNAMED','-Djava.awt.headless=true','-Dfabric.development=true',('-Dfabric.gameJarPath='+$Mc),('-Dcadeditor.player.receipt='+$Receipt),'-cp',$Cp,'net.fabricmc.loader.impl.launch.knot.KnotServer','--nogui')

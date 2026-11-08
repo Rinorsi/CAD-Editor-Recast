@@ -61,3 +61,7 @@ stats.value={entries:[{type:'minecraft:custom',id:'minecraft:jump',value:0}]}，
 
 
 跨维度传送成功后，扩展视图继续按 UUID 工作。原有背包/状态世界编辑会话仍绑定打开时维度；页面应提示关闭重开后再提交原有页草稿，不应将旧世界会话静默切到新基线。
+
+页面注意：同一视图的 read 会更新宿主持有的基线；有未保存草稿时不要自动轮询 read 或以翻页请求悄悄刷新基线。显式重新读取应先让用户保留/放弃草稿。所有扩展请求由宿主串行发送，并遵守 500ms 服务端间隔。
+
+验收与证据：[player-extended-verification.md](player-extended-verification.md)。
