@@ -21,6 +21,7 @@ public interface ClientPlatform {
     KeyMapping registerKey(KeyMapping key);
     void onCommands(Consumer<CommandDispatcher<Object>> callback);
     void onTick(Consumer<Minecraft> callback);
+    void onStarted(Consumer<Minecraft> callback);
     void onStopping(Consumer<Minecraft> callback);
     void onDisconnect(Consumer<Minecraft> callback);
     void onScreenKey(BiPredicate<Screen, KeyEvent> allow);

@@ -9,7 +9,7 @@ New-Item -ItemType Directory -Force $Logs,$Main,$Tests | Out-Null
 $JavaBin=Join-Path $env:USERPROFILE '.jdks/jdk-25.0.5+8/bin'
 $RuntimeFile=(Get-ChildItem ($Workspace+'/daily/*/scratch/editor-mod/runtime-classpath.json') | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).FullName
 $Runtime=@(Get-Content $RuntimeFile -Raw | ConvertFrom-Json)
-$Mc=(Get-ChildItem (Join-Path $Root '.gradle/loom-cache/minecraftMaven') -Recurse -Filter '*.jar' | Where-Object { $_.FullName -match '[\/]26[.]1[.]2[\/]' } | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).FullName
+$Mc=(Get-ChildItem (Join-Path $Root '.gradle/loom-cache/minecraftMaven') -Recurse -Filter '*.jar' | Where-Object { $_.FullName -match '[\\/]26[.]1[.]2[\\/]' } | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).FullName
 $BaseJar=(Get-ChildItem ($Workspace+'/daily/*/scratch/editor-mod/build/fabric-26.1.2/libs/cadeditor-fabric-26.1.2-0.99.2.jar') | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).FullName
 $Cp=(@($Mc,$BaseJar)+$Runtime) -join ';'
 $Sources=@('registry/VaultChannel.java','registry/RegistryBridge.java','vault/VaultStore.java','vault/VaultStacks.java','vault/VaultPaths.java','registry/search/Pinyin.java','StackCodec.java','ComponentValidation.java','registry/SpawnerData.java') | ForEach-Object {Join-Path $Root ('common/versions/26.1/build/generated/stonecutter/main/java/dev/rinorsi/editor/'+$_)}

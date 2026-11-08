@@ -1,0 +1,1 @@
+{"required":true,"package":"dev.rinorsi.editor.smoke.neomixin","compatibilityLevel":"JAVA_25","client":["NeoWindowHandoffMixin"],"injectors":{"defaultRequire":1}}

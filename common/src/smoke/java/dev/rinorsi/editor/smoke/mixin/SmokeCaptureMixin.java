@@ -1,4 +1,5 @@
-package dev.rinorsi.editor.smoke;
+package dev.rinorsi.editor.smoke.mixin;
+import dev.rinorsi.editor.smoke.MatrixSmoke;
 import dev.rinorsi.editor.client.EditorClient;
 
 import org.spongepowered.asm.mixin.Mixin;

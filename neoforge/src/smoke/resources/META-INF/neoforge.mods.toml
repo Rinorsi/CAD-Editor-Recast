@@ -7,3 +7,6 @@ version="1.0.0"
 displayName="Editor matrix test probe"
 [[mixins]]
 config="editor-matrix-smoke.mixins.json"
+
+[[mixins]]
+config="editor-matrix-neoforge.mixins.json"

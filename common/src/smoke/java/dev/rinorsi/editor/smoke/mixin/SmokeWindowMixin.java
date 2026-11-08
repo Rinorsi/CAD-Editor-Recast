@@ -1,4 +1,5 @@
-package dev.rinorsi.editor.smoke;
+package dev.rinorsi.editor.smoke.mixin;
+import dev.rinorsi.editor.smoke.MatrixSmoke;
 import com.mojang.blaze3d.platform.Window;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.*;

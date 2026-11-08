@@ -25,6 +25,7 @@ public final class FabricClientPlatform implements ClientPlatform {
     @SuppressWarnings({"unchecked", "rawtypes"})
     public void onCommands(Consumer<CommandDispatcher<Object>> c) { ClientCommandRegistrationCallback.EVENT.register((d, r) -> c.accept((CommandDispatcher)d)); }
     public void onTick(Consumer<Minecraft> c) { ClientTickEvents.END_CLIENT_TICK.register(c::accept); }
+    public void onStarted(Consumer<Minecraft> c) { ClientLifecycleEvents.CLIENT_STARTED.register(c::accept); }
     public void onStopping(Consumer<Minecraft> c) { ClientLifecycleEvents.CLIENT_STOPPING.register(c::accept); }
     public void onDisconnect(Consumer<Minecraft> c) { ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> c.accept(mc)); }
     public void onScreenKey(BiPredicate<Screen, KeyEvent> allow) { ScreenEvents.AFTER_INIT.register((mc, s, w, h) -> ScreenKeyboardEvents.allowKeyPress(s).register(allow::test)); }

@@ -145,6 +145,9 @@ public final class ComponentSchemaTest {
         var rangesDocument = Files.exists(rangesPath) ? JsonParser.parseString(Files.readString(rangesPath)).getAsJsonObject() : new JsonObject();
         if (args.length > 0 && args[0].equals("--write-snapshot")) {
             rangesDocument.add("ranges_for_ui", ranges); rangesDocument.addProperty("schema_version", ComponentSchema.VERSION);
+            rangesDocument.addProperty("mc_version", SharedConstants.getCurrentVersion().name());
+            rangesDocument.addProperty("source", "live persistent Codec derivation; snapshot is not used in production");
+            rangesDocument.addProperty("null_meaning", "no proven numeric bound or no universal codec default; not zero");
             Files.writeString(rangesPath, new GsonBuilder().serializeNulls().setPrettyPrinting().disableHtmlEscaping().create().toJson(rangesDocument) + System.lineSeparator());
         } else check(rangesDocument.get("ranges_for_ui").equals(JsonParser.parseString(ranges.toString())), "UI numeric ranges artifact drift");
         modComponents(access);

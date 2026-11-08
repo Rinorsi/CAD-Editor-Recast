@@ -23,7 +23,7 @@ $JavaBin = Join-Path $env:USERPROFILE '.jdks/jdk-25.0.5+8/bin'
 $Cache = Join-Path $env:USERPROFILE '.gradle/caches/fabric-loom'
 $Mc = Join-Path $Cache 'minecraftMaven/net/minecraft/minecraft-merged-deobf/26.1.2/minecraft-merged-deobf-26.1.2.jar'
 $Runtime = @(Get-Content $ClasspathFile | ConvertFrom-Json)
-$CompileMc=(Get-ChildItem (Join-Path $Root '.gradle/loom-cache/minecraftMaven') -Recurse -Filter '*.jar' | Where-Object { $_.FullName -match '[\/]26[.]1[.]2[\/]' } | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).FullName
+$CompileMc=(Get-ChildItem (Join-Path $Root '.gradle/loom-cache/minecraftMaven') -Recurse -Filter '*.jar' | Where-Object { $_.FullName -match '[\\/]26[.]1[.]2[\\/]' } | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).FullName
 $Cp = (@($CompileMc,$BaseJar,$Mc) + $Runtime) -join ';'
 $Sources=@(Get-ChildItem (Join-Path $Root 'common/versions/26.1/build/generated/stonecutter/main/java'),(Join-Path $Root 'fabric/versions/26.1/build/generated/stonecutter/main/java') -Recurse -Filter '*.java' | ForEach-Object FullName)
 # Existing interactive Gradle runClient processes remain untouched; compile the owned entry/channel sources directly.

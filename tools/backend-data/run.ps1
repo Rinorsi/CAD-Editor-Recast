@@ -8,7 +8,7 @@ $Java=Join-Path $env:JAVA_HOME 'bin/java.exe'
 $Javac=Join-Path $env:JAVA_HOME 'bin/javac.exe'
 $Jar=Join-Path $env:JAVA_HOME 'bin/jar.exe'
 $Runtime=@(Get-Content -LiteralPath $ClasspathJson | ConvertFrom-Json)
-$Mc=Get-ChildItem (Join-Path $Editor '.gradle/loom-cache/minecraftMaven/net/minecraft') -Recurse -Filter '*.jar' | Where-Object { $_.FullName -match '[\/]26[.]1[.]2[\/]' } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+$Mc=Get-ChildItem (Join-Path $Editor '.gradle/loom-cache/minecraftMaven/net/minecraft') -Recurse -Filter '*.jar' | Where-Object { $_.FullName -match '[\\/]26[.]1[.]2[\\/]' } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 $Cp=@($Runtime | Where-Object {$_ -notmatch 'minecraft-merged'})+@($Mc.FullName)
 foreach($Dir in @('main','probe','test','jar-main','jar-probe','run/mods','run/saves')){New-Item -ItemType Directory -Force (Join-Path $Work $Dir) | Out-Null}
 New-Item -ItemType Directory -Force $Log | Out-Null

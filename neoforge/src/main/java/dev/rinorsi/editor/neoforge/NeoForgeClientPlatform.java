@@ -36,6 +36,7 @@ public final class NeoForgeClientPlatform implements ClientPlatform {
     @SuppressWarnings({"unchecked", "rawtypes"})
     public void onCommands(Consumer<CommandDispatcher<Object>> c) { NeoForge.EVENT_BUS.addListener((RegisterClientCommandsEvent e) -> c.accept((CommandDispatcher)e.getDispatcher())); }
     public void onTick(Consumer<Minecraft> c) { NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) -> c.accept(Minecraft.getInstance())); }
+    public void onStarted(Consumer<Minecraft> c) { NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.client.event.lifecycle.ClientStartedEvent e) -> c.accept(Minecraft.getInstance())); }
     public void onStopping(Consumer<Minecraft> c) { NeoForge.EVENT_BUS.addListener((ClientStoppingEvent e) -> c.accept(Minecraft.getInstance())); }
     public void onDisconnect(Consumer<Minecraft> c) { NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut e) -> c.accept(Minecraft.getInstance())); }
     public void onScreenKey(BiPredicate<Screen, KeyEvent> allow) { NeoForge.EVENT_BUS.addListener((ScreenEvent.KeyPressed.Pre e) -> { if (!allow.test(e.getScreen(), e.getKeyEvent())) e.setCanceled(true); }); }

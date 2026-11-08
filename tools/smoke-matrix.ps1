@@ -30,11 +30,20 @@ foreach($Target in $Targets){
         if([datetime]::UtcNow -gt $Deadline){$TimedOut=$true;break}
     }
     if($TimedOut){
-        # Only descendants of this exact launcher; never enumerate-and-kill unrelated Java clients.
-        $All=@(Get-CimInstance Win32_Process);$Ids=[Collections.Generic.List[int]]::new();$Ids.Add($Process.Id)
-        for($i=0;$i -lt $Ids.Count;$i++){foreach($Child in $All | Where-Object {$_.ParentProcessId -eq $Ids[$i] -and $_.CommandLine -notmatch 'GradleDaemon|agent[.]jar'}){$Ids.Add([int]$Child.ProcessId)}}
-        for($i=$Ids.Count-1;$i -ge 0;$i--){$Owned=Get-Process -Id $Ids[$i] -ErrorAction SilentlyContinue;if($Owned -and $Owned.StartTime -ge $Process.StartTime){$Owned.Kill()}}
-        $Process.WaitForExit()
+        # Gradle's game may be a daemon child. Identify our unique run token in the Java args,
+        # never kill a daemon, agent or unrelated client just because it shares a parent.
+        $OwnedToken=Split-Path (Split-Path $Run -Parent) -Leaf
+        Get-CimInstance Win32_Process -Filter "Name = 'java.exe' OR Name = 'javaw.exe'" | ForEach-Object {
+            $Line=$_.CommandLine
+            if($Line -match 'agent[.]jar|GradleDaemon|GradleWrapperMain'){return}
+            foreach($Match in [regex]::Matches($Line,'"@([^"]+)"|@"([^"]+)"|@([^\s]+)')){
+                $Arg=@($Match.Groups[1].Value,$Match.Groups[2].Value,$Match.Groups[3].Value) | Where-Object {$_} | Select-Object -First 1
+                if(Test-Path -LiteralPath $Arg){$Line+=' '+(Get-Content -LiteralPath $Arg -Raw)}
+            }
+            if($Line.Contains($OwnedToken)){Stop-Process -Id $_.ProcessId}
+        }
+        if(!$Process.WaitForExit(20000)){$Process.Kill();$Process.WaitForExit()}
+
     }
     [IO.File]::WriteAllText((Join-Path $Evidence 'stdout.log'),$Stdout.GetAwaiter().GetResult())
     [IO.File]::WriteAllText((Join-Path $Evidence 'stderr.log'),$Stderr.GetAwaiter().GetResult())

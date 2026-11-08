@@ -24,7 +24,7 @@ loom {
     runs {
         client {
             runDirectory.set(clientRun.absolutePath)
-            vmArg('-Doriel.sourceRoot=' + rootProject.file('common').absolutePath)
+            if (!providers.gradleProperty('editorSmokeRun').isPresent()) vmArg('-Doriel.sourceRoot=' + rootProject.file('common').absolutePath)
             if (providers.gradleProperty('mcTestPort').isPresent()) {
                 vmArg('-Dmctest.port=' + providers.gradleProperty('mcTestPort').get())
             }

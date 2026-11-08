@@ -21,6 +21,9 @@ def smokeJar = tasks.register('smokeJar', Jar) {
 }
 if (providers.gradleProperty('editorSmokeRun').isPresent()) {
     def runDir=file(providers.gradleProperty('editorSmokeRun').get())
+    // This is a unique smoke directory, never the user's config. Disable NeoForge's pre-game window too.
+    new File(runDir, 'config').mkdirs()
+    new File(runDir, 'config/fml.toml').text='earlyWindowControl = false\n'
     if (project.parent.name == 'fabric') {
         loom.runs.named('client') {
             runDirectory.set(runDir.absolutePath)
@@ -40,6 +43,7 @@ if (providers.gradleProperty('editorSmokeRun').isPresent()) {
         neoForge.runs.named('client') {
             gameDirectory=runDir
             systemProperty('editor.autotest','matrix-smoke')
+            systemProperty('java.awt.headless','true')
             programArguments.addAll('--username','MatrixSmoke','--quickPlaySingleplayer','MatrixSmoke')
         }
         tasks.named('runClient') { dependsOn('smokeClasses') }

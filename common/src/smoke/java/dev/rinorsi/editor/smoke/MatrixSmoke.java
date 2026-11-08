@@ -19,7 +19,7 @@ public final class MatrixSmoke {
     private static int phase;
     private static long started = System.nanoTime(), deadline = started + 240_000_000_000L;
     private static boolean finished;
-    private static Object proceeded;
+    private static Object proceeded, observed;
     private static CompletableFuture<?> setup;
     private static CompletableFuture<ItemStack> saved;
     private static ItemStack expected;
@@ -31,11 +31,15 @@ public final class MatrixSmoke {
     public static void tick(Minecraft mc) {
         if (finished) { if(mc.level!=null)mc.disconnectWithSavingScreen(); else if(mc.getSingleplayerServer()==null)mc.stop(); return; }
         try {
-            if(System.nanoTime()>deadline)throw new IllegalStateException("smoke timeout phase="+phase);
+            if(mc.gui.screen()!=observed){
+                observed=mc.gui.screen();
+                System.out.println("MATRIX phase="+phase+" screen="+(observed==null?"null":observed.getClass().getName())+" widgets="+(mc.gui.screen()==null?"":mc.gui.screen().children().stream().filter(c->c instanceof net.minecraft.client.gui.components.Button).map(c->((net.minecraft.client.gui.components.Button)c).getMessage().getString()).toList()));
+            }
+            if(System.nanoTime()>deadline)throw new IllegalStateException("smoke timeout phase="+phase+" screen="+(observed==null?"null":observed.getClass().getName()));
             if(mc.level==null || mc.player==null) {
                 if(mc.gui.screen()!=null && proceeded!=mc.gui.screen())for(var child:mc.gui.screen().children())if(child instanceof net.minecraft.client.gui.components.Button button) {
                     String label=button.getMessage().getString();
-                    if(label.equals(net.minecraft.network.chat.CommonComponents.GUI_PROCEED.getString()) || label.equals(Component.translatable("selectWorld.backupJoinSkipButton").getString())) { proceeded=mc.gui.screen();button.onPress(null);break; }
+                    if((mc.gui.screen() instanceof net.minecraft.client.gui.screens.ConfirmScreen && label.equals(net.minecraft.network.chat.CommonComponents.GUI_YES.getString())) || label.equals(net.minecraft.network.chat.CommonComponents.GUI_PROCEED.getString()) || label.equals(Component.translatable("selectWorld.backupJoinSkipButton").getString())) { proceeded=mc.gui.screen();button.onPress(null);break; }
                 }
                 return;
             }
@@ -48,6 +52,8 @@ public final class MatrixSmoke {
                 if((flags&org.lwjgl.sdl.SDLVideo.SDL_WINDOW_HIDDEN)==0 || (flags&org.lwjgl.sdl.SDLVideo.SDL_WINDOW_INPUT_FOCUS)!=0)throw new IllegalStateException("SDL window must be hidden and unfocused");
                 //?}
                 receipt.addProperty("hidden_unfocused",true);
+                if(!dev.rinorsi.editor.platform.ClientPlatform.get().canSend(EditorPackets.Request.TYPE))throw new IllegalStateException("server mod payload channel missing");
+                receipt.addProperty("server_mod_channel",true);
                 expected=new ItemStack(Items.DIAMOND_SWORD);expected.set(DataComponents.CUSTOM_NAME,Component.literal("Matrix smoke saved"));expected.set(DataComponents.DAMAGE,7);
                 setup=mc.getSingleplayerServer().submit(()->{var p=mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());p.setGameMode(GameType.CREATIVE);p.getInventory().setItem(0,new ItemStack(Items.DIAMOND_SWORD));p.inventoryMenu.broadcastChanges();});
                 phase=1;deadline=System.nanoTime()+90_000_000_000L;return;

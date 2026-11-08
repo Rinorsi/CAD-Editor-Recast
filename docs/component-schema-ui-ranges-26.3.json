@@ -78,19 +78,19 @@
       {
         "path": "$.block_delay_seconds",
         "min": 0.0,
-        "max": 3.4028235E38,
+        "max": 3.4028235e+38,
         "default": 0.0
       },
       {
         "path": "$.disable_cooldown_scale",
         "min": 0.0,
-        "max": 3.4028235E38,
+        "max": 3.4028235e+38,
         "default": 1.0
       },
       {
         "path": "$.damage_reductions[].horizontal_blocking_angle",
         "min": 0,
-        "max": 3.4028235E38,
+        "max": 3.4028235e+38,
         "default": 90.0,
         "min_exclusive": true
       },
@@ -109,7 +109,7 @@
       {
         "path": "$.item_damage.threshold",
         "min": 0.0,
-        "max": 3.4028235E38,
+        "max": 3.4028235e+38,
         "default": null
       },
       {
@@ -195,7 +195,7 @@
       {
         "path": "$.consume_seconds",
         "min": 0.0,
-        "max": 3.4028235E38,
+        "max": 3.4028235e+38,
         "default": 1.6
       },
       {
@@ -243,7 +243,7 @@
       {
         "path": "$.on_consume_effects[].diameter",
         "min": 0,
-        "max": 3.4028235E38,
+        "max": 3.4028235e+38,
         "default": 16.0,
         "min_exclusive": true
       }
@@ -353,7 +353,7 @@
       {
         "path": "$.death_effects[].diameter",
         "min": 0,
-        "max": 3.4028235E38,
+        "max": 3.4028235e+38,
         "default": 16.0,
         "min_exclusive": true
       }
@@ -462,13 +462,13 @@
       {
         "path": "$.use_duration",
         "min": 0.0,
-        "max": 3.4028235E38,
+        "max": 3.4028235e+38,
         "default": null
       },
       {
         "path": "$.range",
         "min": 0,
-        "max": 3.4028235E38,
+        "max": 3.4028235e+38,
         "default": null,
         "min_exclusive": true
       },
@@ -763,7 +763,7 @@
       {
         "path": "$",
         "min": 0.0,
-        "max": 3.4028235E38,
+        "max": 3.4028235e+38,
         "default": null
       }
     ],
@@ -816,7 +816,7 @@
       {
         "path": "$.rules[].speed",
         "min": 0,
-        "max": 3.4028235E38,
+        "max": 3.4028235e+38,
         "default": null,
         "min_exclusive": true
       },
@@ -844,7 +844,7 @@
       {
         "path": "$.seconds",
         "min": 0,
-        "max": 3.4028235E38,
+        "max": 3.4028235e+38,
         "default": null,
         "min_exclusive": true
       }
@@ -885,7 +885,7 @@
       {
         "path": "$.disable_blocking_for_seconds",
         "min": 0.0,
-        "max": 3.4028235E38,
+        "max": 3.4028235e+38,
         "default": 0.0
       }
     ],
@@ -903,5 +903,8 @@
     ],
     "minecraft:zombie_nautilus/variant": []
   },
-  "schema_version": 2
+  "schema_version": 2,
+  "mc_version": "26.3",
+  "source": "live persistent Codec derivation; snapshot is not used in production",
+  "null_meaning": "no proven numeric bound or no universal codec default; not zero"
 }

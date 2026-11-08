@@ -42,7 +42,7 @@ public final class EditorClient  {
     private static final String PAGE = "cadeditor:ui/index.html";
 
     public void onInitializeClient() {
-        EditorToast.initialize();
+        ClientPlatform.get().onStarted(client -> EditorToast.initialize());
         WorldEditorClient.initialize();
         VaultClient.initialize(() -> screen != null || opening != null || WorldEditorClient.active());
         dev.rinorsi.editor.registry.RegistryBridge.initialize();

@@ -82,6 +82,9 @@ stonecutter.properties.toml   每个游戏版本的 MC / 加载器 / API / Oriel
 | 27 | 全部 | 原始源码直接用于基线 javac 探针 | 使用 Stonecutter 生成的 26.1 源码；先运行 :fabric:26.1:build / autotestClasses |
 | 28 | NeoForge | 直接 JavaExec 启动 patched game 测试 | FML 未启动时 patched 类不可独立引导；Codec JVM 使用同版本 common NeoForm vanilla runtime，生产编译与客户端 smoke 使用真实 NeoForge |
 
+| 29 | NeoForge | 模组构造时立即初始化 HUD | 此时 Minecraft singleton 尚未建立；通过 ClientStartedEvent / Fabric CLIENT_STARTED 平台回调初始化 HUD |
+| 30 | 26.2 / NeoForge | GLFW 创建时隐藏即足够 | 26.2 Minecraft 构造器额外 glfwShowWindow；测试 mixin 拦截它。NeoForge 独立测试 config/fml.toml 关闭 earlyWindowControl，避免加载器先打开窗口；26.3 另拦截 EarlyWindowHandoff 的显示调用 |
+
 ## 实施约定
 
 - VCS 活动版本固定 26.3；开发切换后提交前恢复 26.3。原生产文件通过 git mv 迁移到 common。
@@ -92,3 +95,12 @@ stonecutter.properties.toml   每个游戏版本的 MC / 加载器 / API / Oriel
 - WorldEditTest 的 26.3 汇总证据超过单消息上限，逐目标验证真实传输往返；生产 192 KiB 展开上限保持不变。
 - Gradle 产物、测试运行目录、日志保持 daily/scratch 与 daily/logs；Stonecutter 的源码生成目录沿用 Oriel 默认的 versions/<版本>/build/generated，已被 gitignore 排除。
 
+
+
+## 验证记录（2026-11-08）
+
+- 架构里程碑 ba7e422：六目标生产源码编译 / jar 打包；Fabric 26.1.2 完整 build、autotestClasses、exportAutotestClasspath 通过。日志：daily/2026-11-08/logs/editor-baseline-and-jars.log（同次命令的新版本夹具失败已在后续修正，不能把该命令整体称为通过）。
+- 新版及 NeoForge 的五目标隐藏客户端 smoke 全部通过：daily/2026-11-08/logs/editor-smoke-204031/results.json，各目标目录有 matrix-smoke.json、stdout.log、stderr.log。每个回执包含 hidden_unfocused、server_mod_channel、server_equal、reopen_equal，均为 true。
+- 发行 jar 不含 probe / smoke 类，包含 UI 和平台 services：daily/2026-11-08/logs/editor-jar-layout.json。
+- UI 全门禁通过：daily/2026-11-08/logs/editor-final-ui.log；PowerShell 解析通过，基线 acceptance standalone javac 通过：editor-accept-compile-only2.log。
+- 六目标最终 build/check、dist 和完整 Fabric 基线实机结果由收尾验收补录；以上 smoke 不替代完整基线门禁或人工视觉验收。

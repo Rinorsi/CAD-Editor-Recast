@@ -38,7 +38,7 @@ if (!$ClasspathFile -or !$BaseJar -or !$World) { throw '缺少已构建的基础
 $JavaBin = Join-Path $env:USERPROFILE '.jdks/jdk-25.0.5+8/bin'
 $Cache = Join-Path $env:USERPROFILE '.gradle/caches/fabric-loom'
 $Mc = Join-Path $Cache 'minecraftMaven/net/minecraft/minecraft-merged-deobf/26.1.2/minecraft-merged-deobf-26.1.2.jar'
-$CompileMc = (Get-ChildItem ($Root+'/.gradle/loom-cache/minecraftMaven') -Recurse -Filter '*.jar' | Where-Object { $_.FullName -match '[\/]26[.]1[.]2[\/]' } | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).FullName
+$CompileMc = (Get-ChildItem ($Root+'/.gradle/loom-cache/minecraftMaven') -Recurse -Filter '*.jar' | Where-Object { $_.FullName -match '[\\/]26[.]1[.]2[\\/]' } | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).FullName
 $Runtime = @(Get-Content $ClasspathFile | ConvertFrom-Json)
 $Cp = (@($BaseJar,$CompileMc,$Mc) + $Runtime) -join ';'
 $Sources = @(Get-ChildItem ($Root+'/common/versions/26.1/build/generated/stonecutter/main/java'),($Root+'/fabric/versions/26.1/build/generated/stonecutter/main/java') -Recurse -Filter '*.java' | ForEach-Object FullName)

@@ -4,15 +4,15 @@ Minecraft **26.1.2 + Fabric 0.19.5 / Fabric API 0.155.3+26.1.2**，Java 25，Sto
 
 ## 构建
 
-在此目录执行 `bash tools/gw.sh :fabric:26.1.2:build --no-problems-report`。包装脚本使用工作区已配置的 JDK/网络方案；不要直连 Gradle 下载。Gradle wrapper 与当前 Oriel 工程一致。
+在此目录执行 `bash tools/gw.sh :fabric:26.1:build --no-problems-report`。包装脚本使用工作区已配置的 JDK/网络方案；不要直连 Gradle 下载。Gradle wrapper 与当前 Oriel 工程一致。
 
 构建产物、测试结果位于 `../Oriel-UI-Workspace/daily/<当天>/scratch/editor-mod/build/`，运行目录位于当天 `run/editor-mod-client` 或 `run/editor-mod-server`。`codecTest` 是真实原版 Codec 的纯 Java 测试，不启动 Minecraft 客户端/服务端。
 
 ## 页面与独立运行
 
-页面源码位于 `fabric/src/main/resources/assets/cadeditor/ui/`，随 Editor jar 打包；不带浏览器 mock、图集或预览夹具。`I` 与 `/cade` 使用同一个真实物品打开流程。页面是否符合用户审美仍由用户验收，自动化验证不代替批准。
+页面源码位于 `common/src/main/resources/assets/cadeditor/ui/`，随 Editor jar 打包；不带浏览器 mock、图集或预览夹具。`I` 与 `/cade` 使用同一个真实物品打开流程。页面是否符合用户审美仍由用户验收，自动化验证不代替批准。
 
-双击根目录启动器会用 Editor 自己的 `:fabric:26.1.2:runClient` 启动。模板中心入口已改为 `/oriel showcase templates` →「我的页面」；其中 item-editor 是注入演示夹具的副本，不写真实物品。真实入口无需模板中心。
+双击根目录启动器会用 Editor 自己的 `:fabric:26.1:runClient` 启动。模板中心入口已改为 `/oriel showcase templates` →「我的页面」；其中 item-editor 是注入演示夹具的副本，不写真实物品。真实入口无需模板中心。
 
 ## 入口与写入合同
 
@@ -38,7 +38,7 @@ Minecraft **26.1.2 + Fabric 0.19.5 / Fabric API 0.155.3+26.1.2**，Java 25，Sto
 
 2026-11-06 已使用独立发布 jar 完成后台自动验证：模板中心列出并打开 item-editor；`/cade` → 页面 JS 修改名称 → 原页面 applyToGame → 宿主 → 原版槽位包 → 服务端确认 → 客户端物品；保存退出后移除 Editor 和 Oriel，再进同一世界读回同名钻石剑。该验证保留 Fabric API 和独立测试探针，没有加载 Editor/Oriel；不是物理按 I 或人工审美验收，也没有覆盖多人、权限拒绝、容器及全部字段。
 
-开发探针位于 `fabric/src/test/java/dev/rinorsi/editor/probe/`，单独构建，**不会进入 Editor 发行 jar**。先执行 `bash tools/gw.sh :fabric:26.1.2:autotestJar :fabric:26.1.2:exportAutotestClasspath --no-problems-report`，再用 PowerShell 7 执行 `pwsh -NoProfile -File tools/autotest/run.ps1 -Mode server`（或 `edit`、`vanilla`）。客户端测试要求当天已存在 `run/editor-mod-client/saves/Editor-release-test/` 测试世界；不自动创建或触碰用户其他世界。
+开发探针位于 `fabric/src/autotest/java/dev/rinorsi/editor/probe/`，单独构建，**不会进入 Editor 发行 jar**。先执行 `bash tools/gw.sh :fabric:26.1:autotestJar :fabric:26.1:exportAutotestClasspath --no-problems-report`，再用 PowerShell 7 执行 `pwsh -NoProfile -File tools/autotest/run.ps1 -Mode server`（或 `edit`、`vanilla`）。客户端测试要求当天已存在 `run/editor-mod-client/saves/Editor-release-test/` 测试世界；不自动创建或触碰用户其他世界。
 
 探针只在 `-Deditor.autotest=edit|vanilla` 时运行；测试 jar 中的专用 Mixin 阻止游戏抓取鼠标。脚本只将自己的测试窗口移到屏幕外（不激活），使用游戏内部 API 交互和截图，保存后自动退出。`vanilla` 会卸载测试目录中的 Editor/Oriel；日常 Loom 运行目录独立，不受影响。所有结果和截图在当天 `run/editor-autotest-client/`，完整日志在当天 `logs/editor-autotest-*.log`。库发布包不含无头预览器，因此没有绕过发布包限制去调用源码版截图工具。
 
