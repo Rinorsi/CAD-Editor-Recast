@@ -26,3 +26,16 @@
 服务端物品请求及give每玩家20次/秒，最多32767字符并校验JSON深度。原版创造包仍由原版服务器校验创造资格。拒绝不会偷偷改用另一写法。
 
 证据：logs/permission/PermissionTest.log为纯JVM真实Codec/脱离客户端的容器；logs/permission/captured-server.json为隔离专用服务端、真实ServerLevel/ServerPlayer（脱离实际网络登录，RecordingListener记录发包）。它们不等于客户端画面验收。用户游戏运行中，没有触碰其进程或鼠标键盘；创造界面可见性、真实客户端收到完整同步未实机验证。
+
+## P4-1 玩家扩展（2026-11-08）
+
+| 写操作 | 服务端权限与额外条件 | 路径 |
+|---|---|---|
+| player_extended position | EditorPolicy.requirePlayerEdit，每笔重查 COMMANDS_GAMEMASTER；实时维度、边界/高度、目标区块加载 | PlayerExtendedEditor.route/prepare |
+| player_extended respawn / clear | 同上；实时维度与坐标校验；setRespawnPosition | PlayerExtendedEditor.route/prepare |
+| player_extended recipes | 同上；实时 RecipeManager ID、整批校验；ServerRecipeBook 同步 | PlayerExtendedEditor.route/prepare |
+| player_extended advancements | 同上，且目标 UUID 必须等于请求者；条件来自实时成就定义 | PlayerExtendedEditor.route/prepare |
+| player_extended stats | 同上；实时 StatType 及其 registry，非负整数 | PlayerExtendedEditor.route/prepare |
+| player_extended offline | 同上；目标不在线，单人 owner 拒绝；受限字段、原版加载/保存校验、文件指纹、备份、原子替换；落盘前再次查在线状态 | OfflinePlayerEdit.read/prepare/replace |
+
+扩展 read 同样需要 requirePlayerEdit，不允许通过只读接口泄露其他玩家数据。扩展目标为明确 UUID 的管理员操作，不使用准星距离门槛；不赋予非管理员任何跨维度/远程编辑能力。成就不可代改其他玩家。所有写操作保留请求者/目标/前后指纹审计；只支持当前视图独立提交，无 undo。

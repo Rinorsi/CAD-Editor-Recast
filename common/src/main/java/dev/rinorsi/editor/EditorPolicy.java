@@ -33,6 +33,11 @@ public record EditorPolicy(int permissionLevel, boolean creativeOnly) {
     public static boolean gameMaster(ServerPlayer player) {
         return player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
     }
+    public void requirePlayerEdit(ServerPlayer player) {
+        if (!gameMaster(player))
+            EditorSessions.fail("player_forbidden", "编辑玩家需要原版游戏管理员权限（OP或单人开启作弊）");
+        require(player);
+    }
     // Legacy config keys remain readable; they cannot deny a game-master based on game mode.
     public boolean allows(boolean creative, boolean permitted) { return creative || permitted; }
 }

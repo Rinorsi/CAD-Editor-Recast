@@ -22,6 +22,10 @@ public final class PlayerWorldEditServerProbe implements ModInitializer {
     private final JsonObject receipt=new JsonObject();private int checks;
     public void onInitialize(){ServerLifecycleEvents.SERVER_STARTED.register(this::run);}
     private void run(MinecraftServer server){try{
+        if(Boolean.getBoolean("cadeditor.player.extended")) {
+            receipt.add("extended",dev.rinorsi.editor.world.PlayerExtendedServerProbe.run(server));
+            receipt.addProperty("passed",true);return;
+        }
         var level=server.overworld();level.setChunkForced(0,0,true);level.getChunk(0,0);
         var profile=new GameProfile(UUID.randomUUID(),"CADPlayerProbe");var p=new ServerPlayer(server,level,profile,ClientInformation.createDefault());
         var packets=new ArrayList<String>();p.connection=new RecordingListener(server,p,profile,packets);p.setPos(0.5,65,0.5);p.setHealth(20);

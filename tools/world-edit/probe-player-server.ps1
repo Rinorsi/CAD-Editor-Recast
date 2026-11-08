@@ -1,4 +1,4 @@
-param()
+param([switch]$Extended)
 $ErrorActionPreference='Stop'
 $Root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 # Independent scratch server, loopback ephemeral port; does not touch the running client.
@@ -16,10 +16,18 @@ if($LASTEXITCODE -ne 0){throw '服务端探针打包失败'}
 $Cp=(Get-Content (Join-Path $Log 'classpath.txt') -Raw).Trim()
 $Mc=($Cp -split ';' | Where-Object {$_ -match 'minecraft-merged.*[.]jar$'} | Select-Object -First 1)
 $Receipt=Join-Path $Log 'captured-server.json'
+if($Extended){
+    & "$env:JAVA_HOME/bin/jar.exe" uf (Join-Path $Server 'mods/player-probe.jar') -C (Join-Path $Work 'test') dev/rinorsi/editor/world
+    if($LASTEXITCODE -ne 0){throw '扩展服务端探针打包失败'}
+    $Log=Join-Path $Root 'logs/player-extended'
+    New-Item -ItemType Directory -Force $Log | Out-Null
+    $Receipt=Join-Path $Log 'captured-server.json'
+}
 $ArgsFile=Join-Path $Server 'java.args'
 $JavaArgs=@('-Xmx2G','--enable-native-access=ALL-UNNAMED','-Djava.awt.headless=true','-Dfabric.development=true',('-Dfabric.gameJarPath='+$Mc),('-Dcadeditor.player.receipt='+$Receipt),'-cp',$Cp,'net.fabricmc.loader.impl.launch.knot.KnotServer','--nogui')
+if($Extended){$JavaArgs=@('-Dcadeditor.player.extended=true')+$JavaArgs}
 [IO.File]::WriteAllLines($ArgsFile,@($JavaArgs | ForEach-Object {'"'+$_.Replace('\','\\').Replace('"','\"')+'"'}))
 Push-Location -LiteralPath $Server
 try { & "$env:JAVA_HOME/bin/java.exe" ('@'+$ArgsFile) *> (Join-Path $Log 'server-probe.log'); if($LASTEXITCODE -ne 0){throw '服务端探针失败：logs/world-player/server-probe.log'} } finally {Pop-Location}
 if(!(Test-Path -LiteralPath $Receipt) -or !(Get-Content $Receipt -Raw | ConvertFrom-Json).passed){throw '服务端探针未通过：logs/world-player/captured-server.json'}
-Write-Output 'PASS real ServerLevel detached player probe; logs/world-player/server-probe.log; captured-server.json'
+Write-Output ('PASS real ServerLevel detached player probe; '+(Join-Path $Log 'server-probe.log')+'; '+$Receipt)

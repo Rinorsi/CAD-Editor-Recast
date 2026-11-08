@@ -126,3 +126,7 @@ stonecutter.properties.toml   每个游戏版本的 MC / 加载器 / API / Oriel
 表内五份 matrix-smoke.json 均位于 Oriel-UI-Workspace/daily/2026-11-08/logs/editor-smoke-204031/；六目标构建任务索引为 editor-matrix/results.json。NeoForge 独立 JVM Codec 检查使用同版本 vanilla NeoForm，真实 FML 集成由各版本客户端保存 smoke 验证。人工视觉验收、其他五目标完整七阶段基线和 NeoForge 独立服务端长期运行未做，不由上述测试代替。
 
 首轮 map_color 超时根因尚未确定；完整复测同一组件三轮和其余 318 轮均通过，保留原失败及诊断入口，不能称为首轮全绿。
+
+### P4-1 玩家扩展 API 核对
+
+位置 teleportTo、RespawnConfig/LevelData.RespawnData、ServerRecipeBook.Packed/loadUntrusted/copyOverData、PlayerAdvancements.award/revoke、ServerStatsCounter、Player.load/saveWithoutId 在 26.1.2 / 26.2 / 26.3 的公开签名一致；本次暂不新增运行时反射或加载器分支。离线使用 detached Player（不是 ServerPlayer），避免构造 ServerPlayer 时污染 PlayerList 的统计/成就缓存。ServerRecipeBook.loadUntrusted 是追加加载，先加载独立书再 copyOverData 替换，确保撤销和取消高亮真实生效。后续编译验证发现的差异追加在此。

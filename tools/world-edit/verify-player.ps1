@@ -11,11 +11,15 @@ $Mc=Get-ChildItem (Join-Path $Root '.gradle/loom-cache/minecraftMaven') -Recurse
 $Cp=(@($Entries | Where-Object {$_ -notmatch 'minecraft-merged.*[.]jar$' -and $_ -notmatch 'classes.java.main$'})+@($Mc.FullName)) -join ';'
 Set-Content (Join-Path $Log 'classpath.txt') $Cp
 $Sources=Get-ChildItem (Join-Path $Root "${BaselineCommon}/main/java"),(Join-Path $Root "${BaselineFabric}/main/java") -Recurse -Filter '*.java' | ForEach-Object FullName
-& "$env:JAVA_HOME/bin/javac.exe" -proc:none -encoding UTF-8 -cp $Cp -d (Join-Path $Work 'main') @Sources *> (Join-Path $Log 'compile.log')
+$JavacArgs=Join-Path $Work 'main-javac.args'
+[IO.File]::WriteAllLines($JavacArgs,@(@('-proc:none','-encoding','UTF-8','-cp',$Cp,'-d',(Join-Path $Work 'main'))+@($Sources) | ForEach-Object {'"'+$_.Replace('\','/').Replace('"','\"')+'"'}))
+& "$env:JAVA_HOME/bin/javac.exe" ('@'+$JavacArgs) *> (Join-Path $Log 'compile.log')
 if($LASTEXITCODE -ne 0){throw 'javac失败：logs/world-player/compile.log'}
 Write-Output 'PASS javac; logs/world-player/compile.log'
 $Sources=Get-ChildItem (Join-Path $Root "${BaselineCommon}/test/java"),(Join-Path $Root "${BaselineFabric}/test/java"),(Join-Path $Root "${BaselineCommon}/testFixtures/java") -Recurse -Filter '*.java' | Where-Object {$_.FullName -notmatch '[\\/]probe[\\/]'} | ForEach-Object FullName
-& "$env:JAVA_HOME/bin/javac.exe" -proc:none -encoding UTF-8 -cp ((Join-Path $Work 'main')+';'+$Cp) -d (Join-Path $Work 'test') @Sources *> (Join-Path $Log 'compile-tests.log')
+$JavacArgs=Join-Path $Work 'test-javac.args'
+[IO.File]::WriteAllLines($JavacArgs,@(@('-proc:none','-encoding','UTF-8','-cp',((Join-Path $Work 'main')+';'+$Cp),'-d',(Join-Path $Work 'test'))+@($Sources) | ForEach-Object {'"'+$_.Replace('\','/').Replace('"','\"')+'"'}))
+& "$env:JAVA_HOME/bin/javac.exe" ('@'+$JavacArgs) *> (Join-Path $Log 'compile-tests.log')
 if($LASTEXITCODE -ne 0){throw '测试编译失败：logs/world-player/compile-tests.log'}
 Write-Output 'PASS javac tests; logs/world-player/compile-tests.log'
 $Runtime=(Join-Path $Work 'test')+';'+(Join-Path $Work 'main')+';'+$Cp

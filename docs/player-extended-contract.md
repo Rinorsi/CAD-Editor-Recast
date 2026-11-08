@@ -10,7 +10,7 @@
 
 成功写回同 opened 结构，但 status=saved，revision 更新。失败为 {status:'rejected',requestId,code,reason}。target.uuid 可省略（自己）；offline 默认 false。view 为 position / respawn / recipes / advancements / stats / offline。离线必须显式 uuid、offline:true、view:offline。所有读写均要求 EditorPolicy + 实时 COMMANDS_GAMEMASTER；成就额外仅允许自己的在线数据。
 
-read 建立目标/视图基线，apply 携带最近 read/saved revision。服务端重新读取完整视图检查变化，分页不缩小校验范围。一次只写一种视图；不提供扩展操作 undo。断开清理会话。每人 read/apply 间隔 500ms；limit 1..64 默认32，query 按 ID 子串过滤。服务端可缩小页面，按 nextOffset 续读。所有选择器须支持手输 ID；手输仍须服务端实时校验。
+read 建立目标/视图基线，apply 携带最近 read/saved revision。服务端重新读取完整视图，分页不缩小校验范围。位置/重生点和离线文件要求完整基线一致；配方/成就/统计按被改字段三方合并，未改条目及持续增长的游玩时间等计数保留当前值，只有同字段不同修改才拒绝。一次只写一种视图；不提供扩展操作 undo。断开清理会话。每人 read/apply 间隔 500ms；limit 1..64 默认32，query 按 ID 子串过滤。服务端可缩小页面，按 nextOffset 续读。所有选择器须支持手输 ID；手输仍须服务端实时校验。
 
 ## 位置、重生点
 
@@ -34,7 +34,7 @@ stats.value={entries:[{type:'minecraft:custom',id:'minecraft:jump',value:0}]}，
 
 目标为实际 playerdata/<uuid>.dat，不创建新玩家；UUID 手输，不接受路径。offline.value={snbt:'可编辑字段的类型保真 Compound SNBT'}，schema={source:'vanilla player load/save',editableKeys:['运行时实际存在的受支持键'],backupRetention:5}。patch={snbt:'完整可编辑字段复合'}。支持背包、末影箱、生命、饥饿、经验字段；身份、位置、骑乘、连接、成就和独立统计文件不通过此入口。未暴露/未知原始字段保持原 NBT 值。
 
-先用原版 DataFixer、临时 ServerPlayer.load/save 验证每个被改字段，再写临时压缩 NBT 并读回校验。写前重查目标不在线、文件指纹未变，备份原文件到 playerdata/cadeditor-backups/<uuid>/（保留最近5份），同目录 ATOMIC_MOVE 替换，不支持则拒绝、不退化覆盖。单人 owner 的 level.dat Player 优先于 playerdata，因此拒绝其离线编辑，避免旧内嵌数据覆盖；其他单人访客和专服离线玩家可用。审计记录操作者/目标 UUID、操作、前后指纹、结果，不记录物品内容。
+先用原版 DataFixer、临时 Player.load/save（避免污染 ServerPlayer 的统计/成就缓存） 验证每个被改字段，再写临时压缩 NBT 并读回校验。写前重查目标不在线、文件指纹未变，备份原文件到 playerdata/cadeditor-backups/<uuid>/（保留最近5份），同目录 ATOMIC_MOVE 替换，不支持则拒绝、不退化覆盖。单人 owner 的 level.dat Player 优先于 playerdata，因此拒绝其离线编辑，避免旧内嵌数据覆盖；其他单人访客和专服离线玩家可用。审计记录操作者/目标 UUID、操作、前后指纹、结果，不记录物品内容。
 
 ## 错误码
 
@@ -55,5 +55,9 @@ stats.value={entries:[{type:'minecraft:custom',id:'minecraft:jump',value:0}]}，
 | session_lost / target_changed | 会话失效/数据变化，保留草稿后重新读取 |
 | rate_limited / payload_too_large / invalid_request / protected_field | 请求太快/过大/格式错误/禁止字段 |
 | request_timeout | 结果未知，先重新读取，不盲目重试 |
+| write_uncertain | 原版回调或写后回执异常，操作可能已生效；保留草稿并重新读取，禁止自动重试 |
 
 示例不是实机证据；验收记录在实现完成后追加。
+
+
+跨维度传送成功后，扩展视图继续按 UUID 工作。原有背包/状态世界编辑会话仍绑定打开时维度；页面应提示关闭重开后再提交原有页草稿，不应将旧世界会话静默切到新基线。

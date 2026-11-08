@@ -13,6 +13,9 @@ public final class WorldEditor {
     private static final org.slf4j.Logger LOG = LoggerFactory.getLogger("WorldEditor");
     private WorldEditor() {}
     public static void initialize() {
+        Platform.get().onDisconnect(player -> PlayerExtendedEditor.remove(player.getUUID()));
+        Platform.get().onServerStopped(server -> PlayerExtendedEditor.clear());
+        Platform.get().onServerStarting(server -> PlayerExtendedEditor.clear());
         Platform.get().onDisconnect(player -> SESSIONS.remove(player.getUUID()));
         Platform.get().onServerStopped(server -> SESSIONS.clear());
         Platform.get().onServerStarting(server -> SESSIONS.clear());
@@ -22,6 +25,7 @@ public final class WorldEditor {
     }
     /** Same authoritative route with a transport sink for dedicated-server protocol probes. */
     public static boolean route(ServerPlayer player, JsonObject request, Supplier<EditorPolicy> policy,java.util.function.Consumer<JsonObject> replySink) {
+        if (PlayerExtendedEditor.route(player,request,policy,replySink)) return true;
         if (!request.has("slot") || !request.get("slot").isJsonObject()) return false;
         var slot = request.getAsJsonObject("slot");
         if (!slot.has("kind") || !slot.get("kind").isJsonPrimitive()) return false;

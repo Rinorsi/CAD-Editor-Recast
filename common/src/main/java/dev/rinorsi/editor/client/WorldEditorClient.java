@@ -33,13 +33,14 @@ public final class WorldEditorClient {
             dispatcher.register(literal("cadeditor").then(block).then(literal("entity").executes(c -> queue("entity", null))).then(player));
         });
         ClientPlatform.get().onTick(mc -> {
+            PlayerExtendedClient.tick();
             if (queued != null) { String kind = queued; var pos = queuedPos; queued = null; queuedPos = null; open(kind, pos); }
             if ((opening != null || pending != null) && System.nanoTime() > deadline) {
                 String id = pending != null ? pending : opening; opening = null; pending = null;
                 reject(id, "request_timeout", "服务器未确认世界编辑结果；保留草稿，请重新读取目标核对");
             }
         });
-        ClientPlatform.get().onDisconnect(mc -> { screen = null; slot = null; revision = null; opening = null; pending = null; queued = null; });
+        ClientPlatform.get().onDisconnect(mc -> { PlayerExtendedClient.clear(); screen = null; slot = null; revision = null; opening = null; pending = null; queued = null; });
     }
     private static int queue(String kind, JsonObject pos) { queued = kind; queuedPos = pos; return 1; }
     public static void openSelf(){queue("player",null);}
@@ -103,6 +104,7 @@ public final class WorldEditorClient {
         } catch (RuntimeException e) { opening = null; message((e instanceof EditorSessions.Failure f ? f.code + "：" : "") + e.getMessage()); }
     }
     public static boolean receive(JsonObject result) {
+        if (PlayerExtendedClient.receive(result)) return true;
         String id = result.has("requestId") ? result.get("requestId").getAsString() : "";
         if (opening != null && opening.equals(id)) {
             opening = null;
@@ -124,6 +126,7 @@ public final class WorldEditorClient {
         slot = world.getAsJsonObject("slot").deepCopy(); revision = world.get("revision").getAsString();
         var data = new JsonObject(); data.add("world", world); data.add("prefs", EditorPrefs.read()); data.addProperty("hostPrefs",true);
         screen = OrielScreens.open("cadeditor:ui/index.html", data); var owner = screen;
+        PlayerExtendedClient.attach(owner);
         dev.rinorsi.editor.registry.RegistryBridge.attach(owner.driver());
         owner.driver().onMessage("apply", value -> Minecraft.getInstance().execute(() -> apply(owner, value, false)));
         owner.driver().onMessage("undo", value -> Minecraft.getInstance().execute(() -> apply(owner, value, true)));
