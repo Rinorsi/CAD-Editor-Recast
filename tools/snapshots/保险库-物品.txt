@@ -8,12 +8,6 @@ div
         div.grow
         div.k-mini "×"
       div.k-mb
-        div.vt-top
-          div.k-sbox
-            input.k-input [placeholder="搜索名称、标签、物品（支持拼音）" type="text"]
-            div.k-btn.k-sbtn [title="搜索（也可以按回车）"]
-              img.o-ico [src="oriel:textures/icons/search.png" style="height:16px;width:16px"]
-              span "搜索"
         div.vt-bar
           div.k-seg
             div.k-segi.on
@@ -28,6 +22,11 @@ div
             div.k-segi
               img.o-ico [src="oriel:textures/icons/user.png" style="height:16px;width:16px"]
               "玩家预设"
+          div.k-sbox
+            input.k-input [placeholder="搜索名称、标签、物品（支持拼音）" type="text"]
+            div.k-btn.k-sbtn [title="搜索（也可以按回车）"]
+              img.o-ico [src="oriel:textures/icons/search.png" style="height:16px;width:16px"]
+              span "搜索"
           div.k-seg
             div.k-segi.on
               "最近"
@@ -35,14 +34,12 @@ div
               "名称"
             div.k-segi
               "类型"
-          div.k-btn.pri [style="display:none"]
-            img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
-            span "存入当前物品"
-          div.grow
+          div.k-btn [title="按标签筛选" style="display:none"]
+            img.o-ico [src="oriel:textures/icons/tag.png" style="height:16px;width:16px"]
+            span "标签"
           span.k-sub.vt-stat
-        div.k-chips.vt-tags
+        div.k-chips.vt-tags [style="display:none"]
         div.vt-warn
-        div
         div.vt-list
           div.x-list
             div.k-sortlist
@@ -67,12 +64,16 @@ div
           img.o-ico [src="oriel:textures/icons/down.png" style="height:16px;width:16px"]
           span "显示更多"
       div.k-mf
+        div.k-btn.pri [style="display:none"]
+          img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
+          span "存入当前物品"
         div.k-btn
           img.o-ico [src="oriel:textures/icons/upload.png" style="height:16px;width:16px"]
           span "导入…"
         div.k-btn
           img.o-ico [src="oriel:textures/icons/download.png" style="height:16px;width:16px"]
           span "导出全部"
+        div
         div.grow
         div.k-btn.pri
           span "完成"

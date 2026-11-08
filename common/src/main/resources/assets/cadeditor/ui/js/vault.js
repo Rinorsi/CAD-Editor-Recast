@@ -169,8 +169,11 @@ function openVault(opts) {
     if (w) warn.appendChild(h('div', { class: 'vt-msg bad', text: w }));
     pollPersisted();
   }
+  var tagsOpen = false, tagBtn = kBtn('标签', function () { tagsOpen = !tagsOpen; tagBar.style.display = tagsOpen ? '' : 'none'; }, { icon: 'tag', title: '按标签筛选' });
+  tagBar.style.display = 'none'; tagBtn.style.display = 'none';
+  function paintTagBtn() { clear(tagBtn); tagBtn.appendChild(uiIcon('tag', 12)); tagBtn.appendChild(h('span', { text: V.tags.length ? '标签 ' + V.tags.length : '标签' })); tagBtn.classList.toggle('on', V.tags.length > 0); }
   function paintTags(tags) {
-    clear(tagBar);
+    clear(tagBar); tagBtn.style.display = (tags || []).length ? '' : 'none'; if (!(tags || []).length) { tagsOpen = false; tagBar.style.display = 'none'; } paintTagBtn();
     (tags || []).forEach(function (t) {
       var on = V.tags.indexOf(t.name) >= 0, c = h('div', { class: 'k-chip' + (on ? ' on' : ''), text: t.name + ' ' + t.count });
       activate(c, function () { var i = V.tags.indexOf(t.name); if (i >= 0) V.tags.splice(i, 1); else V.tags.push(t.name); refresh(); });
@@ -228,10 +231,10 @@ function openVault(opts) {
           var nm = vInput(e.name || '', function (v) { if (!v.trim()) return; Vault.call('update', { id: e.id, name: v }, function (r) { if (r.ok) { e.name = v; paintState(); } else vaultErr(r); }); }, '名称');
           var tg = vInput((e.tags || []).join('，'), function (v) { var t = splitTags(v).slice(0, 8); Vault.call('update', { id: e.id, tags: t }, function (r) { if (r.ok) { e.tags = t; refresh();  xl.draw(); } else vaultErr(r); }); }, '标签，用逗号隔开（最多 8 个）');
           var nt = vInput(e.note || '', function (v) { Vault.call('update', { id: e.id, note: v }, function (r) { if (r.ok) { e.note = v; xl.draw(); } else vaultErr(r); }); }, '备注（最多 200 字）');
-          var foot = h('div', { class: 'x2f' }, [h('span', { class: 'k-sub', text: tagEls.length ? '' : '没有标签' }),
-            kBtn('复制一份', function () { Vault.call('duplicate', { id: e.id }, function (r) { if (r.ok) refresh(); else vaultErr(r); }); }, { icon: 'copy' }),
-            kBtn('删除', function () { Vault.call('delete', { ids: [e.id] }, function (r) { if (r.ok) { Vault.undo = { token: r.token, until: Date.now() + 29000 }; toast('已删除，30 秒内可在窗口底部撤销', 'info'); refresh(); undoBar(); } else vaultErr(r); }); }, { cls: 'dng', icon: 'trash' })]);
-          return [xField('edit', '名称', nm), xField('tag', '标签', tg), xField('list', '备注', nt), foot];
+          var copyBtn = kBtn('复制一份', function () { Vault.call('duplicate', { id: e.id }, function (r) { if (r.ok) refresh(); else vaultErr(r); }); }, { icon: 'copy' });
+          var delBtn = kBtn('删除', function () { Vault.call('delete', { ids: [e.id] }, function (r) { if (r.ok) { Vault.undo = { token: r.token, until: Date.now() + 29000 }; toast('已删除，30 秒内可在窗口底部撤销', 'info'); refresh(); undoBar(); } else vaultErr(r); }); }, { cls: 'dng', icon: 'trash' });
+          function vf(label, el) { return h('div', { class: 'vt-f' }, [h('span', { class: 'k-sub', text: label }), el]); }
+          return [h('div', { class: 'vt-det' }, [vf('名称', nm), vf('标签', tg), vf('备注', nt), h('div', { class: 'vt-act' }, [copyBtn, delBtn])])];
         } };
     }
   });
@@ -248,9 +251,8 @@ function openVault(opts) {
   var impBtn = kBtn('导入…', function () { openVaultImport(refresh); }, { icon: 'upload' });
   var expBtn = kBtn('导出全部', function () { vaultExport(); }, { icon: 'download' });
   var kindSeg = fixedKind ? null : kSeg([{ v: 'item', label: '物品', icon: 'backpack' }, { v: 'entity', label: '生物', icon: 'paw' }, { v: 'block', label: '方块', icon: 'cube' }, { v: 'player_preset', label: '玩家预设', icon: 'user' }], V.kind, function (v) { V.kind = v; V.tags = []; saveBtn.style.display = v === 'item' && Store.docs && Store.docs.length ? '' : 'none'; q.setAttribute('placeholder', v === 'entity' ? '搜索名称、标签、生物（支持拼音）' : v === 'block' ? '搜索名称、标签、方块' : v === 'player_preset' ? '搜索名称、标签' : '搜索名称、标签、物品（支持拼音）'); refresh(); }).el;
-  var top = h('div', { class: 'vt-top' }, [sbox.el]);
-  var body = [top, h('div', { class: 'vt-bar' }, [kindSeg, sort.el, saveBtn, h('div', { class: 'grow' }), stat]), tagBar, warn, undoEl, list, more];
-  var win = modalShell('保险库', opts.pickEntity ? '选一只生物' : opts.pick ? '选一件放进去' : '存在这台电脑上，所有存档和服务器通用', body, [impBtn, expBtn, h('div', { class: 'grow' }), kBtn('完成', closeModal, { cls: 'pri' })], 'wide vtwin');
+  var body = [h('div', { class: 'vt-bar' }, [kindSeg, sbox.el, sort.el, tagBtn, stat]), tagBar, warn, list, more];
+  var win = modalShell('保险库', opts.pickEntity ? '选一只生物' : opts.pick ? '选一件放进去' : '存在这台电脑上，所有存档和服务器通用', body, [saveBtn, impBtn, expBtn, undoEl, h('div', { class: 'grow' }), kBtn('完成', closeModal, { cls: 'pri' })], 'wide vtwin');
   openModal(win, !!opts.pick); windowify(win, 'vault');   // 和别的大窗口一样：能拖、能拉大小
   refresh(); paintState();
 }

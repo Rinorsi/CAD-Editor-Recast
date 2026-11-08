@@ -1485,14 +1485,12 @@ textarea.world-snbt { min-height: 56px; }
 .k-card.es-open .k-chead { cursor: default; }
 
 /* 保险库窗口 */
-.vt-top { display: flex; margin-bottom: 6px;
-  width: 100%;
-}
-.vt-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.vt-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+.vt-bar .k-sbox { flex: 1 1 140px; min-width: 120px; width: auto; }
+.vt-bar .k-sbox > .k-input { flex: 1; min-width: 60px; }
+.vt-bar .vt-stat { margin-left: auto; }
 .vt-tags { margin-bottom: 6px; }
 .vt-list { max-height: 330px; overflow-y: auto; }
-.vt-top .k-sbox { flex: 1; width: 100%; }
-.vt-top .k-sbox > .k-input { flex: 1; min-width: 60px; }
 
 body.vault-only .ew { display: none; }
 .x2r > .we-line { flex: 1 1 auto; width: auto; min-width: 0; margin-left: 0; }
@@ -1509,6 +1507,11 @@ body.vault-only .ew { display: none; }
 .k-modal.vtwin .k-mb > * { margin-bottom: 0; flex-shrink: 0; }
 .k-modal.vtwin .vt-list { flex: 1 1 auto; min-height: 0; max-height: none; overflow-y: auto; }
 .vt-meta { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
+.vt-det { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
+.vt-f { flex: 1 1 110px; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.vt-f > .vt-in { width: 100%; margin-left: 0; }
+.vt-act { flex: none; display: flex; gap: 6px; }
+.k-mf .vt-msg { padding: 0 4px; }
 .vt-note { color: var(--tx3); font-size: 12px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .x2r > .vt-in { flex: 1 1 auto; width: auto; min-width: 0; margin-left: 0; }
 
