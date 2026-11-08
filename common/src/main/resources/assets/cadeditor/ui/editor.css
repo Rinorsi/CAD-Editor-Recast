@@ -838,12 +838,13 @@ textarea.ed-code-in { min-height: 56px; }
 
 /* 界面缩放大（GUI 比例 3、4）时窗口只剩 420~680 个像素宽：左栏收窄、名字缩小、标题不竖排 */
 .ed-stagehead span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ew.snug .ed-hero { padding: 6px; }
+.ew.snug .ed-hero { padding: 6px;
+  width: var(--hw, 176px);
+}
 .ew.snug .ed-name { font-size: 16px; line-height: 20px; }
 .ew.snug .ed-stats .k-stat { font-size: 12px; }
 .ew.snug .ed-tags { gap: 2px; }
 .k-stat { white-space: nowrap; min-width: 0; }
-.ew.snug .ed-hero { width: var(--hw, 176px); }
 
 /* 缩放大的时候内容更紧凑一点：行矮一点、分段标题留白少一点，同一屏多看到几行 */
 .ew.snug .k-chead { min-height: 30px; padding: 3px 6px; }
@@ -1006,16 +1007,19 @@ textarea.tc-raw { min-height: 140px; width: 100%; }
 /* 详细编辑窗口 */
 .detailwin .advnav { width: 132px; }
 .detailwin .advnav-i { height: 28px; }
-.detail-pad { gap: 8px; }
+.detail-pad { gap: 8px;
+  max-width: 640px; width: 100%; margin: 0 auto; box-sizing: border-box;
+  animation: k-open 160ms var(--o-ease-out, ease-out) both;
+}
 .detailwin .k-card.in-detail .k-chev { display: none; }
 .detailwin .k-card.in-detail .k-cbody { display: flex; }
 .det-row { display: flex; min-width: 0; }
-.det-sum { flex: 1; min-width: 0; color: var(--tx2); overflow: hidden; text-overflow: ellipsis; }
+.det-sum { flex: 1; min-width: 0; color: var(--tx2); overflow: hidden; text-overflow: ellipsis;
+  white-space: normal;
+}
 .det-row > .k-btn { flex: none; }
 .k-chead .det-open { flex: none; }
 .det-row { flex-direction: column; align-items: stretch; gap: 6px; }
-.det-sum { white-space: normal; }
-.detail-pad { max-width: 640px; width: 100%; margin: 0 auto; box-sizing: border-box; }
 .in-detail .k-scrollbox, .in-detail .k-scrollbox.tall { max-height: none; overflow: visible; }
 
 /* 可增删的对象列表（详细编辑窗口里的专用表单） */
@@ -1038,7 +1042,9 @@ textarea.bees-nbt { min-height: 64px; width: 100%; }
 .detailwin .k-card.in-detail > .k-cbody { padding: 0; border: 0; margin: 0; gap: 0; background: none; }
 .detailwin .in-detail .k-cbody { display: flex; flex-direction: column; gap: 0; padding-right: 0; }
 .det-reset { margin-right: 8px; }
-.in-detail .k-fld { display: grid; row-gap: 4px; align-items: center; border-top: 1px solid var(--ln2); min-width: 0; }
+.in-detail .k-fld { display: grid; row-gap: 4px; align-items: center; border-top: 1px solid var(--ln2); min-width: 0;
+  width: 100%; box-sizing: border-box;
+}
 .in-detail .k-fld:first-child { border-top: 0; }
 .in-detail .k-fld > .lb { display: flex; color: var(--tx); }
 .in-detail .k-fld > .lb .k-sub { margin: 0; color: var(--tx3); }
@@ -1048,7 +1054,6 @@ textarea.bees-nbt { min-height: 64px; width: 100%; }
 .in-detail .k-togrow { padding: 8px 2px; border-top: 1px solid var(--ln2); }
 .in-detail .k-sech { margin: 16px 0 4px 0; }
 .in-detail .k-sech:first-child { margin-top: 2px; }
-.in-detail .k-fld { width: 100%; box-sizing: border-box; }
 
 /* 属性加成：数值直接在行里改，展开后是紧凑的两行设置 */
 .k-xhead .k-xnum { flex: none; width: 120px; }
@@ -1056,9 +1061,13 @@ textarea.bees-nbt { min-height: 64px; width: 100%; }
 .k-xhead .k-xnum .k-big { display: none; }   /* 行内数字框不显示“≈ 3.6万”之类的换算，会撑出行；需要的换算写在说明里 */
 .k-xbody.x2 { gap: 8px; padding: 8px 10px 10px 10px; }
 .x2r { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.x2r > :last-child { min-width: 0; }
+.x2r > :last-child { min-width: 0;
+  margin-left: auto;
+}
 .x2f { display: flex; align-items: center; gap: 8px; }
-.x2f .k-btn { flex: none; }
+.x2f .k-btn { flex: none;
+  margin-left: auto;
+}
 /* 大窗口默认尺寸收小：够用就好，需要时自己拉大 */
 .in-detail .k-fld { grid-template-columns: 128px minmax(0, 1fr); column-gap: 12px; padding: 8px 2px; }
 .detail-pad { padding: 10px 12px 14px 12px; }
@@ -1072,18 +1081,18 @@ textarea.bees-nbt { min-height: 64px; width: 100%; }
 /* 展开行：左边图标 + 名称，控件整体靠右 */
 .x2r { justify-content: space-between; }
 .x2l { display: flex; align-items: center; gap: 8px; width: auto; flex: none; color: var(--tx2); -mc-tint: var(--tx3); }
-.x2r > :last-child { margin-left: auto; }
 .x2f { justify-content: space-between; }
-.x2f .k-btn { margin-left: auto; }
 /* 大窗口里的普通行：字段名在左，控件整体靠右 */
 .in-detail .k-fld:not(.wide) > :last-child { max-width: 100%; }
 .in-detail .k-togrow { flex-direction: row-reverse; justify-content: space-between; }
 /* 详细编辑窗口：按视口比例取大小（高 UI 缩放下视口很小，固定像素会占满整屏） */
-.k-modal.advwin.detailwin { width: 50%; min-width: 360px; max-width: 520px; }
+.k-modal.advwin.detailwin { width: 50%; min-width: 360px; max-width: 520px;
+  height: auto; min-height: 0; max-height: 70%;
+}
 /* 高度跟着内容走，超过上限才滚动 */
-.k-modal.advwin.detailwin { height: auto; min-height: 0; max-height: 70%; }
-.detailwin .advbody { flex: 0 1 auto; min-height: 0; }
-.detailwin .advbody { width: 100%; box-sizing: border-box; }
+.detailwin .advbody { flex: 0 1 auto; min-height: 0;
+  width: 100%; box-sizing: border-box;
+}
 .detailwin .advmain { flex: 1 1 auto; min-width: 0; }
 /* 会弹出独立窗口的卡片：右侧是“外跳”图标 + 名称，和展开箭头明显不同 */
 .k-chev.det { transform: none; opacity: 1; -mc-tint: var(--acc2); }
@@ -1095,7 +1104,9 @@ textarea.bees-nbt { min-height: 64px; width: 100%; }
 /* ===== 单选：平铺列表行（带说明）===== */
 .k-tiles.list { display: flex; flex-direction: column; gap: 0; border-top: 1px solid var(--ln2); }
 .k-tiles.list .k-tile { flex-direction: row; align-items: center; justify-content: flex-start; gap: 10px; min-height: 30px; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--ln2); box-shadow: none; transform: none; }
-.k-tiles.list .k-tile::before { content: ''; flex: none; width: 10px; height: 10px; border: 2px solid var(--tx3); background: transparent; }
+.k-tiles.list .k-tile::before { content: ''; flex: none; width: 10px; height: 10px; border: 2px solid var(--tx3); background: transparent;
+  order: 3; margin-left: auto;
+}
 .k-tiles.list .k-tile:hover { background: var(--ln); transform: none; border-color: var(--ln2); }
 .k-tiles.list .k-tile.on { background: color-mix(in srgb, var(--acc) 16%, transparent); border-color: var(--ln2); box-shadow: inset 2px 0 0 var(--acc); }
 .k-tiles.list .k-tile.on::before { border-color: var(--acc2); background: var(--acc2); }
@@ -1125,7 +1136,6 @@ textarea.bees-nbt { min-height: 64px; width: 100%; }
 .pickrow .pr-k .rs-id { overflow: hidden; text-overflow: ellipsis; }
 .pickrow .pr-r { flex: none; display: flex; align-items: center; gap: 6px; }
 /* 列表式单选：选中标记放右边 */
-.k-tiles.list .k-tile::before { order: 3; margin-left: auto; }
 .k-tiles.list .k-tile { padding: 0 10px 0 12px; }
 .k-fld.pickrow, .in-detail .k-fld.pickrow:not(.wide) { display: flex !important; flex-direction: row !important; align-items: center; gap: 12px; }
 .pickrow > .pr-r { justify-self: auto; }
@@ -1222,7 +1232,6 @@ textarea.world-snbt { display: block; width: 100%; max-height: 200px; box-sizing
 .worldwin .k-fld:has(textarea) > :last-child { width: 100%; }
 /* 展开 / 切换分段的过渡 */
 @keyframes k-open { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
-.detail-pad { animation: k-open 160ms var(--o-ease-out, ease-out) both; }
 
 /* 自定义模型数据的原始数组：小标题 + 右侧“添加”，下面每行 #序号 控件 删除 */
 .l6-h { display: flex; align-items: center; justify-content: space-between; margin: 12px 2px 4px 2px; color: var(--tx2); }
@@ -1304,13 +1313,14 @@ textarea.world-snbt { min-height: 56px; }
 .bn-ops { flex: none; display: flex; }
 .bn-ops .k-btn { padding: 0 7px; }
 .bn-ops .k-btn.dis { opacity: 0.35; pointer-events: none; }
-.bn-row > .k-btn { flex: none; }
+.bn-row > .k-btn { flex: none;
+  justify-content: flex-start;
+}
 .bn-raw { color: var(--tx3); }
 .bn-pat .rs-field { gap: 6px; }
 .bn-pat .rs-field .k-btn > span { display: none; }
 .bn-pat .rs-field .k-btn { min-width: 0; padding: 0 6px; }
 .bn-pat .rs-txt, .bn-pat .rs-name { max-width: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bn-row > .k-btn { justify-content: flex-start; }
 .bn-prev { flex: none; width: 104px; height: 104px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--ln2); background: var(--s0); }
 .bn-wrap { display: flex; align-items: flex-start; gap: 16px; min-width: 0; }
 .bn-side { flex: none; width: 104px; display: flex; flex-direction: column; gap: 8px; }
@@ -1397,7 +1407,9 @@ textarea.world-snbt { min-height: 56px; }
 .k-sbox > .k-sbtn { flex: none; }
 
 /* 外观借用：头部那个按钮名字太长时截断，不挤掉卡片说明 */
-.hd-pick .k-btn { min-width: 0; }
+.hd-pick .k-btn { min-width: 0;
+  max-width: 130px;
+}
 .hd-pick .k-btn > .hd-model { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* 左侧属性：不要图标；标签可以被截断，数值永远完整显示 */
@@ -1406,16 +1418,15 @@ textarea.world-snbt { min-height: 56px; }
 .k-stat b { flex: none; white-space: nowrap; margin-left: 6px; }
 /* 外观借用：头部控件靠右、按钮窄一点 */
 .k-chead .hd-pick { margin-left: auto; }
-.hd-pick .k-btn { max-width: 130px; }
 
 /* 物品选择弹层底部：左边计数提示，右边可选的操作按钮（如「恢复默认」） */
 .k-pfoot { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.k-pfoot > .k-phint { flex: 1; min-width: 0; }
+.k-pfoot > .k-phint { flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .k-pfoot > .k-btn { flex: none; }
 /* 外观借用：「恢复默认」在选择窗里，头部不再显示 */
 .k-card[data-card=model] .k-reset { display: none; }
-
-.k-pfoot > .k-phint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* 左栏预览区收放时内容先淡出，避免 3D 模型被压扁 */
 .ed-stage > * { transition: opacity 90ms ease-out; }
@@ -1469,12 +1480,12 @@ textarea.world-snbt { min-height: 56px; }
 .k-card.es-open .k-chead { cursor: default; }
 
 /* 保险库窗口 */
-.vt-top { display: flex; margin-bottom: 6px; }
+.vt-top { display: flex; margin-bottom: 6px;
+  width: 100%;
+}
 .vt-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .vt-tags { margin-bottom: 6px; }
 .vt-list { max-height: 330px; overflow-y: auto; }
-
-.vt-top { width: 100%; }
 .vt-top .k-sbox { flex: 1; width: 100%; }
 .vt-top .k-sbox > .k-input { flex: 1; min-width: 60px; }
 
@@ -1541,14 +1552,17 @@ body.vault-only .ew { display: none; }
   background: linear-gradient(rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0.16)); border: 1px solid var(--ln2);
   box-shadow: inset 0 1px 0 var(--ln), inset 0 0 14px rgba(0, 0, 0, 0.4), 0 1px 0 var(--ln); }
 .wp-inv .k-cgrid { margin: 0; padding: 0; }
-.wp-col { display: flex; flex-direction: column; gap: 6px; }
+.wp-col { display: flex; flex-direction: column; gap: 6px;
+  flex: 1 1 auto; max-width: 272px;
+}
 .wp-sep { height: 1px; background: var(--ln2); box-shadow: 0 1px 0 var(--ln); }
 .wp-vsep { align-self: stretch; width: 1px; background: var(--ln2); box-shadow: 1px 0 0 var(--ln); }
 .slot .es-ghost { opacity: 0.32; }
 .slot.hand::after { height: 2px; bottom: -3px; box-shadow: 0 0 5px var(--warn); }
 .wp-inv .k-cgrid:not(.fluid) .slot.s34 { width: 26px; height: 26px; }
-.wp-inv .k-cgrid.fluid .slot.s34 { width: auto; height: auto; aspect-ratio: 1; }
-.wp-col { flex: 1 1 auto; max-width: 272px; }
+.wp-inv .k-cgrid.fluid .slot.s34 { width: auto; height: auto; aspect-ratio: 1;
+  min-width: 22px;
+}
 .x-sec.wp-fold { cursor: pointer; } .x-sec.wp-fold:hover .x-st { color: var(--acc2); }
 .wp-fold .fold-arrow { color: var(--tx3); }
 
@@ -1557,8 +1571,6 @@ body.vault-only .ew { display: none; }
 .ew.hthin .ed-hero .ed-name { white-space: normal; text-align: center; overflow-wrap: anywhere; }
 .ew.narrow .k-apply span { display: none; }
 .ew.hthin .ed-stage { align-self: stretch; width: 100%; }
-
-.wp-inv .k-cgrid.fluid .slot.s34 { min-width: 22px; }
 .wp-col { min-width: 204px; }
 .wp-inv { overflow-x: auto; justify-content: flex-start; }
 .wp-inv > :first-child { margin-left: auto; } .wp-inv > :last-child { margin-right: auto; }
