@@ -3,6 +3,18 @@
    各页面里保留原来的全局名（SLOT_ZH、OPS 等）作别名，指向这里的同一个对象。
    同一概念有两种措辞的（如槽位的「头部 / 头盔」、属性操作的「加值 / 加固定值」）是界面里不同位置用的，分开存放，不要合并措辞。 */
 var Labels = {};
+/* 关于：名称、作者、简介和链接（设置弹窗的「关于」区读这里；版本号由宿主在页面数据的 about.version 里带来） */
+Labels.about = {
+  name: 'CAD Editor',
+  tagline: '可视化编辑 Minecraft 物品、方块、生物和玩家数据',
+  author: '云诺羲Rinorsi',
+  authorRole: 'CAD Editor 与 Oriel UI 的作者',
+  links: [
+    { icon: 'code', title: 'GitHub', show: 'Rinorsi/CAD-Editor-Recast', url: 'https://github.com/Rinorsi/CAD-Editor-Recast' },
+    { icon: 'play', title: 'B站', show: 'b23.tv/hjUvs0c', url: 'https://b23.tv/hjUvs0c' },
+    { icon: 'heart', title: '爱发电', show: 'afdian.com/a/Rinorsi', url: 'https://afdian.com/a/Rinorsi' }
+  ]
+};
 /* SLOT_ZH */
 Labels.slot = { any: '任意', mainhand: '主手', offhand: '副手', hand: '双手', head: '头部', chest: '胸部', legs: '腿部', feet: '脚部', armor: '全部盔甲', body: '身体', saddle: '鞍' };
 /* SLOT_HEAD */

@@ -1382,6 +1382,13 @@ textarea.world-snbt { min-height: 56px; }
 .x-list .k-sortlist { display: flex; flex-direction: column; }
 .x-b { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .st-list { display: flex; flex-direction: column; gap: 8px; }
+/* 设置里的「关于」：Logo + 名称/版本一行，下面是作者和链接行（链接行用普通 xRow，右侧两个图标按钮贴合内容） */
+.ab-head { display: flex; align-items: center; gap: 10px; padding: 4px 2px 8px; }
+.ab-logo { width: 48px; height: 48px; flex: none; }
+.ab-tx { flex: 1; min-width: 0; }
+.ab-name { color: var(--tx); }
+.ab-acts { display: flex; align-items: center; gap: 4px; flex: none; }
+.k-btn.ab-btn { text-decoration: none; color: var(--tx); }
 
 /* 数据类表单收紧：说明、段标题、列表之间不留大块空白 */
 .world-note { margin-bottom: 6px; }

@@ -119,3 +119,17 @@ assert.deepEqual(Array.from(c.splitTags('a，b, c  d,,')), ['a', 'b', 'c', 'd'])
   assert.equal(tab.getAttribute('title'), null, '页签重画后鼠标不动，也不会有原生提示');
 }
 console.log('PASS components: xNum/xToggle/xText/xSeg/xSelect, kInput onCommit, xList extras, modalShell, kColorPop, combo, variant preview, tooltips, labels / names.');
+{
+ let pop;const original=c.kPopover;c.kPopover=(anchor,node)=>{pop=node;};
+ const obj={Health:4};const row=c.esFlagRow({key:'Health',id:'health',type:'float',min:0,max:1,default:1},{get:()=>obj},fn=>fn(obj));
+ const warning=row.querySelector('.k-numwarn');assert.equal(warning.textContent,'超过默认上限 · 说明');
+ assert(warning.textContent.length<18,'health row must stay concise');
+ warning.fire('click');assert(pop.textContent.includes('默认最大生命值为 1'));assert(pop.textContent.includes('体型、变体'));
+ row.num.set(1);assert.equal(warning.style.display,'none','warning disappears at the default bound');c.kPopover=original;
+}
+{
+ const obj={};const row=c.esFlagRow({key:'NoAI',type:'byte-bool',default:false,present_by_default:false},{get:()=>obj},fn=>fn(obj));
+ row.toggle.el.fire('click');assert.equal(obj.NoAI,true);
+ assert.equal(c.nbtMerge(obj,c.nbtParse('{}')),'{NoAI:true}','a newly added boolean must not become an int tag');
+ row.toggle.el.fire('click');assert(!Object.hasOwn(obj,'NoAI'),'default false is omitted again');
+}

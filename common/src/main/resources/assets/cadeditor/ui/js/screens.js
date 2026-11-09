@@ -12,6 +12,7 @@ var Prefs = {
   vals: {}, host: false,
   init: function (data) {
     this.host = !!(data && data.hostPrefs); this.hostClip = !!(data && data.hostClip);
+    this.about = data && data.about && typeof data.about === 'object' ? data.about : {};
     var p = data && data.prefs && typeof data.prefs === 'object' ? data.prefs : null;
     if (p) for (var k in p) this.vals[k] = p[k];
     UI.heroView = this.get('heroView', '3d') === '2d' ? '2d' : '3d';
@@ -1069,4 +1070,20 @@ function advSettings(host) {
   var t = kToggle(Prefs.get('debug', false) === true, function (on) { Prefs.set('debug', on); if (on) dbg('调试已开启：拖动、写回、草稿等事件会弹提示并写入游戏日志'); }, '');
   row('bug', '调试模式', '关键操作弹提示，并写入游戏日志', t.el);
   host.appendChild(box);
+}
+  aboutSection(box);
+/* 关于：Logo、版本、作者和链接。链接用页面的 <a href>，点了 Oriel 会先让玩家确认；玩家把网页链接设成屏蔽时打不开，所以每行都有「复制」 */
+function aboutSection(box) {
+  var A = Labels.about, ver = Prefs.about && Prefs.about.version;
+  box.appendChild(xSec('star', '关于'));
+  box.appendChild(h('div', { class: 'ab-head' }, [
+    h('img', { class: 'ab-logo', src: 'logo.png', alt: '' }),
+    h('div', { class: 'ab-tx' }, [h('div', { class: 'ab-name', text: A.name }), h('div', { class: 'k-sub', text: ver && ver !== 'unknown' ? '版本 ' + ver : A.tagline })])
+  ]));
+  box.appendChild(xRow({ icon: uiIcon('crown', 14), title: A.author, sub: A.authorRole }));
+  A.links.forEach(function (l) {
+    var open = h('a', { class: 'k-btn ab-btn', href: l.url, title: '在浏览器打开（会先确认）' }, [uiIcon('external', 12)]);
+    var copy = kBtn('', function () { copyText(l.url, l.title + '链接'); }, { icon: 'copy', title: '复制地址' });
+    box.appendChild(xRow({ icon: uiIcon(l.icon, 14), title: l.title, sub: l.show, right: h('div', { class: 'ab-acts' }, [open, copy]) }));
+  });
 }
