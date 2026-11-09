@@ -53,6 +53,18 @@ public final class EditorClipboardHostTest {
         String page = sources.get("EditorPageHost.java");
         check(page.contains("EditorClipboardHost.declare(data)") && page.contains("data.addProperty(\"hostPrefs\", true)"),
                 "common capabilities declared");
+        String declaration = page.substring(page.indexOf("private static void declare(JsonObject data)"),
+                page.indexOf("private static String modVersion()"));
+        check(declaration.contains("var about = new JsonObject()")
+                && declaration.contains("about.addProperty(\"version\", modVersion())")
+                && declaration.contains("data.add(\"about\", about)"),
+                "every page declares about.version alongside host capabilities");
+        check(page.contains("Platform.get().modVersion(\"cadeditor\")")
+                && page.contains("version == null || version.isBlank() ? \"unknown\" : version")
+                && page.contains("catch (RuntimeException | LinkageError unavailable)")
+                && page.contains("return \"unknown\""), "loader version lookup has an unknown fallback");
+        check(page.indexOf("declare(data);") < page.indexOf("OrielScreens.open(page, data)")
+                && page.contains("declare(dataOrNull);"), "both page entry paths declare shared data");
         check(page.contains("EditorClipboardHost.attach(screen, clipboard)")
                 && page.contains("onMessage(\"prefs\", EditorPrefs::accept)")
                 && page.contains("RegistryBridge.attach(screen.driver())"), "common channels attached");

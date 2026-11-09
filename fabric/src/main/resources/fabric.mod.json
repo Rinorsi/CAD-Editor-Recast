@@ -3,6 +3,15 @@
   "id": "cadeditor",
   "version": "${version}",
   "name": "CAD Editor",
+  "icon": "assets/cadeditor/icon.png",
+  "authors": ["云诺羲Rinorsi"],
+  "contact": {
+    "homepage": "https://github.com/Rinorsi/CAD-Editor-Recast",
+    "sources": "https://github.com/Rinorsi/CAD-Editor-Recast",
+    "issues": "https://github.com/Rinorsi/CAD-Editor-Recast/issues",
+    "bilibili": "https://b23.tv/hjUvs0c",
+    "afdian": "https://afdian.com/a/Rinorsi"
+  },
   "description": "CAD Editor (Recast): visual item component and data editor for Minecraft, built on Oriel UI.",
   "environment": "*",
   "entrypoints": {

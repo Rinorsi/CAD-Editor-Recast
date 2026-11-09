@@ -1,10 +1,15 @@
 modLoader="javafml"
 loaderVersion="${neoforge_loader_version_range}"
 license="All Rights Reserved"
+issueTrackerURL="https://github.com/Rinorsi/CAD-Editor-Recast/issues"
 [[mods]]
 modId="cadeditor"
 version="${version}"
 displayName="CAD Editor"
+${neoforge_logo_key}="assets/cadeditor/icon.png"
+authors="云诺羲Rinorsi"
+displayURL="https://github.com/Rinorsi/CAD-Editor-Recast"
+credits="界面使用优易库 Oriel UI（作者：云诺羲Rinorsi）；https://github.com/Rinorsi/Oriel-UI；作者 B站：https://b23.tv/hjUvs0c；爱发电：https://afdian.com/a/Rinorsi"
 description="Visual item, block and entity editor built on Oriel UI."
 [[dependencies.cadeditor]]
 modId="neoforge"

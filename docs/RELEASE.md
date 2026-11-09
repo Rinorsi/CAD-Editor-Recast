@@ -5,7 +5,7 @@
 1. 改版本：`pwsh -File tools/bump-version.ps1 -Version <新版本> -DryRun`，审阅后去掉 `-DryRun`。同步 README、docs 当前版本标记、CHANGELOG 未发布章节、元数据模板。补全中文玩家更新日志，删掉开发中占位描述。
 2. 全部功能合并后统一验收：`pwsh -File tools/accept-all.ps1 -Full`；其余五目标运行 `tools/smoke-matrix.ps1`。保留失败、重试和最终证据。可选内存采样：`pwsh -File tools/live-test/run.ps1 -Driver memory -MemoryMinutes 3 -EvidenceRoot <新的独立目录>`。
 3. 打包：`pwsh -File tools/build-all.ps1`，等待共享 Gradle 锁，不结束别人的进程。输出 `../Oriel-UI-Workspace/dist/editor-<版本>-<日期>/`，仅六个目标 jar。
-4. 发行目录运行 `sha256sum -c SHA256SUMS.txt`（Git Bash / Linux），确认恰好六项全部通过；检查 metadata 版本、UI、平台 services 与测试代码隔离。
+4. 发行目录运行 `sha256sum -c SHA256SUMS.txt`（Git Bash / Linux），确认恰好六项全部通过；检查 metadata 版本、UI、平台 services 与测试代码隔离。图标/作者/链接元数据与 docs/branding 一致。
 5. 提交并审核，确认 CI 六目标 build/check（含 codecVerification）通过，玩家日志与已验收功能一致。
 6. 有发布授权的维护者创建并推送 `v<版本>` tag。tag 必须与 gradle.properties 一致；工作流从同一 tag 重建六个 jar，发布 GitHub Release 与 SHA256SUMS.txt。本地脚本不会主动 push。
 

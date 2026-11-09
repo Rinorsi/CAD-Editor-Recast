@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/branding/logo-transparent-256.png" width="128" alt="CAD Editor">
+</p>
+
 # CAD Editor · Recast
 
 Minecraft 物品数据组件编辑器：游戏里按 **I**（或 `/cade`）打开可视化界面：悬停 / 手持物品改物品，对着方块、实体、玩家改它们，什么都不指就改自己。

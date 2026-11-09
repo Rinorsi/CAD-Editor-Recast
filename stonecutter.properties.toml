@@ -41,4 +41,5 @@ fabric_version = "0.155.3+26.1.2"
 fabric_loader_version = "0.19.5"
 neoforge_version = "26.1.2.126"
 neoforge_loader_version_range = "[4,)"
-neoforge_logo_key = "iconFile"
+# 26.1's ModListScreen still reads IModInfo.getLogoFile(); iconFile starts in 26.2.
+neoforge_logo_key = "logoFile"

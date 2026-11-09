@@ -3,6 +3,7 @@ package dev.rinorsi.editor.client;
 import com.google.gson.JsonObject;
 import dev.oriel.mod.client.OrielScreen;
 import dev.oriel.mod.client.OrielScreens;
+import dev.rinorsi.editor.platform.Platform;
 import dev.rinorsi.editor.registry.RegistryBridge;
 
 /** Common channels for every editor page, including custom OrielScreen subclasses. */
@@ -31,5 +32,17 @@ final class EditorPageHost {
     private static void declare(JsonObject data) {
         EditorClipboardHost.declare(data);
         data.addProperty("hostPrefs", true);
+        var about = new JsonObject();
+        about.addProperty("version", modVersion());
+        data.add("about", about);
+    }
+
+    private static String modVersion() {
+        try {
+            String version = Platform.get().modVersion("cadeditor");
+            return version == null || version.isBlank() ? "unknown" : version;
+        } catch (RuntimeException | LinkageError unavailable) {
+            return "unknown";
+        }
     }
 }
