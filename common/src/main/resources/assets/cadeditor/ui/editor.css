@@ -1389,6 +1389,8 @@ textarea.world-snbt { min-height: 56px; }
 .ab-name { color: var(--tx); }
 .ab-acts { display: flex; align-items: center; gap: 4px; flex: none; }
 .k-btn.ab-btn { text-decoration: none; color: var(--tx); }
+/* 设置弹窗的三页同高：否则弹窗居中时，切页签页签条会上下跳（以最高的「关于」为准） */
+.set-pages { min-height: 208px; }
 
 /* 数据类表单收紧：说明、段标题、列表之间不留大块空白 */
 .world-note { margin-bottom: 6px; }

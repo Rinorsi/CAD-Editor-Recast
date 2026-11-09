@@ -118,6 +118,24 @@ assert.deepEqual(Array.from(c.splitTags('a，b, c  d,,')), ['a', 'b', 'c', 'd'])
   const tab = c.h('div', { class: 'ed-tab', title: '成就' }, [c.h('span', { text: '成就' })]);
   assert.equal(tab.getAttribute('title'), null, '页签重画后鼠标不动，也不会有原生提示');
 }
+// ---- 设置里的「关于」：Logo、版本、作者、链接行（打开 = <a href>，复制 = 统一的 copyText）
+{
+  c.Prefs.init({ about: { version: '9.8.7' } });
+  const box = c.h('div'); c.aboutSection(box);
+  const head = q(box, '.ab-head');
+  assert.ok(head, '设置里有关于区'); assert.equal(q(head, '.ab-logo').getAttribute('src'), 'logo.png'); assert.equal(text(q(head, '.ab-name')), 'CAD Editor');
+  assert.ok(text(head).includes('版本 9.8.7'), '版本号来自宿主带来的 about.version');
+  const hrefs = box.querySelectorAll('a.ab-btn').map(a => a.getAttribute('href'));
+  assert.deepEqual(hrefs, ['https://github.com/Rinorsi/CAD-Editor-Recast', 'https://b23.tv/hjUvs0c', 'https://afdian.com/a/Rinorsi'], '三个链接都有「打开」');
+  box.querySelectorAll('a.ab-btn').forEach(a => assert.equal(a.getAttribute('title'), null, '链接按钮也不带原生 title'));
+  assert.ok(text(box).includes('云诺羲Rinorsi'), '有作者');
+  const acts = box.querySelectorAll('.ab-acts'); assert.equal(acts.length, 3, '三个链接行'); acts.forEach(a => assert.equal(a.children.length, 2, '每行两个按钮：打开 + 复制'));
+  c.Prefs.init({}); const box2 = c.h('div'); c.aboutSection(box2);
+  assert.ok(!text(q(box2, '.ab-head')).includes('版本'), '宿主没给版本号就不显示，改显示简介'); c.Prefs.init({ about: { version: 'unknown' } });
+  const box3 = c.h('div'); c.aboutSection(box3); assert.ok(!text(q(box3, '.ab-head')).includes('unknown'), '版本取不到（unknown）不显示');
+  const gen = c.h('div'); c.advSettings(gen, 'ui'); const gen2 = c.h('div'); c.advSettings(gen2, 'adv'); assert.equal(q(gen, '.ab-head'), null, '界面页不带关于区'); assert.equal(q(gen2, '.ab-head'), null, '高级页不带关于区（关于在自己的页签里）');
+  assert.equal(text(gen).includes('调试模式'), false, '调试不在界面页'); assert.ok(text(gen2).includes('调试模式') && text(gen2).includes('窗口大小'), '窗口和调试在高级页'); assert.ok(text(gen).includes('界面音效') && text(gen).includes('主题'), '音效、主题在界面页');
+}
 console.log('PASS components: xNum/xToggle/xText/xSeg/xSelect, kInput onCommit, xList extras, modalShell, kColorPop, combo, variant preview, tooltips, labels / names.');
 {
  let pop;const original=c.kPopover;c.kPopover=(anchor,node)=>{pop=node;};

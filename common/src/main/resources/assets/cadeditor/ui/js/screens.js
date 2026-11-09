@@ -1050,14 +1050,28 @@ function openImport() {
 /* 高级 → 设置 */
 /* 设置：界面本身的偏好，和「高级」（原始数据、命令）分开 */
 function openSettings() {
-  var host = h('div', {}); advSettings(host);
-  openModal(modalShell('设置', '界面偏好', [host], [h('div', { class: 'grow' }), kBtn('完成', closeModal, { cls: 'pri' })]));
+  var host = h('div', { class: 'set-pages' }), cur = 'ui';
+  var tabs = [{ id: 'ui', icon: 'palette', label: '界面' }, { id: 'adv', icon: 'gear', label: '高级' }, { id: 'about', icon: 'star', label: '关于' }];
+  var bar = h('div', { class: 'ed-tabs' });
+  function paint() {
+    clear(host); if (cur === 'about') aboutSection(host); else advSettings(host, cur);
+    for (var i = 0; i < bar.children.length; i++) bar.children[i].classList.toggle('on', tabs[i].id === cur);
+  }
+  tabs.forEach(function (t) {
+    var el = h('div', { class: 'ed-tab' }, [uiIcon(t.icon, 14), h('span', { text: t.label })]);
+    activate(el, function () { if (cur !== t.id) { cur = t.id; paint(); } });
+    bar.appendChild(el);
+  });
+  var shell = modalShell('设置', '界面偏好', [host], [h('div', { class: 'grow' }), kBtn('完成', closeModal, { cls: 'pri' })]);
+  shell.insertBefore(bar, shell.children[1]);   /* 页签条放在标题和内容之间，和主窗口的分页同一套样式 */
+  paint();
+  openModal(shell);
 }
-function advSettings(host) {
+function advSettings(host, page) {
   var box = h('div', { class: 'x-list set-list' });
   /* 一项设置 = 一行：图标 + 名称 / 一句说明 + 右侧控件（和子页的行同一个样式） */
   function row(icon, title, sub, control) { box.appendChild(xRow({ icon: uiIcon(icon, 14), title: title, sub: sub, right: control })); }
-  box.appendChild(xSec('palette', '界面'));
+  if (page === 'ui') {
   var snd1 = kToggle(Snd.on, function (on) { Snd.on = on; Prefs.set('uiSound', on); if (on) snd('minecraft:ui.button.click', 0.5, 1.1); }, '');
   row('music', '界面音效', '按钮、拖动排序、打开窗口时的声音', snd1.el);
   var th1 = kSeg([{ v: 'dark', label: '暗色' }, { v: 'light', label: '亮色' }], UI.theme, function (v) { if (v !== UI.theme) toggleTheme(); });
@@ -1070,12 +1084,13 @@ function advSettings(host) {
   var t = kToggle(Prefs.get('debug', false) === true, function (on) { Prefs.set('debug', on); if (on) dbg('调试已开启：拖动、写回、草稿等事件会弹提示并写入游戏日志'); }, '');
   row('bug', '调试模式', '关键操作弹提示，并写入游戏日志', t.el);
   host.appendChild(box);
+  } else {
 }
-  aboutSection(box);
 /* 关于：Logo、版本、作者和链接。链接用页面的 <a href>，点了 Oriel 会先让玩家确认；玩家把网页链接设成屏蔽时打不开，所以每行都有「复制」 */
-function aboutSection(box) {
+function aboutSection(host) {
+  var box = h('div', { class: 'x-list set-list' });
   var A = Labels.about, ver = Prefs.about && Prefs.about.version;
-  box.appendChild(xSec('star', '关于'));
+  }
   box.appendChild(h('div', { class: 'ab-head' }, [
     h('img', { class: 'ab-logo', src: 'logo.png', alt: '' }),
     h('div', { class: 'ab-tx' }, [h('div', { class: 'ab-name', text: A.name }), h('div', { class: 'k-sub', text: ver && ver !== 'unknown' ? '版本 ' + ver : A.tagline })])
@@ -1087,3 +1102,4 @@ function aboutSection(box) {
     box.appendChild(xRow({ icon: uiIcon(l.icon, 14), title: l.title, sub: l.show, right: h('div', { class: 'ab-acts' }, [open, copy]) }));
   });
 }
+  host.appendChild(box);
