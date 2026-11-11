@@ -1,6 +1,6 @@
 modLoader="javafml"
 loaderVersion="${neoforge_loader_version_range}"
-license="All Rights Reserved"
+license="MIT"
 issueTrackerURL="https://github.com/Rinorsi/CAD-Editor-Recast/issues"
 [[mods]]
 modId="cadeditor"

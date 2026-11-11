@@ -29,4 +29,4 @@ processResources {
     inputs.properties(properties)
     filesMatching(['fabric.mod.json', 'META-INF/neoforge.mods.toml']) { expand(properties) }
 }
-tasks.named('jar') { from(rootProject.file('NOTICE')); from(rootProject.file('CHANGELOG.md')) }
+tasks.named('jar') { from(rootProject.file('LICENSE')); from(rootProject.file('NOTICE')); from(rootProject.file('CHANGELOG.md')) }

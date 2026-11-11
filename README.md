@@ -130,4 +130,4 @@ node tools/ui-contract-test.cjs                              # 界面测试（�
 
 ## 许可
 
-本项目自己的许可证待定，第三方声明见 [`NOTICE`](NOTICE)。
+本项目原创代码采用 [MIT 许可证](LICENSE)。第三方组件仍遵循各自许可证，声明见 [`NOTICE`](NOTICE)。

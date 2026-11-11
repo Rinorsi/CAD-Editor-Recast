@@ -3,6 +3,7 @@
   "id": "cadeditor",
   "version": "${version}",
   "name": "CAD Editor",
+  "license": "MIT",
   "icon": "assets/cadeditor/icon.png",
   "authors": ["云诺羲Rinorsi"],
   "contact": {
