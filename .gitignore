@@ -40,3 +40,21 @@ fabric/versions/*/run/
 # 历史计划、排查报告与采集回执：仅在本机保留，不提交
 /docs/archive/
 /.block-edit/
+
+# AI 助手（Cindy 等）的项目指令与 Skill：只在本机使用，不提交
+/.cindy/
+/.claude/
+/.codex/
+/AGENTS.md
+/CLAUDE.md
+
+# 开发过程笔记、审计与验收回执（由脚本生成或仅作本机记录）
+/docs/DEV-NOTES-*.md
+/docs/NBT-ROUNDTRIP-AUDIT-*.md
+/docs/COVERAGE-signoff.md
+/docs/acceptance/
+/tools/client-only/*PREPARATION.md
+
+# 宣传片录制产物（含游戏存档、日志、截图）
+/promo/raw/
+/promo/**/run/
