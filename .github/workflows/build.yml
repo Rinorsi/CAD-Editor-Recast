@@ -53,7 +53,8 @@ jobs:
         shell: bash
         run: |
           chmod +x gradlew
-          ./gradlew :fabric:${{ matrix.mc }}:publishToMavenLocal :neoforge:${{ matrix.mc }}:publishToMavenLocal -Poriel_slim --console=plain --stacktrace
+          # Gradle 配置阶段会解析三个 Minecraft 版本的 Oriel 依赖，所以每个任务都要把六个目标发布到本地 Maven，只发布当前矩阵的版本会在配置 fabric:26.1 时找不到 oriel-fabric-26.1.2
+          ./gradlew :fabric:26.1:publishToMavenLocal :fabric:26.2:publishToMavenLocal :fabric:26.3:publishToMavenLocal :neoforge:26.1:publishToMavenLocal :neoforge:26.2:publishToMavenLocal :neoforge:26.3:publishToMavenLocal -Poriel_slim --console=plain --stacktrace
       - name: Matrix build and check including codecVerification
         working-directory: Editor
         shell: bash
