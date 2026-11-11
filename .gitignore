@@ -55,6 +55,25 @@ fabric/versions/*/run/
 /docs/acceptance/
 /tools/client-only/*PREPARATION.md
 
-# 宣传片录制产物（含游戏存档、日志、截图）
-/promo/raw/
-/promo/**/run/
+# 本地宣传片工程、生成报告与一次性排查工具
+/promo/
+/release/
+/docs/locale-inventory.json
+/tools/.missing-icons.txt
+/tools/coverage-sync.cjs
+/tools/nbt-audit/aggregate-*.cjs
+/tools/nbt-audit/audit-final-*
+/tools/nbt-audit/final-terminal-*
+/tools/nbt-audit/finalize.py
+/tools/entity-feedback/audit-*
+/tools/entity-feedback/report-*
+/tools/entity-feedback/discard-captured.mjs
+/tools/entity-feedback/resume-owned.ps1
+/tools/entity-feedback/verify-restarted.mjs
+
+# 本地依赖与环境配置
+node_modules/
+.env
+.env.*
+!.env.example
+*.log

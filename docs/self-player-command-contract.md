@@ -47,13 +47,3 @@
 ## 验证范围
 
 第一批候选 49143 的后续结果已齐：Orca Worker developer 实际六目标完整 check 通过（159 个 JavaExec 检查重新执行，14m57s），Orca Worker tester 的 Fabric 26.1.2 实际 LAN 23/23 通过。准确产物、哈希和日志见[客户端命令验证证据](client-only-hotbar.md)。这些结果不覆盖第二批整合源码。下面是实现阶段的历史交接记录，其中“未运行”仅描述当时 Worker 的执行范围。
-
-### 实现阶段历史交接（不代表最新验收状态）
-
-项目后续由 Orca Worker developer 统一完成三版本、两加载器的稳定候选编译与相称回归，日志为 `../Oriel-UI-Workspace/daily/2026-11-09/logs/client-inventory-vault/stable-six-target-gates.log` 及同目录 `stable-self-player-document-test.cjs.log`、`stable-ui-self-player-capabilities-test.cjs.log`。当前 Fabric 26.1.2 候选哈希为 `49143F44FAB953FA1343CD9C2B899F793EA8AA424491167F39AE114BD7232FC9`；真实 LAN 与最终完整回归仍待结果。下文保留自身字段实现 Worker 的原始执行范围，不能将其未运行 Gradle 与后续统一构建混为一谈。
-
-已执行 Node 自身能力/混合草稿/保存期间草稿测试、既有 world/playerx 回归，并检查 26.1.2、26.2、26.3 查询权限/transaction API 字节码。日志目录：`C:/Storage/Minecraft/project/Mods/Oriel-UI-Workspace/daily/2026-11-09/logs/self-player-capabilities`。未执行 Gradle、游戏或联网测试。
-
-交 sole Gradle developer：将 `node tools/ui-self-player-capabilities-test.cjs` 加入 UI gate；编译共用新增 `SelfPlayerCommands.java` 的三版本两加载器组合。没有额外事件/Mixin 注册要求。实机须覆盖纯客户端连接无 Editor 服务端，无 OP 生存提前只读提示、有 OP 生存改等级/模式且前后查询回读，撤权/断线/换世界/查询超时无误报，单人和双端完整字段不缩水，编辑期间新增草稿在 saved 后仍存在。
-
-`app.js` 由另一个 developer 持有：若 bridge 将 world/result 合并成一个 data patch，需按 world 然后 result 分别处理（原 else-if 会漏 result）。本任务不修改 app.js。

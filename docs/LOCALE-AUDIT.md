@@ -7,7 +7,7 @@
 - data.js 有 3058 处，单列为浏览器样例。
 - labels.js 集中定义 20 组标签/配置。
 
-这是字符串词法清单，不是完整 JS 语法分析或错误译名计数；包含编辑器按钮、说明、诊断、回退及格式片段。完整位置与原文见 locale-inventory.json。
+这是字符串词法清单，不是完整 JS 语法分析或错误译名计数；包含编辑器按钮、说明、诊断、回退及格式片段。完整位置与原文可运行 `python tools/locale-inventory.py` 生成；`docs/locale-inventory.json` 仅在本地保留。
 
 ## 本轮已修正
 

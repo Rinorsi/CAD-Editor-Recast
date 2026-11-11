@@ -1,14 +1,8 @@
 # 1.0 发布门槛清单
 
-## 自动化证据（不替代发布勾选）
+## 验证与回执
 
-运行 `pwsh -NoProfile -File tools/accept/run.ps1`，详见 [验收工具说明](../tools/accept/README.md)。
-
-- [逐组件机器回执与三轮统计](acceptance/components.md) / [JSON 原始逐轮证据](acceptance/components.json)：真实页面 apply、服务端槽位、关闭重开、类型精确保留、两种组件校验及世界编辑路径。未运行/不可达/拒绝均保留原因。
-- [隐藏客户端注册表性能](acceptance/perf.md)：首个可交互页面、暖页面、实际目录尺寸及搜索 p50/p95。
-- [仅供人工判断的短清单](acceptance/CHECKLIST-for-user.md)：布局、手感、动画、浅色主题和25项常用组件的呈现。
-
-以上证据只证明记录中的版本、样本及路径；不自动勾选任何组件或功能，不证明所有边界或游戏语义。
+运行 `pwsh -NoProfile -File tools/accept/run.ps1`，详见 [验收工具说明](../tools/accept/README.md)。逐组件回执、性能记录和人工签收保存在本地 `docs/acceptance/`，不随源码分发。源码清单不替代当前产物的构建与游戏验证。
 
 ## 发布规则与勾选定义
 
@@ -30,113 +24,113 @@ component_schema来源只说明独立JVM核验的宿主Codec结构；full不代�
 
 | 组件 id | 中文名 | 当前界面形态 | 数据来源是否权威 | 是否已验收 |
 |---|---|---|---|---|
-| `minecraft:custom_model_data` | 自定义模型数据 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:custom_name` | 自定义名称 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:dyed_color` | 染色 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:enchantment_glint_override` | 附魔光效 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:item_model` | 物品模型 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:item_name` | 基础名称 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:lore` | 说明文字 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:rarity` | 稀有度 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:tooltip_display` | 提示框显示 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:tooltip_style` | 提示框样式 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:break_sound` | 损坏音效 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:damage` | 已损耗耐久 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:damage_resistant` | 免疫伤害 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:max_damage` | 最大耐久 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:max_stack_size` | 最大堆叠 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:repair_cost` | 铁砧惩罚 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:repairable` | 可修复材料 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:unbreakable` | 不可破坏 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:attack_range` | 攻击范围 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:attribute_modifiers` | 属性修饰器 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:blocks_attacks` | 格挡 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:damage_type` | 攻击伤害类型 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:kinetic_weapon` | 动能武器 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:minimum_attack_charge` | 最小攻击充能 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:piercing_weapon` | 穿刺武器 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:swing_animation` | 挥动动画 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:tool` | 工具 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:weapon` | 武器 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:enchantable` | 可附魔性 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:enchantments` | 附魔 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:stored_enchantments` | 存储的附魔 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:consumable` | 消耗行为 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:death_protection` | 死亡保护 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:food` | 食物 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:intangible_projectile` | 不可拾取投射物 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:ominous_bottle_amplifier` | 不祥之瓶强度 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:suspicious_stew_effects` | 谜之炖菜效果 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:use_cooldown` | 使用冷却 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:use_effects` | 使用时效果 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:use_remainder` | 使用后剩余 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:banner_patterns` | 旗帜图案 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:base_color` | 盾牌底色 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:equippable` | 可装备 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:glider` | 滑翔 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:provides_banner_patterns` | 提供旗帜图案 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:provides_trim_material` | 提供纹饰材料 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:trim` | 盔甲纹饰 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:bees` | 蜜蜂 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:block_entity_data` | 方块实体数据 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:block_state` | 方块状态 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:bucket_entity_data` | 桶内实体数据 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:bundle_contents` | 收纳袋内容 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:can_break` | 可破坏方块 | 专用表单 | authoritative: component_schema（仅高级 predicates 为 partial/SNBT；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:can_place_on` | 可放置于 | 专用表单 | authoritative: component_schema（仅高级 predicates 为 partial/SNBT；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:charged_projectiles` | 已装填弹药 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:container` | 容器内容 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:container_loot` | 容器战利品 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:custom_data` | 自定义数据 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:debug_stick_state` | 调试棒状态 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:entity_data` | 实体数据 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:lock` | 容器锁 | 专用表单 | authoritative: component_schema（仅高级 predicates 为 partial/SNBT；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:pot_decorations` | 陶罐装饰 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:profile` | 头颅档案 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:lodestone_tracker` | 磁石追踪 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:map_color` | 地图颜色 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:map_decorations` | 地图标记 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:map_id` | 地图编号 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:recipes` | 解锁配方 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:writable_book_content` | 书与笔内容 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:written_book_content` | 成书内容 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:dye` | 染料 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:firework_explosion` | 烟花爆炸 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:fireworks` | 烟花 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:instrument` | 乐器 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:jukebox_playable` | 唱片 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:note_block_sound` | 音符盒音效 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:potion_contents` | 药水内容 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：专用界面 |
-| `minecraft:potion_duration_scale` | 药水时长倍率 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:axolotl/variant` | 美西螈变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:cat/collar` | 猫项圈颜色 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:cat/sound_variant` | 猫声音变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:cat/variant` | 猫变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:chicken/sound_variant` | 鸡声音变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:chicken/variant` | 鸡变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:cow/sound_variant` | 牛声音变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:cow/variant` | 牛变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:fox/variant` | 狐狸变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:frog/variant` | 青蛙变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:horse/variant` | 马变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:llama/variant` | 羊驼变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:mooshroom/variant` | 哞菇变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:painting/variant` | 画变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:parrot/variant` | 鹦鹉变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:pig/sound_variant` | 猪声音变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:pig/variant` | 猪变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:rabbit/variant` | 兔子变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:salmon/size` | 鲑鱼体型 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:sheep/color` | 绵羊颜色 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:shulker/color` | 潜影贝颜色 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:tropical_fish/base_color` | 热带鱼底色 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:tropical_fish/pattern` | 热带鱼图案 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:tropical_fish/pattern_color` | 热带鱼图案颜色 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:villager/variant` | 村民变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:wolf/collar` | 狼项圈颜色 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:wolf/sound_variant` | 狼声音变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:wolf/variant` | 狼变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
-| `minecraft:zombie_nautilus/variant` | 僵尸鹦鹉螺变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 机器通过 3/3 · 2026-11-08 · [回执](acceptance/components.md) · 建议：通用表单足够（**待你确认**） |
+| `minecraft:custom_model_data` | 自定义模型数据 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:custom_name` | 自定义名称 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:dyed_color` | 染色 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:enchantment_glint_override` | 附魔光效 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:item_model` | 物品模型 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:item_name` | 基础名称 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:lore` | 说明文字 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:rarity` | 稀有度 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:tooltip_display` | 提示框显示 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:tooltip_style` | 提示框样式 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:break_sound` | 损坏音效 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:damage` | 已损耗耐久 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:damage_resistant` | 免疫伤害 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:max_damage` | 最大耐久 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:max_stack_size` | 最大堆叠 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:repair_cost` | 铁砧惩罚 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:repairable` | 可修复材料 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:unbreakable` | 不可破坏 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:attack_range` | 攻击范围 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:attribute_modifiers` | 属性修饰器 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:blocks_attacks` | 格挡 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:damage_type` | 攻击伤害类型 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:kinetic_weapon` | 动能武器 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:minimum_attack_charge` | 最小攻击充能 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:piercing_weapon` | 穿刺武器 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:swing_animation` | 挥动动画 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:tool` | 工具 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:weapon` | 武器 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:enchantable` | 可附魔性 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:enchantments` | 附魔 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:stored_enchantments` | 存储的附魔 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:consumable` | 消耗行为 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:death_protection` | 死亡保护 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:food` | 食物 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:intangible_projectile` | 不可拾取投射物 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:ominous_bottle_amplifier` | 不祥之瓶强度 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:suspicious_stew_effects` | 谜之炖菜效果 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:use_cooldown` | 使用冷却 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:use_effects` | 使用时效果 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:use_remainder` | 使用后剩余 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:banner_patterns` | 旗帜图案 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:base_color` | 盾牌底色 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:equippable` | 可装备 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:glider` | 滑翔 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:provides_banner_patterns` | 提供旗帜图案 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:provides_trim_material` | 提供纹饰材料 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:trim` | 盔甲纹饰 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:bees` | 蜜蜂 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:block_entity_data` | 方块实体数据 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:block_state` | 方块状态 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:bucket_entity_data` | 桶内实体数据 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:bundle_contents` | 收纳袋内容 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:can_break` | 可破坏方块 | 专用表单 | authoritative: component_schema（仅高级 predicates 为 partial/SNBT；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:can_place_on` | 可放置于 | 专用表单 | authoritative: component_schema（仅高级 predicates 为 partial/SNBT；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:charged_projectiles` | 已装填弹药 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:container` | 容器内容 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:container_loot` | 容器战利品 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:custom_data` | 自定义数据 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:debug_stick_state` | 调试棒状态 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:entity_data` | 实体数据 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:lock` | 容器锁 | 专用表单 | authoritative: component_schema（仅高级 predicates 为 partial/SNBT；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:pot_decorations` | 陶罐装饰 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:profile` | 头颅档案 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:lodestone_tracker` | 磁石追踪 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:map_color` | 地图颜色 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:map_decorations` | 地图标记 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:map_id` | 地图编号 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:recipes` | 解锁配方 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:writable_book_content` | 书与笔内容 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:written_book_content` | 成书内容 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:dye` | 染料 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:firework_explosion` | 烟花爆炸 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:fireworks` | 烟花 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:instrument` | 乐器 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:jukebox_playable` | 唱片 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:note_block_sound` | 音符盒音效 | 专用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:potion_contents` | 药水内容 | 专用卡片 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:potion_duration_scale` | 药水时长倍率 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:axolotl/variant` | 美西螈变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:cat/collar` | 猫项圈颜色 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:cat/sound_variant` | 猫声音变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:cat/variant` | 猫变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:chicken/sound_variant` | 鸡声音变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:chicken/variant` | 鸡变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:cow/sound_variant` | 牛声音变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:cow/variant` | 牛变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:fox/variant` | 狐狸变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:frog/variant` | 青蛙变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:horse/variant` | 马变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:llama/variant` | 羊驼变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:mooshroom/variant` | 哞菇变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:painting/variant` | 画变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:parrot/variant` | 鹦鹉变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:pig/sound_variant` | 猪声音变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:pig/variant` | 猪变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:rabbit/variant` | 兔子变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:salmon/size` | 鲑鱼体型 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:sheep/color` | 绵羊颜色 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:shulker/color` | 潜影贝颜色 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:tropical_fish/base_color` | 热带鱼底色 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:tropical_fish/pattern` | 热带鱼图案 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:tropical_fish/pattern_color` | 热带鱼图案颜色 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:villager/variant` | 村民变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:wolf/collar` | 狼项圈颜色 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:wolf/sound_variant` | 狼声音变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:wolf/variant` | 狼变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
+| `minecraft:zombie_nautilus/variant` | 僵尸鹦鹉螺变种 | 通用表单 | authoritative: component_schema（结构 full；[Codec证据](component-schema-contract.md)，前端消费/玩法待验） | [ ] 待验收；机器回执在本地单独记录 |
 
 ## 手写表与页面接线
 
@@ -221,8 +215,8 @@ component_schema来源只说明独立JVM核验的宿主Codec结构；full不代�
 2026-11-10 将旧计划、阶段报告与历史回执移入仅本地保留的 `docs/archive/`，该目录不随 Git 仓库分发。下面保留旧计划中尚需核对的事项；这是迁移记录，不表示当前实现仍有同样缺口，也不修改本清单的验收勾选。确认时以当前源码、对应版本产物和新回执为准。
 
 - 功能生效测试：核对旧 quick 档 15 条失败的后续结果，保留失败原因及耗时；数据往返通过不能代替玩法生效。入口与边界见 [live-effects.md](live-effects.md)。
-- 107 个组件逐项签收，以及通用表单是否够用，继续按本清单和 [COVERAGE-signoff.md](COVERAGE-signoff.md) 执行，不沿用旧计划中的组件数量分组。
-- 人工观感：字号、亮色主题剩余页面、禁用按钮对比度、搜索占位文字、实体图标、弹窗位置、声音及中文输入法，归入 [人工观感清单](acceptance/CHECKLIST-for-user.md)。
+- 107 个组件逐项签收，以及通用表单是否够用，继续按本清单和 本地人工签收记录 执行，不沿用旧计划中的组件数量分组。
+- 人工观感：字号、亮色主题剩余页面、禁用按钮对比度、搜索占位文字、实体图标、弹窗位置、声音及中文输入法，归入 本地人工观感清单。
 - 旧保险库合并：先核对脚本对生物、方块和玩家预设类别的兼容，再备份并确认相关文件未被游戏写入；本次归档不执行数据合并。
 - 模组通用适配：核对真实模组注册组件、方块实体和实体的结构化表单、未知字段及类型保真；测试夹具通过不代替整合包实测。见 [generic-schema-contract.md](generic-schema-contract.md)。
 - 玩家扩展、方块与玩家保险库预设、多版本六目标及分发流程：旧计划已包含后续完成项，分别按 [玩家扩展协议](player-extended-contract.md)、[保险库协议](vault-contract.md)、[多版本说明](MULTIVERSION.md) 和 [发版清单](RELEASE.md) 核对，避免重复派工。

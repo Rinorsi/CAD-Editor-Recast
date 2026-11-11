@@ -8,9 +8,9 @@
 ## 参照
 
 Oriel 自己就是这个结构，照着做，不要另发明：
-`C:\Storage\Minecraft\project\Mods\Oriel-UI`（`settings.gradle`、`stonecutter.gradle`、`stonecutter.properties.toml`、
+`../Oriel-UI`（`settings.gradle`、`stonecutter.gradle`、`stonecutter.properties.toml`、
 `build-logic/`、`common/`、`fabric/`、`neoforge/`）。Oriel 发行包（含六个目标的 jar）在
-`C:\Storage\Minecraft\project\Mods\Oriel-UI-Workspace\dist\oriel-0.11.0-20261108\`。
+`../Oriel-UI-Workspace/dist/oriel-0.11.0-20261108/`。
 
 ## 目录
 
@@ -39,8 +39,8 @@ stonecutter.properties.toml   每个游戏版本的 MC / 加载器 / API / Oriel
 
 - `./gradlew build` 一次构建全部六个目标；单个目标 `:fabric:26.2:build`。
 - jar 命名：`cadeditor-<loader>-<mc>-<版本>.jar`。
-- 发行目录：`Oriel-UI-Workspace\dist\editor-<版本>-<日期>\`，含六个 jar、`SHA256SUMS.txt`、README。
-- 构建输出仍放 `Oriel-UI-Workspace\daily\<日期>\scratch\...`，不污染仓库。
+- 发行目录：`Oriel-UI-Workspace/dist/editor-<版本>-<日期>/`，含六个 jar、`SHA256SUMS.txt`、README。
+- 构建输出仍放 `Oriel-UI-Workspace/daily/<日期>/scratch/...`，不污染仓库。
 
 ## 验收
 

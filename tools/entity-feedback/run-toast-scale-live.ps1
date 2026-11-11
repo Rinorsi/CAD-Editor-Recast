@@ -1,6 +1,6 @@
 param([ValidateSet('toast-scale-live.mjs','escape-navigation-live.mjs')][string]$Driver='toast-scale-live.mjs',[ValidateSet('26.2','26.3')][string]$Minecraft='26.2',[switch]$RegistryLive,[string]$RegistryPack,[string]$Evidence,[Parameter(Mandatory)][string]$ProbeJar,[string]$EditorJar,[string]$ExpectedEditorSha256,[string]$RuntimeClasspath,[string]$OrielJar,[switch]$VerifyHotReload,[switch]$VaultSelfDebug,[switch]$PlayerActionsDebug,[switch]$DiagnosticsDebug,[switch]$LayoutDebug,[switch]$LayoutExpectedFixed,[switch]$LayoutPackaged,[ValidateRange(640,2560)][int]$WindowWidth=1280,[ValidateRange(360,1440)][int]$WindowHeight=800,[string]$CasePattern,[ValidateSet('lan','full','extra','notice','inventory','self','expanded','next','backend-single','backend-dual')][string]$Mode='lan')
 $ErrorActionPreference='Stop'
-$Root='C:/Storage/Minecraft/project/Mods/Editor'
+$Root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $Day=[IO.Path]::GetFullPath((Join-Path $Root '../Oriel-UI-Workspace/daily/2026-11-09'))
 if(!$Evidence){$Evidence=Join-Path $Day ('logs/client-only-lan-'+(Get-Date -Format 'HHmmss'))}
 $Evidence=[IO.Path]::GetFullPath($Evidence)

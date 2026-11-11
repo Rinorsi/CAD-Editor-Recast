@@ -29,7 +29,7 @@
 
 ### 2.1 已实际执行的 javap
 
-直接读取 `C:/Users/XINDONG/.gradle/caches/fabric-loom/26.1.2/minecraft-merged.jar`，执行 `javap -p -c -classpath <jar> <类名>`。工具版本与 jar SHA256 见 [provenance.txt](../logs/command-backend/provenance.txt)。javap 使用本机 JDK 21 工具读取类文件，未加载或运行游戏。输出以类名保存在 [logs/command-backend](../logs/command-backend/)，汇总为 `core.javap.txt`、`extra.javap.txt`；错误文件供复核，不把找不到的类当证据。额外类分别核验。
+直接读取 `<GRADLE_USER_HOME>/caches/fabric-loom/26.1.2/minecraft-merged.jar`，执行 `javap -p -c -classpath <jar> <类名>`。工具版本与 jar SHA256 见 `provenance.txt`（本地记录）。javap 使用本机 JDK 21 工具读取类文件，未加载或运行游戏。输出以类名保存在 `logs/command-backend`（本地记录），汇总为 `core.javap.txt`、`extra.javap.txt`；错误文件供复核，不把找不到的类当证据。额外类分别核验。
 
 | 编号 | 已核验类.方法与关键字节码事实 |
 |---|---|

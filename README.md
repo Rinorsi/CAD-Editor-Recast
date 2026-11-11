@@ -118,7 +118,7 @@ node tools/ui-contract-test.cjs                              # 界面测试（�
 
 ## 文档
 
-世界编辑：[协议](docs/world-edit-contract.md) · [方块](docs/world-block-edit.md) · [实体](docs/world-entity-contract.md)。组件结构：[component-schema](docs/component-schema-contract.md)；保险库：[vault](docs/vault-contract.md)；验收：[docs/acceptance](docs/acceptance/)。
+世界编辑：[协议](docs/world-edit-contract.md) · [方块](docs/world-block-edit.md) · [实体](docs/world-entity-contract.md)。组件结构：[component-schema](docs/component-schema-contract.md)；保险库：[vault](docs/vault-contract.md)；验收：[测试说明](docs/TESTING.md)（回执仅本地保留）。
 
 宿主搜索：[源码调研与性能](docs/search-architecture.md) · [search消息契约](docs/search-contract.md)。搜索架构参考 [JEI](https://github.com/mezz/JustEnoughItems)、[REI](https://github.com/shedaniel/RoughlyEnoughItems)、[EMI](https://github.com/emilyploszaj/emi) 的索引、缓存与可见网格思路，采用自主实现，未复制其代码；版本与文件许可见调研报告。
 

@@ -169,7 +169,7 @@ VaultStore.flushNow()是同步有界落盘屏障，返回boolean。写屏障等�
 
 离线汇总旧gameDir：PowerShell 7运行 tools/vault-persist/merge-legacy.ps1。检测到Minecraft进程就拒绝，不会杀游戏。例：
 
-    pwsh -NoProfile -File tools/vault-persist/merge-legacy.ps1 -Glob 'C:\Storage\Minecraft\project\Mods\Oriel-UI-Workspace\daily\*\run\editor-mod-client\config\cadeditor\vault.json'
+    pwsh -NoProfile -File tools/vault-persist/merge-legacy.ps1 -Glob '../Oriel-UI-Workspace/daily/*/run/editor-mod-client/config/cadeditor/vault.json'
 
 多个明确路径用PowerShell命令调用：
 
