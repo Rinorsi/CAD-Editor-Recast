@@ -9,15 +9,39 @@ Minecraft 物品数据组件编辑器：游戏里按 **I**（或 `/cade`）打�
 CAD Editor（Component And Data Editor）的换代重写，界面基于 [Oriel UI](https://github.com/Rinorsi/Oriel-UI)。
 **预发布 0.99.x**：功能补全之前不进入 1.0，清单见 [`docs/COVERAGE.md`](docs/COVERAGE.md)。
 
+## 界面预览
+
+改名称、说明和外观时，左侧同步预览物品与提示框。
+
+![物品外观编辑：名称、说明、稀有度与提示框预览](docs/screenshots/item-editor.png)
+
+<details>
+<summary>药水效果：调整效果、等级与持续时间</summary>
+
+![药水效果编辑](docs/screenshots/potion-effects.png)
+
+</details>
+
+<details>
+<summary>SNBT 编辑：语法高亮、行号与格式化</summary>
+
+![物品 SNBT 编辑与提示框预览](docs/screenshots/snbt-editor.png)
+
+</details>
+
+以上为 0.99.7 源码页面的离线预览，使用演示数据。[截图说明](docs/screenshots/README.md)
+
 ## 能改什么
 
 - **物品**：运行版本的全部持久数据组件（26.1.2 / 26.2 / 26.3 分别为 107 / 108 / 119 个原版组件，另支持模组注册的组件）；刷怪蛋 / 刷怪笼（生物外观、体型、属性、状态效果、装备）；提示框预览用游戏自己生成的内容。数值范围来自游戏的真实 Codec，不是手写表。
 - **世界里已放置的东西**（对准它按 **I**，或 `/cadeditor block|entity|player`）：方块实体（容器、告示牌、旗帜、蜂箱、讲台、唱片机、陶罐、命令方块、头颅、熔炉 / 酿造台 / 营火的进度……）、方块状态；实体（姿态、装备、属性、展示框 / 画、展示实体、村民交易、乘客）。
 - **保险库**（按 **O**，主菜单 / 暂停菜单也有按钮）：把改好的物品存在本机，之后取出放进任意物品槽或字段。
 
-按键都在“控制”设置里（分类：物品栏），可以改：编辑 = I，保险库 = O。按住 Shift 再按 I：只改手里的物品，空手就改自己。
+按键都在“控制”设置里的“CAD Editor”分类，可以改：编辑 = I，保险库 = O。按住 Shift 再按 I：只改手里的物品，空手就改自己。
 
-当前版本：<!-- editor-version -->0.99.4<!-- /editor-version --> · [更新日志](CHANGELOG.md) · [发版清单](docs/RELEASE.md)
+当前版本：<!-- editor-version -->0.99.7<!-- /editor-version --> · [更新日志](CHANGELOG.md) · [发版清单](docs/RELEASE.md)
+
+高级多行编辑、特殊浮点数、背包格完整编辑及窗口缩放设置见[操作说明](docs/EDITOR-INTERACTION.md)；出错定位见[写回日志](docs/INVENTORY-WRITE-DIAGNOSTICS.md)。
 
 ## 下载
 
@@ -27,22 +51,32 @@ CAD Editor（Component And Data Editor）的换代重写，界面基于 [Oriel U
 
 | Minecraft | Fabric | NeoForge | Java / 前置 |
 |---|---|---|---|
-| 26.1.2 | `cadeditor-fabric-26.1.2-<版本>.jar` | `cadeditor-neoforge-26.1.2-<版本>.jar` | Java 25 / Oriel UI 0.11.x |
+| 26.1.2 | `cadeditor-fabric-26.1.2-<版本>.jar` | `cadeditor-neoforge-26.1.2-<版本>.jar` | Java 25 / 已内嵌 Oriel UI 0.15.0 |
 | 26.2 | `cadeditor-fabric-26.2-<版本>.jar` | `cadeditor-neoforge-26.2-<版本>.jar` | 同上 |
 | 26.3 | `cadeditor-fabric-26.3-<版本>.jar` | `cadeditor-neoforge-26.3-<版本>.jar` | 同上 |
 
 ## 要求
 
-Minecraft 26.1.2 / 26.2 / 26.3 · Fabric 或 NeoForge · Java 25 · **对应版本的 Oriel UI 0.11.x（前置模组）**。Fabric 需 Loader ≥ 0.19.5 与匹配游戏版本的 Fabric API。
+Minecraft 26.1.2 / 26.2 / 26.3 · Fabric 或 NeoForge · Java 25 · **对应版本的 Oriel UI 0.15.0（正式包已内嵌）**。Fabric 需 Loader ≥ 0.19.5 与匹配游戏版本的 Fabric API。
 
 ## 安装
 
-`mods/` 里放 与加载器及游戏版本匹配的 CAD Editor 和 Oriel UI；Fabric 还需 Fabric API。创造模式直接写回；非创造模式，或要改容器里的物品，需要服务端也装本模组并授予权限。
+**客户端必装，服务端选装。** 房主未安装时仍可连接；完整服务端编辑能力需要房主安装并授权。
+
+`mods/` 里放 与加载器及游戏版本匹配的 CAD Editor；正式包内嵌 Oriel 0.15.0，无需另装 Oriel，Fabric 还需 Fabric API。创造模式保留原版写回。服务端未装本模组时，获得原版 execute/item 命令权限的生存玩家也可修改自己的普通背包 0..35（第1～36格）；主手绑定打开时的槽位，装备、副手、容器及世界/其他玩家仍需服务端模组；有原版命令权限也可从本地保险库取出到自己的空槽。命令写回只在收到服务器同步后确认成功，部分匹配保护不等于完整 CAS；少量原版反馈可能通知本人、其他 OP 并记录控制台，不向普通非 OP 玩家广播，插件额外转发未知。详见[能力与限制](docs/client-only-hotbar.md)。
 
 | 安装位置 | 必需文件 |
 |---|---|
-| 客户端 `mods/` | 一个匹配目标的 CAD Editor jar、对应 Oriel UI；Fabric 另放 Fabric API |
-| 需要服务端写回的服务器 `mods/` | 相同游戏版本与加载器的 CAD Editor、Oriel UI 和对应依赖；管理员授予写入权限 |
+| 客户端 `mods/` | 一个匹配目标的 CAD Editor jar（内含 Oriel）；Fabric 另放 Fabric API |
+| 需要完整编辑能力的服务器 `mods/`（选装） | 相同游戏版本与加载器的 CAD Editor（内含 Oriel）和对应依赖；管理员授予写入权限 |
+
+房主选择安装完整后端时，还需考虑 Oriel 的客户端前置要求：Fabric 26.1.2 / Oriel 0.11 实测中，未安装 Oriel 的旁观客户端会因缺少 `oriel` 注册表项被拒绝连接。此时其他玩家也应安装匹配的 Oriel；这与“房主完全不装 Editor/Oriel、操作者仅在客户端安装”的场景不同，后者已完成真实 LAN 库存/Vault 验证。其他版本和加载器的这一连接组合尚未实测。
+
+只在客户端安装时，本机保险库的保存、整理、导入导出可正常使用，不要求 OP。服务器授予原版权威查询及对应命令权限后，可逐项修改自己的游戏模式、经验等级、本等级整数点数、同维度位置/旋转，以及一个可同步属性的基础值；每笔只发送一条修改命令，服务器回读确认后才算保存。本级点数不设置累计经验；位置不跨维度；属性必须存在服务器原始 base，修饰符不随之覆盖。生命、饥饿、独立能力、完整重生配置等仍提示需要服务端 Editor，不能混入命令提交。完整自身/其他玩家、容器及世界编辑需要服务端安装并授权。详见[自身命令合同](docs/self-player-command-contract.md)和[扩展字段合同与验收范围](docs/self-player-next-contract.md)。
+
+没有原版命令权限的生存玩家可编辑本地草稿和管理保险库，游戏数据不会因此改变；界面会持续提示权限或服务端要求。只有收到服务器确认才显示保存成功；超时显示结果未知、保留草稿且不自动重发，应关闭后重新读取核对。
+
+“保留草稿”指仍存在的编辑会话，不保证断线重连后自动恢复旧草稿。真实重连测试中新页面重新读取服务器已生效的值，旧连接的迟到回包不会在新页面报保存成功或触发重发；断线后的修改状态请重新读取核对。
 
 ## 从源码构建
 
@@ -60,7 +94,7 @@ Mods/
 **2. 准备**
 
 - JDK 25、Git Bash、Node.js 18+
-- 把 Oriel UI 0.11.0 的六个发布 jar 放进 libs/（文件名保留加载器和游戏版本，不进 git；详见 docs/MULTIVERSION.md）
+- 获取 Oriel 0.15.0 六目标瘦包的 Maven 工件，使用 `-PorielRepository=<本地Maven目录>`，或放入 `libs/oriel-maven/`，也可在 Oriel 工程运行 `publishToMavenLocal -Poriel_slim`。不要把完整版作为嵌入依赖。
 
 | 目标 | 命令 |
 |---|---|
@@ -77,6 +111,8 @@ bash tools/gw.sh build -PmcTest=false                       # 六目标构建与
 # PowerShell: pwsh -File tools/build-all.ps1                  # 六 jar + SHA256SUMS
 node tools/ui-contract-test.cjs                              # 界面测试（另有 ui-world-test / ui-compact-test）
 ```
+
+正式发行默认 `-PorielEmbedded=true`；外部依赖版用 `-PorielEmbedded=false`，该版需玩家另装 Oriel 0.15.x（低于 0.16）。两种模式均保留模组内部的 Oriel 必需依赖范围。嵌入版仍依赖 Oriel 的代码，只是玩家不需要另找一个文件；不修改 Oriel mod id 或做私有重定位。
 
 调试游戏：双击 `启动物品工坊预览.bat`，保存 CSS / JS 即可热更新。
 
