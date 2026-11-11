@@ -138,7 +138,7 @@ public final class EditorPrefsTest {
         now.set(500_000_000); store.tick();
         check(new EditorPrefs.Store(path, now::get).getDraft(first).getAsString().contains("草稿😀"), "draft restart round trip");
         JsonObject before = store.read();
-        for (String bad : new String[]{"", " ", "not-json", "{} {}", "{'x':1}", "[".repeat(129) + "0" + "]".repeat(129), "\"" + "x".repeat(EditorPrefs.MAX_DRAFT_BYTES) + "\"", "\"" + "汉".repeat(70_000) + "\""})
+        for (String bad : new String[]{"", " ", "not-json", "{} {}", "{'x':1}", "[".repeat(129) + "0" + "]".repeat(129), "\"" + "x".repeat(EditorPrefs.MAX_DRAFT_BYTES) + "\"", "\"" + "汉".repeat(EditorPrefs.MAX_DRAFT_BYTES / 3 + 10) + "\""})
             check(!store.putDraft(first, bad), "bad/oversized/deep draft rejected");
         check(!store.putDraft("", "{}") && !store.putDraft("control\n", "{}") && !store.putDraft("x".repeat(1025), "{}"), "bad draft keys rejected");
         check(store.read().equals(before), "rejected draft leaves original intact");
@@ -152,7 +152,8 @@ public final class EditorPrefsTest {
         send(store, "drafts", "{\"bad\":{}}"); check(store.read().equals(before), "non-string draft map rejected");
         JsonObject nine = new JsonObject(); for (int i = 0; i < 9; i++) nine.addProperty("slot:" + i, "{}");
         send(store, "drafts", nine.toString()); check(store.read().equals(before), "replacement map over eight rejected");
-        String big = "\"" + "x".repeat(180_000) + "\"";
+        /* 单份草稿上限 8 MiB、总上限 64 MiB：每份取单份上限，8 份加起来必然超过总上限 */
+        String big = "\"" + "x".repeat(EditorPrefs.MAX_DRAFT_BYTES - 2) + "\"";
         JsonObject hugeMap = new JsonObject(); for (int i = 0; i < 8; i++) hugeMap.addProperty("slot:" + i, big);
         send(store, "drafts", hugeMap.toString()); check(store.read().equals(before), "replacement map over one MiB rejected");
         check(store.clearDraft(first), "single clear accepted");
@@ -170,10 +171,10 @@ public final class EditorPrefsTest {
         check(!new EditorPrefs.Store(path, now::get).read().getAsJsonObject("drafts").has("slot:0"), "single clear survives restart");
         check(restarted.getDraft("missing").isJsonNull(), "missing draft returns null");
         var bytes = new EditorPrefs.Store(root.resolve("draft-byte-budget.json"), now::get);
-        for (int i = 0; i < 6; i++) bytes.putDraft("slot:" + i, big);
+        for (int i = 0; i < 8; i++) bytes.putDraft("slot:" + i, big);
         var budget = bytes.read().getAsJsonObject("drafts");
-        check(budget.size() == 5 && !budget.has("slot:0") && budget.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8).length <= EditorPrefs.MAX_DRAFTS_BYTES, "total byte cap evicts LRU");
-        check(bytes.putDraft("boundary", "\"" + "x".repeat(EditorPrefs.MAX_DRAFT_BYTES - 2) + "\""), "exact 200KiB draft accepted");
+        check(budget.size() == 7 && !budget.has("slot:0") && budget.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8).length <= EditorPrefs.MAX_DRAFTS_BYTES, "total byte cap evicts LRU");
+        check(bytes.putDraft("boundary", "\"" + "x".repeat(EditorPrefs.MAX_DRAFT_BYTES - 2) + "\""), "exact single-draft limit accepted");
         bytes.flush(); check(new EditorPrefs.Store(root.resolve("draft-byte-budget.json"), now::get).read().equals(bytes.read()), "near one MiB restart round trip");
         Files.writeString(path, "{\"heroView\":\"3d\",\"drafts\":{\"invalid\":0}}");
         check(new EditorPrefs.Store(path, now::get).read().equals(JsonParser.parseString("{\"heroView\":\"3d\"}")), "disk draft whitelist preserves scalar prefs");

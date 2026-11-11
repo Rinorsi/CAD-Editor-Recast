@@ -113,7 +113,7 @@ public final class StackCodecTest {
         largeEdit.getAsJsonObject("component_snbt").addProperty("custom_data", "{stale broken sidecar");
         check(ItemStack.matches(largeStack, StackCodec.decode(largeEdit, registries)), "explicit typed edit wins over stale sidecar and is not limited by quick-validation size");
         var oversized = largeEdit.deepCopy();
-        oversized.getAsJsonObject("comps").addProperty("custom_data", "{payload:\"" + "x".repeat(65536) + "\"}");
+        oversized.getAsJsonObject("comps").addProperty("custom_data", "{payload:\"" + "x".repeat(EditorWire.MAX_NBT_CHARS) + "\"}");
         rejects(() -> StackCodec.decode(oversized, registries), "typed component decoder remains bounded above largest supported entry");
         var badId = json.deepCopy(); badId.addProperty("id", "minecraft:does_not_exist");
         rejects(() -> StackCodec.decode(badId, registries), "unknown item");

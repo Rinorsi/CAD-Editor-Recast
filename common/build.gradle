@@ -3,13 +3,18 @@ neoForge {
     neoFormVersion = neo_form_version
     accessTransformers.from(stonecutter.process(parent.file('src/main/resources/META-INF/accesstransformer.cfg'), 'build/stonecutter-processed/accesstransformer.cfg'))
 }
-dependencies { compileOnly("dev.oriel:oriel-fabric-${minecraft_version}:${oriel_version}") { transitive = false } }
-sourceSets { testFixtures; smoke }
+// mixinStubs：只在 Common 编译期用的 Mixin 注解替身，不导出给加载器工程、也不会打进包（加载器用真正的 Mixin 库）。
+// Common 的普通类（SpriteCatalog、EditorSoundPreview、EditorKeyBindings）会引用 *Accessor 接口，所以接口要能在 Common 里编译。
+sourceSets { testFixtures; smoke; mixinStubs }
+dependencies {
+    compileOnly("dev.oriel:oriel-fabric-${minecraft_version}:${oriel_version}") { transitive = false }
+    compileOnly sourceSets.mixinStubs.output
+}
 // Shared verification sources are consumed and executed by each loader.
 tasks.named('compileTestJava') { enabled = false }
-// Loader projects compile these shared mixins with their own Mixin implementation.
-// Common is a compile-only source bridge and deliberately has no loader dependency.
-tasks.named('compileJava', JavaCompile) { exclude('dev/rinorsi/editor/mixin/**') }
+// 真正的 Mixin 类由各加载器工程用自己的 Mixin 实现编译；Common 是只编译不打包的源码桥，不依赖加载器。
+// *Accessor 接口留在 Common 里编译（见 mixinStubs）。
+tasks.named('compileJava', JavaCompile) { exclude('dev/rinorsi/editor/mixin/**/*Mixin.java') }
 tasks.named('test') { enabled = false }
 configurations {
     commonSmoke { canBeResolved = false; canBeConsumed = true }
