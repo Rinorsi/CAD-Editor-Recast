@@ -29,7 +29,7 @@ CAD Editor（Component And Data Editor）的换代重写，界面基于 [Oriel U
 
 </details>
 
-以上为 0.99.7 源码页面的离线预览，使用演示数据。[截图说明](docs/screenshots/README.md)
+以上为 0.99.8 源码页面的离线预览，使用演示数据。[截图说明](docs/screenshots/README.md)
 
 ## 能改什么
 
@@ -39,7 +39,7 @@ CAD Editor（Component And Data Editor）的换代重写，界面基于 [Oriel U
 
 按键都在“控制”设置里的“CAD Editor”分类，可以改：编辑 = I，保险库 = O。按住 Shift 再按 I：只改手里的物品，空手就改自己。
 
-当前版本：<!-- editor-version -->0.99.7<!-- /editor-version --> · [更新日志](CHANGELOG.md) · [发版清单](docs/RELEASE.md)
+当前版本：<!-- editor-version -->0.99.8<!-- /editor-version --> · [更新日志](CHANGELOG.md) · [发版清单](docs/RELEASE.md)
 
 高级多行编辑、特殊浮点数、背包格完整编辑及窗口缩放设置见[操作说明](docs/EDITOR-INTERACTION.md)；出错定位见[写回日志](docs/INVENTORY-WRITE-DIAGNOSTICS.md)。
 

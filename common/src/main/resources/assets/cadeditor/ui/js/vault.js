@@ -189,6 +189,7 @@ function openVault(opts) {
   function load(append, tries) {
     if (append && V.next === null) return;
     var tok = ++V.token;
+    if (!append) { clear(errBox); errBox.appendChild(kLoadingRow('正在读取保险库…')); }   // 读完（或失败）时 errBox 会被清掉 / 换成错误提示
     Vault.call('list', { kind: V.kind, query: V.query, tags: V.tags, sort: V.sort, offset: append ? V.next : 0, limit: 40 }, function (r) {
       if (tok !== V.token) return;
       if (!r.ok) {

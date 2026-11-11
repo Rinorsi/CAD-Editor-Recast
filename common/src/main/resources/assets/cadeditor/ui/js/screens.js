@@ -19,6 +19,7 @@ var Prefs = {
     UI.heroView = this.get('heroView', '3d') === '2d' ? '2d' : '3d';
     Snd.on = this.get('uiSound', true) !== false;
     applyUiMotion(this.get('uiAnimations', true) !== false);
+    applyUiFont(this.get('uiFont', 'mc'));
     UI.stageOpen = this.get('stageOpen', true) !== false; UI.statsOpen = this.get('statsOpen', true) !== false;
     UI.windowMode = windowModeClamp(this.get('windowMode', 'remember'));
     UI.maxed = UI.windowMode === 'maximized' || (UI.windowMode === 'remember' && this.get('windowMax', false) === true);
@@ -40,6 +41,11 @@ var Prefs = {
 function uiScaleClamp(v) { return typeof v === 'number' && v >= 0 && v <= 4 && Math.floor(v) === v ? v : 0; }
 function uiScaleFactor() { return 1; }
 function uiMotionEnabled() { return UI.animations !== false; }
+/* 界面字体：mc = 游戏自带字体（默认），smooth = 平滑的常规黑体。字号和版式不变，只换字体族 */
+function applyUiFont(v) {
+  v = v === 'smooth' ? 'smooth' : 'mc'; UI.font = v;
+  document.documentElement.setAttribute('data-ed-font', v);
+}
 function applyUiMotion(on) {
   UI.animations = !!on;
   document.documentElement.setAttribute('data-motion', on ? 'full' : 'reduced');
@@ -476,6 +482,7 @@ function edTabsFit(bar) {
 }
 function drawTabbar() {
   var bar = clear($('tabbar')), kind = kindOfItem(Store.doc().id), tabs = tabsOfKind(kind);
+  UI.shellKind = kind;
   resolveInitialItemTab(tabs);
   bar.classList.toggle('dense', tabs.length >= 4);
   tabs.forEach(function (t, i) {
@@ -1417,6 +1424,8 @@ function advSettings(host, page) {
   row('music', '界面音效', '按钮、拖动排序、打开窗口时的声音', snd1.el);
   var motion = kToggle(uiMotionEnabled(), function (on) { applyUiMotion(on); Prefs.set('uiAnimations', on); }, '');
   row('play', '界面动画', '窗口、浮层与控件的动画', motion.el);
+  var fontSeg = kSeg([{ v: 'mc', label: 'MC 默认' }, { v: 'smooth', label: '平滑' }], UI.font === 'smooth' ? 'smooth' : 'mc', function (v) { applyUiFont(v); Prefs.set('uiFont', v); });
+  row('edit', '界面字体', 'MC 默认是游戏自带字体；平滑字体笔画更圆润，长段中文更好读', fontSeg.el);
   var th1 = kSeg([{ v: 'dark', label: '暗色' }, { v: 'light', label: '亮色' }], UI.theme, function (v) { if (v !== UI.theme) toggleTheme(); });
   row('sparkle', '主题', '暗色或亮色', th1.el);
   var hv = kSeg([{ v: '3d', label: '3D' }, { v: '2d', label: '2D' }], UI.heroView, function (v) { UI.heroView = v; Prefs.set('heroView', v); drawHero(); });

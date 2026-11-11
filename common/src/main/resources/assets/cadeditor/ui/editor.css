@@ -1,11 +1,12 @@
 /* 物品工坊 · 样式（Ore 质感版）
    令牌 → 窗口与顶栏 → 英雄区 → 分页与卡片 → 控件 → 弹层 → 高级页 → 响应式
-   版式基准：GUI 480×270 ~ 640×360；字体 oriel:pixel_12 12px（8px 的汉字笔画挤成一团，不可读），行高 14px；间距走 2 / 4 / 6 / 8 / 12。
+   版式基准：GUI 480×270 ~ 640×360；正文 oriel:sans 12px，行高 14px；间距走 2 / 4 / 6 / 8 / 12。
    窗体、按钮、输入框、物品格、开关、滑块、分页用 Ore 斜角纹理；卡片/列表/芯片是扁平块（块里不再套块）。
    颜色全走变量；品类色 --cat 由页面按物品类别设置。 */
 
-html, html[data-font] { font-family: oriel:pixel_12; font-size: 12px; }
-/* 像素字没有真正的粗体，引擎合成的粗体会糊成一团：界面里一律不用粗体（只有物品名/文字预览里按物品本身的样式显示） */
+html, html[data-font] { font-family: minecraft:default; font-size: 12px; }
+html[data-ed-font=smooth], html[data-font][data-ed-font=smooth] { font-family: oriel:sans; }
+/* 正文用常规黑体保留汉字细节；合成粗体会合并小字号笔画，仅物品文字按原始样式预览。 */
 b, strong, th, h1, h2, h3, h4, h5, h6 { font-weight: normal; }
 html, body { margin: 0; height: 100%; }
 :root {
@@ -376,9 +377,56 @@ textarea.k-input { height: auto; padding: 3px 5px; line-height: 14px; }
 
 /* ---------- 容器格子 / 书本 ---------- */
 .k-cgrid { display: grid; gap: 2px; justify-content: center; }
-.k-bookpage { display: flex; flex-direction: column; gap: 3px; padding: 4px; background: var(--s2); border: 1px solid var(--edge); }
-.k-bookcols { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.k-bookprev { min-height: 50px; padding: 4px 6px; line-height: 14px; color: #000; background: #e8dcc3; border: 1px solid #6b5a3a; word-break: break-all; }
+/* 所见即所得文字编辑器（kRichDoc）：工具栏 + 原生着色输入框 */
+.k-rd { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.k-rdedit { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.k-rdbar { display: flex; align-items: center; gap: 1px; flex-wrap: wrap; min-width: 0; }
+.k-rdb { flex: none; display: flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 3px; color: var(--tx2); cursor: pointer; border: 1px solid transparent; -mc-tint: var(--tx2); }
+.k-rdb:hover { color: var(--tx); background: var(--s3); -mc-tint: var(--tx); }
+.k-rdb.on { color: var(--tx); background: color-mix(in srgb, var(--acc) 28%, transparent); border-color: var(--acc2); }
+.k-rdb.bold span { font-weight: bold; } .k-rdb.italic span { font-style: italic; }
+.k-rdb.underlined span { text-decoration-line: underline; } .k-rdb.strikethrough span { text-decoration-line: line-through; }
+.k-rdsw { display: block; width: 12px; height: 12px; border: 1px solid #000; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25); }
+.k-rdsw.def { background: var(--tx); opacity: 0.55; }
+.k-rdsw.mixed { background: linear-gradient(135deg, #ff5555, #ffff55, #55ff55, #5555ff); }
+.k-rdsep { flex: none; width: 1px; height: 14px; margin: 0 3px; background: var(--ln3); }
+.k-rdcount { flex: none; margin-left: auto; padding: 0 2px; color: var(--tx3); white-space: nowrap; }
+.k-rdcount.bad { color: var(--bad); }
+textarea.k-input.k-rdta { display: block; width: 100%; padding: 3px 5px; line-height: 14px; resize: none; }
+.k-rd.single textarea.k-rdta { height: 22px; overflow: hidden; white-space: nowrap; }
+.k-rdprev { white-space: pre-wrap; }
+.k-rd.paper-book textarea.k-rdta, .k-rd.paper-sign textarea.k-rdta { color: #000000; border-image: none; border: 1px solid #6b5a3a; }
+.k-rd.paper-book textarea.k-rdta { background: #e9ddc2; }
+.k-rd.paper-sign textarea.k-rdta { background: #b4905a; text-align: center; }
+.k-rd.paper-book textarea.k-rdta:focus, .k-rd.paper-sign textarea.k-rdta:focus { outline: 1px solid var(--acc2); }
+/* 书本编辑器：工具栏 + 左写右看（等高、滚动同步）+ 一行页脚 */
+.k-book { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.k-book-meta { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.k-book-f { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.k-book-f > .lt { flex: none; width: 32px; color: var(--tx2); }
+.k-book-f > .k-input { flex: 1 1 auto; min-width: 60px; }
+.k-book-ed { display: flex; flex-direction: column; min-width: 0; }
+.k-rdbody { display: flex; align-items: stretch; gap: 6px; min-width: 0; }
+.k-rdbody > textarea.k-rdta { flex: 1 1 0; min-width: 0; }
+.k-rdbody > .k-bookpg { flex: 1 1 0; min-width: 0; }
+.k-book textarea.k-rdta, .k-book .k-bookpg { height: 220px; }
+.k-bookpg { padding: 6px 8px; overflow-y: auto; scrollbar-width: thin; background: #e9ddc2; border: 1px solid #6b5a3a; }
+.k-bookpg-b { line-height: 14px; white-space: pre-wrap; word-break: break-all; text-shadow: none; }
+.k-book-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; height: 220px; border: 1px dashed var(--ln3); }
+.k-book-note { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.k-book-note:empty { display: none; }
+.k-book-foot { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 6px; min-width: 0; padding-top: 4px; border-top: 1px solid var(--ln2); }
+.k-book-acts { display: flex; align-items: center; gap: 2px; justify-self: start; }
+.k-book-info { justify-self: end; color: var(--tx3); white-space: nowrap; }
+.k-book-pager { display: flex; align-items: center; justify-content: center; gap: 2px; }
+.k-btn.k-book-ib { min-width: 22px; height: 22px; padding: 0 3px; justify-content: center; }
+.k-btn.k-book-ib.dis { opacity: 0.35; pointer-events: none; }
+.k-book-pn { display: flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 4px; color: var(--tx2); cursor: pointer; border: 1px solid transparent; }
+.k-book-pn:hover { color: var(--tx); background: var(--s3); }
+.k-book-pn.on { color: var(--acc-ink); background: var(--acc); border-color: var(--acc2); }
+.k-book-pn.gap { color: var(--tx3); min-width: 16px; padding: 0 2px; }
+.k-book-pn.gap:hover { color: var(--tx); }
+.k-rdb.dis { opacity: 0.35; }
 .k-bigtip .ed-tip { padding: 8px 10px; }
 .k-bigtip .ed-tip .tl { font-size: 16px; line-height: 20px; }
 
@@ -429,7 +477,7 @@ textarea.k-input { height: auto; padding: 3px 5px; line-height: 14px; }
 .change-values { display: flex; flex: 0 1 auto; flex-wrap: wrap; align-items: baseline; gap: 5px; min-width: 0; max-width: 100%; line-height: 15px; }
 .change-values > .before, .change-values > .after { flex: 0 1 auto; min-width: 0; white-space: pre-wrap; word-break: break-all; }
 .change-values > .before { color: var(--tx3); }
-.change-values > .after { color: var(--tx); font-weight: bold; }
+.change-values > .after { color: var(--tx); font-weight: normal; }
 .change-values > .arrow { flex: none; color: var(--tx3); }
 .k-modal.k-pal, .k-pal { width: 340px; }
 .k-ph { flex: none; }
@@ -1866,3 +1914,33 @@ html[data-motion=reduced] *, html[data-motion=reduced] *::before, html[data-moti
   .trade-edit-flow, .trade-settings { grid-template-columns: minmax(0, 1fr); }
   .trade-edit-flow > .trade-arrow { padding-top: 0; transform: rotate(90deg); justify-self: center; }
 }
+/* 弹出层底部：主按钮 + 右下角拖动缩放把手 */
+.k-pop-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 6px; min-width: 0; }
+.k-pop-foot > .k-btn { flex: 0 1 auto; }
+.k-pop-grip { flex: none; width: 14px; height: 14px; cursor: nwse-resize; opacity: 0.6;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0) 0 52%, var(--tx3) 52% 58%, rgba(0, 0, 0, 0) 58% 70%, var(--tx3) 70% 76%, rgba(0, 0, 0, 0) 76% 88%, var(--tx3) 88% 94%, rgba(0, 0, 0, 0) 94%); }
+.k-pop-grip:hover { opacity: 1; }
+.we-signdoc { padding: 2px 0 4px; min-width: 0; }
+/* 输入框里的精灵图：输入框外包一层，真图标盖在占位符上 */
+.k-rdtaw { position: relative; display: block; min-width: 0; }
+.k-rdbody > .k-rdtaw { flex: 1 1 0; min-width: 0; }
+.k-rdspr { position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: hidden; pointer-events: none; }
+.k-rdsprin { position: absolute; left: 0; top: 0; width: 0; height: 0; }
+.k-rdsp { position: absolute; line-height: 14px; white-space: pre; text-shadow: none; }
+.k-rdmirror { position: absolute; left: 2px; top: 3px; box-sizing: border-box; padding: 3px 5px; line-height: 14px; font: inherit; white-space: pre-wrap; color: transparent; text-shadow: none; }
+.k-rd.single .k-rdmirror { white-space: pre; }
+.k-rd.paper-book .k-rdmirror, .k-rd.paper-sign .k-rdmirror { left: 1px; top: 2px; }
+.k-rd.paper-sign .k-rdmirror { text-align: center; }
+/* 书页预览：真实页宽，不在单词中间折行（和游戏一致） */
+.k-bookpg-b { word-break: normal; }
+.k-rdprobe { position: absolute; left: 0; top: 0; opacity: 0; white-space: pre; line-height: 14px; pointer-events: none; }
+/* 打开时的加载动画：游戏数据没到齐时盖在窗口上，到齐后淡出 */
+.ed-loading { position: absolute; left: 0; top: 0; right: 0; bottom: 0; z-index: 400; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: color-mix(in srgb, var(--s0) 88%, transparent); transition: opacity 200ms; }
+.ed-loading.out { opacity: 0; pointer-events: none; }
+.ed-load-dots { display: flex; gap: 8px; }
+.ed-load-dots > i { display: block; width: 10px; height: 10px; background: var(--acc); animation: ed-load 900ms ease-in-out infinite; }
+.ed-load-dots > i:nth-child(2) { animation-delay: 150ms; }
+.ed-load-dots > i:nth-child(3) { animation-delay: 300ms; }
+.ed-load-text { color: var(--tx2); }
+@keyframes ed-load { 0%, 80%, 100% { opacity: 0.25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-5px); } }
+.ed-loadrow { display: flex; align-items: center; gap: 10px; padding: 10px 6px; color: var(--tx2); }

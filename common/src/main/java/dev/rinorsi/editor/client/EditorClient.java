@@ -46,7 +46,10 @@ public final class EditorClient  {
 
     public void onInitializeClient() {
         EditorPageHost.initialize();
-        ClientPlatform.get().onStarted(client -> EditorToast.initialize());
+        ClientPlatform.get().onStarted(client -> {
+            EditorKeyBindings.removeUnavailableLibraryHome(client);
+            EditorToast.initialize();
+        });
         WorldEditorClient.initialize();
         VaultClient.initialize(() -> screen != null || opening != null || WorldEditorClient.active());
         dev.rinorsi.editor.registry.RegistryBridge.initialize();

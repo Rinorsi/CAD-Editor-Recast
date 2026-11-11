@@ -106,6 +106,7 @@ public final class EditorPageController implements PageControllers.Controller {
                 + "for(var k in s.ui)if(Object.prototype.hasOwnProperty.call(s.ui,k))UI[k]=s.ui[k];"
                 + "if(typeof UIOpen!=='undefined')for(var c in s.open)if(Object.prototype.hasOwnProperty.call(s.open,c))UIOpen[c]=s.open[c];"
                 + "if(typeof applyUiMotion==='function')applyUiMotion(Prefs.get('uiAnimations',true)!==false);"
+                + "if(typeof applyUiFont==='function')applyUiFont(Prefs.get('uiFont','mc'));"
                 + "document.documentElement.setAttribute('data-editor-restore-stage','绘制界面');"
                 // Select under the loading guard, then paint once even when the restored UI was editing raw text.
                 + "UI.loading=true;try{Store.select(s.index);}finally{UI.loading=false;}rebuild();"

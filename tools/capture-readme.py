@@ -61,7 +61,7 @@ def main():
             '<script src="readme-fixture.js"></script><script src="js/app.js"></script><script src="readme-scene.js"></script>')
         (page / 'index.html').write_text(html, encoding='utf-8')
         log = LOGS / ('capture-' + name + '.log')
-        cmd = [str(JAVA), '-Xmx1G', '-cp', str(ORIEL / 'preview/build/install/preview/lib/*'),
+        cmd = [str(JAVA), '-Xmx1G', '-XX:CompileThresholdScaling=0.1', '-cp', str(ORIEL / 'preview/build/install/preview/lib/*'),
                'dev.oriel.preview.Preview', str(page / 'index.html'), '--size', '840x560',
                '--scale', '2', '--frames', '45', '--snapshot', str(OUT / (name + '.png'))]
         with log.open('w', encoding='utf-8') as output:

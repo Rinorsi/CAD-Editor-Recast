@@ -100,7 +100,21 @@ WEV.sign = function (body, g) {
     fn(o); weSetV(g, face, o);
   }
   var msgs = cur().messages || [];
-  for (var i = 0; i < n; i++) (function (i) {
+  function unwaxNote() {
+    if (weVal(g, 'is_waxed')) { weSetV(g, 'is_waxed', false); toast('涂过蜡的告示牌不能改字：已同时取消涂蜡', 'info'); weRender(); }
+  }
+  /* 和名称、说明文字同一个文本编辑器：选中文字直接改颜色、粗体、精灵图；每行独立保存 */
+  var padded = []; for (var k = 0; k < n; k++) padded.push(msgs[k] === undefined ? '' : msgs[k]);
+  var doc = kRichDoc(padded, { lines: n, preview: false, height: n * 16 + 12, placeholder: '最多 ' + n + ' 行，每行约 15 个字宽',
+    onChange: function (v) {
+      var changed = false;
+      setFace(function (o) { for (var j = 0; j < n; j++) if (JSON.stringify(v[j]) !== JSON.stringify(last[j])) { o.messages[j] = v[j]; changed = true; } });
+      last = v.slice(); if (changed) unwaxNote();
+    } });
+  var last = doc ? doc.lineRuns().map(function (r) { return tcBuild({}, r); }) : [];
+  while (last.length < n) last.push('');
+  if (doc) body.appendChild(h('div', { class: 'we-signdoc' }, [doc.el]));
+  else for (var i = 0; i < n; i++) (function (i) {
     var inp = kInput(msgText(msgs[i]), function () {}, { placeholder: '第 ' + (i + 1) + ' 行' }); inp.classList.add('we-line');
     inp.addEventListener('change', function () {
       var before = !!weVal(g, 'is_waxed');
@@ -110,11 +124,10 @@ WEV.sign = function (body, g) {
     body.appendChild(h('div', { class: 'x2r' }, [h('span', { class: 'x2l' }, [h('span', { text: String(i + 1) })]), inp]));
   })(i);
   var o = cur();
-  body.appendChild(xRow({ icon: false, title: '文字颜色', right: dyeButton(o.color || 'black', function (c) { setFace(function (x) { x.color = c; }); weRender(); }) }));
   body.appendChild(xToggle({ title: '发光文字', sub: '用荧光墨囊涂过的效果', value: o.has_glowing_text, onChange: function (on) { setFace(function (x) { x.has_glowing_text = on; }); } }));
   body.appendChild(xSec('lock', '涂蜡'));
   body.appendChild(wvToggle(g, 'is_waxed', '涂蜡', '涂过蜡的告示牌不能再改字'));
-  body.appendChild(kHint('一行里想要样式（颜色、粗体）时，直接写文本组件，比如 {"text":"你好","color":"red"}。'));
+  if (!doc) body.appendChild(kHint('这块告示牌带点击等事件，按文本组件 JSON 逐行编辑以免丢失，比如 {"text":"你好","color":"red"}。'));
 };
 
 /* ---------- 旗帜图案 ---------- */

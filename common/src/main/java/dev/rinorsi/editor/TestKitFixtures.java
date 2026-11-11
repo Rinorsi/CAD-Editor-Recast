@@ -669,7 +669,10 @@ final class TestKitFixtures {
       "writable_book_content": {
         "pages": [
           "测试第一页",
-          "测试第二页"
+          {
+            "raw": "测试第二页：原文",
+            "filtered": "测试第二页：过滤文本"
+          }
         ]
       }
     }
@@ -687,10 +690,14 @@ final class TestKitFixtures {
         "author": "物品工坊",
         "pages": [
           {
-            "text": "第一章：组件往返"
+            "text": "第一章：",
+            "color": "#e27845",
+            "bold": true,
+            "extra": [{"text": "组件往返", "color": "aqua", "italic": true}]
           },
           {
-            "text": "第二章：保存后重开"
+            "raw": {"text": "第二章：保存后重开", "color": "gold"},
+            "filtered": {"text": "第二章：过滤文本", "underlined": true}
           }
         ],
         "generation": 1,

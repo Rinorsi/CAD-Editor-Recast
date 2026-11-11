@@ -199,6 +199,8 @@ public final class EditorPrefs {
                 case "remember", "maximized", "windowed" -> true;
                 default -> false;
             } ? value : null;
+        if (key.equals("uiFont"))
+            return primitive.isString() && (primitive.getAsString().equals("mc") || primitive.getAsString().equals("smooth")) ? value : null;
         if (key.equals("heroView"))
             return primitive.isString() && (primitive.getAsString().equals("2d") || primitive.getAsString().equals("3d")) ? value : null;
         if (key.equals("windowMax") || key.equals("uiSound") || key.equals("uiAnimations") || key.equals("stageOpen") || key.equals("statsOpen") || key.equals("debug"))

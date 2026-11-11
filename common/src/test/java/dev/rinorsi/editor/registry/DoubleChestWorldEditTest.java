@@ -4,6 +4,8 @@ import com.google.gson.*;
 import dev.rinorsi.editor.world.*;
 import java.util.*;
 import net.minecraft.core.*;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.world.CompoundContainer;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.block.*;

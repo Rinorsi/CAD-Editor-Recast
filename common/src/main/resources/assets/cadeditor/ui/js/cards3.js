@@ -379,57 +379,54 @@ CARDS.bundle = function () {
 
 /* ==================== 书 ==================== */
 CARDS.writtenBook = function () {
-  var card = kCard({ id: 'wbook', icon: 'book_open', title: '成书内容', desc: '标题、作者、每一页的文字', comps: ['written_book_content'], span: 2 }, Ctx);
-  var v = Ctx.get('written_book_content');
-  if (!v) return enableBox(card, ['这是一本空书', '启用后可以写标题和内容。'], '开始写这本书', function () { Ctx.enable('written_book_content', { title: '新书', author: '我', generation: 0, pages: ['第一页'] }, '开始写书'); });
-  function str(t) { return typeof t === 'string' ? t : (isObj(t) && typeof t.raw === 'string' ? t.raw : ''); }
-  function put(fn) { var o = Ctx.get('written_book_content') || { pages: [] }; fn(o); Ctx.setSmart('written_book_content', o, { label: '成书内容' }); }
-  card.body.appendChild(fieldRow('书名', kInput(str(v.title), function (t) { put(function (o) { o.title = t; }); }, { max: 32, placeholder: '最多 32 个字符' })));
-  card.body.appendChild(fieldRow('作者', kInput(v.author || '', function (t) { put(function (o) { o.author = t; }); }, { placeholder: '作者名' })));
-  card.body.appendChild(fieldRow('版本', kSeg([{ v: 0, label: '原稿' }, { v: 1, label: '副本' }, { v: 2, label: '副本的副本' }, { v: 3, label: '破烂（不可复制）' }], v.generation || 0, function (x) { put(function (o) { o.generation = x; }); }).el, '决定能不能继续复制'));
-  var pages = h('div', { class: 'k-sortlist' });
-  function draw() {
-    clear(pages);
-    var o = Ctx.get('written_book_content') || { pages: [] };
-    (o.pages || []).forEach(function (p, i) {
-      var ta = h('textarea', { class: 'k-input', rows: '4', spellcheck: 'false' }); ta.value = str(p);
-      var prev = h('div', { class: 'k-bookprev' });
-      function paintPrev() { renderRuns(prev, {}, parseCodes(ta.value), { color: '#000000', placeholder: '（空白页）' }); }
-      ta.addEventListener('input', function () { put(function (oo) { oo.pages[i] = ta.value; }); paintPrev(); });
-      var rm = h('div', { class: 'k-mini del', text: '×', title: '删除这一页' }); activate(rm, function () { put(function (oo) { oo.pages.splice(i, 1); }); draw(); });
-      paintPrev();
-      pages.appendChild(h('div', { class: 'k-bookpage k-srow' }, [h('div', { class: 'k-row' }, [kGrip(), h('b', { class: 'ix', text: '第 ' + (i + 1) + ' 页' }), h('div', { class: 'grow' }), rm]), h('div', { class: 'k-bookcols' }, [ta, prev])]));
-    });
-    if (!(o.pages || []).length) pages.appendChild(xEmpty('还没有内容'));
-  }
-  kSortable(pages, { onMove: function (from, to) { put(function (o) { var x = o.pages.splice(from, 1)[0]; o.pages.splice(to, 0, x); }); draw(); } });
-  var add = xAdd('添加一页');
-  activate(add, function () { put(function (o) { (o.pages = o.pages || []).push(''); }); draw(); });
-  card.body.appendChild(fieldRow('内容', h('div', { class: 'k-scrollbox tall' }, [pages]), '左边写字，右边是书页上的样子；颜色请用 § 代码（如 §6金色）'));
-  card.body.appendChild(add);
-  draw();
+  var cid = 'written_book_content';
+  var card = kCard({ id: 'wbook', icon: 'book_open', title: '成书内容', desc: '书名、作者和每一页的文字', comps: [cid], span: 2, value: function () { var v = Ctx.get(cid); return v && Array.isArray(v.pages) ? v.pages.length + ' 页' : ''; } }, Ctx);
+  var v = Ctx.get(cid);
+  if (!v) return enableBox(card, ['这是一本空书', '启用后可以写标题和内容。'], '开始写这本书', function () { Ctx.enable(cid, { title: '新书', author: '我', generation: 0, pages: ['第一页'] }, '开始写书'); });
+  function put(fn, label) { var o = clone(Ctx.get(cid) || { pages: [] }); fn(o); Ctx.setSmart(cid, o, { label: label || '成书内容' }); }
+  function rawTitle(t) { return typeof t === 'string' ? t : bookFiltered(t) && typeof t.raw === 'string' ? t.raw : ''; }
+  var titleMax = function () { return Reg.codecFact(cid, ['$.title', '$.title.raw'], 'max_length', 32); };
+  var title = kInput(rawTitle(v.title), function (t) { put(function (o) { if (bookFiltered(o.title)) o.title.raw = t; else o.title = t; }, '书名'); paintTitle(); }, { placeholder: '书名' });
+  var titleCount = h('span', { class: 'k-rdcount' });
+  function paintTitle() { var m = titleMax(), n = title.value.length; titleCount.textContent = n + (typeof m === 'number' ? ' / ' + m : m === undefined ? ' / …' : ''); titleCount.classList.toggle('bad', typeof m === 'number' && n > m); }
+  var author = kInput(typeof v.author === 'string' ? v.author : '', function (t) { put(function (o) { o.author = t; }, '作者'); }, { placeholder: '作者' });
+  var gen = kSeg([{ v: 0, label: '原稿' }, { v: 1, label: '副本' }, { v: 2, label: '副本的副本' }, { v: 3, label: '破烂' }], codecField(v, cid, 'generation', 0) || 0, function (x) { put(function (o) { o.generation = x; }, '成书版本'); });
+  setTip(gen.el, '副本的副本和破烂不能再用合成复制');
+  var resolved = codecToggle(codecField(v, cid, 'resolved', false), function (on) { put(function (o) { o.resolved = on; }, '已解析'); }, '已解析');
+  setTip(resolved.el, '关闭时，玩家第一次打开书会把选择器、分数等动态文本换成实际内容');
+  card.body.appendChild(h('div', { class: 'k-book-meta' }, [
+    h('label', { class: 'k-book-f' }, [h('span', { class: 'lt', text: '书名' }), title, titleCount]),
+    h('label', { class: 'k-book-f' }, [h('span', { class: 'lt', text: '作者' }), author]),
+    h('div', { class: 'k-book-f' }, [h('span', { class: 'lt', text: '版本' }), gen.el, resolved.el])
+  ]));
+  if (bookFiltered(v.title) && v.title.filtered !== undefined) card.body.appendChild(kHint('书名还有一份过滤文本，会原样保留。'));
+  var book = kBookEditor({ kind: 'written', key: 'book:written',
+    get: function () { var o = Ctx.get(cid); return o && o.pages; },
+    save: function (pages, label) { put(function (o) { o.pages = pages; }, label); },
+    maxPages: function () { var m = Reg.codecFact(cid, ['$.pages'], 'max_size', null); return typeof m === 'number' && m < 2147483647 ? m : null; } });
+  card.body.appendChild(book.el);
+  paintTitle();
+  card.live.push(function () {
+    var o = Ctx.get(cid); if (!o) return;
+    if (document.activeElement !== title && title.value !== rawTitle(o.title)) title.value = rawTitle(o.title);
+    if (document.activeElement !== author && author.value !== (o.author || '')) author.value = o.author || '';
+    gen.set(codecField(o, cid, 'generation', 0) || 0); resolved.set(codecField(o, cid, 'resolved', false) === true);
+    paintTitle(); book.refresh();
+  });
+  var off = Reg.on(function () { if (!document.body.contains(card.el)) { off(); return; } paintTitle(); book.refresh(); });
   return card;
 };
 CARDS.writableBook = function () {
-  var card = kCard({ id: 'wrbook', icon: 'book_open', title: '书与笔内容', desc: '还没署名的书，页数最多 100 页，每页最多 1024 字符', comps: ['writable_book_content'], span: 2 }, Ctx);
-  function pagesList() { var v = Ctx.get('writable_book_content'); return v && v.pages ? v.pages.map(function (p) { return typeof p === 'string' ? p : (p.raw || ''); }) : []; }
-  function save(l) { Ctx.setSmart('writable_book_content', { pages: l }, { label: '书与笔' }); }
-  var pages = h('div', { class: 'k-sortlist' });
-  function draw() {
-    clear(pages); var l = pagesList();
-    l.forEach(function (p, i) {
-      var ta = h('textarea', { class: 'k-input', rows: '4', maxlength: '1024', spellcheck: 'false' }); ta.value = p;
-      var cnt = h('span', { class: 'k-sub', text: p.length + ' / 1024' });
-      ta.addEventListener('input', function () { var l2 = pagesList(); l2[i] = ta.value; save(l2); cnt.textContent = ta.value.length + ' / 1024'; });
-      var rm = h('div', { class: 'k-mini del', text: '×' }); activate(rm, function () { var l2 = pagesList(); l2.splice(i, 1); save(l2); draw(); });
-      pages.appendChild(h('div', { class: 'k-bookpage k-srow' }, [h('div', { class: 'k-row' }, [kGrip(), h('b', { class: 'ix', text: '第 ' + (i + 1) + ' 页' }), h('div', { class: 'grow' }), cnt, rm]), ta]));
-    });
-    if (!l.length) pages.appendChild(xEmpty('空白的书'));
-  }
-  kSortable(pages, { onMove: function (from, to) { var l = pagesList(); var x = l.splice(from, 1)[0]; l.splice(to, 0, x); save(l); draw(); } });
-  var add = xAdd('添加一页');
-  activate(add, function () { var l = pagesList(); if (l.length >= 100) { toast('最多 100 页', 'error'); return; } l.push(''); save(l); draw(); });
-  card.body.appendChild(h('div', { class: 'k-scrollbox tall' }, [pages])); card.body.appendChild(add); draw();
+  var cid = 'writable_book_content';
+  var card = kCard({ id: 'wrbook', icon: 'book_open', title: '书与笔内容', desc: '还没署名的书，每页原文可带 § 颜色代码', comps: [cid], span: 2, value: function () { var v = Ctx.get(cid); return v && Array.isArray(v.pages) ? v.pages.length + ' 页' : ''; } }, Ctx);
+  var book = kBookEditor({ kind: 'writable', key: 'book:writable',
+    get: function () { var o = Ctx.get(cid); return o && o.pages; },
+    save: function (pages, label) { var o = clone(Ctx.get(cid) || {}); o.pages = pages; Ctx.setSmart(cid, o, { label: label || '书与笔' }); },
+    maxPages: function () { return Reg.codecFact(cid, ['$.pages'], 'max_size', 100); },
+    maxChars: function () { return Reg.codecFact(cid, ['$.pages[]', '$.pages[].raw'], 'max_length', 1024); } });
+  card.body.appendChild(book.el);
+  card.live.push(function () { book.refresh(); });
+  var off = Reg.on(function () { if (!document.body.contains(card.el)) { off(); return; } book.refresh(); });
   return card;
 };
 

@@ -132,7 +132,7 @@ var Reg = {
         this.kinds = {}; this.defs = {}; this.defAsk = {}; this.imeta = {}; this.imAsk = {}; this.imAll = false;
         this.rel = {}; this.relAsk = {}; this.asked = {}; this.tblAsk = {}; this.rows = {}; this.lookAsked = {}; this.lookPending = {}; this.lazy = {};
         this.bprops = {}; this.bpAsk = {}; this.bpAll = null; this.tags = {}; this.tagAsk = {}; this.hints = {}; this.hintAsk = {};
-        this.ebase = {}; this.ebAsk = {}; this.einfo = {}; this.eiAsk = {}; this.eggMap = null; this.eggAsk = false; this.csAsk = false; this.fieldDefaults = new WeakMap(); this.codecDefaults = {}; this.formEnums = new WeakMap(); this.formVariants = new WeakMap();
+        this.ebase = {}; this.ebAsk = {}; this.einfo = {}; this.eiAsk = {}; this.eggMap = null; this.eggAsk = false; this.csAsk = false; this.fieldDefaults = new WeakMap(); this.codecDefaults = {}; this.codecPaths = {}; this.formEnums = new WeakMap(); this.formVariants = new WeakMap();
       }
       this.meta = val; this.cache = {}; if (val && val.lazy) this.setLazy(val.lazy); this.askSchema(); this.fire(); return;
     }
@@ -427,7 +427,14 @@ var Reg = {
     var entries = this.preview() ? labels : (f ? this.schemaEnumOptions(f.s) : []);
     return entries.map(function (e) { var label = (labels || []).filter(function (l) { return l.v === e.v; })[0]; return { v: e.v, label: label ? label.label : e.label }; });
   },
-  codecDefaults: {},
+  codecDefaults: {}, codecPaths: {},
+  /* Codec 上限（list max_size、string max_length 等）。undefined = 字段信息还没到；null = 游戏没给出这个上限 */
+  codecFact: function (cid, paths, key, preview) {
+    if (this.preview()) return preview;
+    var m = this.codecPaths[this.full(cid)]; if (!m) return this.formStatus(cid).pending ? undefined : null;
+    for (var i = 0; i < paths.length; i++) { var hit = (m[paths[i]] || []).filter(function (n) { return typeof n[key] === 'number'; })[0]; if (hit) return hit[key]; }
+    return null;
+  },
   codecDefault: function (cid, key, preview) { if (this.preview()) return preview; var m = this.codecDefaults[this.full(cid)]; return m && Object.prototype.hasOwnProperty.call(m, '$.' + key) ? clone(m['$.' + key]) : undefined; },
   fieldDefault: function (f) { var live = this.fieldDefaults.get(f); return this.preview() ? f.df : (live && live.known ? live.value : undefined); },
   fieldDefaultReady: function (f) { return this.preview() || f.df === undefined || !!this.fieldDefaults.get(f); },
@@ -449,7 +456,7 @@ var Reg = {
       var paths = {};
       function collect(n) { if (!n || typeof n !== 'object') return; if (n.path) (paths[n.path] || (paths[n.path] = [])).push(n); (n.fields || []).forEach(collect); if (n.element) collect(n.element); (n.alternatives || []).forEach(collect); (n.variants || []).forEach(function (v) { collect(v.schema || v); }); }
       (entry.fields || []).forEach(collect);
-      var defaults = Reg.codecDefaults[Reg.full(entry.id)] = {};
+      var defaults = Reg.codecDefaults[Reg.full(entry.id)] = {}; Reg.codecPaths[Reg.full(entry.id)] = paths;
       Object.keys(paths).forEach(function (p) { var matches = paths[p]; if (matches.every(function (m) { return JSON.stringify(m.default) === JSON.stringify(matches[0].default); }) && Object.prototype.hasOwnProperty.call(matches[0], 'default')) defaults[p] = clone(matches[0].default); });
       function bind(sc, path) {
         if (!sc) return;

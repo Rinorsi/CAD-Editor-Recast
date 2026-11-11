@@ -165,14 +165,15 @@ function renderRuns(el, base, runs, def) {
 /* § 代码 ⇄ 分段 */
 var SECT = String.fromCharCode(167);
 var CODE_COLOR = { '0': 'black', '1': 'dark_blue', '2': 'dark_green', '3': 'dark_aqua', '4': 'dark_red', '5': 'dark_purple', '6': 'gold', '7': 'gray', '8': 'dark_gray', '9': 'blue', a: 'green', b: 'aqua', c: 'red', d: 'light_purple', e: 'yellow', f: 'white' };
-function parseCodes(text) {
+/* sectOnly：只认游戏本身认的 § 代码（书与笔原文），不把普通的 & 当代码 */
+function parseCodes(text, sectOnly) {
   var runs = [], cur = {}, buf = '';
   function flush() { if (buf !== '') { var r = clone(cur); r.text = buf; runs.push(r); buf = ''; } }
   for (var i = 0; i < text.length; i++) {
     var ch = text.charAt(i);
-    if ((ch === SECT || ch === '&') && i + 1 < text.length) {
+    if ((ch === SECT || (!sectOnly && ch === '&')) && i + 1 < text.length) {
       var c = text.charAt(i + 1).toLowerCase();
-      if (c === '#' && /^[0-9a-fA-F]{6}$/.test(text.substring(i + 2, i + 8))) { flush(); cur = { color: '#' + text.substring(i + 2, i + 8).toUpperCase() }; i += 7; continue; }
+      if (!sectOnly && c === '#' && /^[0-9a-fA-F]{6}$/.test(text.substring(i + 2, i + 8))) { flush(); cur = { color: '#' + text.substring(i + 2, i + 8).toUpperCase() }; i += 7; continue; }
       if (CODE_COLOR[c]) { flush(); cur = { color: CODE_COLOR[c] }; i++; continue; }
       if (c === 'l') { flush(); cur.bold = true; i++; continue; }
       if (c === 'o') { flush(); cur.italic = true; i++; continue; }
@@ -198,164 +199,589 @@ function toCodes(base, runs) {
 }
 function lerpHex(a, b, t) { var pa = parseInt(a.replace('#', ''), 16), pb = parseInt(b.replace('#', ''), 16); function ch(sh) { return Math.round(((pa >> sh) & 255) * (1 - t) + ((pb >> sh) & 255) * t); } return '#' + [16, 8, 0].map(function (s) { var x = ch(s).toString(16).toUpperCase(); return x.length < 2 ? '0' + x : x; }).join(''); }
 
-/* ---------- 所见即所得文字编辑器 ----------
-   value: 字符串 / 文本组件。o={placeholder, compact, def:{color,italic,placeholder}, openKey, onChange(v, empty)}
-   紧凑模式：折叠时只显示渲染后的预览行，点击展开才进入分段编辑。 */
-function kRich(value, o) {
-  o = o || {};
-  var parsed = tcRuns(value);
-  if (!parsed) {
-    var raw = wText({ t: 'text' }, value, function (v) { o.onChange(v, false); }, o);
-    return { el: h('div', { class: 'k-rich' }, [raw]), set: function () {} };
-  }
-  var base = parsed.base, runs = parsed.runs, caret = null, activeInput = null, inputs = [], valueVersion = 0;
-  var wrap = h('div', { class: 'k-rich' + (o.compact ? ' compact' : '') });
-  var prev = h('div', { class: 'k-rprev' }), edit = h('div', { class: 'k-redit' }), list = h('div', { class: 'k-rruns' });
-  var openKey = o.openKey || 'rich', open = !o.compact || !!UIOpen[openKey];
-  function emit(redraw) {
-    valueVersion++;
-    var v = tcBuild(base, runs);
-    renderRuns(prev, base, runs, o.def);
-    o.onChange(v, typeof v === 'string' && v === '');
-    if (redraw) drawRuns();
-  }
-  function remember(r, input) {
-    if (runs.indexOf(r) < 0) return;
-    activeInput = input;
-    caret = { run: r, start: typeof input.selectionStart === 'number' ? input.selectionStart : r.text.length, end: typeof input.selectionEnd === 'number' ? input.selectionEnd : r.text.length };
-  }
-  function insertSprite(object, mark) {
-    if (!mark && runs.length) { var last = runs[runs.length - 1]; mark = { run: last, start: last.text.length, end: last.text.length }; }
-    var i = mark ? runs.indexOf(mark.run) : -1, r = i >= 0 ? runs[i] : null, tail;
-    if (r && !r._object) {
-      var text = r.text, start = Math.max(0, Math.min(text.length, mark.start)), end = Math.max(start, Math.min(text.length, mark.end));
-      /* DOM offsets are UTF-16; never divide an emoji surrogate pair. */
-      function splitPair(at) { return at > 0 && at < text.length && /[\uD800-\uDBFF]/.test(text.charAt(at - 1)) && /[\uDC00-\uDFFF]/.test(text.charAt(at)); }
-      if (start === end) { if (splitPair(start)) start = end = start + 1; }
-      else { if (splitPair(start)) start--; if (splitPair(end)) end++; }
-      var before = clone(r), icon = runStyleOf(r); tail = clone(r);
-      before.text = text.slice(0, start); tail.text = text.slice(end); icon.text = '￼'; icon._object = clone(object);
-      var parts = before.text ? [before, icon, tail] : [icon, tail];
-      runs.splice.apply(runs, [i, 1].concat(parts));
-    } else {
-      var index = r ? i + 1 : runs.length, style = runStyleOf(r || runs[runs.length - 1] || {});
-      var spriteRun = clone(style); spriteRun.text = '￼'; spriteRun._object = clone(object);
-      tail = clone(style); tail.text = ''; runs.splice(index, 0, spriteRun, tail);
+/* ---------- 所见即所得文字编辑器（公共组件） ----------
+   像论坛发帖的编辑器：上面一排工具栏，下面直接写字。选中文字再点颜色、粗体等；没选中时，设置的样式用于接下来输入的字。
+   颜色直接画在输入框里（Oriel 原生文本高亮）；粗体、斜体等输入框画不出，在预览里看。
+   名称、说明文字、告示牌、书页都用这一个组件。
+   value：文本组件（mode 'component'）或带 § 代码的字符串（mode 'codes'，书与笔的原文）；lines=n 时 value 是 n 行文本组件的数组（告示牌）。
+   o = { mode, multiline, lines, compact, openKey, placeholder, def:{color,italic,placeholder}, preview（默认显示）, paper（'book'|'sign'）,
+         height, max（字符上限：数字或函数，undefined=读取中、null=游戏没给上限）, onChange(v, empty), onRender(api), onKey(e) }
+   返回 { el, set(v), focus(), runs(), lineRuns() }；内容含编辑器不认识的结构（点击事件、翻译键等）时 lines 模式返回 null，其他模式退回原始 SNBT 编辑。 */
+var RD_FLAGS = [['bold', 'B', '粗体（Ctrl+B）', 'l'], ['italic', 'I', '斜体（Ctrl+I）', 'o'], ['underlined', 'U', '下划线（Ctrl+U）', 'n'], ['strikethrough', 'S', '删除线', 'm'], ['obfuscated', '?', '乱码字（游戏里不停变化）', 'k']];
+var RD_OBJ = '\uFFFC';  /* 分段里精灵图的占位字：渲染时由精灵字体画成图 */
+var SPR_DY = 4;  /* 平滑字体下输入框里的图标比普通字偏上，整体往下挪几个像素；游戏默认字体下对得齐，不挪 */
+var RD_MARK = '\u53E3';  /* 输入框里精灵图的占位字（透明）：用和一个汉字等宽的「口」，这样图标盖上去不会遮住后面的字；原生输入框画不了图，真图标由镜像层盖在上面 */
+var RD_CODES_WHY = '书与笔每页只保存纯文字，游戏只认 16 种 § 颜色；自定义颜色和精灵图要写在成书里';
+function rdNorm(st) { var o = {}; Object.keys(st || {}).forEach(function (k) { if (st[k] !== undefined && st[k] !== '') o[k] = st[k]; }); return o; }
+function rdStyleOf(r) { var s = runStyleOf(r); if (r._object) s._object = clone(r._object); return s; }
+/* 分段 → 文字 + 每个字符的样式（UTF-16 下标对齐输入框） */
+function rdFromRuns(runs, into) {
+  runs.forEach(function (r) {
+    var s = rdStyleOf(r), t = r._object ? RD_MARK : (r.text || '');
+    into.text += t; for (var i = 0; i < t.length; i++) into.sty.push(s);
+  });
+  return into;
+}
+function rdLoad(v, codes, n) {
+  var out = { text: '', sty: [] };
+  if (n) {
+    var list = Array.isArray(v) ? v : [];
+    for (var i = 0; i < n; i++) {
+      var p = tcRuns(list[i] === undefined || list[i] === null ? '' : list[i]); if (!p) return null;
+      if (i) { out.text += '\n'; out.sty.push({}); }
+      rdFromRuns(p.runs, out);
     }
-    caret = { run: tail, start: 0, end: 0 }; activeInput = null; emit(true);
-    if (!document.body.contains(wrap)) return;
-    inputs.forEach(function (entry) {
-      if (entry.run !== tail) return; entry.input.focus();
-      if (entry.input.setSelectionRange) entry.input.setSelectionRange(0, 0);
-    });
+    return out;
   }
-  function colorBtn(r, i) {
-    var st = r.color ? tcHex(r.color) : null;
-    var b = h('div', { class: 'k-rcolb', title: '文字颜色：点开选色，或输入 #RRGGBB' }, [h('i', { class: 'sw' + (r.color ? '' : ' none'), style: st ? 'background:' + st : '' }), h('span', { text: '颜色' })]);
-    activate(b, function () {
-      var pal = h('div', { class: 'k-pickbox' });
-      var sw = h('div', { class: 'k-swatches' });
-      function paintPalette() { clear(sw);
-      var none = h('div', { class: 'k-sw nonec' + (!r.color ? ' on' : ''), title: '默认颜色' }, [h('i', { text: '×' })]);
-      none.addEventListener('mousedown', function (e) { e.preventDefault(); kPopClose(); delete runs[i].color; emit(true); }); sw.appendChild(none);
-      mcColors().forEach(function (c) { var s = h('div', { class: 'k-sw' + (r.color === c[0] ? ' on' : ''), title: c[2], style: 'background:#' + c[1] }); s.addEventListener('mousedown', function (e) { e.preventDefault(); kPopClose(); runs[i].color = c[0]; emit(true); }); sw.appendChild(s); });
-      if (!mcColors().length) sw.appendChild(h('span', { class: 'k-sub', text: '正在读取颜色…' })); }
-      var hex = h('input', { class: 'k-input', type: 'text', placeholder: '#RRGGBB', value: r.color && r.color.charAt(0) === '#' ? r.color : '', maxlength: '7' });
-      hex.addEventListener('change', function () { var t = hex.value.trim(); if (/^#[0-9a-fA-F]{6}$/.test(t)) { kPopClose(); runs[i].color = t.toUpperCase(); emit(true); } });
-      pal.appendChild(sw); pal.appendChild(hex);
-      paintPalette();
-      var stop = watchColorOptions(mcColors, paintPalette);
-      kPopover(b, pal, { width: 244, onClose: stop });
-    });
+  if (codes) return rdFromRuns(parseCodes(typeof v === 'string' ? v : '', true), out);
+  var parsed = tcRuns(v === undefined || v === null ? '' : v);
+  return parsed ? rdFromRuns(parsed.runs, out) : null;
+}
+/* 文字 + 样式 → 分段（相同样式的相邻字合并；精灵图各占一段） */
+function rdRuns(text, sty, from, to) {
+  var runs = [], cur = null; from = from || 0; to = to === undefined ? text.length : to;
+  for (var i = from; i < to; i++) {
+    var s = sty[i] || {};
+    if (s._object) { cur = null; var o = runStyleOf(s); o.text = RD_OBJ; o._object = clone(s._object); runs.push(o); continue; }
+    if (cur && sameStyle(cur, s)) cur.text += text.charAt(i);
+    else { cur = runStyleOf(s); cur.text = text.charAt(i); runs.push(cur); }
+  }
+  if (!runs.length) runs.push({ text: '' });
+  return runs;
+}
+/* 分段 → 游戏认的 § 代码。颜色代码会清掉粗体等，所以换色或去掉某个格式时先换色 / §r，再补格式 */
+function rdCodes(runs) {
+  var rev = {}; Object.keys(CODE_COLOR).forEach(function (k) { rev[CODE_COLOR[k]] = k; });
+  var out = '', prev = {};
+  runs.forEach(function (r) {
+    if (!r.text) return;
+    var s = runStyleOf(r), reset = (prev.color || '') !== (s.color || '');
+    RD_FLAGS.forEach(function (f) { if (prev[f[0]] === true && s[f[0]] !== true) reset = true; });
+    if (reset) { out += SECT + (s.color && rev[s.color] ? rev[s.color] : 'r'); RD_FLAGS.forEach(function (f) { if (s[f[0]] === true) out += SECT + f[3]; }); }
+    else RD_FLAGS.forEach(function (f) { if (s[f[0]] === true && prev[f[0]] !== true) out += SECT + f[3]; });
+    prev = s; out += r.text;
+  });
+  return out;
+}
+function rdArgb(c) { var hx = tcHex(c); return hx ? 0xFF000000 + parseInt(hx.substring(1), 16) : null; }
+
+function kRichDoc(value, o) {
+  o = o || {};
+  var codes = o.mode === 'codes', n = o.lines || 0, multi = !!o.multiline || n > 1, def = o.def || {};
+  var loaded = rdLoad(value, codes, n);
+  if (!loaded) {
+    if (n) return null;
+    var raw = wText({ t: 'text' }, value, function (v) { o.onChange(v, false); }, o);
+    return { el: h('div', { class: 'k-rd raw' }, [raw]), set: function () {}, focus: function () {}, runs: function () { return []; }, lineRuns: function () { return []; }, raw: true };
+  }
+  var sprOn = false, followAside = null, text = loaded.text, sty = loaded.sty, pending = null, sel = { s: text.length, e: text.length }, version = 0, hlError = false, api;
+  var wrap = h('div', { class: 'k-rd' + (multi ? ' multi' : ' single') + (o.paper ? ' paper-' + o.paper : '') + (o.compact ? ' compact' : '') });
+  var ta = h('textarea', { class: 'k-input k-rdta', spellcheck: 'false', placeholder: o.placeholder || '' });
+  if (!multi) ta.setAttribute('wrap', 'off');
+  if (o.height) ta.style.height = o.height + 'px'; else if (n > 1) ta.style.height = (n * 14 + 8) + 'px';
+  if (def.color && (!o.paper || o.paper === 'sign')) ta.style.color = tcHex(def.color) || def.color;
+  ta.value = text;
+  var prev = o.preview === false ? null : h('div', { class: 'k-rprev k-rdprev' });
+  var bar = h('div', { class: 'k-rdbar' }), count = h('span', { class: 'k-rdcount' });
+
+  function styleAt(p) {
+    var s = p > 0 && text.charAt(p - 1) !== '\n' ? sty[p - 1] : (p < text.length && text.charAt(p) !== '\n' ? sty[p] : (p > 0 ? sty[p - 1] : null));
+    s = clone(s || {}); delete s._object; return s;
+  }
+  function selStyles() {
+    if (sel.s === sel.e) return [pending && pending.at === sel.s ? pending.style : styleAt(sel.s)];
+    var out = []; for (var i = sel.s; i < sel.e; i++) if (text.charAt(i) !== '\n') out.push(sty[i] || {});
+    return out.length ? out : [{}];
+  }
+  function eff(s, f) { return f === 'italic' && s.italic === undefined ? !!def.italic : s[f] === true; }
+  function readSel() {
+    if (typeof ta.selectionStart === 'number' && typeof ta.selectionEnd === 'number') {
+      var s = Math.max(0, Math.min(text.length, ta.selectionStart)), e = Math.max(s, Math.min(text.length, ta.selectionEnd));
+      sel = { s: s, e: e };
+    }
+    if (pending && (sel.s !== sel.e || sel.s !== pending.at)) pending = null;
+    paintBar();
+  }
+  function refocus(top) {
+    if (!document.body.contains || !document.body.contains(wrap)) return;
+    var keepTop = top === undefined ? ta.scrollTop : top, want = { s: sel.s, e: sel.e };
+    /* focus() 会触发 focus 事件，readSel 把引擎自己放的光标（文末）读成 sel；所以先记下想要的选区，聚焦后再放回去 */
+    ta.focus(); sel = want; if (typeof ta.setSelectionRange === 'function') ta.setSelectionRange(want.s, want.e);
+    if (multi) { ta.scrollTop = keepTop; if (followAside) followAside(); }
+  }
+  function curValue() {
+    if (n) {
+      var lines = [], start = 0;
+      for (var i = 0; i <= text.length; i++) if (i === text.length || text.charAt(i) === '\n') { lines.push(tcBuild({}, rdRuns(text, sty, start, i))); start = i + 1; }
+      while (lines.length < n) lines.push('');
+      return lines.slice(0, n);
+    }
+    var runs = rdRuns(text, sty);
+    return codes ? rdCodes(runs) : tcBuild({}, runs);
+  }
+  function isEmpty(v) { return n ? v.every(function (x) { return x === ''; }) : v === ''; }
+  function highlight() {
+    if (typeof ta.setTextHighlights !== 'function') return;
+    var ranges = [], cur = null;
+    for (var i = 0; i < text.length; i++) {
+      var c = sty[i] && sty[i].color ? rdArgb(sty[i].color) : null;
+      if (sprOn && sty[i] && sty[i]._object) c = 0;
+      if (c === null || text.charAt(i) === '\n') { cur = null; continue; }
+      if (cur && cur.color === c && cur.end === i) cur.end = i + 1; else { cur = { start: i, end: i + 1, color: c }; ranges.push(cur); }
+    }
+    try { ta.setTextHighlights(text, ranges, false); hlError = false; }
+    catch (e) { if (!hlError && typeof EditorDiag !== 'undefined') EditorDiag.error('richdoc.highlight', e); hlError = true; }
+  }
+  function paintCount(v) {
+    if (o.max === undefined) return;
+    var m = typeof o.max === 'function' ? o.max() : o.max, len = typeof v === 'string' ? v.length : text.length;
+    count.textContent = len + (typeof m === 'number' ? ' / ' + m : m === undefined ? ' / …' : '');
+    count.classList.toggle('bad', typeof m === 'number' && len > m);
+    setTip(count, typeof m === 'number' ? (codes ? '按保存的原文计数，§ 代码也算字符；游戏上限 ' + m : '游戏上限 ' + m) : m === undefined ? '正在读取游戏的字数上限' : '');
+  }
+  function paintPrev() { if (prev) renderRuns(prev, {}, rdRuns(text, sty), def); }
+  function rendered(v) { scheduleSprites(); paintPrev(); paintCount(v === undefined ? curValue() : v); if (o.onRender) o.onRender(api); if (followAside) followAside(); }
+  function emit() { version++; var v = curValue(); rendered(v); o.onChange(v, isEmpty(v)); }
+  /* 原生输入框改了文字：比较前后共同的首尾，中间被替换的部分换成新输入的字，新字沿用光标前一个字（或刚设好的待输入样式） */
+  function absorb(nt) {
+    var a = text, max = Math.min(a.length, nt.length), p = 0, q = 0;
+    while (p < max && a.charCodeAt(p) === nt.charCodeAt(p)) p++;
+    while (q < max - p && a.charCodeAt(a.length - 1 - q) === nt.charCodeAt(nt.length - 1 - q)) q++;
+    var st = pending && pending.at === p ? pending.style : styleAt(p), add = [];
+    for (var i = p; i < nt.length - q; i++) add.push(nt.charAt(i) === '\n' ? {} : st);
+    Array.prototype.splice.apply(sty, [p, a.length - q - p].concat(add));
+    text = nt;
+  }
+  ta.addEventListener('input', function () {
+    var nt = ta.value;
+    if (!multi && nt.indexOf('\n') >= 0) { nt = nt.replace(/\r?\n/g, ''); ta.value = nt; }
+    if (n && nt.split('\n').length > n) {
+      /* 末尾还有空行就让出来：在中间按回车，整体下移一行，最后一个空行被挤掉 */
+      var ls = nt.split('\n'), extra = ls.length - n, caret = typeof ta.selectionStart === 'number' ? ta.selectionStart : nt.length;
+      while (extra > 0 && ls.length && ls[ls.length - 1] === '') { ls.pop(); extra--; }
+      if (extra > 0) { var back = sel.s; ta.value = text; if (typeof ta.setSelectionRange === 'function') ta.setSelectionRange(back, back); toast('这里最多 ' + n + ' 行', 'info', 'rd-lines'); return; }
+      nt = ls.join('\n'); ta.value = nt; if (typeof ta.setSelectionRange === 'function') ta.setSelectionRange(Math.min(caret, nt.length), Math.min(caret, nt.length));
+      while (nt.split('\n').length < n) nt += '\n'; ta.value = nt;
+      if (typeof ta.setSelectionRange === 'function') ta.setSelectionRange(Math.min(caret, nt.length), Math.min(caret, nt.length));
+      /* 在中间按回车：新换行插在光标处，末尾那个空行的换行被挤掉；后面各行的样式跟着整体下移，不要被重置 */
+      var cut = caret - 1;
+      if (cut >= 0 && nt.length === text.length && text.charAt(text.length - 1) === '\n' && nt === text.slice(0, cut) + '\n' + text.slice(cut, text.length - 1)) {
+        sty.splice(cut, 0, {}); sty.length = nt.length; text = nt; pending = null;
+        emit(); highlight(); readSel(); return;
+      }
+    }
+    absorb(nt); emit(); highlight(); readSel();
+  });
+  ['select', 'mouseup', 'keyup', 'focus'].forEach(function (ev) { ta.addEventListener(ev, readSel); });
+  ta.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.ctrlKey && !multi) { e.preventDefault(); return; }
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
+      var f = { b: 'bold', i: 'italic', u: 'underlined' }[String(e.key).toLowerCase()];
+      if (f) { e.preventDefault(); readSel(); toggleFlag(f); return; }
+    }
+    if (o.onKey) o.onKey(e);
+  });
+
+  /* 选中范围改样式；没选中就设成接下来输入的样式 */
+  function patch(fn) {
+    if (sel.s === sel.e) { pending = { at: sel.s, style: rdNorm(fn(clone(selStyles()[0]))) }; paintBar(); refocus(); return; }
+    for (var i = sel.s; i < sel.e; i++) { if (text.charAt(i) === '\n') continue; var obj = sty[i] && sty[i]._object; var s = rdNorm(fn(clone(sty[i] || {}))); if (obj) s._object = obj; sty[i] = s; }
+    emit(); highlight(); paintBar(); refocus();
+  }
+  function toggleFlag(f) {
+    var on = selStyles().every(function (s) { return eff(s, f); });
+    patch(function (s) { if (on) { if (f === 'italic' && def.italic) s.italic = false; else delete s[f]; } else { if (f === 'italic' && def.italic) delete s.italic; else s[f] = true; } return s; });
+  }
+  function setColor(c) { patch(function (s) { if (c) s.color = c; else delete s.color; return s; }); }
+  function replaceSel(str, styles) {
+    var s = sel.s, e = sel.e, top = ta.scrollTop;
+    text = text.slice(0, s) + str + text.slice(e);
+    Array.prototype.splice.apply(sty, [s, e - s].concat(styles));
+    ta.value = text; sel = { s: s + str.length, e: s + str.length }; pending = null;
+    refocus(top); emit(); highlight(); paintBar();
+  }
+  function wholeIfEmpty() { if (sel.s === sel.e) sel = { s: 0, e: text.length }; }
+
+  function tb(cls, label, tip, fn) {
+    var b = h('div', { class: 'k-rdb ' + cls, title: tip }, [typeof label === 'string' ? h('span', { text: label }) : label]);
+    b.addEventListener('mousedown', function (e) { if (e.button !== undefined && e.button !== 0) return; readSel(); e.preventDefault(); });
+    activate(b, function () { fn(b); });
     return b;
   }
-  function drawRuns() {
-    clear(list); inputs = []; activeInput = null;
-    if (caret && runs.indexOf(caret.run) < 0) caret = null;
-    runs.forEach(function (r, i) {
-      var inp;
-      if (r._object) {
-        inp = h('div', { class: 'k-input k-rsprite', title: r._object.sprite });
-        renderRuns(inp, base, [r]);
-        activate(inp, function () { activeInput = null; caret = { run: r, start: 1, end: 1 }; });
-      } else {
-        inp = h('input', { class: 'k-input', type: 'text', value: r.text, placeholder: o.placeholder || '输入文字', spellcheck: 'false' });
-        inputs.push({ run: r, input: inp });
-        ['focus', 'blur', 'select', 'mouseup', 'keyup'].forEach(function (event) { inp.addEventListener(event, function () { remember(r, inp); }); });
-        inp.addEventListener('input', function () { r.text = inp.value; remember(r, inp); emit(false); });
-      }
-      var sty = h('div', { class: 'k-rsty' });
-      [['bold', 'B', '粗体'], ['italic', 'I', '斜体'], ['underlined', 'U', '下划线'], ['strikethrough', 'S', '删除线']].forEach(function (d) {
-        var on = r[d[0]] === true || (d[0] === 'italic' && r.italic === true) , off = d[0] === 'italic' && r.italic === false;
-        var b = h('div', { class: 'k-rs ' + d[0] + (on ? ' on' : '') + (off ? ' off' : ''), title: d[2] + (d[0] === 'italic' ? '（再点一次=强制非斜体）' : ''), text: d[1] });
-        activate(b, function () {
-          if (d[0] === 'italic') { if (runs[i].italic === undefined) runs[i].italic = true; else if (runs[i].italic === true) runs[i].italic = false; else delete runs[i].italic; }
-          else { if (runs[i][d[0]]) delete runs[i][d[0]]; else runs[i][d[0]] = true; }
-          emit(true);
-        });
-        sty.appendChild(b);
+  var chip = h('i', { class: 'k-rdsw' });
+  var colorB = tb('color', chip, '文字颜色', function (b) {
+    var keep = { s: sel.s, e: sel.e }, box = h('div', { class: 'k-pickbox' }), sw = h('div', { class: 'k-swatches' });
+    function pick(c) { kPopClose(); sel = keep; setColor(c); }
+    function paint() {
+      clear(sw);
+      var none = h('div', { class: 'k-sw nonec', title: '默认颜色' }, [h('i', { text: '×' })]);
+      none.addEventListener('mousedown', function (e) { e.preventDefault(); pick(null); }); sw.appendChild(none);
+      mcColors().forEach(function (c) { var s = h('div', { class: 'k-sw', title: c[2], style: 'background:#' + c[1] }); s.addEventListener('mousedown', function (e) { e.preventDefault(); pick(c[0]); }); sw.appendChild(s); });
+      if (!mcColors().length) sw.appendChild(h('span', { class: 'k-sub', text: '正在读取颜色…' }));
+    }
+    paint(); box.appendChild(sw);
+    var hex = h('input', { class: 'k-input', type: 'text', placeholder: codes ? '书与笔不能用自定义颜色' : '#RRGGBB', maxlength: '7' });
+    if (codes) { hex.setAttribute('disabled', ''); setTip(hex, RD_CODES_WHY); }
+    else hex.addEventListener('change', function () { var t = hex.value.trim(); if (/^#[0-9a-fA-F]{6}$/.test(t)) pick(t.toUpperCase()); });
+    box.appendChild(hex);
+    kPopover(b, box, { width: 244, onClose: watchColorOptions(mcColors, paint) });
+  });
+  bar.appendChild(colorB);
+  var flagB = {};
+  RD_FLAGS.forEach(function (f) { flagB[f[0]] = tb('flag ' + f[0], f[1], f[2], function () { toggleFlag(f[0]); }); bar.appendChild(flagB[f[0]]); });
+  bar.appendChild(h('i', { class: 'k-rdsep' }));
+  {
+    bar.appendChild(tb('sprite' + (codes ? ' dis' : ''), uiIcon('image', 12), codes ? '精灵图：' + RD_CODES_WHY : '在光标处插入精灵图', function (b) {
+      if (codes) { toast(RD_CODES_WHY, 'info', 'rd-codes'); return; }
+      var keep = { s: sel.s, e: sel.e }, ver = version;
+      pickSprite(b, function (object) {
+        if (ver !== version) { toast('文字已变化，请重新选择插入位置', 'info'); return; }
+        sel = keep; replaceSel(RD_MARK, [{ _object: clone(object), color: 'white' }]);
       });
-      var rm = h('div', { class: 'k-mini del', text: '×', title: '删除这一段' }); activate(rm, function () { runs.splice(i, 1); if (!runs.length) runs.push({ text: '' }); emit(true); });
-      var row = h('div', { class: 'k-rrun k-srow' }, [runs.length > 1 ? kGrip() : null, colorBtn(r, i), inp, sty, runs.length > 1 ? rm : null]);
-      list.appendChild(row); lastRow = row;
-    });
-    placeTools();
+    }));
   }
-  var lastRow = null, sp = null, more = null, spriteButton = null, tools = null;
-  /* 只有一段时，「分色」和菜单按钮并进同一行；多段时放在列表下面 */
-  function placeTools() { if (!tools || !more) return; var single = runs.length === 1 && lastRow; var host = single ? lastRow : tools; if (sp) host.appendChild(sp); if (spriteButton) host.appendChild(spriteButton); host.appendChild(more); tools.style.display = single ? 'none' : 'flex'; }
-  kSortable(list, { onMove: function (from, to) { var x = runs.splice(from, 1)[0]; runs.splice(to, 0, x); emit(true); } });
-  tools = h('div', { class: 'k-row k-rtools' });
+  function nearestColor(hx) {
+    var v = parseInt(hx.replace('#', ''), 16), best = null, bd = 1e9;
+    mcColors().forEach(function (c) {
+      var p = parseInt(c[1], 16), d = 0; [16, 8, 0].forEach(function (sh) { var x = ((v >> sh) & 255) - ((p >> sh) & 255); d += x * x; });
+      if (d < bd) { bd = d; best = c[0]; }
+    });
+    return best;
+  }
+  var gradB = null;
   function gradientPop(anchor) {
-    if (runs.some(function (r) { return !!r._object || !!r.font; })) { toast('含精灵图或自定义字体，请按分段编辑', 'info'); return; }
-    var sBox = h('div', { class: 'k-pickbox' }); var c1 = '#FF5555', c2 = '#5555FF';
-    var a = kColor(0xFF5555, function (n) { c1 = hex6(n); }), b = kColor(0x5555FF, function (n) { c2 = hex6(n); });
-    sBox.appendChild(kHint('起始')); sBox.appendChild(a.el); sBox.appendChild(kHint('结束')); sBox.appendChild(b.el);
-    sBox.appendChild(kBtn('应用渐变', function () {
-      var text = runs.map(function (r) { return r.text; }).join(''), chars = text.split(''); if (chars.length > 64) { toast('渐变最多 64 个字', 'error'); return; }
-      var st = runStyleOf(runs[0]); delete st.color; var out = [];
-      chars.forEach(function (ch, i) { var r = { text: ch }; for (var k in st) r[k] = st[k]; r.color = lerpHex(c1, c2, chars.length > 1 ? i / (chars.length - 1) : 0); out.push(r); });
-      runs.length = 0; out.forEach(function (r) { runs.push(r); }); kPopClose(); emit(true);
+    wholeIfEmpty(); var keep = { s: sel.s, e: sel.e }, c1 = '#FF5555', c2 = '#5555FF';
+    var box = h('div', { class: 'k-pickbox' });
+    if (codes) box.appendChild(kHint('只有 16 色，逐字取最接近的'));
+    box.appendChild(kHint('起始')); box.appendChild(kColor(0xFF5555, function (v) { c1 = hex6(v); }).el);
+    box.appendChild(kHint('结束')); box.appendChild(kColor(0x5555FF, function (v) { c2 = hex6(v); }).el);
+    box.appendChild(kBtn('应用到' + (keep.s === 0 && keep.e === text.length ? '全部文字' : '选中文字'), function () {
+      var idx = []; for (var i = keep.s; i < keep.e; i++) if (text.charAt(i) !== '\n' && !(sty[i] && sty[i]._object)) idx.push(i);
+      if (idx.length > 256) { toast('渐变最多 256 个字', 'error'); return; }
+      idx.forEach(function (i, k) { var s = clone(sty[i] || {}); var hx = lerpHex(c1, c2, idx.length > 1 ? k / (idx.length - 1) : 0); s.color = codes ? (nearestColor(hx) || hx) : hx; sty[i] = s; });
+      kPopClose(); sel = keep; emit(); highlight(); paintBar(); refocus();
     }, { cls: 'pri' }));
-    kPopover(anchor, sBox, { width: 280, maxHeight: 360 });
+    kPopover(anchor, box, { width: 280, maxHeight: 360 });
   }
   function codePop(anchor) {
-    if (runs.some(function (r) { return !!r._object || !!r.font; })) { toast('§ 代码不能表示精灵图或自定义字体', 'info'); return; }
-    var ta = h('textarea', { class: 'k-input ed-code-in', spellcheck: 'false', placeholder: '&6金色&l加粗' });
-    ta.value = toCodes(base, runs).replace(new RegExp(SECT + 'r', 'g'), '');
-    kPopover(anchor, h('div', { class: 'k-pickbox' }, [ta, kBtn('导入', function () { runs.length = 0; parseCodes(ta.value).forEach(function (r) { runs.push(r); }); base = {}; kPopClose(); emit(true); }, { cls: 'pri' })]), { width: 300, maxHeight: 220 });
-  }
-  if (!o.compact) { sp = h('div', { class: 'k-mini', title: '分色：把文字分成几段，每段单独设置颜色' }, [uiIcon('plus', 14)]); activate(sp, function () { runs.push({ text: '' }); emit(true); }); }
-  spriteButton = kBtn('Sprite', function () {
-    var mark = caret ? { run: caret.run, start: caret.start, end: caret.end } : null, version = valueVersion;
-    pickSprite(spriteButton, function (object) {
-      if (!document.body.contains(wrap) || version !== valueVersion || mark && runs.indexOf(mark.run) < 0) { toast('文字已变化，请重新选择插入位置', 'info'); return; }
-      insertSprite(object, mark);
+    var src = h('textarea', { class: 'k-input ed-code-in', spellcheck: 'false', placeholder: codes ? '§6金色§l加粗' : '&6金色&l加粗' });
+    src.value = rdCodes(rdRuns(text, sty));
+    src.setAttribute('style', 'height:140px');
+    var grip = h('div', { class: 'k-pop-grip', title: '拖动调整大小' });
+    var apply = kBtn(codes ? '使用这段原文' : '导入', function () {
+      var nt = { text: '', sty: [] }; rdFromRuns(parseCodes(src.value, codes), nt);
+      if (!multi) { nt.text = nt.text.replace(/\n/g, ''); nt.sty = nt.sty.slice(0, nt.text.length); }
+      kPopClose(); sel = { s: 0, e: text.length }; replaceSel(nt.text, nt.sty);
+    }, { cls: 'pri' });
+    var pop = kPopover(anchor, h('div', { class: 'k-pickbox' }, [codes ? kHint('这一页保存的原文；§ 代码由游戏解释。') : null, src, h('div', { class: 'k-pop-foot' }, [apply, grip])]), { width: 400, maxHeight: 520 });
+    grip.addEventListener('mousedown', function (e) {
+      if (e.button !== undefined && e.button !== 0) return;
+      var scale = uiScaleFactor(), vp = uiViewport(), pr = pop.getBoundingClientRect(), sx = e.clientX, sy = e.clientY;
+      var w0 = pr.width / scale, h0 = src.getBoundingClientRect().height / scale, left = pr.left / scale;
+      var st = String(pop.getAttribute('style') || '').replace(/(^|;)\s*(width|max-height)\s*:[^;]*/g, '');
+      dragTrack(e, function (ev) {
+        var w = clampN(w0 + (ev.clientX - sx) / scale, 220, Math.max(220, vp.width - left - 8));
+        var hh = clampN(h0 + (ev.clientY - sy) / scale, 60, Math.max(60, vp.height - 120));
+        src.setAttribute('style', 'height:' + Math.round(hh) + 'px');
+        pop.setAttribute('style', st + ';width:' + Math.round(w) + 'px;max-height:' + Math.round(vp.height - 16) + 'px');
+      });
     });
-  }, { icon: 'image', title: '插入 Sprite 到光标位置' });
-  spriteButton.addEventListener('mousedown', function (e) {
-    if (e.button !== undefined && e.button !== 0) return;
-    if (activeInput && list.contains(activeInput)) inputs.forEach(function (entry) { if (entry.input === activeInput) remember(entry.run, activeInput); });
-    e.preventDefault();
-  });
-  more = h('div', { class: 'k-mini', title: '渐变色、§ 代码、清除格式' }, [uiIcon('menu', 14)]);
-  activate(more, function () {
-    var r = more.getBoundingClientRect();
-    kMenu(r.left, r.bottom + 2, [
-      { label: '渐变色', icon: 'palette', run: function () { gradientPop(more); } },
-      { label: '§ 代码', icon: 'code', run: function () { codePop(more); } },
-      { sep: 1 },
-      { label: '清除格式', icon: 'restore', run: function () { runs = runs.map(function (r) { return r._object ? { text: r.text, _object: r._object } : { text: r.text }; }); base = {}; emit(true); } }
-    ]);
-  });
-  tools.appendChild(more); placeTools();
-  edit.appendChild(list); edit.appendChild(tools);
-  drawRuns(); renderRuns(prev, base, runs, o.def);
-  function sync() { edit.style.display = open ? 'flex' : 'none'; wrap.classList.toggle('open', open); }
-  if (o.compact) {
-    prev.classList.add('click'); setTip(prev, '点击展开编辑');
-    prev.addEventListener('click', function () { open = !open; UIOpen[openKey] = open; sync(); });
   }
-  wrap.appendChild(prev); wrap.appendChild(edit); sync();
-  return { el: wrap, set: function (v) { valueVersion++; caret = null; var p = tcRuns(v); if (!p) return; base = p.base; runs.length = 0; p.runs.forEach(function (r) { runs.push(r); }); drawRuns(); renderRuns(prev, base, runs, o.def); } };
+  gradB = tb('grad', uiIcon('palette', 12), '渐变色（选中文字；没选就是整页）', function (b) { gradientPop(b); });
+  bar.appendChild(gradB);
+  var more = tb('more', uiIcon('menu', 12), '§ 代码、清除格式', function (b) {
+    var r = b.getBoundingClientRect();
+    kMenu(r.left, r.bottom + 2, [
+      { label: codes ? '查看 / 编辑原文' : '§ 代码导入 / 导出', icon: 'code', run: function () { codePop(more); } },
+      { sep: 1 },
+      { label: '清除格式', icon: 'restore', run: function () { wholeIfEmpty(); patch(function (s) { return s._object ? { _object: s._object } : {}; }); } }
+    ].filter(Boolean));
+  });
+  bar.appendChild(more); bar.appendChild(count);
+  function paintBar() {
+    var list = selStyles();
+    RD_FLAGS.forEach(function (f) { flagB[f[0]].classList.toggle('on', list.every(function (s) { return eff(s, f[0]); })); });
+    var colors = list.map(function (s) { return s.color || ''; }), same = colors.every(function (c) { return c === colors[0]; });
+    var hx = same ? (tcHex(colors[0]) || tcHex(def.color) || '') : '';
+    chip.className = 'k-rdsw' + (same ? '' : ' mixed') + (same && !colors[0] ? ' def' : '');
+    chip.setAttribute('style', hx ? 'background:' + hx : '');
+    setTip(colorB, '文字颜色：' + (!same ? '多种' : colors[0] ? (mcColors().filter(function (c) { return c[0] === colors[0]; }).map(function (c) { return c[2]; })[0] || colors[0]) : '默认'));
+  }
+
+  /* aside：放在输入框右边、和它等高的预览（书页）；两边按滚动比例同步 */
+  /* 原生输入框画不了图：精灵图在输入框里占一个（透明的）◆，真图标盖在它上面。
+     位置由一个看不见的镜像量出来：同样的宽度、字体、折行，◆ 落在哪就把图标放在哪 */
+  var sprLayer = h('div', { class: 'k-rdspr' }), sprIn = h('div', { class: 'k-rdsprin' }), mirror = h('div', { class: 'k-rdmirror' });
+  sprIn.appendChild(mirror); sprLayer.appendChild(sprIn);
+  var tawrap = h('div', { class: 'k-rdtaw' }, [ta, sprLayer]);
+  var sprKey = '', sprTimer = null, sprWaited = 0;
+  function hasObjects() { for (var i = 0; i < sty.length; i++) if (sty[i] && sty[i]._object) return true; return false; }
+  var shownTop = -1, shownLeft = -1;
+  function sprShift() { shownTop = ta.scrollTop || 0; shownLeft = ta.scrollLeft || 0; sprIn.setAttribute('style', 'left:' + (-shownLeft) + 'px;top:' + (-shownTop) + 'px'); }
+  function placeSprites() {
+    if (codes) return;
+    if (!hasObjects()) { if (sprOn) { sprOn = false; highlight(); } clear(sprIn); clear(mirror); sprKey = ''; return; }
+    if (!document.body.contains || !document.body.contains(wrap)) return;
+    var cw = ta.clientWidth, scale = typeof uiScaleFactor === 'function' ? uiScaleFactor() : 1;
+    if (!cw) return;
+    /* 镜像：和输入框同宽、同字体、同折行，文字透明，只有图标可见。
+       图标和普通字排在同一行（基线、行高和右边预览一模一样），外面套一个和占位符 ◆ 一样宽的盒子，这样折行和位置不会错 */
+    clear(mirror);
+    mirror.setAttribute('style', 'width:' + cw + 'px');
+    var probe = h('span', { text: RD_MARK }); mirror.appendChild(probe);
+    var mw = Math.round(probe.getBoundingClientRect().width / scale * 100) / 100;
+    clear(mirror);
+    if (!(mw > 0)) return;
+    var from = 0;
+    for (var i = 0; i < text.length; i++) if (sty[i] && sty[i]._object) {
+      if (i > from) mirror.appendChild(h('span', { text: text.slice(from, i) }));
+      var run = runStyleOf(sty[i]); run.text = RD_OBJ; run._object = clone(sty[i]._object);
+      var box = h('span'); renderRuns(box, {}, [run], def);
+      box.setAttribute('style', 'display:inline-block;width:' + mw + 'px;white-space:pre;position:relative;top:' + ((typeof UI !== 'undefined' && UI.font === 'smooth') ? SPR_DY : 0) + 'px');
+      mirror.appendChild(box); from = i + 1;
+    }
+    if (from < text.length) mirror.appendChild(h('span', { text: text.slice(from) }));
+    sprShift(); sprKey = cw + ',' + ta.clientHeight + ',' + version;
+    if (!sprOn) { sprOn = true; highlight(); }
+  }
+  function scheduleSprites() {
+    if (codes) return;
+    [0, 120, 500].forEach(function (ms) { setTimeout(placeSprites, ms); });
+    if (sprTimer) return;
+    sprTimer = setInterval(function () {
+      var attached = document.body.contains && document.body.contains(wrap);
+      if (!attached) { if (++sprWaited > 200) { clearInterval(sprTimer); sprTimer = null; } return; }
+      sprWaited = 0;
+      if (!hasObjects()) return;
+      if (sprKey !== ta.clientWidth + ',' + ta.clientHeight + ',' + version) placeSprites();
+      else if ((ta.scrollTop || 0) !== shownTop || (ta.scrollLeft || 0) !== shownLeft) sprShift();
+    }, 80);
+  }
+  ta.addEventListener('scroll', sprShift);
+  var edit = h('div', { class: 'k-rdedit' }, [bar, o.aside ? h('div', { class: 'k-rdbody' }, [tawrap, o.aside]) : tawrap]);
+  if (o.aside) {
+    var syncing = false, scroller = o.asideScroll || o.aside;
+    var follow = function (from, to) {
+      if (syncing) return;
+      var span = from.scrollHeight - from.clientHeight, r = span > 0 ? from.scrollTop / span : 0;
+      syncing = true; to.scrollTop = Math.round(r * Math.max(0, to.scrollHeight - to.clientHeight)); syncing = false;
+    };
+    ta.addEventListener('scroll', function () { follow(ta, scroller); });
+    scroller.addEventListener('scroll', function () { follow(scroller, ta); });
+    followAside = function () { follow(ta, scroller); };
+  }
+  if (prev) wrap.appendChild(prev);
+  wrap.appendChild(edit);
+  var openKey = o.openKey || 'rich', open = !o.compact || !!UIOpen[openKey];
+  function sync() { edit.style.display = open ? 'flex' : 'none'; wrap.classList.toggle('open', open); }
+  if (o.compact && prev) {
+    prev.classList.add('click'); setTip(prev, '点击展开编辑');
+    prev.addEventListener('click', function () { open = !open; UIOpen[openKey] = open; sync(); if (open) refocus(); });
+  }
+  sync();
+  api = {
+    el: wrap, textarea: ta, recount: function () { paintCount(curValue()); },
+    runs: function () { return rdRuns(text, sty); },
+    lineRuns: function () { var out = [], start = 0; for (var i = 0; i <= text.length; i++) if (i === text.length || text.charAt(i) === '\n') { out.push(rdRuns(text, sty, start, i)); start = i + 1; } return out; },
+    focus: function () { open = true; sync(); sel = { s: text.length, e: text.length }; refocus(); },
+    length: function () { return text.length; },
+    caretPos: function () { readSel(); return sel.e; },
+    setCaret: function (p) { p = Math.max(0, Math.min(text.length, p)); sel = { s: p, e: p }; refocus(0); },
+    slice: function (a, b) { return { text: text.slice(a, b), sty: sty.slice(a, b) }; },
+    set: function (v) {
+      var l = rdLoad(v, codes, n); if (!l) return;
+      version++; text = l.text; sty = l.sty; pending = null; sel = { s: Math.min(sel.s, text.length), e: Math.min(sel.e, text.length) };
+      if (ta.value !== text) ta.value = text;
+      highlight(); paintBar(); rendered();
+    }
+  };
+  highlight(); paintBar(); rendered();
+  return api;
+}
+/* 旧接口：名称、说明文字等单行文字 */
+function kRich(value, o) { o = o || {}; return kRichDoc(value, { compact: o.compact, openKey: o.openKey, placeholder: o.placeholder, def: o.def, onChange: o.onChange }); }
+
+/* ---------- 书本编辑器（成书 / 书与笔共用） ----------
+   一次编辑一页：工具栏在上；左边写字，右边是同高的书页预览，两边滚动同步。
+   页脚一行：左边是本页操作（插入、复制、删除），中间是居中的页码（页多时折叠成 1 … 5 6 [7] 8 9 … 100，点 … 跳页），右边是页数。
+   右键页码可移动、复制、插入或删除那一页；PageUp / PageDown 翻页。
+   o = { kind: 'written'|'writable', get(): 页数组, save(pages, label), maxPages(), maxChars()（undefined=读取中、null=没有上限）, key }
+   页可以是 {raw, filtered}（游戏的过滤文本）：只改 raw，filtered 原样保留。 */
+function bookFiltered(p) { return isObj(p) && p.raw !== undefined && Object.keys(p).every(function (k) { return k === 'raw' || k === 'filtered'; }); }
+/* 页码窗口：总数 ≤ 9 全部列出；否则首页、末页、当前页前后各 2 页，中间用 … 代替。返回 [0, '…', 4, 5, 6, …] */
+function bookPagerItems(total, at) {
+  if (total <= 9) { var all = []; for (var i = 0; i < total; i++) all.push(i); return all; }
+  var lo = Math.max(1, Math.min(at - 2, total - 6)), hi = Math.min(total - 2, Math.max(at + 2, 5)), out = [0];
+  if (lo > 1) out.push('…');
+  for (var j = lo; j <= hi; j++) out.push(j);
+  if (hi < total - 2) out.push('…');
+  out.push(total - 1);
+  return out;
+}
+function kBookEditor(o) {
+  var codes = o.kind === 'writable', key = o.key || 'book:' + o.kind;
+  var root = h('div', { class: 'k-book' }), at = UIOpen[key] || 0, seen = '', ed = null;
+  function pages() { var l = o.get(); return Array.isArray(l) ? clone(l) : []; }
+  function raw(p) { return bookFiltered(p) ? p.raw : p; }
+  function put(list, label) { seen = JSON.stringify(list); o.save(list, label); }
+  function maxPages() { return o.maxPages ? o.maxPages() : null; }
+  function setAt(i, n) { at = Math.max(0, Math.min(i, n - 1)); UIOpen[key] = at; }
+
+  var edHost = h('div', { class: 'k-book-ed' });
+  var pgBody = h('div', { class: 'k-bookpg-b' }), paper = h('div', { class: 'k-bookpg' }, [pgBody]);
+  var note = h('div', { class: 'k-book-note' });
+  var acts = h('div', { class: 'k-book-acts' }), pager = h('div', { class: 'k-book-pager' }), info = h('div', { class: 'k-book-info' });
+  var foot = h('div', { class: 'k-book-foot' }, [acts, pager, info]);
+  root.appendChild(edHost); root.appendChild(note); root.appendChild(foot);
+  root.addEventListener('keydown', function (e) {
+    if (e.key === 'PageUp') { e.preventDefault(); go(at - 1); }
+    else if (e.key === 'PageDown') { e.preventDefault(); go(at + 1); }
+  });
+
+  function go(i) { var l = pages(); if (!l.length) return; i = Math.max(0, Math.min(l.length - 1, i)); if (i === at) return; setAt(i, l.length); drawAll(true); }
+  function insert(i, page) {
+    var l = pages(), m = maxPages();
+    if (typeof m === 'number' && l.length >= m) { toast('这本书最多 ' + m + ' 页（游戏上限）', 'error', 'book-max'); return; }
+    i = Math.max(0, Math.min(i, l.length)); l.splice(i, 0, page); put(l, '插入第 ' + (i + 1) + ' 页'); setAt(i, l.length); drawAll(true);
+  }
+  function remove(i) { var l = pages(); if (i < 0 || i >= l.length) return; l.splice(i, 1); put(l, '删除第 ' + (i + 1) + ' 页'); setAt(Math.min(at, l.length - 1), l.length); drawAll(); }
+  function move(from, to) { var l = pages(); if (to < 0 || to >= l.length || from === to) return; var x = l.splice(from, 1)[0]; l.splice(to, 0, x); put(l, '移动第 ' + (from + 1) + ' 页'); setAt(to, l.length); drawAll(); }
+  function setPage(v) {
+    var l = pages(); if (at >= l.length) return;
+    var p = l[at]; if (bookFiltered(p)) { p = clone(p); p.raw = v; l[at] = p; } else l[at] = v;
+    put(l, '修改第 ' + (at + 1) + ' 页');
+  }
+  function pageMenu(i) {
+    var n = pages().length;
+    return [
+      { label: '在前面插入空白页', icon: 'plus', run: function () { insert(i, ''); } },
+      { label: '在后面插入空白页', icon: 'plus', run: function () { insert(i + 1, ''); } },
+      { label: '复制这一页', icon: 'copy', run: function () { insert(i + 1, clone(pages()[i])); } },
+      { sep: 1 },
+      { label: '往前移一页', icon: 'back', dis: i === 0, run: function () { move(i, i - 1); } },
+      { label: '往后移一页', icon: 'forward', dis: i >= n - 1, run: function () { move(i, i + 1); } },
+      { label: '移到第一页', icon: 'up', dis: i === 0, run: function () { move(i, 0); } },
+      { label: '移到最后一页', icon: 'down', dis: i >= n - 1, run: function () { move(i, n - 1); } },
+      { sep: 1 },
+      { label: '删除这一页', icon: 'trash', danger: 1, run: function () { remove(i); } }
+    ];
+  }
+  function iconBtn(icon, tip, fn, cls) { return kBtn('', fn, { icon: icon, title: tip, cls: 'k-book-ib' + (cls ? ' ' + cls : '') }); }
+  function jumpPop(anchor, n) {
+    var inp = h('input', { class: 'k-input', type: 'text', placeholder: '1 – ' + n });
+    function ok() { var v = parseInt(inp.value, 10); if (!isNaN(v)) { kPopClose(); go(v - 1); } }
+    inp.addEventListener('change', ok);
+    kPopover(anchor, h('div', { class: 'k-pickbox' }, [kHint('跳到第几页'), inp, kBtn('跳转', ok, { cls: 'pri' })]), { width: 150 });
+    setTimeout(function () { if (inp.focus) inp.focus(); }, 0);
+  }
+  function paintFoot() {
+    var l = pages(), n = l.length, m = maxPages();
+    clear(acts); clear(pager); clear(info);
+    acts.appendChild(iconBtn('plus', '在这一页后面插入空白页', function () { insert(n ? at + 1 : 0, ''); }, typeof m === 'number' && n >= m ? 'dis' : ''));
+    acts.appendChild(iconBtn('copy', '复制这一页', function () { if (n) insert(at + 1, clone(pages()[at])); }, n ? '' : 'dis'));
+    acts.appendChild(iconBtn('trash', '删除这一页', function () { remove(at); }, 'dng' + (n ? '' : ' dis')));
+    var prev = iconBtn('back', '上一页（PageUp）', function () { go(at - 1); }, at <= 0 ? 'dis' : '');
+    var next = iconBtn('forward', '下一页（PageDown）', function () { go(at + 1); }, at >= n - 1 ? 'dis' : '');
+    pager.appendChild(prev);
+    bookPagerItems(n, at).forEach(function (i) {
+      if (i === '…') { var gap = h('div', { class: 'k-book-pn gap', text: '…', title: '跳到指定页' }); activate(gap, function () { jumpPop(gap, n); }); pager.appendChild(gap); return; }
+      var b = h('div', { class: 'k-book-pn' + (i === at ? ' on' : ''), text: String(i + 1), title: '第 ' + (i + 1) + ' 页（右键：移动、复制、删除）' });
+      activate(b, function () { go(i); }); onContext(b, function () { return pageMenu(i); });
+      pager.appendChild(b);
+    });
+    pager.appendChild(next);
+    info.textContent = '共 ' + n + ' 页' + (typeof m === 'number' ? ' / ' + m : '');
+    setTip(info, typeof m === 'number' ? '游戏上限 ' + m + ' 页' : m === undefined ? '正在读取页数上限' : '');
+  }
+  /* 游戏里的书页：宽 114、最多 14 行、每行 9（游戏像素）。界面字号固定 12px，游戏字体里 6 像素宽的数字在这里宽 9.0508，所以放大倍数是固定的 */
+  var BOOK_W = 114, BOOK_N = 14, BOOK_LH = 9, bookS = 1.5085;
+  function pageStyle(el, extra) {
+    bookS = (typeof UI !== 'undefined' && UI.font === 'smooth') ? 1.5085 : 1.5;   /* 游戏字体 12px 下正好 1.5 倍；平滑字体的数字略宽 */
+    el.setAttribute('style', 'width:' + Math.round(BOOK_W * bookS) + 'px;line-height:' + (BOOK_LH * bookS).toFixed(2) + 'px;overflow-wrap:anywhere;' + (extra || ''));
+  }
+  /* 放得下返回 -1；放不下返回该在哪个下标切开（尽量在空白处，切口后面的内容挪到下一页）。
+     先把每个段落放进各自的块里，一次排版就知道累计行数；再把溢出的那一段逐字拆开，一次排版找到第一个落到第 15 行的字 */
+  function fitIndex(text, sty) {
+    pageStyle(pgBody); clear(pgBody);
+    var lh = BOOK_LH * bookS, def = { color: '#000000' };
+    var paras = [], start = 0;
+    for (var i = 0; i <= text.length; i++) if (i === text.length || text.charAt(i) === '\n') {
+      var d = h('div'); renderRuns(d, {}, i > start ? rdRuns(text, sty, start, i) : [{ text: '\u00A0' }], def); pgBody.appendChild(d);
+      paras.push({ el: d, s: start, e: i }); start = i + 1;
+    }
+    var cum = 0, hit = -1, rem = 0;
+    for (var p = 0; p < paras.length; p++) {
+      var n = Math.max(1, Math.round(paras[p].el.clientHeight / lh));
+      if (cum + n > BOOK_N) { hit = p; rem = BOOK_N - cum; break; }
+      cum += n;
+    }
+    if (hit < 0) return -1;
+    var P = paras[hit];
+    if (rem <= 0) return Math.max(1, P.s);
+    clear(pgBody);
+    var runs = []; for (var c = P.s; c < P.e; c++) runs = runs.concat(rdRuns(text, sty, c, c + 1));
+    var host = h('div'); renderRuns(host, {}, runs, def); pgBody.appendChild(host);
+    var hr = host.getBoundingClientRect(), sc = host.clientHeight ? hr.height / host.clientHeight : 1, kids = host.children, at2 = P.e;
+    for (var j = 0; j < kids.length; j++) {
+      var line = Math.floor((kids[j].getBoundingClientRect().top - hr.top) / sc / lh + 0.2);
+      if (line >= rem) { at2 = P.s + j; break; }
+    }
+    for (var q = at2; q > Math.max(P.s + 1, at2 - 60); q--) if (/\s/.test(text.charAt(q - 1))) return q;
+    return Math.max(1, at2);
+  }
+  function rdVal(t) { var runs = rdRuns(t.text, t.sty); return codes ? rdCodes(runs) : tcBuild({}, runs); }
+  function withRaw(p, v) { if (bookFiltered(p)) { p = clone(p); p.raw = v; return p; } return v; }
+  /* 当前页写满了：多出来的挪到下一页开头（下一页再满就继续往后），最后一页满了就加新页 */
+  function flow() {
+    if (!ed || ed.raw || !document.body.contains || !document.body.contains(pgBody)) return;
+    try { flowRun(); } finally { paintPaper(); }
+  }
+  function flowRun() {
+    var l = pages(), j = at, carry = null, caretPage = null, caret = ed.caretPos(), changed = false, guard = 0;
+    var maxP = maxPages();
+    while (j < l.length && guard++ < 200) {
+      var ld = j === at ? ed.slice(0, ed.length()) : rdLoad(raw(l[j]), codes, 0);
+      if (!ld) break;
+      if (carry) { ld = { text: carry.text + ld.text, sty: carry.sty.concat(ld.sty) }; }
+      var k = fitIndex(ld.text, ld.sty);
+      if (k < 0) { if (carry) { l[j] = withRaw(l[j], rdVal(ld)); changed = true; } break; }
+      var head = { text: ld.text.slice(0, k), sty: ld.sty.slice(0, k) }, tail = { text: ld.text.slice(k), sty: ld.sty.slice(k) };
+      if (j === at && caret >= k) caretPage = { page: at + 1, pos: caret - k };
+      if (j + 1 >= l.length) {
+        if (typeof maxP === 'number' && l.length >= maxP) { toast('这本书已经是最多 ' + maxP + ' 页，写满的这一页后面的行游戏里会被截断', 'error', 'book-flow'); return; }
+        l.push('');
+      }
+      l[j] = withRaw(l[j], rdVal(head)); changed = true; carry = tail; j++;
+    }
+    if (!changed) return;
+    put(l, '写满一页，自动换到下一页');
+    if (caretPage) { setAt(caretPage.page, l.length); drawAll(true); if (ed && ed.setCaret) ed.setCaret(caretPage.pos); }
+    else { drawAll(true); if (ed && ed.setCaret) ed.setCaret(Math.min(caret, ed.length())); }
+    toast('这一页写满了（游戏里每页最多 ' + BOOK_N + ' 行），多出的内容已移到下一页', 'info', 'book-flow');
+  }
+  function paintPaper() {
+    pageStyle(pgBody, 'min-height:' + Math.round(BOOK_N * BOOK_LH * bookS) + 'px;border-bottom:1px dashed #b0a07a;');
+    if (ed && !ed.raw) renderRuns(pgBody, {}, ed.runs(), { color: '#000000', placeholder: '（空白页）' });
+    else clear(pgBody);
+  }
+  function drawEditor(focus) {
+    clear(edHost); clear(note); ed = null; var l = pages();
+    if (!l.length) {
+      edHost.appendChild(h('div', { class: 'k-book-empty' }, [h('span', { class: 'k-sub', text: '这本书还没有页' }), kBtn('添加第一页', function () { insert(0, ''); }, { icon: 'plus', cls: 'pri' })]));
+      return;
+    }
+    var p = l[at];
+    ed = kRichDoc(raw(p), { mode: codes ? 'codes' : 'component', multiline: true, preview: false, paper: 'book', aside: paper,
+      placeholder: '写下第 ' + (at + 1) + ' 页的内容…', def: { color: '#000000', placeholder: '（空白页）' }, max: codes ? o.maxChars : undefined,
+      onChange: function (v) { setPage(v); flow(); }, onRender: paintPaper });
+    edHost.appendChild(ed.el);
+    if (ed.raw) note.appendChild(kHint('这一页带点击、悬停等事件，按 SNBT 编辑以免丢失。', 'hint'));
+    if (bookFiltered(p) && p.filtered !== undefined) note.appendChild(kHint('这一页另有一份过滤文本（开启聊天过滤的玩家看到的版本），会原样保留。'));
+    if (focus && ed.focus) ed.focus();
+  }
+  function drawAll(focus) { var l = pages(); seen = JSON.stringify(l); setAt(at, l.length); drawEditor(focus); paintPaper(); paintFoot(); }
+  /* 撤销 / 重做 / 外部修改：内容不是这里刚写的，就重新载入 */
+  function refresh() { if (JSON.stringify(pages()) !== seen) drawAll(); else { paintFoot(); if (ed && ed.recount) ed.recount(); } }
+  drawAll();
+  return { el: root, refresh: refresh };
 }

@@ -102,9 +102,17 @@ function enterVaultMode() {
 function redrawRegistryPage(kinds) {
   if ($('detailwin') && (kinds || []).indexOf('component_schema') >= 0) (UI.detailRefresh || []).forEach(function (refresh) { refresh(); });
   if (typeof weActive === 'function' && weActive()) { if ((kinds || []).some(function (k) { return k === 'item_defaults_one' || k === 'item_meta_one' || k === 'item_meta'; })) { drawWorldTop(); drawWorldFoot(); } return; }
-  if (!Store.docs.length || $('modal') || (typeof weActive === 'function' && weActive())) return;
+  if (!Store.docs.length || (typeof weActive === 'function' && weActive())) return;
+  /* 有窗口开着时不重画；窗口关掉之前每秒再试一次，别让数据到了却一直没刷新 */
+  if ($('modal')) {
+    UI.regDeferKinds = (UI.regDeferKinds || []).concat(kinds || []);
+    if (!UI.regDeferT) UI.regDeferT = setTimeout(function () { var ks = UI.regDeferKinds; UI.regDeferT = null; UI.regDeferKinds = []; redrawRegistryPage(ks); }, 1000);
+    return;
+  }
   var meta = ['item_defaults_one', 'item_meta_one', 'item_meta', 'entity_base_attributes', 'equipment_slot_groups', 'entity_info', 'entity_schema', 'component_schema', 'translate'];
   var refreshShell = (kinds || []).some(function (kind) { return meta.indexOf(kind) >= 0; });
+  /* 不管收到的是哪类数据：只要这件物品现在判定的类别和顶部分页画的时候不一样，就必须重画分页 */
+  if (UI.shellKind !== kindOfItem(Store.doc().id)) refreshShell = true;
   if (refreshShell) { drawHero(); drawTabbar(); }
   // Numeric capabilities update in place. Do not destroy an input containing a
   // pending NaN/Infinity just because its Codec facts have now arrived.
@@ -122,18 +130,86 @@ function redrawRegistryPage(kinds) {
   if (!(UI.tab === 'item-stack' && UI.cmdFmt === 'snbt' && raw && raw.view && raw.view.parentNode === $('edbody'))) drawTabBody();
   if (refreshShell) drawFooter();
 }
+/* 打开时游戏数据（组件表等）还在陆续送来，页面会一次次重画。数据没到齐就盖一层加载动画，到齐了淡出；已经到过的世界里再打开不会出现 */
+/* 列表里的一行加载提示：数据还在读时代替空白 */
+function kLoadingRow(text) { return h('div', { class: 'ed-loadrow' }, [h('div', { class: 'ed-load-dots' }, [h('i'), h('i'), h('i')]), h('span', { text: text || '正在读取…' })]); }
+var EditorLoading = {
+  schemaGen: null, el: null, timer: null, started: 0, lastTouch: 0, sent: 0, readyAt: 0,
+  /* 物品自己的数据到齐：组件表到了，并且这件物品的默认值、类型信息也到了（没到时页面是「物品 / 方块」的通用样子） */
+  ready: function () {
+    if (Reg.preview()) return true;
+    if (!Reg.meta) return false;
+    var d = Store.docs.length ? Store.doc() : null;
+    if (d && d.id && !(typeof weActive === 'function' && weActive())) return liveKind(d.id) !== null;
+    return true;
+  },
+  note: function (kinds) {
+    this.touch();
+    if (Reg.meta && kinds && kinds.indexOf('component_schema') >= 0) this.schemaGen = String(Reg.meta.generation);
+  },
+  /* 每次向游戏要注册表数据、或收到一批数据，都算「还在加载」；安静超过 0.8 秒才算真正加载完（页面是在数据到达后延迟重画的） */
+  touch: function (sending) { this.lastTouch = Date.now(); if (sending) this.sent++; },
+  arm: function () { this.lastTouch = Date.now(); this.sent = 0; },
+  mount: function () {
+    var win = $('win');
+    if (!this.el) this.el = h('div', { class: 'ed-loading' }, [h('div', { class: 'ed-load-dots' }, [h('i'), h('i'), h('i')]), h('div', { class: 'ed-load-text', text: '正在读取游戏数据…' })]);
+    if (win && !this.el.parentNode) win.appendChild(this.el);
+    this.el.classList.remove('out');
+  },
+  begin: function () {
+    if (!this.started) this.started = Date.now();
+    if (!this.timer) this.timer = setInterval(function () { EditorLoading.tick(); }, 100);
+    this.tick();
+  },
+  tick: function () {
+    var now = Date.now(), quiet = now - this.lastTouch, rd = this.ready();
+    if (rd) { if (!this.readyAt) this.readyAt = now; } else this.readyAt = 0;
+    /* 数据早就缓存好、这次打开一个请求都没发：不挡 */
+    if (rd && this.sent === 0) { this.end(); return; }
+    /* 放行条件，满足任何一个：
+       ① 这件物品的数据到了，并且安静了 0.8 秒（页面是数据到后延迟重画的），或者到了之后又过了 2.5 秒（后台还有零散请求也不再等）；
+       ② 向游戏要过数据，但 1.5 秒内没有任何新请求或新数据（说明不会再来了，比如这件物品的数据读取失败）；
+       ③ 总共等了 8 秒。永远不会一直转 */
+    if ((rd && (quiet > 800 || now - this.readyAt > 2500)) || (this.sent > 0 && quiet > 1500) || now - this.started > 8000) { this.end(); return; }
+    this.mount();
+  },
+  end: function () {
+    var shown = !!this.el;
+    clearInterval(this.timer); this.timer = null; this.started = 0; this.readyAt = 0;
+    /* 撤掉加载层前最后补画一次：数据到了但页面没跟上（要点一下分页才刷新）的情况不能留给用户 */
+    if (shown && Store.docs.length) { try { redrawRegistryPage(['item_defaults_one', 'item_meta_one', 'component_schema']); } catch (e) { if (typeof EditorDiag !== 'undefined') EditorDiag.error('loading.redraw', e); } }
+    var el = this.el; if (!el) return; this.el = null;
+    el.classList.add('out'); setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 220);
+  }
+};
 function boot() {
   Store.subscribe(onStoreEvent);
+  try {
+    if (typeof oriel !== 'undefined' && oriel && typeof oriel.send === 'function' && !oriel.__loadWrap) {
+      var rawSend = oriel.send;
+      oriel.send = function (name) { if (name === 'registry') EditorLoading.touch(true); return rawSend.apply(this, arguments); };
+      oriel.__loadWrap = true;
+    }
+  } catch (e) { if (typeof EditorDiag !== 'undefined') EditorDiag.error('loading.wrap', e); }
   EditorDiag.phase('boot.prefs', function () { Prefs.init(typeof oriel !== 'undefined' ? oriel.data : null); });
   EditorDiag.phase('boot.registry', function () { Reg.attach(); });
   Valid.on(function () { if (Store.docs.length) { drawFooter(); if (typeof paintProblems === 'function') paintProblems(); } });
   /* 注册表数据到齐后，如果界面上没有打开的窗口，就重画当前页，让名称/列表换成实时数据 */
-  var regT = null;
-  Reg.on(function (kind, kinds) { clearTimeout(regT); regT = setTimeout(function () { try { redrawRegistryPage(kinds || [kind]); } catch (e) { if (typeof EditorDiag !== 'undefined') EditorDiag.error('registry.redraw', e); } }, 400); });
+  /* 连着到几批数据时只重画一次，但要把这几批的类别合在一起：以前只用最后一批的类别，最后一批恰好不是物品数据时，
+     顶部分页（书的「内容」页等）就不会更新，要点一下分页才刷新 */
+  var regT = null, regKinds = [];
+  Reg.on(function (kind, kinds) {
+    var got = kinds || [kind]; EditorLoading.note(got);
+    got.forEach(function (k) { if (regKinds.indexOf(k) < 0) regKinds.push(k); });
+    clearTimeout(regT);
+    regT = setTimeout(function () { var ks = regKinds; regKinds = []; try { redrawRegistryPage(ks); } catch (e) { if (typeof EditorDiag !== 'undefined') EditorDiag.error('registry.redraw', e); } }, 400);
+  });
   OrielEditor = { open: function (st) {
+    EditorLoading.arm();
     if (!EditorInventorySessionStale) EditorInventoryCapability = st && typeof st.capability === 'string' ? st.capability : '';
     EditorDiag.phase('item.load', function () { loadStack(st); });
     EditorDiag.phase('item.render', rebuild);
+    EditorLoading.begin();
     EditorDiag.phase('item.drafts', function () { if (typeof Drafts !== 'undefined') Drafts.offer(Store.doc()); });
     if (EditorInventoryCapability) toast(EditorInventoryCapability, 'info', 'inventory-capability');
   } };
@@ -166,7 +242,7 @@ function boot() {
   /* 页面数据可能比脚本晚到（快捷键打开时）：到了才进保险库模式，不然会停在空的编辑器上 */
   setTimeout(function () { if (!VaultOnly && typeof oriel !== 'undefined' && oriel.data && oriel.data.mode === 'vault') enterVaultMode(); }, 250);
   /* 世界编辑模式：宿主给的是 world（已放置的方块实体 / 实体），不是物品栈 */
-  if (typeof oriel !== 'undefined' && oriel.data && oriel.data.world) { EditorDiag.phase('boot.world', function () { weOpen(oriel.data.world); }); return; }
+  if (typeof oriel !== 'undefined' && oriel.data && oriel.data.world) { EditorLoading.arm(); EditorDiag.phase('boot.world', function () { weOpen(oriel.data.world); }); EditorLoading.begin(); return; }
   var init = typeof oriel !== 'undefined' && oriel.data && oriel.data.stack ? oriel.data.stack :
     (typeof ORIEL_STACK !== 'undefined' ? ORIEL_STACK : (typeof DEMO !== 'undefined' && DEMO.items.length ? DEMO.items[0].stack : null));
   if (init) OrielEditor.open(init); else rebuild();

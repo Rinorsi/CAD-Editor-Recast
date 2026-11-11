@@ -1,4 +1,4 @@
-> 当前构建配置（<!-- editor-version -->0.99.7<!-- /editor-version -->）：六目标使用 Oriel 0.15.0 瘦包 Maven 工件；默认 Jar-in-Jar，`-PorielEmbedded=false` 生成外部依赖版。开发热更新仍使用官方 sourceRoot/dev-sources。下方历史验收按原版本和产物记录，不代表当前包已实测。
+> 当前构建配置（<!-- editor-version -->0.99.8<!-- /editor-version -->）：六目标使用 Oriel 0.15.0 瘦包 Maven 工件；默认 Jar-in-Jar，`-PorielEmbedded=false` 生成外部依赖版。开发热更新仍使用官方 sourceRoot/dev-sources。下方历史验收按原版本和产物记录，不代表当前包已实测。
 
 # 多版本、多加载器架构
 

@@ -45,6 +45,7 @@ public final class ComponentSchemaTest {
             }
         }
         complexComponents(access);
+        BookTextRoundTripTest.run(access);
         var pages = RegistryPages.split("component_schema", "test", entries);
         int rows = 0;
         for (var page : pages) {
