@@ -1,0 +1,11 @@
+// Additive headless test only; no probe enters any production jar.
+gradle.projectsEvaluated {
+    gradle.rootProject.allprojects.findAll { p -> p.extensions.findByName('sourceSets')?.findByName('codecVerification') != null }.each { p ->
+        p.tasks.register('entityScopePagesTest', JavaExec) {
+            dependsOn p.tasks.named('codecVerificationClasses')
+            classpath = p.sourceSets.codecVerification.runtimeClasspath
+            mainClass = 'dev.rinorsi.editor.registry.EntityScopePagesTest'
+            workingDir = gradle.rootProject.projectDir
+        }
+    }
+}

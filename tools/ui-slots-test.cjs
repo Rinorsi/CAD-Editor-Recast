@@ -4,6 +4,7 @@ const H = require('./lib/ui-harness.cjs');
 const t = H.create(), c = t.c;
 c.snd = () => {}; c.toast = () => {};
 c.Reg.meta = {};
+c.window.EDITOR_PREVIEW = true; // This card test deliberately renders the offline preview fixtures.
 
 function openCard(id, comps, cardName) {
   c.Store.docs.length = 0;

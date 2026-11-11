@@ -4,7 +4,7 @@
 
 实体侧增量见 [world-entity-contract.md](world-entity-contract.md)：动态字段稳定 revision、盔甲架姿态/装备、服务端交易、乘客操作、展示框/画/三种展示实体的规范化 views 与写入；该文覆盖本文早期的实体动态变化冲突限制，附真实专用服采集。
 
-方块侧增量协议见 [world-block-edit.md](world-block-edit.md)：`apply.block_state`、命令块模式 `block_type`、`updateNeighbors`、`views` 规范化写入、`block_state_schema`、包含方块状态的 revision/undo，以及经原版字节码确认的 volatile 字段合并。真实工厂捕获见 [world-block-samples.json](world-block-samples.json)。这些能力已替代本文早期版本中的“状态只读/任意动态变化冲突”限制；真实客户端状态变更/邻居同步仍待专项验收。
+方块侧增量协议见 [world-block-edit.md](world-block-edit.md)：`apply.block_state`、命令块模式 `block_type`、`updateNeighbors`、`views` 规范化写入、`block_state_schema`、包含方块状态的 revision/undo，以及经原版字节码确认的 volatile 字段合并。真实工厂捕获见 历史采集回执（仅本地归档：`docs/archive/world-block-samples.json`，不随仓库分发）。这些能力已替代本文早期版本中的“状态只读/任意动态变化冲突”限制；真实客户端状态变更/邻居同步仍待专项验收。
 
 ## 入口及页面数据
 
@@ -140,7 +140,7 @@ world 字段：
 
 两半各自从冻结基线生成分离副本，经原版 `loadWithComponents`、物品规则及三方合并校验，再统一写入。另一半同样检查区块、交互距离和区域权限。两半加载完成后才通知比较器；任一半写入或最终响应构建失败时，恢复两半的写前 NBT/状态，版本和撤销缓存不推进。未知模组回调的外部副作用与已有事务一样不保证可撤销；回滚异常记录为 suppressed 异常。
 
-会话基线、内容指纹及 undo 前像包含两半。未编辑的当前槽位保留；任一半同槽不同修改报 `target_changed`，整笔不写。点开半的冲突沿用 `["Items","[Slot=0]",...]`，另一半前缀为 `["container","double","partner","Items","[Slot=0]",...]`，其中 Slot 为该半本地 0..26，按上述顺序映射到页面全局编号。
+会话基线、内容指纹及 undo 前像包含两半。未编辑的当前槽位保留；主动修改的槽位按字段采用用户值，不因现场同字段变化拒绝。两半的连接身份仍须匹配；Slot 为该半本地 0..26，按上述顺序映射到页面全局编号。
 
 连接关系（两边位置、方块类型、LEFT/RIGHT、朝向）属于会话身份。拆成单箱、移除任何一半、换块或改变连接/顺序均报 `target_changed`，`stale:"identity"`、`conflicts:[{"path":["container","double"]}]`，不得写入任何一半。双箱会话内改变 `type`/`facing` 使其断连也拒绝；关闭后按新拓扑重新打开。单箱状态编辑仍沿用原协议。undo 同时还原两半本次实际修改的路径，保留后来未冲突的其他槽位。
 
@@ -153,12 +153,12 @@ world 字段：
 通用三方合并的完整规则、conflicts 回执、undo 与验证边界见 [world-merge-contract.md](world-merge-contract.md)，覆盖旧版全量冲突规则。
 
 - open 与 apply / undo 都要求存活；无 game master 权限者仍拒绝旁观，有 game master 权限者允许旁观/冒险及 mayBuild=false，且通过同一 EditorPolicy（创造模式或 game master 命令权限；有 game master 权限不受游戏模式影响，旧配置不能否决该权限）。读世界 NBT 也不对无权限用户开放。有权限玩家将自己改为旁观或 mayBuild=false 后，仍可继续编辑及 undo。原版出生点保护继续由 level.mayInteract 判定；DedicatedServer.isUnderSpawnProtection 本来就豁免 OP，本编辑器不额外绕过区域检查。
-- 服务器强制当前维度、已加载区块、动态 block/entityInteractionRange、world border、player.mayInteract、level.mayInteract；无 game master 权限时还要求 mayBuild。不会给目标加载区块或传送玩家。
+- 服务器强制当前维度、已加载区块、动态 block/entityInteractionRange、world border、player.mayInteract、level.mayInteract；无 game master 权限时还要求 mayBuild。非玩家实体已认证会话可在目标跑出范围后以打开位置检查交互范围，应用时返回原位；当前位置和返回位置均检查区块/区域。不会给目标加载区块或传送玩家。
 - 原版 GameMasterBlock 标记方块（含命令方块/结构方块/拼图方块）、onlyOpCanSetNbt 实体及新增此类乘客，额外要求 ServerPlayer.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)。生存模式有该权限允许；创造模式无该权限仍拒绝，不能借创造写命令块。
 - 修改标牌文本且结果包含可执行命令时，同样要求 COMMANDS_GAMEMASTER；生存模式有权限可写，创造无权限不可写。通过 EditorPolicy.gameMaster 复用真实 permission set 判断，不调用隐含创造要求的 Player.canUseGameMasterBlocks。距离/区域/存活等其他守卫仍适用。
 - 第三方领地插件若仅在交互/破坏事件拦截、未集成上述原版检查，尚未提供兼容适配；不得宣称适配了所有保护插件。
 - 每个玩家只保留一个世界会话；连接绑定，无编辑时长硬超时。打开/写入间隔至少 500ms，关闭不受限。
-- 修改前，revision 匹配服务端会话基线、token 匹配即可；身份仍须匹配当前目标。base/mine/current 逐路径三方合并，用户未改的路径取 current；双方改同一路径且不同才 target_changed，并返回最多20项 conflicts:[{path:[字符串段]}]。完整 SNBT 由服务端自行 diff。
+- 修改前，revision 匹配服务端会话基线、token 匹配即可；身份仍须匹配当前目标。base/mine/current 逐路径合并，用户未改路径取 current，在线目标主动修改路径采用 mine；离线玩家保持严格同字段冲突。身份/旧页面拒绝沿用 target_changed 和 conflicts/stale。完整 SNBT 由服务端自行 diff。
 - 逐次成功写入审计包含玩家 UUID、op、目标、前后 revision；拒绝包含 requestId/code/reason，前缀 [CAD-Editor-World]。不将完整自定义数据写入审计行。
 
 ## 限制与错误

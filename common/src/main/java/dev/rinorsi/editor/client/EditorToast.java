@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import dev.oriel.mod.client.OrielHud;
 import java.util.Locale;
 import java.util.function.Consumer;
+import java.util.function.IntSupplier;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -20,11 +21,17 @@ public final class EditorToast {
         public void show() {
             if (OrielHud.show(ID) == null) throw new IllegalStateException("OrielHud.show returned no toast driver");
         }
-        public void push(JsonObject data) { OrielHud.push(ID, data); }
+        public void scale(int value) {
+            var driver = OrielHud.show(ID).uiScale(value);
+            if (driver.document() != null) driver.document().documentElement().setAttribute("data-motion", animations() ? "full" : "reduced");
+        }
+        public void push(JsonObject data) { data.addProperty("animations", animations()); OrielHud.push(ID, data); }
     }, message -> Minecraft.getInstance().gui.hud.getChat().addClientSystemMessage(message),
-            failure -> LoggerFactory.getLogger("EditorToast").warn("Oriel toast unavailable; falling back to labelled chat", failure));
+            failure -> LoggerFactory.getLogger("EditorToast").warn("Oriel toast unavailable; falling back to labelled chat", failure),
+            EditorPageHost::uiScalePreference);
 
     private EditorToast() {}
+    private static boolean animations() { var value = EditorPrefs.read().get("uiAnimations"); return value == null || value.getAsBoolean(); }
 
     public static void initialize() { Minecraft.getInstance().execute(DELIVERY::initialize); }
 
@@ -32,10 +39,13 @@ public final class EditorToast {
         Minecraft.getInstance().execute(() -> DELIVERY.show(level, text));
     }
 
+    static void refreshScale() { DELIVERY.refreshScale(); }
+
     interface Hud {
         void register();
         boolean isShown();
         void show();
+        void scale(int value);
         void push(JsonObject data);
     }
 
@@ -44,12 +54,14 @@ public final class EditorToast {
         private final Hud hud;
         private final Consumer<Component> chat;
         private final Consumer<Throwable> warning;
+        private final IntSupplier scalePreference;
         private boolean registered;
         private Throwable registrationFailure;
         private long sequence;
 
-        Delivery(Hud hud, Consumer<Component> chat, Consumer<Throwable> warning) {
+        Delivery(Hud hud, Consumer<Component> chat, Consumer<Throwable> warning, IntSupplier scalePreference) {
             this.hud = hud; this.chat = chat; this.warning = warning;
+            this.scalePreference = scalePreference;
         }
 
         void initialize() {
@@ -73,8 +85,15 @@ public final class EditorToast {
                 data.addProperty("title", "物品工坊");
                 data.addProperty("seq", ++sequence);
                 if (!hud.isShown()) hud.show();
+                hud.scale(scalePreference.getAsInt());
                 hud.push(data);
             } catch (RuntimeException | LinkageError failure) { fallback(actual, message, failure); }
+        }
+
+        /** Resize the existing overlay without replacing its message, sequence or expiry timer. */
+        void refreshScale() {
+            try { if (registered && hud.isShown()) hud.scale(scalePreference.getAsInt()); }
+            catch (RuntimeException | LinkageError failure) { warning.accept(failure); }
         }
 
         private void fallback(Level level, String text, Throwable failure) {

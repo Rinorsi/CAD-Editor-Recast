@@ -9,17 +9,17 @@ import java.util.zip.*;
 
 /** Host-only compression; UI still receives ordinary JSON. Bounded before allocation. */
 public final class WorldWire {
-    public static final int MAX_DECODED_BYTES = 196608;
+    public static final int MAX_DECODED_BYTES = 8 * 1024 * 1024;
     private WorldWire() {}
     public static String encode(JsonObject value) {
         byte[] bytes = value.toString().getBytes(StandardCharsets.UTF_8);
-        if (bytes.length > MAX_DECODED_BYTES) EditorSessions.fail("payload_too_large", "世界目标展开快照超过 192 KiB");
+        if (bytes.length > MAX_DECODED_BYTES) EditorSessions.fail("payload_too_large", "世界目标展开快照超过 8 MiB");
         if (value.toString().length() <= 16000 && bytes.length < 30000) return value.toString();
         try {
             var buffer = new ByteArrayOutputStream(); try (var gzip = new GZIPOutputStream(buffer)) { gzip.write(bytes); }
             var envelope = new JsonObject(); envelope.addProperty("worldEncoding", "gzip-base64"); envelope.addProperty("data", Base64.getEncoder().encodeToString(buffer.toByteArray()));
             String json = envelope.toString();
-            if (json.length() > 30000) EditorSessions.fail("payload_too_large", "世界目标压缩消息超过传输上限");
+            // The shared packet transport splits large envelopes before sending.
             return json;
         } catch (IOException e) { throw new IllegalArgumentException("世界目标压缩失败", e); }
     }
@@ -30,7 +30,7 @@ public final class WorldWire {
             byte[] zipped = Base64.getDecoder().decode(StackCodec.string(value, "data"));
             try (var gzip = new GZIPInputStream(new ByteArrayInputStream(zipped))) {
                 byte[] bytes = gzip.readNBytes(MAX_DECODED_BYTES + 1);
-                if (bytes.length > MAX_DECODED_BYTES) EditorSessions.fail("payload_too_large", "世界目标展开消息超过 192 KiB");
+                if (bytes.length > MAX_DECODED_BYTES) EditorSessions.fail("payload_too_large", "世界目标展开消息超过 8 MiB");
                 var result = JsonParser.parseString(new String(bytes, StandardCharsets.UTF_8)).getAsJsonObject();
                 if (result.has("worldEncoding")) EditorSessions.fail("invalid_request", "不允许嵌套压缩消息");
                 if (result.has("op")) {

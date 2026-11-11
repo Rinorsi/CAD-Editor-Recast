@@ -16,7 +16,7 @@ import net.minecraft.util.StringRepresentable;
  * Reflection is intentionally bounded and version-sensitive: unsupported wrappers remain unknown.
  * Every node retains its actual codec for diagnostics; schema metadata never authorizes a save. */
 public final class ComponentSchema {
-    public static final int VERSION = 2;
+    public static final int VERSION = 3;
     private static final int MAX_DEPTH = 12, MAX_NODES = 160;
     private ComponentSchema() {}
 
@@ -38,7 +38,7 @@ public final class ComponentSchema {
             return out;
         }
     }
-    public record Derived(String id, Node root, JsonObject entry) {}
+    public record Derived(String id, Node root, JsonObject entry, JsonArray numericRanges) {}
 
     public static Derived derive(String raw, RegistryAccess access) {
         Identifier id = Identifier.parse(raw);
@@ -121,7 +121,9 @@ public final class ComponentSchema {
             entry.add("ranges_for_ui", new JsonArray()); entry.addProperty("editable", "snbt_only");
             entry.addProperty("editable_reason", "schema_wire_budget_exceeded_use_component_validate");
         }
-        return new Derived(id.toString(), root, entry);
+        // Keep the proven numeric facts even if the full form hit its wire budget.
+        // The small rangesOnly endpoint does not transport the recursive form.
+        return new Derived(id.toString(), root, entry, ranges);
     }
     private static void annotateCandidates(Node node) {
         if (node.json.has("registry") && !node.json.get("registry").isJsonNull()) {
@@ -157,8 +159,10 @@ public final class ComponentSchema {
     private static void numericFields(Node n, JsonArray out) {
         if (n.json.has("type") && List.of("int", "long", "float", "double").contains(n.json.get("type").getAsString())) {
             JsonObject row = new JsonObject(); row.add("path", n.json.get("path"));
+            row.add("number_type", n.json.get("type"));
             for (String key : List.of("min", "max", "default")) row.add(key, n.json.has(key) ? n.json.get(key) : JsonNull.INSTANCE);
-            if (n.json.has("min_exclusive")) row.add("min_exclusive", n.json.get("min_exclusive"));
+            for (String key : List.of("min_exclusive", "allow_nan", "allow_positive_infinity", "allow_negative_infinity"))
+                if (n.json.has(key)) row.add(key, n.json.get(key));
             out.add(row);
         }
         n.fields.values().forEach(c -> numericFields(c, out));
@@ -183,9 +187,13 @@ public final class ComponentSchema {
 
     private static final class Inspector {
         final DynamicOps<JsonElement> ops;
+        final DynamicOps<net.minecraft.nbt.Tag> nbtOps;
         int nodes;
         final Map<Object, String> firstPaths = new IdentityHashMap<>();
-        Inspector(RegistryAccess access) { ops = access.createSerializationContext(JsonOps.INSTANCE); }
+        Inspector(RegistryAccess access) {
+            ops = access.createSerializationContext(JsonOps.INSTANCE);
+            nbtOps = access.createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE);
+        }
 
         Node inspect(Codec<?> outer, String path, int depth, Set<Object> ancestors) {
             Node n = inspectRaw(outer, path, depth, ancestors);
@@ -431,6 +439,15 @@ public final class ComponentSchema {
                 var row = new JsonObject(); row.addProperty("value", value); row.addProperty("ok", safeParse(codec, new JsonPrimitive(value), ops)); probes.add(row);
             }
             n.json.add("probes", probes);
+            if (kind.equals("float")) {
+                n.json.addProperty("allow_nan", safeParse(codec, net.minecraft.nbt.FloatTag.valueOf(Float.NaN), nbtOps));
+                n.json.addProperty("allow_positive_infinity", safeParse(codec, net.minecraft.nbt.FloatTag.valueOf(Float.POSITIVE_INFINITY), nbtOps));
+                n.json.addProperty("allow_negative_infinity", safeParse(codec, net.minecraft.nbt.FloatTag.valueOf(Float.NEGATIVE_INFINITY), nbtOps));
+            } else if (kind.equals("double")) {
+                n.json.addProperty("allow_nan", safeParse(codec, net.minecraft.nbt.DoubleTag.valueOf(Double.NaN), nbtOps));
+                n.json.addProperty("allow_positive_infinity", safeParse(codec, net.minecraft.nbt.DoubleTag.valueOf(Double.POSITIVE_INFINITY), nbtOps));
+                n.json.addProperty("allow_negative_infinity", safeParse(codec, net.minecraft.nbt.DoubleTag.valueOf(Double.NEGATIVE_INFINITY), nbtOps));
+            }
             Number[] range = rangeCapture(codec);
             if (codec == net.minecraft.util.ExtraCodecs.UNSIGNED_BYTE) {
                 n.json.addProperty("min", 0); n.json.addProperty("max", 255);
@@ -655,7 +672,7 @@ public final class ComponentSchema {
         if (Math.abs(high) < 1.0e9 && safeParse(codec, new JsonPrimitive(high + 1), ops)) return false;
         return true;
     }
-    private static boolean safeParse(Codec<?> codec, JsonElement input, DynamicOps<JsonElement> ops) {
+    private static <T> boolean safeParse(Codec<?> codec, T input, DynamicOps<T> ops) {
         try { return codec.parse(ops, input).isSuccess(); } catch (RuntimeException error) { return false; }
     }
 }

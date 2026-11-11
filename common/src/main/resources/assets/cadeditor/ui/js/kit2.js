@@ -10,10 +10,11 @@ function levelText(n) { return n >= 1 && n <= 10 ? roman(n) : fmtInt(n); }
    container 的直接子元素带 .k-srow，行里的 .k-grip 是把手。放手时 o.onMove(from, to)。o.grid=true 用二维就近。 */
 /* FLIP：重排前记位置，重排后让每一行从旧位置滑到新位置（180ms，out 曲线） */
 function flipMove(container, mutate) {
+  var scale = typeof uiScaleFactor === 'function' ? uiScaleFactor() : 1;
   var els = Array.prototype.slice.call(container.children), first = els.map(function (e) { return e.getBoundingClientRect().top; });
   mutate();
   els.forEach(function (e, i) {
-    var d = first[i] - e.getBoundingClientRect().top; if (!d) return;
+    var d = (first[i] - e.getBoundingClientRect().top) / scale; if (!d) return;
     e.style.transition = 'none'; e.style.transform = 'translateY(' + d + 'px)';
     requestAnimationFrame(function () { requestAnimationFrame(function () { e.style.transition = 'transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1)'; e.style.transform = ''; }); });
   });
@@ -64,7 +65,8 @@ function kMenu(x, y, items) {
     box.appendChild(row);
   });
   document.getElementById('overlays').appendChild(box);
-  var vw = window.innerWidth, vh = window.innerHeight, hh = items.length * 22 + 8;
+  var scale = typeof uiScaleFactor === 'function' ? uiScaleFactor() : 1; x /= scale; y /= scale;
+  var vw = window.innerWidth / scale, vh = window.innerHeight / scale, hh = items.length * 22 + 8;
   /* 宽度跟着内容走：中文约 12 像素、半角约 6 像素，加图标和左右留白 */
   function textPx(t) { var n = 0; String(t || '').split('').forEach(function (c) { n += c.charCodeAt(0) > 255 ? 12 : 6; }); return n; }
   var w = 80; items.forEach(function (it) { if (it.sep) return; w = Math.max(w, textPx(it.label) + (it.kbd ? textPx(it.kbd) + 14 : 0) + 44); });
@@ -80,57 +82,83 @@ function onContext(el, getItems) {
 }
 
 /* ---------- 文本组件 ⇄ 分段 ---------- */
-var TC_STYLE_KEYS = ['color', 'bold', 'italic', 'underlined', 'strikethrough', 'obfuscated'];
+var TC_STYLE_KEYS = ['color', 'bold', 'italic', 'underlined', 'strikethrough', 'obfuscated', 'font'];
 function runStyleOf(o) { var s = {}; TC_STYLE_KEYS.forEach(function (k) { if (o[k] !== undefined && o[k] !== '') s[k] = o[k]; }); return s; }
-function tcAllowed(o) { for (var k in o) { if (k === 'text' || k === 'extra' || TC_STYLE_KEYS.indexOf(k) >= 0) continue; return false; } return typeof o.text === 'string' || o.extra !== undefined; }
-/* 解析：支持 字符串 / {text,style,extra:[字符串|对象]} / 数组（首项为父级）。复杂内容返回 null */
+function tcSprite(o) { return isObj(o) && typeof o.sprite === 'string' && (o.type === undefined || o.type === 'object') && (o.object === undefined || o.object === 'atlas'); }
+function tcAllowed(o) {
+  for (var k in o) {
+    if (k === 'text' || k === 'extra' || TC_STYLE_KEYS.indexOf(k) >= 0) continue;
+    if (tcSprite(o) && ['type', 'object', 'atlas', 'sprite', 'fallback'].indexOf(k) >= 0) continue;
+    return false;
+  }
+  return tcSprite(o) || typeof o.text === 'string' || o.extra !== undefined;
+}
+/* Native object text remains an object, never a text placeholder in saved data. */
 function tcRuns(v) {
   if (typeof v === 'string') return { base: {}, runs: [{ text: v }] };
   if (Array.isArray(v)) { if (!v.length) return { base: {}, runs: [{ text: '' }] }; var first = v[0], rest = v.slice(1); if (typeof first === 'string') first = { text: first }; if (!isObj(first)) return null; var c = clone(first); c.extra = (c.extra || []).concat(rest); return tcRuns(c); }
   if (!isObj(v) || !tcAllowed(v)) return null;
-  var base = runStyleOf(v), runs = [];
-  if (typeof v.text === 'string' && v.text !== '') runs.push({ text: v.text });
-  var ok = true;
-  (v.extra || []).forEach(function (x) {
-    if (typeof x === 'string') runs.push({ text: x });
-    else if (isObj(x) && tcAllowed(x) && x.extra === undefined && typeof x.text === 'string') { var r = runStyleOf(x); r.text = x.text; runs.push(r); }
-    else ok = false;
-  });
+  var runs = [], ok = true;
+  function add(x, inherited, depth) {
+    if (depth > 32 || runs.length > 1000) { ok = false; return; }
+    if (typeof x === 'string') { var plain = clone(inherited); plain.text = x; runs.push(plain); return; }
+    if (!isObj(x) || !tcAllowed(x) || (x.extra !== undefined && !Array.isArray(x.extra))) { ok = false; return; }
+    var st = clone(inherited), own = runStyleOf(x); Object.keys(own).forEach(function (k) { st[k] = own[k]; });
+    var r = clone(st);
+    if (tcSprite(x)) {
+      r.text = '￼'; r._object = {};
+      ['type', 'object', 'atlas', 'sprite', 'fallback'].forEach(function (k) { if (x[k] !== undefined) r._object[k] = clone(x[k]); });
+      runs.push(r);
+    } else if (typeof x.text === 'string' && x.text !== '') { r.text = x.text; runs.push(r); }
+    (x.extra || []).forEach(function (child) { add(child, st, depth + 1); });
+  }
+  add(v, {}, 0);
   if (!ok) return null;
   if (!runs.length) runs.push({ text: '' });
-  /* 没有分段时，样式直接放在这一段上（颜色块才能显示出来） */
-  if (!(v.extra && v.extra.length)) { var st = runStyleOf(v); Object.keys(st).forEach(function (kk) { runs[0][kk] = st[kk]; }); base = {}; }
-  return { base: base, runs: runs };
+  return { base: {}, runs: runs };
 }
 function sameStyle(a, b) { return deepEq(runStyleOf(a), runStyleOf(b)); }
 function tcBuild(base, runs) {
   var merged = [];
-  runs.forEach(function (r) { if (r.text === '' && runs.length > 1) return; var last = merged[merged.length - 1]; if (last && sameStyle(last, r)) last.text += r.text; else merged.push(clone(r)); });
+  runs.forEach(function (r) {
+    if (!r._object && r.text === '' && runs.length > 1) return;
+    var last = merged[merged.length - 1];
+    if (last && !last._object && !r._object && sameStyle(last, r)) last.text += r.text; else merged.push(clone(r));
+  });
   if (!merged.length) merged.push({ text: '' });
-  var baseEmpty = !Object.keys(base).length;
-  if (merged.length === 1) {
-    var r = merged[0], st = runStyleOf(r), all = {}, k;
-    for (k in base) all[k] = base[k]; for (k in st) all[k] = st[k];
-    if (!Object.keys(all).length) return r.text;
-    var out = { text: r.text }; TC_STYLE_KEYS.forEach(function (kk) { if (all[kk] !== undefined) out[kk] = all[kk]; }); return out;
+  function node(r) {
+    var out = r._object ? clone(r._object) : { text: r.text }, st = runStyleOf(r);
+    Object.keys(base).forEach(function (k) { if (st[k] === undefined) st[k] = base[k]; });
+    Object.keys(st).forEach(function (k) { out[k] = st[k]; });
+    return !r._object && !Object.keys(st).length ? r.text : out;
   }
-  var o = { text: '' }; TC_STYLE_KEYS.forEach(function (kk) { if (base[kk] !== undefined) o[kk] = base[kk]; });
-  o.extra = merged.map(function (r) { var st = runStyleOf(r); return Object.keys(st).length ? (function () { var x = { text: r.text }; TC_STYLE_KEYS.forEach(function (kk) { if (st[kk] !== undefined) x[kk] = st[kk]; }); return x; })() : r.text; });
-  return o;
+  return merged.length === 1 ? node(merged[0]) : { text: '', extra: merged.map(node) };
+}
+function tcFontCss(family) {
+  return typeof family === 'string' && /^(?:[a-z0-9_.-]+:)?[a-z0-9_./-]+$/.test(family) ? 'font-family:"' + family + '";' : '';
+}
+function tcSpriteFont(o) {
+  function hex(id) { var s = ''; for (var i = 0; i < id.length; i++) { var c = id.charCodeAt(i).toString(16); s += c.length < 2 ? '0' + c : c; } return s; }
+  var atlas = o.atlas || 'minecraft:blocks', sprite = o.sprite;
+  if (typeof atlas !== 'string' || typeof sprite !== 'string' || !/^(?:[a-z0-9_.-]+:)?[a-z0-9_./-]+$/.test(atlas) || !/^(?:[a-z0-9_.-]+:)?[a-z0-9_./-]+$/.test(sprite)) return '';
+  return 'cadeditor_inline:atlas/' + hex(Reg.full(atlas)) + '/' + hex(Reg.full(sprite));
 }
 /* 渲染：在 el 里画出带颜色的文字（所见即所得）。def 为默认色/斜体（如说明文字的紫色斜体） */
 function renderRuns(el, base, runs, def) {
   clear(el); def = def || {};
+  // Item text uses the game's component font/native shadow, not the UI TTF.
+  // Keep bold/italic as real styles, including explicit false overrides.
+  el.classList.add('k-mctext');
   var any = false;
   runs.forEach(function (r) {
     if (!r.text) return; any = true;
     var st = {}, k; for (k in base) st[k] = base[k]; var rs = runStyleOf(r); for (k in rs) st[k] = rs[k];
     var hex = tcHex(st.color) || def.color || '#FFFFFF';
     var italic = st.italic === undefined ? !!def.italic : st.italic;
-    var css = 'color:' + hex + ';' + (st.bold ? 'font-weight:bold;' : '') + (italic ? 'font-style:italic;' : '');
+    var css = tcFontCss(r._object ? tcSpriteFont(r._object) : st.font) + 'color:' + hex + ';font-weight:' + (st.bold ? 'bold' : 'normal') + ';font-style:' + (italic ? 'italic' : 'normal') + ';';
     var deco = []; if (st.underlined) deco.push('underline'); if (st.strikethrough) deco.push('line-through');
     if (deco.length) css += 'text-decoration-line:' + deco.join(' ') + ';';
-    var s = h('span', { text: st.obfuscated ? r.text.replace(/./g, '▒') : r.text }); s.setAttribute('style', css); el.appendChild(s);
+    var s = h('span', { text: st.obfuscated && !r._object ? r.text.replace(/./g, '▒') : r.text }); s.setAttribute('style', css); el.appendChild(s);
   });
   if (!any) el.appendChild(h('span', { class: 'k-ph', text: def.placeholder || '（空）' }));
 }
@@ -180,15 +208,46 @@ function kRich(value, o) {
     var raw = wText({ t: 'text' }, value, function (v) { o.onChange(v, false); }, o);
     return { el: h('div', { class: 'k-rich' }, [raw]), set: function () {} };
   }
-  var base = parsed.base, runs = parsed.runs;
+  var base = parsed.base, runs = parsed.runs, caret = null, activeInput = null, inputs = [], valueVersion = 0;
   var wrap = h('div', { class: 'k-rich' + (o.compact ? ' compact' : '') });
   var prev = h('div', { class: 'k-rprev' }), edit = h('div', { class: 'k-redit' }), list = h('div', { class: 'k-rruns' });
   var openKey = o.openKey || 'rich', open = !o.compact || !!UIOpen[openKey];
   function emit(redraw) {
+    valueVersion++;
     var v = tcBuild(base, runs);
     renderRuns(prev, base, runs, o.def);
     o.onChange(v, typeof v === 'string' && v === '');
     if (redraw) drawRuns();
+  }
+  function remember(r, input) {
+    if (runs.indexOf(r) < 0) return;
+    activeInput = input;
+    caret = { run: r, start: typeof input.selectionStart === 'number' ? input.selectionStart : r.text.length, end: typeof input.selectionEnd === 'number' ? input.selectionEnd : r.text.length };
+  }
+  function insertSprite(object, mark) {
+    if (!mark && runs.length) { var last = runs[runs.length - 1]; mark = { run: last, start: last.text.length, end: last.text.length }; }
+    var i = mark ? runs.indexOf(mark.run) : -1, r = i >= 0 ? runs[i] : null, tail;
+    if (r && !r._object) {
+      var text = r.text, start = Math.max(0, Math.min(text.length, mark.start)), end = Math.max(start, Math.min(text.length, mark.end));
+      /* DOM offsets are UTF-16; never divide an emoji surrogate pair. */
+      function splitPair(at) { return at > 0 && at < text.length && /[\uD800-\uDBFF]/.test(text.charAt(at - 1)) && /[\uDC00-\uDFFF]/.test(text.charAt(at)); }
+      if (start === end) { if (splitPair(start)) start = end = start + 1; }
+      else { if (splitPair(start)) start--; if (splitPair(end)) end++; }
+      var before = clone(r), icon = runStyleOf(r); tail = clone(r);
+      before.text = text.slice(0, start); tail.text = text.slice(end); icon.text = '￼'; icon._object = clone(object);
+      var parts = before.text ? [before, icon, tail] : [icon, tail];
+      runs.splice.apply(runs, [i, 1].concat(parts));
+    } else {
+      var index = r ? i + 1 : runs.length, style = runStyleOf(r || runs[runs.length - 1] || {});
+      var spriteRun = clone(style); spriteRun.text = '￼'; spriteRun._object = clone(object);
+      tail = clone(style); tail.text = ''; runs.splice(index, 0, spriteRun, tail);
+    }
+    caret = { run: tail, start: 0, end: 0 }; activeInput = null; emit(true);
+    if (!document.body.contains(wrap)) return;
+    inputs.forEach(function (entry) {
+      if (entry.run !== tail) return; entry.input.focus();
+      if (entry.input.setSelectionRange) entry.input.setSelectionRange(0, 0);
+    });
   }
   function colorBtn(r, i) {
     var st = r.color ? tcHex(r.color) : null;
@@ -196,21 +255,35 @@ function kRich(value, o) {
     activate(b, function () {
       var pal = h('div', { class: 'k-pickbox' });
       var sw = h('div', { class: 'k-swatches' });
+      function paintPalette() { clear(sw);
       var none = h('div', { class: 'k-sw nonec' + (!r.color ? ' on' : ''), title: '默认颜色' }, [h('i', { text: '×' })]);
       none.addEventListener('mousedown', function (e) { e.preventDefault(); kPopClose(); delete runs[i].color; emit(true); }); sw.appendChild(none);
       mcColors().forEach(function (c) { var s = h('div', { class: 'k-sw' + (r.color === c[0] ? ' on' : ''), title: c[2], style: 'background:#' + c[1] }); s.addEventListener('mousedown', function (e) { e.preventDefault(); kPopClose(); runs[i].color = c[0]; emit(true); }); sw.appendChild(s); });
+      if (!mcColors().length) sw.appendChild(h('span', { class: 'k-sub', text: '正在读取颜色…' })); }
       var hex = h('input', { class: 'k-input', type: 'text', placeholder: '#RRGGBB', value: r.color && r.color.charAt(0) === '#' ? r.color : '', maxlength: '7' });
       hex.addEventListener('change', function () { var t = hex.value.trim(); if (/^#[0-9a-fA-F]{6}$/.test(t)) { kPopClose(); runs[i].color = t.toUpperCase(); emit(true); } });
       pal.appendChild(sw); pal.appendChild(hex);
-      kPopover(b, pal, { width: 244 });
+      paintPalette();
+      var stop = watchColorOptions(mcColors, paintPalette);
+      kPopover(b, pal, { width: 244, onClose: stop });
     });
     return b;
   }
   function drawRuns() {
-    clear(list);
+    clear(list); inputs = []; activeInput = null;
+    if (caret && runs.indexOf(caret.run) < 0) caret = null;
     runs.forEach(function (r, i) {
-      var inp = h('input', { class: 'k-input', type: 'text', value: r.text, placeholder: o.placeholder || '输入文字', spellcheck: 'false' });
-      inp.addEventListener('input', function () { runs[i].text = inp.value; emit(false); });
+      var inp;
+      if (r._object) {
+        inp = h('div', { class: 'k-input k-rsprite', title: r._object.sprite });
+        renderRuns(inp, base, [r]);
+        activate(inp, function () { activeInput = null; caret = { run: r, start: 1, end: 1 }; });
+      } else {
+        inp = h('input', { class: 'k-input', type: 'text', value: r.text, placeholder: o.placeholder || '输入文字', spellcheck: 'false' });
+        inputs.push({ run: r, input: inp });
+        ['focus', 'blur', 'select', 'mouseup', 'keyup'].forEach(function (event) { inp.addEventListener(event, function () { remember(r, inp); }); });
+        inp.addEventListener('input', function () { r.text = inp.value; remember(r, inp); emit(false); });
+      }
       var sty = h('div', { class: 'k-rsty' });
       [['bold', 'B', '粗体'], ['italic', 'I', '斜体'], ['underlined', 'U', '下划线'], ['strikethrough', 'S', '删除线']].forEach(function (d) {
         var on = r[d[0]] === true || (d[0] === 'italic' && r.italic === true) , off = d[0] === 'italic' && r.italic === false;
@@ -228,12 +301,13 @@ function kRich(value, o) {
     });
     placeTools();
   }
-  var lastRow = null, sp = null, more = null, tools = null;
+  var lastRow = null, sp = null, more = null, spriteButton = null, tools = null;
   /* 只有一段时，「分色」和菜单按钮并进同一行；多段时放在列表下面 */
-  function placeTools() { if (!tools || !more) return; var single = runs.length === 1 && lastRow; var host = single ? lastRow : tools; if (sp) host.appendChild(sp); host.appendChild(more); tools.style.display = single ? 'none' : 'flex'; }
+  function placeTools() { if (!tools || !more) return; var single = runs.length === 1 && lastRow; var host = single ? lastRow : tools; if (sp) host.appendChild(sp); if (spriteButton) host.appendChild(spriteButton); host.appendChild(more); tools.style.display = single ? 'none' : 'flex'; }
   kSortable(list, { onMove: function (from, to) { var x = runs.splice(from, 1)[0]; runs.splice(to, 0, x); emit(true); } });
   tools = h('div', { class: 'k-row k-rtools' });
   function gradientPop(anchor) {
+    if (runs.some(function (r) { return !!r._object || !!r.font; })) { toast('含精灵图或自定义字体，请按分段编辑', 'info'); return; }
     var sBox = h('div', { class: 'k-pickbox' }); var c1 = '#FF5555', c2 = '#5555FF';
     var a = kColor(0xFF5555, function (n) { c1 = hex6(n); }), b = kColor(0x5555FF, function (n) { c2 = hex6(n); });
     sBox.appendChild(kHint('起始')); sBox.appendChild(a.el); sBox.appendChild(kHint('结束')); sBox.appendChild(b.el);
@@ -246,11 +320,24 @@ function kRich(value, o) {
     kPopover(anchor, sBox, { width: 280, maxHeight: 360 });
   }
   function codePop(anchor) {
+    if (runs.some(function (r) { return !!r._object || !!r.font; })) { toast('§ 代码不能表示精灵图或自定义字体', 'info'); return; }
     var ta = h('textarea', { class: 'k-input ed-code-in', spellcheck: 'false', placeholder: '&6金色&l加粗' });
     ta.value = toCodes(base, runs).replace(new RegExp(SECT + 'r', 'g'), '');
     kPopover(anchor, h('div', { class: 'k-pickbox' }, [ta, kBtn('导入', function () { runs.length = 0; parseCodes(ta.value).forEach(function (r) { runs.push(r); }); base = {}; kPopClose(); emit(true); }, { cls: 'pri' })]), { width: 300, maxHeight: 220 });
   }
   if (!o.compact) { sp = h('div', { class: 'k-mini', title: '分色：把文字分成几段，每段单独设置颜色' }, [uiIcon('plus', 14)]); activate(sp, function () { runs.push({ text: '' }); emit(true); }); }
+  spriteButton = kBtn('Sprite', function () {
+    var mark = caret ? { run: caret.run, start: caret.start, end: caret.end } : null, version = valueVersion;
+    pickSprite(spriteButton, function (object) {
+      if (!document.body.contains(wrap) || version !== valueVersion || mark && runs.indexOf(mark.run) < 0) { toast('文字已变化，请重新选择插入位置', 'info'); return; }
+      insertSprite(object, mark);
+    });
+  }, { icon: 'image', title: '插入 Sprite 到光标位置' });
+  spriteButton.addEventListener('mousedown', function (e) {
+    if (e.button !== undefined && e.button !== 0) return;
+    if (activeInput && list.contains(activeInput)) inputs.forEach(function (entry) { if (entry.input === activeInput) remember(entry.run, activeInput); });
+    e.preventDefault();
+  });
   more = h('div', { class: 'k-mini', title: '渐变色、§ 代码、清除格式' }, [uiIcon('menu', 14)]);
   activate(more, function () {
     var r = more.getBoundingClientRect();
@@ -258,7 +345,7 @@ function kRich(value, o) {
       { label: '渐变色', icon: 'palette', run: function () { gradientPop(more); } },
       { label: '§ 代码', icon: 'code', run: function () { codePop(more); } },
       { sep: 1 },
-      { label: '清除格式', icon: 'restore', run: function () { var t = runs.map(function (r) { return r.text; }).join(''); runs.length = 0; runs.push({ text: t }); base = {}; emit(true); } }
+      { label: '清除格式', icon: 'restore', run: function () { runs = runs.map(function (r) { return r._object ? { text: r.text, _object: r._object } : { text: r.text }; }); base = {}; emit(true); } }
     ]);
   });
   tools.appendChild(more); placeTools();
@@ -270,5 +357,5 @@ function kRich(value, o) {
     prev.addEventListener('click', function () { open = !open; UIOpen[openKey] = open; sync(); });
   }
   wrap.appendChild(prev); wrap.appendChild(edit); sync();
-  return { el: wrap, set: function (v) { var p = tcRuns(v); if (!p) return; base = p.base; runs.length = 0; p.runs.forEach(function (r) { runs.push(r); }); drawRuns(); renderRuns(prev, base, runs, o.def); } };
+  return { el: wrap, set: function (v) { valueVersion++; caret = null; var p = tcRuns(v); if (!p) return; base = p.base; runs.length = 0; p.runs.forEach(function (r) { runs.push(r); }); drawRuns(); renderRuns(prev, base, runs, o.def); } };
 }

@@ -16,8 +16,9 @@ function scalarHead(sc) {
   return null;
 }
 function headCtl(card, el) {
-  var hd = card.el.firstChild, box = h('div', { class: 'hd-pick' }, [el]);
-  hd.insertBefore(box, hd.querySelector('.k-cval')); card.el.classList.add('flat');
+  var hd = card.el.firstChild, box = h('div', { class: 'card-head-select' }, [el]);
+  card.el.classList.add('head-select-card');
+  hd.appendChild(box); card.el.classList.add('flat'); card.onHead = function () { return true; };
 }
 function headAuto(card, cid, c, kind, v) {
   var sc = c.schema;
@@ -28,11 +29,11 @@ function headAuto(card, cid, c, kind, v) {
     headCtl(card, num.el);
   } else if (kind === 'dye') {
     /* 染料颜色：头部一个“色块 + 颜色名”，点开才出 16 个色块 */
-    headCtl(card, dyeButton(typeof v === 'string' ? v : sc.en[0], function (x) { autoPut(cid, x); }));
+    headCtl(card, dyeButton(typeof v === 'string' ? v : (Reg.preview() ? sc.en[0] : ''), function (x) { autoPut(cid, x); }));
   } else if (kind === 'reg') {
     headCtl(card, kRegSelect({ reg: sc.reg, value: typeof v === 'string' ? v : '', title: '选择' + c.name, empty: '（未选择）', onChange: function (x) { if (x) autoPut(cid, x); } }).el);
   } else {
-    var entries = liveEnumOptions(cid, '') || sc.en.map(function (e) { return { v: e, label: e }; });
-    headCtl(card, kSelect(entries, typeof v === 'string' ? v : sc.en[0], function (x) { autoPut(cid, x); }).el);
+    var entries = liveEnumOptions(cid, '') || Reg.schemaEnumOptions(sc);
+    headCtl(card, combo({ options: entries, value: typeof v === 'string' ? v : '', free: true, onPick: function (x) { autoPut(cid, x); } }));
   }
 }

@@ -21,7 +21,7 @@ public final class TooltipPreview {
         component.getVisualOrderText().accept((position,style,codepoint)->{
             if(budget.chars>=MAX_CODEPOINTS||budget.runs>=MAX_RUNS){budget.partial=true;return false;}
             JsonObject run=style(style);
-            if(!FontDescription.DEFAULT.equals(style.getFont())||style.getShadowColor()!=null)budget.stylePartial=true;
+            if(InlineTextFont.family(style.getFont())==null||style.getShadowColor()!=null)budget.stylePartial=true;
             if(last[0]==null||!last[0].equals(run)){
                 if(last[0]!=null){last[0].addProperty("text",text.toString());runs.add(last[0]);}
                 last[0]=run;text.setLength(0);budget.runs++;
@@ -33,6 +33,8 @@ public final class TooltipPreview {
     }
     private static JsonObject style(Style style){
         JsonObject out=new JsonObject();
+        String family=InlineTextFont.family(style.getFont());
+        if(family!=null&&!FontDescription.DEFAULT.equals(style.getFont()))out.addProperty("font",family);
         if(style.getColor()==null)out.add("color",JsonNull.INSTANCE);else out.addProperty("color",color(style.getColor().getValue()));
         out.addProperty("bold",style.isBold());out.addProperty("italic",style.isItalic());out.addProperty("underlined",style.isUnderlined());out.addProperty("strikethrough",style.isStrikethrough());out.addProperty("obfuscated",style.isObfuscated());return out;
     }
@@ -47,7 +49,8 @@ public final class TooltipPreview {
         Budget budget=new Budget();JsonArray name=hidden?new JsonArray():flatten(vanilla.isEmpty()?stack.getStyledHoverName():vanilla.getFirst(),budget);out.add("name",name);
         JsonArray lines=new JsonArray();
         if(!hidden)for(Component component:vanilla){if(lines.size()>=MAX_LINES||budget.partial){budget.partial=true;break;}lines.add(flatten(component,budget));}
-        out.add("lines",lines);out.addProperty("rarityColor",color(net.minecraft.network.chat.Component.empty().withStyle(stack.getRarity().color()).getStyle().getColor().getValue()));
+        var rarityColor=stack.getStyledHoverName().getStyle().getColor();
+        out.add("lines",lines);out.addProperty("rarityColor",color(rarityColor==null?0xFFFFFF:rarityColor.getValue()));
         JsonArray extra=new JsonArray();
         if(hidden||!display.hiddenComponents().isEmpty()){JsonObject flags=new JsonObject();flags.addProperty("type","tooltip_display");flags.addProperty("hide_tooltip",hidden);JsonArray components=new JsonArray();display.hiddenComponents().stream().limit(256).forEach(type->components.add(String.valueOf(BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(type))));flags.add("hidden_components",components);extra.add(flags);}
         if(!hidden){
@@ -63,7 +66,7 @@ public final class TooltipPreview {
             if(container!=null&&display.shows(DataComponents.CONTAINER)){JsonObject info=new JsonObject();info.addProperty("type","container");info.addProperty("textOnly",true);JsonArray items=new JsonArray();container.nonEmptyItemCopyStream().limit(27).forEach(item->items.add(summary(item)));info.add("items",items);extra.add(info);}
             var map=stack.get(DataComponents.MAP_ID);if(map!=null&&display.shows(DataComponents.MAP_ID)){JsonObject info=new JsonObject();info.addProperty("type","map");info.addProperty("id",map.id());info.addProperty("imageAvailable",false);extra.add(info);budget.partial=true;}
         }
-        if(budget.stylePartial){JsonObject style=new JsonObject();style.addProperty("type","style_features");style.addProperty("reason","custom font or shadow is not represented by text runs");extra.add(style);budget.partial=true;}
+        if(budget.stylePartial){JsonObject style=new JsonObject();style.addProperty("type","style_features");style.addProperty("reason","player object or custom shadow is not represented by text runs");extra.add(style);budget.partial=true;}
         out.add("extra",extra);out.addProperty("partial",budget.partial);
         // Never emit oversized Oriel patches, and never pretend omitted lines are a complete tooltip.
         boolean truncated=budget.partial&&budget.chars>=MAX_CODEPOINTS;

@@ -115,8 +115,8 @@ function blockPredList(card, cid, v, what) {
       adv.appendChild(worldCond(f[1], f[2], set ? kBtn('移除', function () { delete p[key]; put(); xl.draw(); }) : null, kSnbtEditor(set ? p[key] : {}, function (x) { p[key] = x; put(); })));
     });
     nodes.push(worldFold('高级条件', adv, advN > 0, advN ? '已设置 ' + advN + ' 项' : '一般用不到'));
-    var extra = {}; Object.keys(p).forEach(function (k) { if (['blocks', 'state', 'nbt', 'components', 'predicates'].indexOf(k) < 0) extra[k] = p[k]; });
-    if (Object.keys(extra).length) nodes.push(worldFold('其他条件（原样保留）', kSnbtEditor(extra, function (x) { worldCompound(x); Object.keys(x).forEach(function (k) { if (['blocks', 'state', 'nbt', 'components', 'predicates'].indexOf(k) >= 0) throw new Error('请在对应字段编辑 ' + k); }); Object.keys(extra).forEach(function (k) { delete p[k]; }); Object.keys(x).forEach(function (k) { p[k] = x[k]; }); extra = x; put(); }), false));
+    var extra = {}; Object.keys(p).forEach(function (k) { if (['blocks', 'state', 'nbt', 'components', 'predicates'].indexOf(k) < 0) nbtPut(extra, k, nbtTake(p, k)); });
+    if (Object.keys(extra).length) nodes.push(worldFold('其他条件（原样保留）', kSnbtEditor(extra, function (x) { worldCompound(x); Object.keys(x).forEach(function (k) { if (['blocks', 'state', 'nbt', 'components', 'predicates'].indexOf(k) >= 0) throw new Error('请在对应字段编辑 ' + k); }); Object.keys(extra).forEach(function (k) { delete p[k]; }); Object.keys(x).forEach(function (k) { nbtPut(p, k, nbtTake(x, k)); }); extra = x; put(); }), false));
     nodes.push(xFoot('', function () { arr.splice(i, 1); xl.select(-1); put(); }));
     return nodes;
   }

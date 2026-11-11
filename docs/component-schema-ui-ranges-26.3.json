@@ -3,6 +3,7 @@
     "minecraft:attack_animation": [
       {
         "path": "$.duration",
+        "number_type": "int",
         "min": 0,
         "max": 2147483647,
         "default": 6
@@ -11,47 +12,75 @@
     "minecraft:attack_range": [
       {
         "path": "$.min_reach",
+        "number_type": "float",
         "min": 0.0,
         "max": 64.0,
-        "default": 0.0
+        "default": 0.0,
+        "allow_nan": false,
+        "allow_positive_infinity": false,
+        "allow_negative_infinity": false
       },
       {
         "path": "$.max_reach",
+        "number_type": "float",
         "min": 0.0,
         "max": 64.0,
-        "default": 3.0
+        "default": 3.0,
+        "allow_nan": false,
+        "allow_positive_infinity": false,
+        "allow_negative_infinity": false
       },
       {
         "path": "$.min_creative_reach",
+        "number_type": "float",
         "min": 0.0,
         "max": 64.0,
-        "default": 0.0
+        "default": 0.0,
+        "allow_nan": false,
+        "allow_positive_infinity": false,
+        "allow_negative_infinity": false
       },
       {
         "path": "$.max_creative_reach",
+        "number_type": "float",
         "min": 0.0,
         "max": 64.0,
-        "default": 5.0
+        "default": 5.0,
+        "allow_nan": false,
+        "allow_positive_infinity": false,
+        "allow_negative_infinity": false
       },
       {
         "path": "$.hitbox_margin",
+        "number_type": "float",
         "min": 0.0,
         "max": 1.0,
-        "default": 0.3
+        "default": 0.3,
+        "allow_nan": false,
+        "allow_positive_infinity": false,
+        "allow_negative_infinity": false
       },
       {
         "path": "$.mob_factor",
+        "number_type": "float",
         "min": 0.0,
         "max": 2.0,
-        "default": 1.0
+        "default": 1.0,
+        "allow_nan": false,
+        "allow_positive_infinity": false,
+        "allow_negative_infinity": false
       }
     ],
     "minecraft:attribute_modifiers": [
       {
         "path": "$[].amount",
+        "number_type": "double",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       }
     ],
     "minecraft:axolotl/variant": [],
@@ -60,12 +89,14 @@
     "minecraft:bees": [
       {
         "path": "$[].ticks_in_hive",
+        "number_type": "int",
         "min": null,
         "max": null,
         "default": null
       },
       {
         "path": "$[].min_ticks_in_hive",
+        "number_type": "int",
         "min": null,
         "max": null,
         "default": null
@@ -77,92 +108,142 @@
     "minecraft:blocks_attacks": [
       {
         "path": "$.block_delay_seconds",
+        "number_type": "float",
         "min": 0.0,
-        "max": 3.4028235e+38,
-        "default": 0.0
+        "max": 3.4028235E38,
+        "default": 0.0,
+        "allow_nan": false,
+        "allow_positive_infinity": false,
+        "allow_negative_infinity": false
       },
       {
         "path": "$.disable_cooldown_scale",
+        "number_type": "float",
         "min": 0.0,
-        "max": 3.4028235e+38,
-        "default": 1.0
+        "max": 3.4028235E38,
+        "default": 1.0,
+        "allow_nan": false,
+        "allow_positive_infinity": false,
+        "allow_negative_infinity": false
       },
       {
         "path": "$.damage_reductions[].horizontal_blocking_angle",
+        "number_type": "float",
         "min": 0,
-        "max": 3.4028235e+38,
+        "max": 3.4028235E38,
         "default": 90.0,
-        "min_exclusive": true
+        "min_exclusive": true,
+        "allow_nan": false,
+        "allow_positive_infinity": false,
+        "allow_negative_infinity": false
       },
       {
         "path": "$.damage_reductions[].base",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       },
       {
         "path": "$.damage_reductions[].factor",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       },
       {
         "path": "$.item_damage.threshold",
+        "number_type": "float",
         "min": 0.0,
-        "max": 3.4028235e+38,
-        "default": null
+        "max": 3.4028235E38,
+        "default": null,
+        "allow_nan": false,
+        "allow_positive_infinity": false,
+        "allow_negative_infinity": false
       },
       {
         "path": "$.item_damage.base",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       },
       {
         "path": "$.item_damage.factor",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       },
       {
         "path": "$.block_sound.range",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       },
       {
         "path": "$.disabled_sound.range",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       }
     ],
     "minecraft:break_sound": [
       {
         "path": "$.range",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       }
     ],
     "minecraft:brewing_fuel": [
       {
         "path": "$.uses",
+        "number_type": "int",
         "min": null,
         "max": null,
         "default": null
       },
       {
         "path": "$.speed_multiplier",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       }
     ],
     "minecraft:bucket_entity_data": [],
     "minecraft:bundle_contents": [
       {
         "path": "$[].count",
+        "number_type": "int",
         "min": 1,
         "max": 99,
         "default": 1
@@ -176,6 +257,7 @@
     "minecraft:charged_projectiles": [
       {
         "path": "$[].count",
+        "number_type": "int",
         "min": 1,
         "max": 99,
         "default": 1
@@ -186,6 +268,7 @@
     "minecraft:compostable": [
       {
         "path": "$.layers",
+        "number_type": "int",
         "min": null,
         "max": null,
         "default": null
@@ -194,69 +277,95 @@
     "minecraft:consumable": [
       {
         "path": "$.consume_seconds",
+        "number_type": "float",
         "min": 0.0,
-        "max": 3.4028235e+38,
-        "default": 1.6
+        "max": 3.4028235E38,
+        "default": 1.6,
+        "allow_nan": false,
+        "allow_positive_infinity": false,
+        "allow_negative_infinity": false
       },
       {
         "path": "$.sound.range",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       },
       {
         "path": "$.on_consume_effects[].effects[].amplifier",
+        "number_type": "int",
         "min": 0,
         "max": 255,
         "default": 0
       },
       {
         "path": "$.on_consume_effects[].effects[].duration",
+        "number_type": "int",
         "min": null,
         "max": null,
         "default": 0
       },
       {
         "path": "$.on_consume_effects[].effects[].hidden_effect.amplifier",
+        "number_type": "int",
         "min": 0,
         "max": 255,
         "default": 0
       },
       {
         "path": "$.on_consume_effects[].effects[].hidden_effect.duration",
+        "number_type": "int",
         "min": null,
         "max": null,
         "default": 0
       },
       {
         "path": "$.on_consume_effects[].probability",
+        "number_type": "float",
         "min": 0.0,
         "max": 1.0,
-        "default": 1.0
+        "default": 1.0,
+        "allow_nan": false,
+        "allow_positive_infinity": false,
+        "allow_negative_infinity": false
       },
       {
         "path": "$.on_consume_effects[].sound.range",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       },
       {
         "path": "$.on_consume_effects[].diameter",
+        "number_type": "float",
         "min": 0,
-        "max": 3.4028235e+38,
+        "max": 3.4028235E38,
         "default": 16.0,
-        "min_exclusive": true
+        "min_exclusive": true,
+        "allow_nan": false,
+        "allow_positive_infinity": false,
+        "allow_negative_infinity": false
       }
     ],
     "minecraft:container": [
       {
         "path": "$[].slot",
+        "number_type": "int",
         "min": 0,
         "max": 255,
         "default": null
       },
       {
         "path": "$[].item.count",
+        "number_type": "int",
         "min": 1,
         "max": 99,
         "default": 1
@@ -265,6 +374,7 @@
     "minecraft:container_loot": [
       {
         "path": "$.seed",
+        "number_type": "long",
         "min": null,
         "max": null,
         "default": 0
@@ -273,15 +383,20 @@
     "minecraft:cooking_fuel": [
       {
         "path": "$.burn_time",
+        "number_type": "int",
         "min": null,
         "max": null,
         "default": null
       },
       {
         "path": "$.speed_multiplier",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       }
     ],
     "minecraft:cow/sound_variant": [],
@@ -291,12 +406,17 @@
     "minecraft:custom_model_data": [
       {
         "path": "$.floats[]",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       },
       {
         "path": "$.colors[]",
+        "number_type": "int",
         "min": null,
         "max": null,
         "default": null
@@ -306,6 +426,7 @@
     "minecraft:damage": [
       {
         "path": "$",
+        "number_type": "int",
         "min": 0,
         "max": 2147483647,
         "default": null
@@ -316,46 +437,62 @@
     "minecraft:death_protection": [
       {
         "path": "$.death_effects[].effects[].amplifier",
+        "number_type": "int",
         "min": 0,
         "max": 255,
         "default": 0
       },
       {
         "path": "$.death_effects[].effects[].duration",
+        "number_type": "int",
         "min": null,
         "max": null,
         "default": 0
       },
       {
         "path": "$.death_effects[].effects[].hidden_effect.amplifier",
+        "number_type": "int",
         "min": 0,
         "max": 255,
         "default": 0
       },
       {
         "path": "$.death_effects[].effects[].hidden_effect.duration",
+        "number_type": "int",
         "min": null,
         "max": null,
         "default": 0
       },
       {
         "path": "$.death_effects[].probability",
+        "number_type": "float",
         "min": 0.0,
         "max": 1.0,
-        "default": 1.0
+        "default": 1.0,
+        "allow_nan": false,
+        "allow_positive_infinity": false,
+        "allow_negative_infinity": false
       },
       {
         "path": "$.death_effects[].sound.range",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       },
       {
         "path": "$.death_effects[].diameter",
+        "number_type": "float",
         "min": 0,
-        "max": 3.4028235e+38,
+        "max": 3.4028235E38,
         "default": 16.0,
-        "min_exclusive": true
+        "min_exclusive": true,
+        "allow_nan": false,
+        "allow_positive_infinity": false,
+        "allow_negative_infinity": false
       }
     ],
     "minecraft:debug_stick_state": [],
@@ -363,6 +500,7 @@
     "minecraft:dyed_color": [
       {
         "path": "$",
+        "number_type": "int",
         "min": null,
         "max": null,
         "default": null
@@ -371,6 +509,7 @@
     "minecraft:enchantable": [
       {
         "path": "$.value",
+        "number_type": "int",
         "min": 1,
         "max": 2147483647,
         "default": null
@@ -380,6 +519,7 @@
     "minecraft:enchantments": [
       {
         "path": "${value}",
+        "number_type": "int",
         "min": 1,
         "max": 255,
         "default": null
@@ -389,26 +529,36 @@
     "minecraft:equippable": [
       {
         "path": "$.equip_sound.range",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       },
       {
         "path": "$.shearing_sound.range",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       }
     ],
     "minecraft:firework_explosion": [
       {
         "path": "$.colors[]",
+        "number_type": "int",
         "min": null,
         "max": null,
         "default": null
       },
       {
         "path": "$.fade_colors[]",
+        "number_type": "int",
         "min": null,
         "max": null,
         "default": null
@@ -417,18 +567,21 @@
     "minecraft:fireworks": [
       {
         "path": "$.flight_duration",
+        "number_type": "int",
         "min": 0,
         "max": 255,
         "default": 0
       },
       {
         "path": "$.explosions[].colors[]",
+        "number_type": "int",
         "min": null,
         "max": null,
         "default": null
       },
       {
         "path": "$.explosions[].fade_colors[]",
+        "number_type": "int",
         "min": null,
         "max": null,
         "default": null
@@ -437,15 +590,20 @@
     "minecraft:food": [
       {
         "path": "$.nutrition",
+        "number_type": "int",
         "min": 0,
         "max": 2147483647,
         "default": null
       },
       {
         "path": "$.saturation",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       }
     ],
     "minecraft:fox/variant": [],
@@ -455,25 +613,38 @@
     "minecraft:instrument": [
       {
         "path": "$.sound_event.range",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       },
       {
         "path": "$.use_duration",
+        "number_type": "float",
         "min": 0.0,
-        "max": 3.4028235e+38,
-        "default": null
+        "max": 3.4028235E38,
+        "default": null,
+        "allow_nan": false,
+        "allow_positive_infinity": false,
+        "allow_negative_infinity": false
       },
       {
         "path": "$.range",
+        "number_type": "float",
         "min": 0,
-        "max": 3.4028235e+38,
+        "max": 3.4028235E38,
         "default": null,
-        "min_exclusive": true
+        "min_exclusive": true,
+        "allow_nan": false,
+        "allow_positive_infinity": false,
+        "allow_negative_infinity": false
       },
       {
         "path": "$.durability_damage",
+        "number_type": "int",
         "min": 0,
         "max": 2147483647,
         "default": 0
@@ -483,6 +654,7 @@
     "minecraft:interact_animation": [
       {
         "path": "$.duration",
+        "number_type": "int",
         "min": 0,
         "max": 2147483647,
         "default": 6
@@ -494,111 +666,159 @@
     "minecraft:kinetic_weapon": [
       {
         "path": "$.contact_cooldown_ticks",
+        "number_type": "int",
         "min": 0,
         "max": 2147483647,
         "default": 10
       },
       {
         "path": "$.delay_ticks",
+        "number_type": "int",
         "min": 0,
         "max": 2147483647,
         "default": 0
       },
       {
         "path": "$.dismount_conditions.max_duration_ticks",
+        "number_type": "int",
         "min": 0,
         "max": 2147483647,
         "default": null
       },
       {
         "path": "$.dismount_conditions.min_speed",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": 0.0
+        "default": 0.0,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       },
       {
         "path": "$.dismount_conditions.min_relative_speed",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": 0.0
+        "default": 0.0,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       },
       {
         "path": "$.knockback_conditions.max_duration_ticks",
+        "number_type": "int",
         "min": 0,
         "max": 2147483647,
         "default": null
       },
       {
         "path": "$.knockback_conditions.min_speed",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": 0.0
+        "default": 0.0,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       },
       {
         "path": "$.knockback_conditions.min_relative_speed",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": 0.0
+        "default": 0.0,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       },
       {
         "path": "$.damage_conditions.max_duration_ticks",
+        "number_type": "int",
         "min": 0,
         "max": 2147483647,
         "default": null
       },
       {
         "path": "$.damage_conditions.min_speed",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": 0.0
+        "default": 0.0,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       },
       {
         "path": "$.damage_conditions.min_relative_speed",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": 0.0
+        "default": 0.0,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       },
       {
         "path": "$.forward_movement",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": 0.0
+        "default": 0.0,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       },
       {
         "path": "$.damage_multiplier",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": 1.0
+        "default": 1.0,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       },
       {
         "path": "$.sound.range",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       },
       {
         "path": "$.hit_sound.range",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       }
     ],
     "minecraft:llama/variant": [],
     "minecraft:lock": [
       {
         "path": "$.count.min",
+        "number_type": "int",
         "min": null,
         "max": null,
         "default": null
       },
       {
         "path": "$.count.max",
+        "number_type": "int",
         "min": null,
         "max": null,
         "default": null
       },
       {
         "path": "$.count",
+        "number_type": "int",
         "min": null,
         "max": null,
         "default": null
@@ -607,6 +827,7 @@
     "minecraft:lodestone_tracker": [
       {
         "path": "$.target.pos[]",
+        "number_type": "int",
         "min": null,
         "max": null,
         "default": null
@@ -616,26 +837,39 @@
     "minecraft:map_decorations": [
       {
         "path": "${value}.x",
+        "number_type": "double",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       },
       {
         "path": "${value}.z",
+        "number_type": "double",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       },
       {
         "path": "${value}.rotation",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       }
     ],
     "minecraft:map_id": [
       {
         "path": "$",
+        "number_type": "int",
         "min": -2147483648,
         "max": 2147483647,
         "default": null
@@ -644,6 +878,7 @@
     "minecraft:max_damage": [
       {
         "path": "$",
+        "number_type": "int",
         "min": 1,
         "max": 2147483647,
         "default": null
@@ -652,6 +887,7 @@
     "minecraft:max_stack_size": [
       {
         "path": "$",
+        "number_type": "int",
         "min": 1,
         "max": 99,
         "default": null
@@ -660,17 +896,25 @@
     "minecraft:minimum_attack_charge": [
       {
         "path": "$",
+        "number_type": "float",
         "min": 0.0,
         "max": 1.0,
-        "default": null
+        "default": null,
+        "allow_nan": false,
+        "allow_positive_infinity": false,
+        "allow_negative_infinity": false
       }
     ],
     "minecraft:mob_visibility": [
       {
         "path": "$.visibility",
+        "number_type": "float",
         "min": 0.0,
         "max": 10.0,
-        "default": null
+        "default": null,
+        "allow_nan": false,
+        "allow_positive_infinity": false,
+        "allow_negative_infinity": false
       }
     ],
     "minecraft:mooshroom/variant": [],
@@ -678,6 +922,7 @@
     "minecraft:ominous_bottle_amplifier": [
       {
         "path": "$",
+        "number_type": "int",
         "min": 0,
         "max": 4,
         "default": null
@@ -688,15 +933,23 @@
     "minecraft:piercing_weapon": [
       {
         "path": "$.sound.range",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       },
       {
         "path": "$.hit_sound.range",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": null
+        "default": null,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       }
     ],
     "minecraft:pig/sound_variant": [],
@@ -704,24 +957,28 @@
     "minecraft:pot_decorations": [
       {
         "path": "$.back.count",
+        "number_type": "int",
         "min": 1,
         "max": 99,
         "default": 1
       },
       {
         "path": "$.left.count",
+        "number_type": "int",
         "min": 1,
         "max": 99,
         "default": 1
       },
       {
         "path": "$.right.count",
+        "number_type": "int",
         "min": 1,
         "max": 99,
         "default": 1
       },
       {
         "path": "$.front.count",
+        "number_type": "int",
         "min": 1,
         "max": 99,
         "default": 1
@@ -730,30 +987,35 @@
     "minecraft:potion_contents": [
       {
         "path": "$.custom_color",
+        "number_type": "int",
         "min": null,
         "max": null,
         "default": null
       },
       {
         "path": "$.custom_effects[].amplifier",
+        "number_type": "int",
         "min": 0,
         "max": 255,
         "default": 0
       },
       {
         "path": "$.custom_effects[].duration",
+        "number_type": "int",
         "min": null,
         "max": null,
         "default": 0
       },
       {
         "path": "$.custom_effects[].hidden_effect.amplifier",
+        "number_type": "int",
         "min": 0,
         "max": 255,
         "default": 0
       },
       {
         "path": "$.custom_effects[].hidden_effect.duration",
+        "number_type": "int",
         "min": null,
         "max": null,
         "default": 0
@@ -762,9 +1024,13 @@
     "minecraft:potion_duration_scale": [
       {
         "path": "$",
+        "number_type": "float",
         "min": 0.0,
-        "max": 3.4028235e+38,
-        "default": null
+        "max": 3.4028235E38,
+        "default": null,
+        "allow_nan": false,
+        "allow_positive_infinity": false,
+        "allow_negative_infinity": false
       }
     ],
     "minecraft:profile": [],
@@ -777,6 +1043,7 @@
     "minecraft:repair_cost": [
       {
         "path": "$",
+        "number_type": "int",
         "min": 0,
         "max": 2147483647,
         "default": null
@@ -791,6 +1058,7 @@
     "minecraft:stored_enchantments": [
       {
         "path": "${value}",
+        "number_type": "int",
         "min": 1,
         "max": 255,
         "default": null
@@ -799,6 +1067,7 @@
     "minecraft:sulfur_cube_content": [
       {
         "path": "$.count",
+        "number_type": "int",
         "min": 1,
         "max": 99,
         "default": 1
@@ -807,6 +1076,7 @@
     "minecraft:suspicious_stew_effects": [
       {
         "path": "$[].duration",
+        "number_type": "int",
         "min": null,
         "max": null,
         "default": 160
@@ -815,19 +1085,28 @@
     "minecraft:tool": [
       {
         "path": "$.rules[].speed",
+        "number_type": "float",
         "min": 0,
-        "max": 3.4028235e+38,
+        "max": 3.4028235E38,
         "default": null,
-        "min_exclusive": true
+        "min_exclusive": true,
+        "allow_nan": false,
+        "allow_positive_infinity": false,
+        "allow_negative_infinity": false
       },
       {
         "path": "$.default_mining_speed",
+        "number_type": "float",
         "min": null,
         "max": null,
-        "default": 1.0
+        "default": 1.0,
+        "allow_nan": true,
+        "allow_positive_infinity": true,
+        "allow_negative_infinity": true
       },
       {
         "path": "$.damage_per_block",
+        "number_type": "int",
         "min": 0,
         "max": 2147483647,
         "default": 1
@@ -843,23 +1122,32 @@
     "minecraft:use_cooldown": [
       {
         "path": "$.seconds",
+        "number_type": "float",
         "min": 0,
-        "max": 3.4028235e+38,
+        "max": 3.4028235E38,
         "default": null,
-        "min_exclusive": true
+        "min_exclusive": true,
+        "allow_nan": false,
+        "allow_positive_infinity": false,
+        "allow_negative_infinity": false
       }
     ],
     "minecraft:use_effects": [
       {
         "path": "$.speed_multiplier",
+        "number_type": "float",
         "min": 0.0,
         "max": 1.0,
-        "default": 0.2
+        "default": 0.2,
+        "allow_nan": false,
+        "allow_positive_infinity": false,
+        "allow_negative_infinity": false
       }
     ],
     "minecraft:use_remainder": [
       {
         "path": "$.count",
+        "number_type": "int",
         "min": 1,
         "max": 99,
         "default": 1
@@ -869,6 +1157,7 @@
     "minecraft:villager_food": [
       {
         "path": "$.nutrition",
+        "number_type": "int",
         "min": 1,
         "max": 2147483647,
         "default": null
@@ -878,15 +1167,20 @@
     "minecraft:weapon": [
       {
         "path": "$.item_damage_per_attack",
+        "number_type": "int",
         "min": 0,
         "max": 2147483647,
         "default": 1
       },
       {
         "path": "$.disable_blocking_for_seconds",
+        "number_type": "float",
         "min": 0.0,
-        "max": 3.4028235e+38,
-        "default": 0.0
+        "max": 3.4028235E38,
+        "default": 0.0,
+        "allow_nan": false,
+        "allow_positive_infinity": false,
+        "allow_negative_infinity": false
       }
     ],
     "minecraft:wolf/collar": [],
@@ -896,6 +1190,7 @@
     "minecraft:written_book_content": [
       {
         "path": "$.generation",
+        "number_type": "int",
         "min": 0,
         "max": 3,
         "default": 0
@@ -903,7 +1198,7 @@
     ],
     "minecraft:zombie_nautilus/variant": []
   },
-  "schema_version": 2,
+  "schema_version": 3,
   "mc_version": "26.3",
   "source": "live persistent Codec derivation; snapshot is not used in production",
   "null_meaning": "no proven numeric bound or no universal codec default; not zero"

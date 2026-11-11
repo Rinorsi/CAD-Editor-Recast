@@ -122,6 +122,14 @@ public final class BlockViews {
         var value = codec.parse(access.createSerializationContext(JsonOps.INSTANCE),json).getOrThrow(s -> new EditorSessions.Failure("invalid_nbt",s));
         return codec.encodeStart(access.createSerializationContext(NbtOps.INSTANCE),value).getOrThrow(s -> new EditorSessions.Failure("invalid_nbt",s));
     }
+    private static boolean typedWire(Field field) {
+        return field.codec == ItemStack.CODEC || field.codec == BeehiveBlockEntity.Occupant.LIST_CODEC || field.codec == Codec.LONG;
+    }
+    private static <T> Tag canonicalTyped(Codec<T> codec, Tag input, RegistryAccess access) {
+        var ops = access.createSerializationContext(NbtOps.INSTANCE);
+        var value = codec.parse(ops, input).getOrThrow(s -> new EditorSessions.Failure("invalid_nbt", s));
+        return codec.encodeStart(ops, value).getOrThrow(s -> new EditorSessions.Failure("invalid_nbt", s));
+    }
     private static <T> JsonElement decode(Codec<T> codec,Tag tag,RegistryAccess access) {
         var value = codec.parse(access.createSerializationContext(NbtOps.INSTANCE),tag).getOrThrow();
         return codec.encodeStart(access.createSerializationContext(JsonOps.INSTANCE),value).getOrThrow();
@@ -139,6 +147,7 @@ public final class BlockViews {
                 value.add(field.key,tag == null ? JsonNull.INSTANCE : decode(field.codec,tag,access));
                 if(tag != null) subset.put(field.key,field.key.equals("triggered") && nbt.get(field.key)!=null ? nbt.get(field.key).copy() : tag.copy());
                 var schema = new JsonObject(); schema.addProperty("authority","vanilla_codec_and_loadWithComponents"); schema.addProperty("codec",field.codec.toString()); schema.addProperty("nullable",nullable(field));
+                if (typedWire(field)) schema.addProperty("wire_snbt", true);
                 if(field.codec==Codec.BOOL)schema.addProperty("type","boolean");
                 if(field.codec==Codec.STRING)schema.addProperty("type","string");
                 if(field.codec==Codec.INT)schema.addProperty("type","integer");
@@ -208,7 +217,19 @@ public final class BlockViews {
         schema.add("candidates",candidates);schema.addProperty("candidate_source","runtime vanilla enum + saving codec");
     }
     public static CompoundTag apply(BlockEntity block,CompoundTag nbt,JsonObject edits,RegistryAccess access) {
+        return apply(block, nbt, edits, new JsonObject(), access);
+    }
+    public static CompoundTag apply(BlockEntity block,CompoundTag nbt,JsonObject edits,JsonObject typed,RegistryAccess access) {
+        for (var group : typed.entrySet()) {
+            if (!edits.has(group.getKey()) || !edits.get(group.getKey()).isJsonObject() || !group.getValue().isJsonObject())
+                throw new EditorSessions.Failure("invalid_request", "带类型数据缺少对应视图：" + group.getKey());
+            for (var entry : group.getValue().getAsJsonObject().entrySet()) {
+                if (!edits.getAsJsonObject(group.getKey()).has(entry.getKey()) || !entry.getValue().isJsonPrimitive() || !entry.getValue().getAsJsonPrimitive().isString())
+                    throw new EditorSessions.Failure("invalid_request", "带类型数据必须对应已提交字段并为 SNBT 文本：" + entry.getKey());
+            }
+        }
         if (edits.has("generic")) {
+            if (!typed.isEmpty()) throw new EditorSessions.Failure("invalid_request", "通用视图已有独立的 SNBT 协议");
             if (hasSpecialized(block) || edits.size() != 1) throw new IllegalArgumentException("已有专用视图，或不能混合通用与专用字段");
             var next = GenericSchema.apply("block_entity",net.minecraft.core.registries.BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(block.getType()).toString(),nbt,edits.getAsJsonObject("generic"),access);
             GenericSchema.requireRetained(next,GenericSchema.saveBlock(WorldTarget.copyBlock(block,next,access),access));
@@ -221,6 +242,14 @@ public final class BlockViews {
             for(var entry:group.getValue().getAsJsonObject().entrySet()) {
                 var field=allowed.stream().filter(f->f.key.equals(entry.getKey())).findFirst().orElseThrow(()->new EditorSessions.Failure("invalid_request","未知视图字段："+entry.getKey()));
                 var json=entry.getValue();
+                Tag typedValue = null;
+                if (typed.has(group.getKey()) && typed.getAsJsonObject(group.getKey()).has(field.key)) {
+                    if (!typedWire(field)) throw new EditorSessions.Failure("invalid_request", "字段不接受带类型传输：" + field.key);
+                    typedValue = canonicalTyped(field.codec, WorldNbt.parseValue(typed.getAsJsonObject(group.getKey()).get(field.key).getAsString()), access);
+                    // SNBT is authoritative. Run ALL normal permission/range/loader guards
+                    // against its actual decoded value, never an unrelated JSON projection.
+                    json = decode(field.codec, typedValue, access);
+                }
                 if(block instanceof VaultBlockEntity && field.key.equals("server_data.rewarded_players"))throw new EditorSessions.Failure("invalid_request","已奖励玩家列表只读");
                 if(block instanceof BeaconBlockEntity && field.key.equals("Levels"))throw new EditorSessions.Failure("invalid_request","信标等级由金字塔计算，只读");
                 if(block instanceof BeaconBlockEntity && (field.key.equals("primary_effect") || field.key.equals("secondary_effect")) && !json.isJsonNull()) {
@@ -263,11 +292,15 @@ public final class BlockViews {
                     var merged=decode(field.codec,get(result,field),access).getAsJsonObject();json.getAsJsonObject().entrySet().forEach(e->merged.add(e.getKey(),e.getValue()));json=merged;
                 }
                 if(field.codec==SignText.CODEC || field.codec==BannerPatternLayers.CODEC)requireColors(json);
-                var encoded=encode(field.codec,json,access);
+                var encoded=typedValue != null ? typedValue : encode(field.codec,json,access);
                 // Vanilla omits default banner layers/pot decorations rather than saving empty fields.
                 if(field.codec==BannerPatternLayers.CODEC && encoded instanceof ListTag list && list.isEmpty()) encoded=null;
                 if(field.codec==PotDecorations.CODEC && PotDecorations.CODEC.parse(access.createSerializationContext(NbtOps.INSTANCE),encoded).getOrThrow().equals(PotDecorations.EMPTY))encoded=null;
                 if(block instanceof TheEndGatewayBlockEntity && field.key.equals("ExactTeleport") && !json.getAsBoolean())encoded=null;
+                if(block instanceof JukeboxBlockEntity && field.key.equals("RecordItem") && encoded!=null) {
+                    ItemStack next=ItemStack.CODEC.parse(access.createSerializationContext(NbtOps.INSTANCE),encoded).getOrThrow();
+                    if(!next.isEmpty()&&!next.has(DataComponents.JUKEBOX_PLAYABLE))throw new EditorSessions.Failure("invalid_nbt","此物品缺少 minecraft:jukebox_playable");
+                }
                 put(result,field,encoded);
             }
         }

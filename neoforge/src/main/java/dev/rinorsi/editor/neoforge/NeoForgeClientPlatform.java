@@ -43,6 +43,6 @@ public final class NeoForgeClientPlatform implements ClientPlatform {
     public void onResourcesReload(Runnable c) { reloads.add(c); }
     public void onTagsReload(Runnable c) { NeoForge.EVENT_BUS.addListener((TagsUpdatedEvent.ClientPacketReceived e) -> c.run()); }
     public boolean canSend(CustomPacketPayload.Type<?> type) { var c = Minecraft.getInstance().getConnection(); return c != null && c.hasChannel(type.id()); }
-    public void send(EditorPackets.Request request) { ClientPacketDistributor.sendToServer(request); }
+    public void send(EditorPackets.Request request) { for(String frame:dev.rinorsi.editor.EditorWire.frames(request.json()))ClientPacketDistributor.sendToServer(new EditorPackets.Request(frame)); }
     public void receive(Consumer<EditorPackets.Reply> c) { receiver = c; }
 }

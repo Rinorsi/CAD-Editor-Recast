@@ -104,7 +104,7 @@ public final class EntitySchema {
         T original=e.get(component);if(original==null||component.codec()==null)return;
         List<T> values=new ArrayList<>();String kind,registry=null;
         if(original instanceof Holder<?> holder&&holder.unwrapKey().isPresent()){kind="holder";var key=holder.unwrapKey().orElseThrow().registryKey();registry=key.identifier().toString();
-            @SuppressWarnings({"rawtypes","unchecked"}) var holders=lookup.lookupOrThrow((net.minecraft.resources.ResourceKey)key);
+            var holders=lookup.lookupOrThrow(key);
             holders.listElements().limit(257).forEach(h->{@SuppressWarnings("unchecked") T value=(T)h;values.add(value);});
         }else if(original instanceof Enum<?> choice){kind="enum";for(Object c:choice.getDeclaringClass().getEnumConstants()){@SuppressWarnings("unchecked")T value=(T)c;values.add(value);}}else if(original instanceof Boolean){kind="bool";for(boolean b:new boolean[]{false,true}){@SuppressWarnings("unchecked")T value=(T)Boolean.valueOf(b);values.add(value);}}else return;
         if(values.size()>256)throw new IllegalArgumentException("变种选项超过单实体探测预算256；请使用原始NBT，不返回截断选择器");

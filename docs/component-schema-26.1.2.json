@@ -1,10 +1,10 @@
 {
   "mc_version": "26.1.2",
-  "schema_version": 2,
+  "schema_version": 3,
   "components": [
     {
       "id": "minecraft:attack_range",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -47,6 +47,9 @@
                   "ok": false
                 }
               ],
+              "allow_nan": false,
+              "allow_positive_infinity": false,
+              "allow_negative_infinity": false,
               "min": 0.0,
               "max": 64.0,
               "constraint_source": "captured_numeric_validator_and_boundary_decode",
@@ -85,6 +88,9 @@
                   "ok": false
                 }
               ],
+              "allow_nan": false,
+              "allow_positive_infinity": false,
+              "allow_negative_infinity": false,
               "min": 0.0,
               "max": 64.0,
               "constraint_source": "captured_numeric_validator_and_boundary_decode",
@@ -123,6 +129,9 @@
                   "ok": false
                 }
               ],
+              "allow_nan": false,
+              "allow_positive_infinity": false,
+              "allow_negative_infinity": false,
               "min": 0.0,
               "max": 64.0,
               "constraint_source": "captured_numeric_validator_and_boundary_decode",
@@ -161,6 +170,9 @@
                   "ok": false
                 }
               ],
+              "allow_nan": false,
+              "allow_positive_infinity": false,
+              "allow_negative_infinity": false,
               "min": 0.0,
               "max": 64.0,
               "constraint_source": "captured_numeric_validator_and_boundary_decode",
@@ -199,6 +211,9 @@
                   "ok": false
                 }
               ],
+              "allow_nan": false,
+              "allow_positive_infinity": false,
+              "allow_negative_infinity": false,
               "min": 0.0,
               "max": 1.0,
               "constraint_source": "captured_numeric_validator_and_boundary_decode",
@@ -237,6 +252,9 @@
                   "ok": false
                 }
               ],
+              "allow_nan": false,
+              "allow_positive_infinity": false,
+              "allow_negative_infinity": false,
               "min": 0.0,
               "max": 2.0,
               "constraint_source": "captured_numeric_validator_and_boundary_decode",
@@ -256,39 +274,63 @@
       "ranges_for_ui": [
         {
           "path": "$.min_reach",
+          "number_type": "float",
           "min": 0.0,
           "max": 64.0,
-          "default": 0.0
+          "default": 0.0,
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false
         },
         {
           "path": "$.max_reach",
+          "number_type": "float",
           "min": 0.0,
           "max": 64.0,
-          "default": 3.0
+          "default": 3.0,
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false
         },
         {
           "path": "$.min_creative_reach",
+          "number_type": "float",
           "min": 0.0,
           "max": 64.0,
-          "default": 0.0
+          "default": 0.0,
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false
         },
         {
           "path": "$.max_creative_reach",
+          "number_type": "float",
           "min": 0.0,
           "max": 64.0,
-          "default": 5.0
+          "default": 5.0,
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false
         },
         {
           "path": "$.hitbox_margin",
+          "number_type": "float",
           "min": 0.0,
           "max": 1.0,
-          "default": 0.3
+          "default": 0.3,
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false
         },
         {
           "path": "$.mob_factor",
+          "number_type": "float",
           "min": 0.0,
           "max": 2.0,
-          "default": 1.0
+          "default": 1.0,
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false
         }
       ],
       "input_probes": [
@@ -361,7 +403,7 @@
     },
     {
       "id": "minecraft:attribute_modifiers",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -426,6 +468,9 @@
                     "ok": true
                   }
                 ],
+                "allow_nan": true,
+                "allow_positive_infinity": true,
+                "allow_negative_infinity": true,
                 "constraint_source": "primitive_codec_no_explicit_range",
                 "name": "amount"
               },
@@ -528,9 +573,13 @@
       "ranges_for_ui": [
         {
           "path": "$[].amount",
+          "number_type": "double",
           "min": null,
           "max": null,
-          "default": null
+          "default": null,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         }
       ],
       "input_probes": [
@@ -630,7 +679,7 @@
     },
     {
       "id": "minecraft:axolotl/variant",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -715,7 +764,7 @@
     },
     {
       "id": "minecraft:banner_patterns",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -866,7 +915,7 @@
     },
     {
       "id": "minecraft:base_color",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -962,7 +1011,7 @@
     },
     {
       "id": "minecraft:bees",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -1085,12 +1134,14 @@
       "ranges_for_ui": [
         {
           "path": "$[].ticks_in_hive",
+          "number_type": "int",
           "min": null,
           "max": null,
           "default": null
         },
         {
           "path": "$[].min_ticks_in_hive",
+          "number_type": "int",
           "min": null,
           "max": null,
           "default": null
@@ -1159,7 +1210,7 @@
     },
     {
       "id": "minecraft:block_entity_data",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -1251,7 +1302,7 @@
     },
     {
       "id": "minecraft:block_state",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -1360,7 +1411,7 @@
     },
     {
       "id": "minecraft:blocks_attacks",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -1403,6 +1454,9 @@
                   "ok": true
                 }
               ],
+              "allow_nan": false,
+              "allow_positive_infinity": false,
+              "allow_negative_infinity": false,
               "min": 0.0,
               "max": 3.4028235E38,
               "constraint_source": "captured_numeric_validator_and_boundary_decode",
@@ -1441,6 +1495,9 @@
                   "ok": true
                 }
               ],
+              "allow_nan": false,
+              "allow_positive_infinity": false,
+              "allow_negative_infinity": false,
               "min": 0.0,
               "max": 3.4028235E38,
               "constraint_source": "captured_numeric_validator_and_boundary_decode",
@@ -1500,6 +1557,9 @@
                         "ok": true
                       }
                     ],
+                    "allow_nan": false,
+                    "allow_positive_infinity": false,
+                    "allow_negative_infinity": false,
                     "min": 0,
                     "min_exclusive": true,
                     "max": 3.4028235E38,
@@ -1554,6 +1614,9 @@
                         "ok": true
                       }
                     ],
+                    "allow_nan": true,
+                    "allow_positive_infinity": true,
+                    "allow_negative_infinity": true,
                     "constraint_source": "primitive_codec_no_explicit_range",
                     "name": "base"
                   },
@@ -1588,6 +1651,9 @@
                         "ok": true
                       }
                     ],
+                    "allow_nan": true,
+                    "allow_positive_infinity": true,
+                    "allow_negative_infinity": true,
                     "constraint_source": "primitive_codec_no_explicit_range",
                     "name": "factor"
                   }
@@ -1638,6 +1704,9 @@
                       "ok": true
                     }
                   ],
+                  "allow_nan": false,
+                  "allow_positive_infinity": false,
+                  "allow_negative_infinity": false,
                   "min": 0.0,
                   "max": 3.4028235E38,
                   "constraint_source": "captured_numeric_validator_and_boundary_decode",
@@ -1674,6 +1743,9 @@
                       "ok": true
                     }
                   ],
+                  "allow_nan": true,
+                  "allow_positive_infinity": true,
+                  "allow_negative_infinity": true,
                   "constraint_source": "primitive_codec_no_explicit_range",
                   "name": "base"
                 },
@@ -1708,6 +1780,9 @@
                       "ok": true
                     }
                   ],
+                  "allow_nan": true,
+                  "allow_positive_infinity": true,
+                  "allow_negative_infinity": true,
                   "constraint_source": "primitive_codec_no_explicit_range",
                   "name": "factor"
                 }
@@ -1782,6 +1857,9 @@
                           "ok": true
                         }
                       ],
+                      "allow_nan": true,
+                      "allow_positive_infinity": true,
+                      "allow_negative_infinity": true,
                       "constraint_source": "primitive_codec_no_explicit_range",
                       "name": "range",
                       "default_absent": true
@@ -1844,6 +1922,9 @@
                           "ok": true
                         }
                       ],
+                      "allow_nan": true,
+                      "allow_positive_infinity": true,
+                      "allow_negative_infinity": true,
                       "constraint_source": "primitive_codec_no_explicit_range",
                       "name": "range",
                       "default_absent": true
@@ -1864,64 +1945,104 @@
       "ranges_for_ui": [
         {
           "path": "$.block_delay_seconds",
+          "number_type": "float",
           "min": 0.0,
           "max": 3.4028235E38,
-          "default": 0.0
+          "default": 0.0,
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false
         },
         {
           "path": "$.disable_cooldown_scale",
+          "number_type": "float",
           "min": 0.0,
           "max": 3.4028235E38,
-          "default": 1.0
+          "default": 1.0,
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false
         },
         {
           "path": "$.damage_reductions[].horizontal_blocking_angle",
+          "number_type": "float",
           "min": 0,
           "max": 3.4028235E38,
           "default": 90.0,
-          "min_exclusive": true
+          "min_exclusive": true,
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false
         },
         {
           "path": "$.damage_reductions[].base",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": null
+          "default": null,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         },
         {
           "path": "$.damage_reductions[].factor",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": null
+          "default": null,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         },
         {
           "path": "$.item_damage.threshold",
+          "number_type": "float",
           "min": 0.0,
           "max": 3.4028235E38,
-          "default": null
+          "default": null,
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false
         },
         {
           "path": "$.item_damage.base",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": null
+          "default": null,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         },
         {
           "path": "$.item_damage.factor",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": null
+          "default": null,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         },
         {
           "path": "$.block_sound.range",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": null
+          "default": null,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         },
         {
           "path": "$.disabled_sound.range",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": null
+          "default": null,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         }
       ],
       "input_probes": [
@@ -1997,7 +2118,7 @@
     },
     {
       "id": "minecraft:break_sound",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -2055,6 +2176,9 @@
                       "ok": true
                     }
                   ],
+                  "allow_nan": true,
+                  "allow_positive_infinity": true,
+                  "allow_negative_infinity": true,
                   "constraint_source": "primitive_codec_no_explicit_range",
                   "name": "range",
                   "default_absent": true
@@ -2073,9 +2197,13 @@
       "ranges_for_ui": [
         {
           "path": "$.range",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": null
+          "default": null,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         }
       ],
       "input_probes": [
@@ -2149,7 +2277,7 @@
     },
     {
       "id": "minecraft:bucket_entity_data",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -2233,7 +2361,7 @@
     },
     {
       "id": "minecraft:bundle_contents",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -2339,6 +2467,7 @@
       "ranges_for_ui": [
         {
           "path": "$[].count",
+          "number_type": "int",
           "min": 1,
           "max": 99,
           "default": 1
@@ -2407,7 +2536,7 @@
     },
     {
       "id": "minecraft:can_break",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -2876,7 +3005,7 @@
     },
     {
       "id": "minecraft:can_place_on",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -3345,7 +3474,7 @@
     },
     {
       "id": "minecraft:cat/collar",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -3441,7 +3570,7 @@
     },
     {
       "id": "minecraft:cat/sound_variant",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -3520,7 +3649,7 @@
     },
     {
       "id": "minecraft:cat/variant",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -3599,7 +3728,7 @@
     },
     {
       "id": "minecraft:charged_projectiles",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -3705,6 +3834,7 @@
       "ranges_for_ui": [
         {
           "path": "$[].count",
+          "number_type": "int",
           "min": 1,
           "max": 99,
           "default": 1
@@ -3773,7 +3903,7 @@
     },
     {
       "id": "minecraft:chicken/sound_variant",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -3852,7 +3982,7 @@
     },
     {
       "id": "minecraft:chicken/variant",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -3944,7 +4074,7 @@
     },
     {
       "id": "minecraft:consumable",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -3987,6 +4117,9 @@
                   "ok": true
                 }
               ],
+              "allow_nan": false,
+              "allow_positive_infinity": false,
+              "allow_negative_infinity": false,
               "min": 0.0,
               "max": 3.4028235E38,
               "constraint_source": "captured_numeric_validator_and_boundary_decode",
@@ -4072,6 +4205,9 @@
                           "ok": true
                         }
                       ],
+                      "allow_nan": true,
+                      "allow_positive_infinity": true,
+                      "allow_negative_infinity": true,
                       "constraint_source": "primitive_codec_no_explicit_range",
                       "name": "range",
                       "default_absent": true
@@ -4401,6 +4537,9 @@
                             "ok": false
                           }
                         ],
+                        "allow_nan": false,
+                        "allow_positive_infinity": false,
+                        "allow_negative_infinity": false,
                         "min": 0.0,
                         "max": 1.0,
                         "constraint_source": "captured_numeric_validator_and_boundary_decode",
@@ -4478,6 +4617,9 @@
                                     "ok": true
                                   }
                                 ],
+                                "allow_nan": true,
+                                "allow_positive_infinity": true,
+                                "allow_negative_infinity": true,
                                 "constraint_source": "primitive_codec_no_explicit_range",
                                 "name": "range",
                                 "default_absent": true
@@ -4549,6 +4691,9 @@
                             "ok": true
                           }
                         ],
+                        "allow_nan": false,
+                        "allow_positive_infinity": false,
+                        "allow_negative_infinity": false,
                         "min": 0,
                         "min_exclusive": true,
                         "max": 3.4028235E38,
@@ -4574,58 +4719,82 @@
       "ranges_for_ui": [
         {
           "path": "$.consume_seconds",
+          "number_type": "float",
           "min": 0.0,
           "max": 3.4028235E38,
-          "default": 1.6
+          "default": 1.6,
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false
         },
         {
           "path": "$.sound.range",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": null
+          "default": null,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         },
         {
           "path": "$.on_consume_effects[].effects[].amplifier",
+          "number_type": "int",
           "min": 0,
           "max": 255,
           "default": 0
         },
         {
           "path": "$.on_consume_effects[].effects[].duration",
+          "number_type": "int",
           "min": null,
           "max": null,
           "default": 0
         },
         {
           "path": "$.on_consume_effects[].effects[].hidden_effect.amplifier",
+          "number_type": "int",
           "min": 0,
           "max": 255,
           "default": 0
         },
         {
           "path": "$.on_consume_effects[].effects[].hidden_effect.duration",
+          "number_type": "int",
           "min": null,
           "max": null,
           "default": 0
         },
         {
           "path": "$.on_consume_effects[].probability",
+          "number_type": "float",
           "min": 0.0,
           "max": 1.0,
-          "default": 1.0
+          "default": 1.0,
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false
         },
         {
           "path": "$.on_consume_effects[].sound.range",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": null
+          "default": null,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         },
         {
           "path": "$.on_consume_effects[].diameter",
+          "number_type": "float",
           "min": 0,
           "max": 3.4028235E38,
           "default": 16.0,
-          "min_exclusive": true
+          "min_exclusive": true,
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false
         }
       ],
       "input_probes": [
@@ -4719,7 +4888,7 @@
     },
     {
       "id": "minecraft:container",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -4871,12 +5040,14 @@
       "ranges_for_ui": [
         {
           "path": "$[].slot",
+          "number_type": "int",
           "min": 0,
           "max": 255,
           "default": null
         },
         {
           "path": "$[].item.count",
+          "number_type": "int",
           "min": 1,
           "max": 99,
           "default": 1
@@ -4945,7 +5116,7 @@
     },
     {
       "id": "minecraft:container_loot",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -5014,6 +5185,7 @@
       "ranges_for_ui": [
         {
           "path": "$.seed",
+          "number_type": "long",
           "min": null,
           "max": null,
           "default": 0
@@ -5077,7 +5249,7 @@
     },
     {
       "id": "minecraft:cow/sound_variant",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -5156,7 +5328,7 @@
     },
     {
       "id": "minecraft:cow/variant",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -5235,7 +5407,7 @@
     },
     {
       "id": "minecraft:custom_data",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -5314,7 +5486,7 @@
     },
     {
       "id": "minecraft:custom_model_data",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -5367,6 +5539,9 @@
                     "ok": true
                   }
                 ],
+                "allow_nan": true,
+                "allow_positive_infinity": true,
+                "allow_negative_infinity": true,
                 "constraint_source": "primitive_codec_no_explicit_range"
               }
             },
@@ -5463,12 +5638,17 @@
       "ranges_for_ui": [
         {
           "path": "$.floats[]",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": null
+          "default": null,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         },
         {
           "path": "$.colors[]",
+          "number_type": "int",
           "min": null,
           "max": null,
           "default": null
@@ -5532,7 +5712,7 @@
     },
     {
       "id": "minecraft:custom_name",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -5616,7 +5796,7 @@
     },
     {
       "id": "minecraft:damage",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -5668,6 +5848,7 @@
       "ranges_for_ui": [
         {
           "path": "$",
+          "number_type": "int",
           "min": 0,
           "max": 2147483647,
           "default": null
@@ -5736,7 +5917,7 @@
     },
     {
       "id": "minecraft:damage_resistant",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -5843,7 +6024,7 @@
     },
     {
       "id": "minecraft:damage_type",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -5927,7 +6108,7 @@
     },
     {
       "id": "minecraft:death_protection",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -6251,6 +6432,9 @@
                             "ok": false
                           }
                         ],
+                        "allow_nan": false,
+                        "allow_positive_infinity": false,
+                        "allow_negative_infinity": false,
                         "min": 0.0,
                         "max": 1.0,
                         "constraint_source": "captured_numeric_validator_and_boundary_decode",
@@ -6328,6 +6512,9 @@
                                     "ok": true
                                   }
                                 ],
+                                "allow_nan": true,
+                                "allow_positive_infinity": true,
+                                "allow_negative_infinity": true,
                                 "constraint_source": "primitive_codec_no_explicit_range",
                                 "name": "range",
                                 "default_absent": true
@@ -6399,6 +6586,9 @@
                             "ok": true
                           }
                         ],
+                        "allow_nan": false,
+                        "allow_positive_infinity": false,
+                        "allow_negative_infinity": false,
                         "min": 0,
                         "min_exclusive": true,
                         "max": 3.4028235E38,
@@ -6424,46 +6614,62 @@
       "ranges_for_ui": [
         {
           "path": "$.death_effects[].effects[].amplifier",
+          "number_type": "int",
           "min": 0,
           "max": 255,
           "default": 0
         },
         {
           "path": "$.death_effects[].effects[].duration",
+          "number_type": "int",
           "min": null,
           "max": null,
           "default": 0
         },
         {
           "path": "$.death_effects[].effects[].hidden_effect.amplifier",
+          "number_type": "int",
           "min": 0,
           "max": 255,
           "default": 0
         },
         {
           "path": "$.death_effects[].effects[].hidden_effect.duration",
+          "number_type": "int",
           "min": null,
           "max": null,
           "default": 0
         },
         {
           "path": "$.death_effects[].probability",
+          "number_type": "float",
           "min": 0.0,
           "max": 1.0,
-          "default": 1.0
+          "default": 1.0,
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false
         },
         {
           "path": "$.death_effects[].sound.range",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": null
+          "default": null,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         },
         {
           "path": "$.death_effects[].diameter",
+          "number_type": "float",
           "min": 0,
           "max": 3.4028235E38,
           "default": 16.0,
-          "min_exclusive": true
+          "min_exclusive": true,
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false
         }
       ],
       "input_probes": [
@@ -6557,7 +6763,7 @@
     },
     {
       "id": "minecraft:debug_stick_state",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -6641,7 +6847,7 @@
     },
     {
       "id": "minecraft:dye",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -6750,7 +6956,7 @@
     },
     {
       "id": "minecraft:dyed_color",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -6802,6 +7008,7 @@
       "ranges_for_ui": [
         {
           "path": "$",
+          "number_type": "int",
           "min": null,
           "max": null,
           "default": null
@@ -6865,7 +7072,7 @@
     },
     {
       "id": "minecraft:enchantable",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -6926,6 +7133,7 @@
       "ranges_for_ui": [
         {
           "path": "$.value",
+          "number_type": "int",
           "min": 1,
           "max": 2147483647,
           "default": null
@@ -7008,7 +7216,7 @@
     },
     {
       "id": "minecraft:enchantment_glint_override",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -7091,7 +7299,7 @@
     },
     {
       "id": "minecraft:enchantments",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -7156,6 +7364,7 @@
       "ranges_for_ui": [
         {
           "path": "${value}",
+          "number_type": "int",
           "min": 1,
           "max": 255,
           "default": null
@@ -7224,7 +7433,7 @@
     },
     {
       "id": "minecraft:entity_data",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -7335,7 +7544,7 @@
     },
     {
       "id": "minecraft:equippable",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -7419,6 +7628,9 @@
                           "ok": true
                         }
                       ],
+                      "allow_nan": true,
+                      "allow_positive_infinity": true,
+                      "allow_negative_infinity": true,
                       "constraint_source": "primitive_codec_no_explicit_range",
                       "name": "range",
                       "default_absent": true
@@ -7559,6 +7771,9 @@
                           "ok": true
                         }
                       ],
+                      "allow_nan": true,
+                      "allow_positive_infinity": true,
+                      "allow_negative_infinity": true,
                       "constraint_source": "primitive_codec_no_explicit_range",
                       "name": "range",
                       "default_absent": true
@@ -7579,15 +7794,23 @@
       "ranges_for_ui": [
         {
           "path": "$.equip_sound.range",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": null
+          "default": null,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         },
         {
           "path": "$.shearing_sound.range",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": null
+          "default": null,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         }
       ],
       "input_probes": [
@@ -7689,7 +7912,7 @@
     },
     {
       "id": "minecraft:firework_explosion",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -7835,12 +8058,14 @@
       "ranges_for_ui": [
         {
           "path": "$.colors[]",
+          "number_type": "int",
           "min": null,
           "max": null,
           "default": null
         },
         {
           "path": "$.fade_colors[]",
+          "number_type": "int",
           "min": null,
           "max": null,
           "default": null
@@ -7904,7 +8129,7 @@
     },
     {
       "id": "minecraft:fireworks",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -8109,18 +8334,21 @@
       "ranges_for_ui": [
         {
           "path": "$.flight_duration",
+          "number_type": "int",
           "min": 0,
           "max": 255,
           "default": 0
         },
         {
           "path": "$.explosions[].colors[]",
+          "number_type": "int",
           "min": null,
           "max": null,
           "default": null
         },
         {
           "path": "$.explosions[].fade_colors[]",
+          "number_type": "int",
           "min": null,
           "max": null,
           "default": null
@@ -8191,7 +8419,7 @@
     },
     {
       "id": "minecraft:food",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -8271,6 +8499,9 @@
                   "ok": true
                 }
               ],
+              "allow_nan": true,
+              "allow_positive_infinity": true,
+              "allow_negative_infinity": true,
               "constraint_source": "primitive_codec_no_explicit_range",
               "name": "saturation"
             },
@@ -8295,15 +8526,20 @@
       "ranges_for_ui": [
         {
           "path": "$.nutrition",
+          "number_type": "int",
           "min": 0,
           "max": 2147483647,
           "default": null
         },
         {
           "path": "$.saturation",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": null
+          "default": null,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         }
       ],
       "input_probes": [
@@ -8386,7 +8622,7 @@
     },
     {
       "id": "minecraft:fox/variant",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -8468,7 +8704,7 @@
     },
     {
       "id": "minecraft:frog/variant",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -8547,7 +8783,7 @@
     },
     {
       "id": "minecraft:glider",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -8631,7 +8867,7 @@
     },
     {
       "id": "minecraft:horse/variant",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -8718,7 +8954,7 @@
     },
     {
       "id": "minecraft:instrument",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -8791,6 +9027,9 @@
                               "ok": true
                             }
                           ],
+                          "allow_nan": true,
+                          "allow_positive_infinity": true,
+                          "allow_negative_infinity": true,
                           "constraint_source": "primitive_codec_no_explicit_range",
                           "name": "range",
                           "default_absent": true
@@ -8830,6 +9069,9 @@
                       "ok": true
                     }
                   ],
+                  "allow_nan": false,
+                  "allow_positive_infinity": false,
+                  "allow_negative_infinity": false,
                   "min": 0,
                   "min_exclusive": true,
                   "max": 3.4028235E38,
@@ -8867,6 +9109,9 @@
                       "ok": true
                     }
                   ],
+                  "allow_nan": false,
+                  "allow_positive_infinity": false,
+                  "allow_negative_infinity": false,
                   "min": 0,
                   "min_exclusive": true,
                   "max": 3.4028235E38,
@@ -8900,23 +9145,35 @@
       "ranges_for_ui": [
         {
           "path": "$.sound_event.range",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": null
+          "default": null,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         },
         {
           "path": "$.use_duration",
+          "number_type": "float",
           "min": 0,
           "max": 3.4028235E38,
           "default": null,
-          "min_exclusive": true
+          "min_exclusive": true,
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false
         },
         {
           "path": "$.range",
+          "number_type": "float",
           "min": 0,
           "max": 3.4028235E38,
           "default": null,
-          "min_exclusive": true
+          "min_exclusive": true,
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false
         }
       ],
       "input_probes": [
@@ -8982,7 +9239,7 @@
     },
     {
       "id": "minecraft:intangible_projectile",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -9061,7 +9318,7 @@
     },
     {
       "id": "minecraft:item_model",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -9153,7 +9410,7 @@
     },
     {
       "id": "minecraft:item_name",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -9256,7 +9513,7 @@
     },
     {
       "id": "minecraft:jukebox_playable",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -9348,7 +9605,7 @@
     },
     {
       "id": "minecraft:kinetic_weapon",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -9514,6 +9771,9 @@
                       "ok": true
                     }
                   ],
+                  "allow_nan": true,
+                  "allow_positive_infinity": true,
+                  "allow_negative_infinity": true,
                   "constraint_source": "primitive_codec_no_explicit_range",
                   "name": "min_speed",
                   "default": 0.0,
@@ -9550,6 +9810,9 @@
                       "ok": true
                     }
                   ],
+                  "allow_nan": true,
+                  "allow_positive_infinity": true,
+                  "allow_negative_infinity": true,
                   "constraint_source": "primitive_codec_no_explicit_range",
                   "name": "min_relative_speed",
                   "default": 0.0,
@@ -9633,6 +9896,9 @@
                       "ok": true
                     }
                   ],
+                  "allow_nan": true,
+                  "allow_positive_infinity": true,
+                  "allow_negative_infinity": true,
                   "constraint_source": "primitive_codec_no_explicit_range",
                   "name": "min_speed",
                   "default": 0.0,
@@ -9669,6 +9935,9 @@
                       "ok": true
                     }
                   ],
+                  "allow_nan": true,
+                  "allow_positive_infinity": true,
+                  "allow_negative_infinity": true,
                   "constraint_source": "primitive_codec_no_explicit_range",
                   "name": "min_relative_speed",
                   "default": 0.0,
@@ -9752,6 +10021,9 @@
                       "ok": true
                     }
                   ],
+                  "allow_nan": true,
+                  "allow_positive_infinity": true,
+                  "allow_negative_infinity": true,
                   "constraint_source": "primitive_codec_no_explicit_range",
                   "name": "min_speed",
                   "default": 0.0,
@@ -9788,6 +10060,9 @@
                       "ok": true
                     }
                   ],
+                  "allow_nan": true,
+                  "allow_positive_infinity": true,
+                  "allow_negative_infinity": true,
                   "constraint_source": "primitive_codec_no_explicit_range",
                   "name": "min_relative_speed",
                   "default": 0.0,
@@ -9826,6 +10101,9 @@
                   "ok": true
                 }
               ],
+              "allow_nan": true,
+              "allow_positive_infinity": true,
+              "allow_negative_infinity": true,
               "constraint_source": "primitive_codec_no_explicit_range",
               "name": "forward_movement",
               "default": 0.0,
@@ -9862,6 +10140,9 @@
                   "ok": true
                 }
               ],
+              "allow_nan": true,
+              "allow_positive_infinity": true,
+              "allow_negative_infinity": true,
               "constraint_source": "primitive_codec_no_explicit_range",
               "name": "damage_multiplier",
               "default": 1.0,
@@ -9921,6 +10202,9 @@
                           "ok": true
                         }
                       ],
+                      "allow_nan": true,
+                      "allow_positive_infinity": true,
+                      "allow_negative_infinity": true,
                       "constraint_source": "primitive_codec_no_explicit_range",
                       "name": "range",
                       "default_absent": true
@@ -9983,6 +10267,9 @@
                           "ok": true
                         }
                       ],
+                      "allow_nan": true,
+                      "allow_positive_infinity": true,
+                      "allow_negative_infinity": true,
                       "constraint_source": "primitive_codec_no_explicit_range",
                       "name": "range",
                       "default_absent": true
@@ -10003,93 +10290,138 @@
       "ranges_for_ui": [
         {
           "path": "$.contact_cooldown_ticks",
+          "number_type": "int",
           "min": 0,
           "max": 2147483647,
           "default": 10
         },
         {
           "path": "$.delay_ticks",
+          "number_type": "int",
           "min": 0,
           "max": 2147483647,
           "default": 0
         },
         {
           "path": "$.dismount_conditions.max_duration_ticks",
+          "number_type": "int",
           "min": 0,
           "max": 2147483647,
           "default": null
         },
         {
           "path": "$.dismount_conditions.min_speed",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": 0.0
+          "default": 0.0,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         },
         {
           "path": "$.dismount_conditions.min_relative_speed",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": 0.0
+          "default": 0.0,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         },
         {
           "path": "$.knockback_conditions.max_duration_ticks",
+          "number_type": "int",
           "min": 0,
           "max": 2147483647,
           "default": null
         },
         {
           "path": "$.knockback_conditions.min_speed",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": 0.0
+          "default": 0.0,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         },
         {
           "path": "$.knockback_conditions.min_relative_speed",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": 0.0
+          "default": 0.0,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         },
         {
           "path": "$.damage_conditions.max_duration_ticks",
+          "number_type": "int",
           "min": 0,
           "max": 2147483647,
           "default": null
         },
         {
           "path": "$.damage_conditions.min_speed",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": 0.0
+          "default": 0.0,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         },
         {
           "path": "$.damage_conditions.min_relative_speed",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": 0.0
+          "default": 0.0,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         },
         {
           "path": "$.forward_movement",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": 0.0
+          "default": 0.0,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         },
         {
           "path": "$.damage_multiplier",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": 1.0
+          "default": 1.0,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         },
         {
           "path": "$.sound.range",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": null
+          "default": null,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         },
         {
           "path": "$.hit_sound.range",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": null
+          "default": null,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         }
       ],
       "input_probes": [
@@ -10217,7 +10549,7 @@
     },
     {
       "id": "minecraft:llama/variant",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -10301,7 +10633,7 @@
     },
     {
       "id": "minecraft:lock",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -10536,18 +10868,21 @@
       "ranges_for_ui": [
         {
           "path": "$.count.min",
+          "number_type": "int",
           "min": null,
           "max": null,
           "default": null
         },
         {
           "path": "$.count.max",
+          "number_type": "int",
           "min": null,
           "max": null,
           "default": null
         },
         {
           "path": "$.count",
+          "number_type": "int",
           "min": null,
           "max": null,
           "default": null
@@ -10611,7 +10946,7 @@
     },
     {
       "id": "minecraft:lodestone_tracker",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -10706,6 +11041,7 @@
       "ranges_for_ui": [
         {
           "path": "$.target.pos[]",
+          "number_type": "int",
           "min": null,
           "max": null,
           "default": null
@@ -10769,7 +11105,7 @@
     },
     {
       "id": "minecraft:lore",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -10866,7 +11202,7 @@
     },
     {
       "id": "minecraft:map_color",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -10919,6 +11255,7 @@
       "ranges_for_ui": [
         {
           "path": "$",
+          "number_type": "int",
           "min": -2147483648,
           "max": 2147483647,
           "default": null
@@ -10987,7 +11324,7 @@
     },
     {
       "id": "minecraft:map_decorations",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -11043,6 +11380,9 @@
                     "ok": true
                   }
                 ],
+                "allow_nan": true,
+                "allow_positive_infinity": true,
+                "allow_negative_infinity": true,
                 "constraint_source": "primitive_codec_no_explicit_range",
                 "name": "x"
               },
@@ -11077,6 +11417,9 @@
                     "ok": true
                   }
                 ],
+                "allow_nan": true,
+                "allow_positive_infinity": true,
+                "allow_negative_infinity": true,
                 "constraint_source": "primitive_codec_no_explicit_range",
                 "name": "z"
               },
@@ -11111,6 +11454,9 @@
                     "ok": true
                   }
                 ],
+                "allow_nan": true,
+                "allow_positive_infinity": true,
+                "allow_negative_infinity": true,
                 "constraint_source": "primitive_codec_no_explicit_range",
                 "name": "rotation"
               }
@@ -11133,21 +11479,33 @@
       "ranges_for_ui": [
         {
           "path": "${value}.x",
+          "number_type": "double",
           "min": null,
           "max": null,
-          "default": null
+          "default": null,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         },
         {
           "path": "${value}.z",
+          "number_type": "double",
           "min": null,
           "max": null,
-          "default": null
+          "default": null,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         },
         {
           "path": "${value}.rotation",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": null
+          "default": null,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         }
       ],
       "input_probes": [
@@ -11213,7 +11571,7 @@
     },
     {
       "id": "minecraft:map_id",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -11266,6 +11624,7 @@
       "ranges_for_ui": [
         {
           "path": "$",
+          "number_type": "int",
           "min": -2147483648,
           "max": 2147483647,
           "default": null
@@ -11329,7 +11688,7 @@
     },
     {
       "id": "minecraft:max_damage",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -11381,6 +11740,7 @@
       "ranges_for_ui": [
         {
           "path": "$",
+          "number_type": "int",
           "min": 1,
           "max": 2147483647,
           "default": null
@@ -11457,7 +11817,7 @@
     },
     {
       "id": "minecraft:max_stack_size",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -11509,6 +11869,7 @@
       "ranges_for_ui": [
         {
           "path": "$",
+          "number_type": "int",
           "min": 1,
           "max": 99,
           "default": null
@@ -11585,7 +11946,7 @@
     },
     {
       "id": "minecraft:minimum_attack_charge",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -11622,6 +11983,9 @@
               "ok": false
             }
           ],
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false,
           "min": 0.0,
           "max": 1.0,
           "constraint_source": "captured_numeric_validator_and_boundary_decode"
@@ -11636,9 +12000,13 @@
       "ranges_for_ui": [
         {
           "path": "$",
+          "number_type": "float",
           "min": 0.0,
           "max": 1.0,
-          "default": null
+          "default": null,
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false
         }
       ],
       "input_probes": [
@@ -11704,7 +12072,7 @@
     },
     {
       "id": "minecraft:mooshroom/variant",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -11786,7 +12154,7 @@
     },
     {
       "id": "minecraft:note_block_sound",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -11864,7 +12232,7 @@
     },
     {
       "id": "minecraft:ominous_bottle_amplifier",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -11916,6 +12284,7 @@
       "ranges_for_ui": [
         {
           "path": "$",
+          "number_type": "int",
           "min": 0,
           "max": 4,
           "default": null
@@ -11984,7 +12353,7 @@
     },
     {
       "id": "minecraft:painting/variant",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -12063,7 +12432,7 @@
     },
     {
       "id": "minecraft:parrot/variant",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -12148,7 +12517,7 @@
     },
     {
       "id": "minecraft:piercing_weapon",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -12232,6 +12601,9 @@
                           "ok": true
                         }
                       ],
+                      "allow_nan": true,
+                      "allow_positive_infinity": true,
+                      "allow_negative_infinity": true,
                       "constraint_source": "primitive_codec_no_explicit_range",
                       "name": "range",
                       "default_absent": true
@@ -12294,6 +12666,9 @@
                           "ok": true
                         }
                       ],
+                      "allow_nan": true,
+                      "allow_positive_infinity": true,
+                      "allow_negative_infinity": true,
                       "constraint_source": "primitive_codec_no_explicit_range",
                       "name": "range",
                       "default_absent": true
@@ -12314,15 +12689,23 @@
       "ranges_for_ui": [
         {
           "path": "$.sound.range",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": null
+          "default": null,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         },
         {
           "path": "$.hit_sound.range",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": null
+          "default": null,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         }
       ],
       "input_probes": [
@@ -12398,7 +12781,7 @@
     },
     {
       "id": "minecraft:pig/sound_variant",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -12477,7 +12860,7 @@
     },
     {
       "id": "minecraft:pig/variant",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -12556,7 +12939,7 @@
     },
     {
       "id": "minecraft:pot_decorations",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -12653,7 +13036,7 @@
     },
     {
       "id": "minecraft:potion_contents",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -13005,30 +13388,35 @@
       "ranges_for_ui": [
         {
           "path": "$.custom_color",
+          "number_type": "int",
           "min": null,
           "max": null,
           "default": null
         },
         {
           "path": "$.custom_effects[].amplifier",
+          "number_type": "int",
           "min": 0,
           "max": 255,
           "default": 0
         },
         {
           "path": "$.custom_effects[].duration",
+          "number_type": "int",
           "min": null,
           "max": null,
           "default": 0
         },
         {
           "path": "$.custom_effects[].hidden_effect.amplifier",
+          "number_type": "int",
           "min": 0,
           "max": 255,
           "default": 0
         },
         {
           "path": "$.custom_effects[].hidden_effect.duration",
+          "number_type": "int",
           "min": null,
           "max": null,
           "default": 0
@@ -13097,7 +13485,7 @@
     },
     {
       "id": "minecraft:potion_duration_scale",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -13134,6 +13522,9 @@
               "ok": true
             }
           ],
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false,
           "min": 0.0,
           "max": 3.4028235E38,
           "constraint_source": "captured_numeric_validator_and_boundary_decode"
@@ -13148,9 +13539,13 @@
       "ranges_for_ui": [
         {
           "path": "$",
+          "number_type": "float",
           "min": 0.0,
           "max": 3.4028235E38,
-          "default": null
+          "default": null,
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false
         }
       ],
       "input_probes": [
@@ -13220,7 +13615,7 @@
     },
     {
       "id": "minecraft:profile",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -13535,7 +13930,7 @@
     },
     {
       "id": "minecraft:provides_banner_patterns",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -13633,7 +14028,7 @@
     },
     {
       "id": "minecraft:provides_trim_material",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -13786,7 +14181,7 @@
     },
     {
       "id": "minecraft:rabbit/variant",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -13873,7 +14268,7 @@
     },
     {
       "id": "minecraft:rarity",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -13970,7 +14365,7 @@
     },
     {
       "id": "minecraft:recipes",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -14062,7 +14457,7 @@
     },
     {
       "id": "minecraft:repair_cost",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -14114,6 +14509,7 @@
       "ranges_for_ui": [
         {
           "path": "$",
+          "number_type": "int",
           "min": 0,
           "max": 2147483647,
           "default": null
@@ -14182,7 +14578,7 @@
     },
     {
       "id": "minecraft:repairable",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -14295,7 +14691,7 @@
     },
     {
       "id": "minecraft:salmon/size",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -14378,7 +14774,7 @@
     },
     {
       "id": "minecraft:sheep/color",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -14474,7 +14870,7 @@
     },
     {
       "id": "minecraft:shulker/color",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -14570,7 +14966,7 @@
     },
     {
       "id": "minecraft:stored_enchantments",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -14635,6 +15031,7 @@
       "ranges_for_ui": [
         {
           "path": "${value}",
+          "number_type": "int",
           "min": 1,
           "max": 255,
           "default": null
@@ -14703,7 +15100,7 @@
     },
     {
       "id": "minecraft:suspicious_stew_effects",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -14780,6 +15177,7 @@
       "ranges_for_ui": [
         {
           "path": "$[].duration",
+          "number_type": "int",
           "min": null,
           "max": null,
           "default": 160
@@ -14848,7 +15246,7 @@
     },
     {
       "id": "minecraft:swing_animation",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -14925,6 +15323,7 @@
       "ranges_for_ui": [
         {
           "path": "$.duration",
+          "number_type": "int",
           "min": 1,
           "max": 2147483647,
           "default": 6
@@ -15007,7 +15406,7 @@
     },
     {
       "id": "minecraft:tool",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -15078,6 +15477,9 @@
                         "ok": true
                       }
                     ],
+                    "allow_nan": false,
+                    "allow_positive_infinity": false,
+                    "allow_negative_infinity": false,
                     "min": 0,
                     "min_exclusive": true,
                     "max": 3.4028235E38,
@@ -15127,6 +15529,9 @@
                   "ok": true
                 }
               ],
+              "allow_nan": true,
+              "allow_positive_infinity": true,
+              "allow_negative_infinity": true,
               "constraint_source": "primitive_codec_no_explicit_range",
               "name": "default_mining_speed",
               "default": 1.0,
@@ -15192,19 +15597,28 @@
       "ranges_for_ui": [
         {
           "path": "$.rules[].speed",
+          "number_type": "float",
           "min": 0,
           "max": 3.4028235E38,
           "default": null,
-          "min_exclusive": true
+          "min_exclusive": true,
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false
         },
         {
           "path": "$.default_mining_speed",
+          "number_type": "float",
           "min": null,
           "max": null,
-          "default": 1.0
+          "default": 1.0,
+          "allow_nan": true,
+          "allow_positive_infinity": true,
+          "allow_negative_infinity": true
         },
         {
           "path": "$.damage_per_block",
+          "number_type": "int",
           "min": 0,
           "max": 2147483647,
           "default": 1
@@ -15317,7 +15731,7 @@
     },
     {
       "id": "minecraft:tooltip_display",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -15428,7 +15842,7 @@
     },
     {
       "id": "minecraft:tooltip_style",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -15507,7 +15921,7 @@
     },
     {
       "id": "minecraft:trim",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -15705,7 +16119,7 @@
     },
     {
       "id": "minecraft:tropical_fish/base_color",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -15801,7 +16215,7 @@
     },
     {
       "id": "minecraft:tropical_fish/pattern",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -15893,7 +16307,7 @@
     },
     {
       "id": "minecraft:tropical_fish/pattern_color",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -15989,7 +16403,7 @@
     },
     {
       "id": "minecraft:unbreakable",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -16068,7 +16482,7 @@
     },
     {
       "id": "minecraft:use_cooldown",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -16111,6 +16525,9 @@
                   "ok": true
                 }
               ],
+              "allow_nan": false,
+              "allow_positive_infinity": false,
+              "allow_negative_infinity": false,
               "min": 0,
               "min_exclusive": true,
               "max": 3.4028235E38,
@@ -16137,10 +16554,14 @@
       "ranges_for_ui": [
         {
           "path": "$.seconds",
+          "number_type": "float",
           "min": 0,
           "max": 3.4028235E38,
           "default": null,
-          "min_exclusive": true
+          "min_exclusive": true,
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false
         }
       ],
       "input_probes": [
@@ -16214,7 +16635,7 @@
     },
     {
       "id": "minecraft:use_effects",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -16275,6 +16696,9 @@
                   "ok": false
                 }
               ],
+              "allow_nan": false,
+              "allow_positive_infinity": false,
+              "allow_negative_infinity": false,
               "min": 0.0,
               "max": 1.0,
               "constraint_source": "captured_numeric_validator_and_boundary_decode",
@@ -16294,9 +16718,13 @@
       "ranges_for_ui": [
         {
           "path": "$.speed_multiplier",
+          "number_type": "float",
           "min": 0.0,
           "max": 1.0,
-          "default": 0.2
+          "default": 0.2,
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false
         }
       ],
       "input_probes": [
@@ -16370,7 +16798,7 @@
     },
     {
       "id": "minecraft:use_remainder",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -16468,6 +16896,7 @@
       "ranges_for_ui": [
         {
           "path": "$.count",
+          "number_type": "int",
           "min": 1,
           "max": 99,
           "default": 1
@@ -16550,7 +16979,7 @@
     },
     {
       "id": "minecraft:villager/variant",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -16629,7 +17058,7 @@
     },
     {
       "id": "minecraft:weapon",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -16711,6 +17140,9 @@
                   "ok": true
                 }
               ],
+              "allow_nan": false,
+              "allow_positive_infinity": false,
+              "allow_negative_infinity": false,
               "min": 0.0,
               "max": 3.4028235E38,
               "constraint_source": "captured_numeric_validator_and_boundary_decode",
@@ -16730,15 +17162,20 @@
       "ranges_for_ui": [
         {
           "path": "$.item_damage_per_attack",
+          "number_type": "int",
           "min": 0,
           "max": 2147483647,
           "default": 1
         },
         {
           "path": "$.disable_blocking_for_seconds",
+          "number_type": "float",
           "min": 0.0,
           "max": 3.4028235E38,
-          "default": 0.0
+          "default": 0.0,
+          "allow_nan": false,
+          "allow_positive_infinity": false,
+          "allow_negative_infinity": false
         }
       ],
       "input_probes": [
@@ -16817,7 +17254,7 @@
     },
     {
       "id": "minecraft:wolf/collar",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -16913,7 +17350,7 @@
     },
     {
       "id": "minecraft:wolf/sound_variant",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -16992,7 +17429,7 @@
     },
     {
       "id": "minecraft:wolf/variant",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -17071,7 +17508,7 @@
     },
     {
       "id": "minecraft:writable_book_content",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -17255,7 +17692,7 @@
     },
     {
       "id": "minecraft:written_book_content",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,
@@ -17492,6 +17929,7 @@
       "ranges_for_ui": [
         {
           "path": "$.generation",
+          "number_type": "int",
           "min": 0,
           "max": 3,
           "default": 0
@@ -17555,7 +17993,7 @@
     },
     {
       "id": "minecraft:zombie_nautilus/variant",
-      "schema_version": 2,
+      "schema_version": 3,
       "source": "vanilla",
       "schema_source": "runtime_codec_structural_adapter",
       "label_key": null,

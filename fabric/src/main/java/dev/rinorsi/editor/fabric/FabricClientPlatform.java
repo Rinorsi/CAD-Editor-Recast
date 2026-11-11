@@ -32,6 +32,6 @@ public final class FabricClientPlatform implements ClientPlatform {
     public void onResourcesReload(Runnable c) { net.fabricmc.fabric.api.resource.v1.ResourceLoader.get(net.minecraft.server.packs.PackType.CLIENT_RESOURCES).registerReloadListener(Identifier.parse("cadeditor:registry_invalidation"), (net.minecraft.server.packs.resources.ResourceManagerReloadListener) r -> c.run()); }
     public void onTagsReload(Runnable c) { net.fabricmc.fabric.api.event.lifecycle.v1.CommonLifecycleEvents.TAGS_LOADED.register((r, client) -> { if(client) c.run(); }); }
     public boolean canSend(CustomPacketPayload.Type<?> type) { return ClientPlayNetworking.canSend(type); }
-    public void send(EditorPackets.Request request) { ClientPlayNetworking.send(request); }
+    public void send(EditorPackets.Request request) { for(String frame:dev.rinorsi.editor.EditorWire.frames(request.json()))ClientPlayNetworking.send(new EditorPackets.Request(frame)); }
     public void receive(Consumer<EditorPackets.Reply> c) { ClientPlayNetworking.registerGlobalReceiver(EditorPackets.Reply.TYPE, (p, ctx) -> ctx.client().execute(() -> c.accept(p))); }
 }

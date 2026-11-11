@@ -17,8 +17,18 @@ public final class WorldMerge {
         public JsonArray json(){var rows=new JsonArray();for(var path:paths){var row=new JsonObject();var parts=new JsonArray();path.forEach(parts::add);row.add("path",parts);rows.add(row);}return rows;}
     }
     public static CompoundTag merge(CompoundTag base,CompoundTag mine,CompoundTag current){
+        return merge(base,mine,current,false);
+    }
+    /** Live editor: explicit user changes win; untouched paths still inherit the live tree. */
+    public static CompoundTag applyEdits(CompoundTag base,CompoundTag mine,CompoundTag current){
+        return merge(base,mine,current,true);
+    }
+    private static CompoundTag merge(CompoundTag base,CompoundTag mine,CompoundTag current,boolean overwrite){
         requireIdentity(base,current);var conflicts=new ArrayList<List<String>>();
-        var result=(CompoundTag)mergeNode(base,mine,current,List.of(),conflicts);
+        var inputs=BlockVolatile.rebaseBeeTimers(base,mine,current);
+        inputs=BlockVolatile.rebaseSpawnerCountdown(inputs.base(),inputs.mine(),current);
+        inputs=rebaseEffectCountdowns(inputs.base(),inputs.mine(),current);
+        var result=(CompoundTag)mergeNode(inputs.base(),inputs.mine(),current,List.of(),overwrite?null:conflicts);
         if(!conflicts.isEmpty())throw new Conflict(conflicts);return result;
     }
     /** Apply only normalized-operation differences, excluding incidental loader defaults. */
@@ -35,6 +45,71 @@ public final class WorldMerge {
         if(!conflicts.isEmpty())throw new Conflict(conflicts,"identity");
     }
     private static CompoundTag entityOrBlock(CompoundTag tag){return tag.getCompound("cad_entity_nbt").orElseGet(()->tag.getCompound("cad_session_nbt").orElse(tag));}
+    /** Only a live entity's own effects qualify, never similarly named item/block/mod data.
+     * An unchanged effect body with positive, decreasing integer timers is countdown-compatible.
+     * Refreshes, expiry, replacements and unknown field changes retain strict conflict handling. */
+    private static BlockVolatile.MergeInputs rebaseEffectCountdowns(CompoundTag base,CompoundTag mine,CompoundTag current){
+        var unchanged=new BlockVolatile.MergeInputs(base,mine);
+        if(base.contains("cad_session_nbt"))return unchanged;
+        var b=entityOrBlock(base);var c=entityOrBlock(current);
+        boolean player=b.getString("id").orElse("").equals("minecraft:player")&&b.contains("cad_player");
+        if(!player&&!EntityVolatile.entity(b))return unchanged;
+        var rb=base.copy();var rm=mine.copy();var bb=entityOrBlock(rb);var mm=entityOrBlock(rm);
+        if(player){
+            if(!(bb.get("cad_player") instanceof StringTag bs)||!(mm.get("cad_player") instanceof StringTag ms)||!(c.get("cad_player") instanceof StringTag cs))return unchanged;
+            var bj=JsonParser.parseString(bs.value());var mj=JsonParser.parseString(ms.value());var cj=JsonParser.parseString(cs.value());
+            rebaseEffectList(bj,mj,cj);
+            bb.putString("cad_player",JSON.toJson(bj));mm.putString("cad_player",JSON.toJson(mj));
+        }else rebaseEffectList(bb,mm,c);
+        return new BlockVolatile.MergeInputs(rb,rm);
+    }
+    private static void rebaseEffectList(Object base,Object mine,Object current){
+        var b=object(base);var m=object(mine);var c=object(current);if(b==null||m==null||c==null)return;
+        var bl=array(b.get("active_effects"));var cl=array(c.get("active_effects"));
+        if(bl==null||cl==null||!uniqueEffectIds(bl)||!uniqueEffectIds(cl))return;
+        var live=index(cl,"id");
+        // The real UI removes the key when deleting the last effect. Rebase only
+        // if the entire live set still matches, allowing countdown and ID order.
+        // Keep the requested key absent; null/scalar values are not deletions.
+        if(!m.containsKey("active_effects")){
+            if(bl.size()!=cl.size())return;
+            for(var old:bl)if(!countdownOnly(old,live.get(key(old,"id"))))return;
+            put(base,"active_effects",copy(c.get("active_effects")));return;
+        }
+        var ml=array(m.get("active_effects"));if(ml==null||!uniqueEffectIds(ml))return;
+        var edits=index(ml,"id");
+        for(var old:bl){String id=key(old,"id");var now=live.get(id);if(countdownOnly(old,now))rebaseEffect(old,edits.get(id),now);}
+    }
+    private static boolean uniqueEffectIds(List<Object> effects){
+        var seen=new HashSet<String>();for(var row:effects){var fields=object(row);if(fields==null)return false;var id=fields.get("id");
+            if(!(id instanceof StringTag)&&!(id instanceof JsonPrimitive j&&j.isString()))return false;
+            if(!seen.add(key(row,"id")))return false;
+        }return true;
+    }
+    private static boolean countdownOnly(Object base,Object current){
+        var b=object(base);var c=object(current);if(b==null||c==null||!b.keySet().equals(c.keySet()))return false;
+        for(String key:b.keySet()){
+            var old=b.get(key);var now=c.get(key);
+            if(Objects.equals(old,now))continue;
+            if(key.equals("duration")){var bt=effectTicks(old);var ct=effectTicks(now);if(bt==null||ct==null||bt<=0||ct<=0||ct>bt)return false;}
+            else if(!key.equals("hidden_effect")||!countdownOnly(old,now))return false;
+        }return true;
+    }
+    private static Integer effectTicks(Object value){
+        if(value instanceof IntTag n)return n.intValue();
+        if(value instanceof JsonPrimitive j&&j.isNumber())try{return j.getAsBigDecimal().intValueExact();}catch(ArithmeticException|NumberFormatException ignored){}
+        return null;
+    }
+    private static void rebaseEffect(Object base,Object mine,Object current){
+        var b=object(base);var m=object(mine);var c=object(current);
+        if(b==null||c==null)return;
+        if(b.containsKey("duration")){
+            var old=b.get("duration");var now=c.get("duration");
+            if(m!=null&&Objects.equals(m.get("duration"),old))put(mine,"duration",copy(now));
+            put(base,"duration",copy(now));
+        }
+        if(b.containsKey("hidden_effect"))rebaseEffect(b.get("hidden_effect"),m==null?null:m.get("hidden_effect"),c.get("hidden_effect"));
+    }
     private static Object mergeNode(Object base,Object mine,Object current,List<String> path,List<List<String>> conflicts){
         if(Objects.equals(mine,base))return copy(current);
         if(Objects.equals(mine,current))return copy(current);

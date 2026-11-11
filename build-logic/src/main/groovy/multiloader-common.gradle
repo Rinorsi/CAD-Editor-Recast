@@ -2,10 +2,26 @@ plugins { id 'java-library' }
 group = "${project.group}.${project.parent.name}"
 base.archivesName = "cadeditor-${project.parent.name}-${minecraft_version}"
 java.toolchain.languageVersion = JavaLanguageVersion.of(java_version as int)
-layout.buildDirectory.set(rootProject.file('../Oriel-UI-Workspace/daily/' + java.time.LocalDate.now() + '/scratch/editor-mod/build/' + project.parent.name + '-' + minecraft_version))
-repositories { mavenCentral() }
-tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+layout.buildDirectory.set(new File(providers.gradleProperty('editorBuildRoot').getOrElse(rootProject.file('../Oriel-UI-Workspace/daily/' + java.time.LocalDate.now() + '/scratch/editor-mod/build').absolutePath), project.parent.name + '-' + minecraft_version))
+repositories {
+    mavenCentral()
+    maven {
+        name = 'Oriel'
+        url = rootProject.uri(providers.gradleProperty('orielRepository').getOrElse('libs/oriel-maven'))
+        content { includeGroup('dev.oriel') }
+    }
+    mavenLocal { content { includeGroup('dev.oriel') } }
+}
+def embeddedOption = providers.gradleProperty('orielEmbedded').getOrElse('true')
+if (!(embeddedOption in ['true', 'false'])) throw new GradleException('orielEmbedded must be true or false')
+ext.orielEmbedded = embeddedOption == 'true'
+if (oriel_version != '0.15.0') throw new GradleException('Compile and embed against Oriel slim 0.15.0 with native text highlights, never the full distribution')
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs.addAll(['-Xlint:deprecation', '-Xlint:unchecked'])
+}
 processResources {
+    from(rootProject.file('CHANGELOG.md')) { into 'assets/cadeditor' }
     def properties = [version: project.version, modrinth_id: providers.gradleProperty('modrinth_id').getOrElse(''), curseforge_id: providers.gradleProperty('curseforge_id').getOrElse(''), minecraft_version: minecraft_version, minecraft_version_range: minecraft_version_range,
         fabric_minecraft_version: fabric_minecraft_version, fabric_loader_version: fabric_loader_version,
         neoforge_version: neoforge_version, neoforge_loader_version_range: neoforge_loader_version_range,
@@ -13,4 +29,4 @@ processResources {
     inputs.properties(properties)
     filesMatching(['fabric.mod.json', 'META-INF/neoforge.mods.toml']) { expand(properties) }
 }
-tasks.named('jar') { from(rootProject.file('NOTICE')) }
+tasks.named('jar') { from(rootProject.file('NOTICE')); from(rootProject.file('CHANGELOG.md')) }

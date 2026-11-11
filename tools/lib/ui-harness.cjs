@@ -54,7 +54,9 @@ function create(opts) {
   opts = opts || {};
   const root = new Element('body'), overlays = new Element('div'); overlays.id = 'overlays'; root.appendChild(overlays);
   const doc = {
-    body: root, documentElement: new Element('html'), activeElement: null, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
+    body: root, documentElement: new Element('html'), activeElement: null,
+    addEventListener(k, fn) { if (opts.documentEvents) (opts.documentEvents[k] = opts.documentEvents[k] || []).push(fn); },
+    removeEventListener() {}, dispatchEvent() { return true; },
     createElement(tag) { const e = new Element(tag); e.ownerDoc = doc; return e; },
     createTextNode(t) { const e = new Element('text'); e.ownerDoc = doc; e.textContent = t; return e; },
     getElementById(id) { return root.querySelector('#' + id); },

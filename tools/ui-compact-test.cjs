@@ -4,8 +4,9 @@ const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const dir = path.resolve(__dirname, '../common/src/main/resources/assets/cadeditor/ui/js');
 function element(tag, props = {}, kids = []) {
-  const e = { tag, className: props.class || '', attrs: {...props}, children: [], events: {}, style: {}, textContent: props.text || '',
-    setAttribute(k,v) { this.attrs[k] = String(v); }, getAttribute(k) { return this.attrs[k] || null; },
+  const e = { tag, tagName: tag.toUpperCase(), value: props.value === undefined ? '' : String(props.value), className: props.class || '', attrs: {...props}, children: [], events: {}, style: {}, textContent: props.text || '',
+    setAttribute(k,v) { this.attrs[k] = String(v); if(k==='value')this.value=String(v); }, getAttribute(k) { return this.attrs[k] ?? null; },
+    querySelector(selector) { const matches = child => selector.startsWith('.') ? child.className.split(' ').includes(selector.slice(1)) : child.tag===selector; for(const child of this.children){if(matches(child))return child;const found=child.querySelector(selector);if(found)return found;}return null; },
     addEventListener(k,fn) { this.events[k] = fn; },
     appendChild(c) { this.children.push(c); c.parentNode = this; return c; },
     removeChild(c) { this.children.splice(this.children.indexOf(c),1); c.parentNode = null; },
@@ -22,19 +23,36 @@ const c = vm.createContext({console, setTimeout:()=>1, clearTimeout(){},
   oriel:{data:{hostAudio:true},send(k,v){sent.push({k,v});},on(k,fn){receipts[k]=fn;}},
   clone:v=>JSON.parse(JSON.stringify(v)), isObj:v=>!!v && typeof v==='object' && !Array.isArray(v),
   fmtNum:String, toast:(...args)=>warnings.push(args) });
-for (const f of ['data.js','labels.js','forms.js','specs.js']) vm.runInContext(fs.readFileSync(path.join(dir,f),'utf8'),c);
+for (const f of ['data.js','labels.js','core.js','nbt.js','reg.js','forms.js','specs.js','cards1.js']) vm.runInContext(fs.readFileSync(path.join(dir,f),'utf8'),c);
 c.h = element; c.uiIcon = ()=>element('img');
+c.centerInput = ()=>{};
+c.Reg.meta = {generation:'compact-live'};
 c.kNumber = (value,o)=>({el:Object.assign(element('div',{class:'test-number'}),{value,change:o.onChange})});
 c.kBtn = (label,fn,o={})=>Object.assign(element('div',{class:'k-btn '+(o.cls||''),text:label}),{click:fn});
 const sc = c.EDATA.comps.find(x=>x.id==='blocks_attacks').schema;
 const spec = c.SPEC_FORMS.blocks_attacks;
 let commits = 0, current = {item_damage:{threshold:1.2,base:0.2,factor:1.2},unknown:{preserve:true}};
 const before = JSON.stringify(current);
+const delayField = sc.f.find(f=>f.k==='block_delay_seconds');
+const unknownRow = c.compactField(delayField, {label:'延迟'}, delayField.s, current, ()=>commits++, {});
+const unknownInput = all(unknownRow,'ed-numin')[0];
+assert.equal(unknownInput.value,'','unread authoritative default stays blank, never invented as zero');
+assert.equal(commits,0);
+unknownInput.value='0.123456789';unknownInput.events.input();
+assert.equal(current.block_delay_seconds,0.123456789,'unknown default still permits explicit precision-preserving input');
+delete current.block_delay_seconds;commits=0;
+// Supply the same live-derived schema row the host sends, not data.js defaults
+// or an item prototype masquerading as a universal optional-field default.
+const live = JSON.parse(fs.readFileSync(path.join(__dirname,'../docs/component-schema-26.3.json'),'utf8')).components.find(x=>x.id==='minecraft:blocks_attacks');
+assert.ok(live,'real Codec-derived blocks_attacks fixture');
+c.Reg.ingestSchemaDefaults([live]);
+const authoritativeDelay = c.Reg.fieldDefault(delayField);
+assert.equal(typeof authoritativeDelay,'number','fixture proves this optional default');
 const form = c.wObj({...sc,f:sc.f.filter(f=>!c.isSoundUnion(f.s))},current,()=>commits++,{spec});
 assert.equal(JSON.stringify(current),before,'rendering inherited defaults must not write overrides');
 assert.equal(commits,0);
 const numeric = all(form,'test-number');
-assert.equal(numeric[0].value,0,'inherited delay is directly editable');
+assert.equal(numeric[0].value,authoritativeDelay,'inherited delay comes from the actual Codec fixture');
 numeric[0].change(0.25);
 assert.equal(current.block_delay_seconds,0.25);
 assert.equal(current.unknown.preserve,true);

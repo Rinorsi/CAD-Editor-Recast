@@ -25,15 +25,27 @@ public final class EntityRegistryChannel {
         return name.equals("entity_info") || name.startsWith("entity_info:") || name.equals("entity_schema") || name.startsWith("entity_schema:")
                 || name.equals("entity_base_attributes") || name.equals("equipment_slot_groups") || name.equals("spawner_info");
     }
-    public static void request(JsonObject request, String name, BiConsumer<List<String>, JsonObject> reply) {
+    public static void request(JsonObject request, String name, String worldGeneration, java.util.function.BooleanSupplier current,
+                               BiConsumer<List<String>, JsonObject> reply) {
         var mc = Minecraft.getInstance();
         JsonObject context = new JsonObject();
+        context.addProperty("worldGeneration", java.util.Objects.requireNonNull(worldGeneration));
         if (request.has("id") && request.get("id").isJsonPrimitive() && request.getAsJsonPrimitive("id").isString()) context.add("id", request.get("id"));
         if (name.startsWith("entity_info:")) context.addProperty("id", name.substring("entity_info:".length()));
         if (name.startsWith("entity_schema:")) context.addProperty("id", name.substring("entity_schema:".length()));
+        String requestError = null;
+        if (request.has("requestId")) {
+            var token=request.get("requestId");
+            if (!token.isJsonPrimitive() || !token.getAsJsonPrimitive().isString() || token.getAsString().isEmpty() || token.getAsString().length()>80)
+                requestError="实体请求 requestId 必须为1至80字符的字符串";
+            else context.add("requestId",token);
+        }
+        final String invalidRequest=requestError;
         mc.execute(() -> {
+            if (!current.getAsBoolean()) return;
             String generation = name.startsWith("entity_schema") ? "entity-schema-" + SCHEMA_GENERATION.get() : "entity-" + GENERATION.incrementAndGet();
             try {
+                if (invalidRequest!=null) throw new IllegalArgumentException(invalidRequest);
                 JsonArray entries;
                 if (name.equals("equipment_slot_groups")) entries = EntityDefaults.slotGroups();
                 else if (name.equals("entity_base_attributes")) {
@@ -62,7 +74,7 @@ public final class EntityRegistryChannel {
                             entity = type == net.minecraft.world.entity.EntityTypes.PLAYER && mc.player != null ? new RemotePlayer(mc.level, mc.player.getGameProfile())
                                     : type.create(mc.level, EntitySpawnReason.LOAD);
                             if (entity == null) templateError = "该实体类型不提供客户端工厂";
-                        } catch (RuntimeException error) { templateError = message(error); }
+                        } catch (RuntimeException error) { templateError = message(error); if (current.getAsBoolean()) dev.rinorsi.editor.EditorDiagnostics.warning("registry.entity.factory", context.toString(), error); }
                         JsonObject row = EntityDefaults.describe(type, entity, mc.level.registryAccess());
                         if (entity != null) {
                             try {
@@ -75,19 +87,29 @@ public final class EntityRegistryChannel {
                                 tag.remove(Entity.TAG_UUID);
                                 tag.putString(Entity.TAG_ID, BuiltInRegistries.ENTITY_TYPE.getKey(type).toString());
                                 row.addProperty("default_nbt", tag.toString());
-                            } catch (RuntimeException error) { templateError = message(error); }
+                            } catch (RuntimeException error) { templateError = message(error); if (current.getAsBoolean()) dev.rinorsi.editor.EditorDiagnostics.warning("registry.entity.template", context.toString(), error); }
                         }
                         row.addProperty("template_available", row.has("default_nbt"));
                         if (templateError != null) row.addProperty("template_error", templateError);
                         entries = new JsonArray(); entries.add(row);
                     }
                 }
-                reply.accept(RegistryPages.split(name, generation, entries, context).stream().map(Object::toString).toList(), context);
+                if (!current.getAsBoolean()) return;
+                var pages = responsePages(name, generation, worldGeneration, entries, context, null);
+                if (current.getAsBoolean()) reply.accept(pages, context);
             } catch (RuntimeException error) {
-                var page = RegistryPages.split(name, generation, new JsonArray(), context).getFirst();
-                page.addProperty("error", message(error)); reply.accept(List.of(page.toString()), context);
+                if (!current.getAsBoolean()) return;
+                dev.rinorsi.editor.EditorDiagnostics.failure("registry.entity", name + " " + context, error);
+                var pages = responsePages(name, generation, worldGeneration, new JsonArray(), context, message(error));
+                if (current.getAsBoolean()) reply.accept(pages, context);
             }
         });
+    }
+    static List<String> responsePages(String name, String generation, String worldGeneration, JsonArray entries, JsonObject context, String error) {
+        JsonObject envelope = context.deepCopy(); envelope.addProperty("worldGeneration", worldGeneration);
+        if (error != null) envelope.addProperty("error", error);
+        var pages = RegistryPages.splitLossless(name, generation, entries, envelope);
+        return pages.stream().map(Object::toString).toList();
     }
     private static EntityType<?> resolve(String raw) {
         Identifier id = Identifier.tryParse(raw);

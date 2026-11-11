@@ -1,4 +1,20 @@
 // Same headless regression tasks on every loader/version. No probes ship in release jars.
+tasks.register('writeLogTest', JavaExec) {
+    dependsOn 'codecVerificationClasses'
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.EditorWriteLogTest'
+    workingDir = rootProject.projectDir
+}
+tasks.named('check') { dependsOn('writeLogTest') }
+
+tasks.register('linkedAttributeTest', JavaExec) {
+    dependsOn 'codecVerificationClasses'
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.registry.LinkedAttributeTest'
+    workingDir = rootProject.projectDir
+}
+tasks.named('check') { dependsOn('linkedAttributeTest') }
+
 def daily = rootProject.file('../Oriel-UI-Workspace/daily/' + java.time.LocalDate.now())
 configurations { commonTests { canBeResolved = true; canBeConsumed = false } }
 dependencies { commonTests(project(path: ':common:' + project.name, configuration: 'commonTests')) }
@@ -25,6 +41,14 @@ tasks.register('prefsTest', JavaExec) {
 }
 tasks.named('check') { dependsOn('prefsTest') }
 
+tasks.register('toastTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.client.EditorToastTest'
+    workingDir = rootProject.projectDir
+}
+tasks.named('check') { dependsOn('toastTest') }
+
 tasks.register('clipboardTest', JavaExec) {
     dependsOn codecVerificationClasses
     classpath = sourceSets.codecVerification.runtimeClasspath
@@ -49,6 +73,14 @@ tasks.register('soundPreviewTest', JavaExec) {
     workingDir = new File(daily, 'scratch/editor-mod')
 }
 tasks.named('check') { dependsOn('soundPreviewTest') }
+
+tasks.register('hotbarCommandTest', JavaExec) {
+    dependsOn codecVerificationClasses
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.client.HotbarCommandTest'
+    workingDir = new File(daily, 'scratch/editor-mod')
+}
+tasks.named('check') { dependsOn('hotbarCommandTest') }
 
 // Optional standalone probe: never included in the distributed Editor jar.
 // Standalone additive lazy-catalog policy/shape checks.
@@ -223,6 +255,24 @@ tasks.register('worldRevisionTest', JavaExec) {
     jvmArgs '-Djava.awt.headless=true'
 }
 tasks.named('check') { dependsOn('worldRevisionTest') }
+
+// Every release checks the actual schema producer and the bounded wire protocol.
+['registryPagesTest': 'RegistryPagesTest', 'entityScopeTest': 'EntityScopePagesTest',
+ 'registryFragmentsTest': 'RegistryFragmentsTest', 'entitySchemaTransportTest': 'EntitySchemaTransportTest'].each { taskName, entry ->
+    tasks.register(taskName, JavaExec) {
+        dependsOn codecVerificationClasses
+        classpath = sourceSets.codecVerification.runtimeClasspath
+        mainClass = 'dev.rinorsi.editor.registry.' + entry
+        workingDir = rootProject.projectDir
+        jvmArgs '-Djava.awt.headless=true'
+        if (taskName == 'entitySchemaTransportTest') {
+            def report = layout.buildDirectory.file('reports/entity-schema-transport.json').get().asFile
+            args report.absolutePath
+            doFirst { report.parentFile.mkdirs() }
+        }
+    }
+    tasks.named('check') { dependsOn(taskName) }
+}
 
 tasks.named('compileTestJava') { enabled = false }
 tasks.named('test') { enabled = false }

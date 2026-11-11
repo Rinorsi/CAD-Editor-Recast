@@ -16,6 +16,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.entity.*;
 import net.minecraft.world.level.storage.*;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 
 /** Resolves loaded world targets; online players use their native setter-only adapter. */
 public final class WorldTarget {
@@ -26,6 +27,7 @@ public final class WorldTarget {
     public final BlockPos blockPos;
     private net.minecraft.world.level.block.state.BlockState previewState;
     private CompoundTag draftData;
+    private Vec3 returnPosition;
     private WorldTarget(net.minecraft.world.level.Level level, BlockEntity block, Entity entity) { this(level,block,entity,block == null ? null : block.getBlockPos()); }
     private WorldTarget(net.minecraft.world.level.Level level, BlockEntity block, Entity entity, BlockPos pos) { this.level = level; this.block = block; this.entity = entity; this.blockPos = pos; }
     public net.minecraft.world.level.block.state.BlockState blockState() { return blockPos == null ? null : previewState != null ? previewState : level.getBlockState(blockPos); }
@@ -40,16 +42,20 @@ public final class WorldTarget {
     }
     WorldTarget half(BlockEntity other) { return new WorldTarget(level,other,null); }
     public static WorldTarget resolve(ServerPlayer player, JsonObject slot) {
+        return resolve(player,slot,null);
+    }
+    /** openingPosition is supplied only by the authenticated server-side session. */
+    public static WorldTarget resolve(ServerPlayer player, JsonObject slot, Vec3 openingPosition) {
         var level = (ServerLevel) player.level();
         boolean gameMaster=EditorPolicy.gameMaster(player);
         if (!player.isAlive() || (player.isSpectator() && !gameMaster)) EditorSessions.fail("not_allowed", "当前玩家状态不能编辑世界目标");
         if (!StackCodec.string(slot, "dim").equals(level.dimension().identifier().toString()))
             EditorSessions.fail("target_unavailable", "目标不在玩家当前维度");
         String kind = StackCodec.string(slot, "kind");
-        BlockEntity block = null; Entity entity = null; BlockPos pos;
+        BlockEntity block = null; Entity entity = null; BlockPos pos; Vec3 returnPosition=null;
         if (kind.equals("block")) {
             pos = new BlockPos(StackCodec.integer(slot, "x", -30000000, 30000000), StackCodec.integer(slot, "y", level.getMinY(), level.getMaxY()), StackCodec.integer(slot, "z", -30000000, 30000000));
-            WorldAccess.loaded(level.hasChunkAt(pos));
+            WorldAccess.loaded(WorldAccess.isLoaded(level,pos));
             WorldAccess.reach(player.isWithinBlockInteractionRange(pos, 0));
             block = level.getBlockEntity(pos);
             if (level.getBlockState(pos).isAir() || (block != null && block.isRemoved())) EditorSessions.fail("target_unavailable", "该位置没有可编辑的已放置方块");
@@ -67,18 +73,34 @@ public final class WorldTarget {
             if(entity instanceof Player && !(entity instanceof ServerPlayer))EditorSessions.fail("player_target","仅支持服务器在线玩家");
             if(entity instanceof ServerPlayer) { PlayerWorldEdit.requirePermission(player.permissions());PlayerWorldEdit.requireOnline(level.getServer().getPlayerList().getPlayer(entity.getUUID())==entity); }
             if (entity == null || entity.level() != level || entity.isRemoved()) EditorSessions.fail("target_unavailable", "实体已卸载、移除或离开维度");
-            WorldAccess.reach(entity==player || player.isWithinEntityInteractionRange(entity, 0));
+            boolean inReach=entity==player || player.isWithinEntityInteractionRange(entity, 0);
+            if (!inReach && openingPosition!=null && !(entity instanceof Player)) {
+                WorldAccess.reach(player.isWithinEntityInteractionRange(entity.getBoundingBox().move(openingPosition.subtract(entity.position())),0));
+                var origin=BlockPos.containing(openingPosition);
+                WorldAccess.loaded(WorldAccess.isLoaded(level,origin));
+                WorldAccess.area(level.getWorldBorder().isWithinBounds(origin) && player.mayInteract(level,origin) && level.mayInteract(player,origin) && (gameMaster || player.mayBuild()));
+                returnPosition=openingPosition;
+            } else WorldAccess.reach(inReach);
             if (entity.getType().onlyOpCanSetNbt() && !EditorPolicy.gameMaster(player))
                 EditorSessions.fail("not_allowed", "该实体需要原版游戏管理员命令权限");
             pos = entity.blockPosition();
-            WorldAccess.loaded(level.hasChunkAt(pos));
+            WorldAccess.loaded(WorldAccess.isLoaded(level,pos));
         } else throw new EditorSessions.Failure("slot_invalid", "未知世界目标类型");
         WorldAccess.area(level.getWorldBorder().isWithinBounds(pos) && player.mayInteract(level, pos) && level.mayInteract(player, pos) && (gameMaster || player.mayBuild()));
         var target=new WorldTarget(level, block, entity, kind.equals("block") ? pos : null);
+        target.returnPosition=returnPosition;
         DoubleChestEdit.connect(target);
         if(target.partner!=null){var p=target.partner.blockPos;WorldAccess.reach(player.isWithinBlockInteractionRange(p,0));WorldAccess.area(level.getWorldBorder().isWithinBounds(p)&&player.mayInteract(level,p)&&level.mayInteract(player,p)&&(gameMaster||player.mayBuild()));}
         return target;
     }
+    /** Called after ordinary NBT protection; clients cannot choose a return destination. */
+    public WorldMergePlan withSessionReturn(WorldMergePlan plan) {
+        if(returnPosition==null)return plan;
+        var next=plan.nbt().copy();
+        next.put("Pos",Vec3.CODEC.encodeStart(NbtOps.INSTANCE,returnPosition).getOrThrow());
+        return new WorldMergePlan(next,plan.blockState(),plan.partnerNbt());
+    }
+    public Vec3 returnPosition() { return returnPosition; }
     public CompoundTag save() {
         if(draftData!=null)return draftData.copy();
         if(block != null) return block.saveWithFullMetadata(level.registryAccess());
@@ -281,9 +303,19 @@ public final class WorldTarget {
             if (!seen.add(index)) EditorSessions.fail("invalid_request", "容器槽位重复");
             var value = StackCodec.object(obj, "stack");
             ItemStack next = value.has("empty") && value.get("empty").getAsBoolean() ? ItemStack.EMPTY : StackCodec.decode(value, level.registryAccess(), original.get(index));
-            if (block instanceof Container c && (!next.isEmpty() && (!c.canPlaceItem(index, next) || next.getCount() > c.getMaxStackSize(next))))
+            if (block instanceof Container c && (!next.isEmpty() && (!canReplaceContainerItem(c, index, next) || next.getCount() > c.getMaxStackSize(next))))
                 EditorSessions.fail("slot_invalid", "物品不符合目标容器槽位的类型或数量限制");
-            target.set(index, next);
+            if (copy instanceof JukeboxBlockEntity) {
+                // Its gameplay setter starts playback and requires a live level.
+                // Validation copies must use the native loader, not emit events.
+                var data = copy.saveWithFullMetadata(level.registryAccess());
+                if (next.isEmpty()) data.remove("RecordItem");
+                else data.put("RecordItem",ItemStack.CODEC.encodeStart(level.registryAccess().createSerializationContext(NbtOps.INSTANCE),next).getOrThrow());
+                data.remove("ticks_since_song_started");
+                var problems = new ProblemReporter.Collector();
+                copy.loadWithComponents(TagValueInput.create(problems,level.registryAccess(),data));
+                requireClean(problems);
+            } else target.set(index, next);
         }
         for (int i = 0; i < target.size(); i++) if (!seen.contains(i) && !StackComparison.matches(original.get(i), target.get(i), level.registryAccess()))
             EditorSessions.fail("invalid_nbt", "未编辑的容器槽位发生变化，已取消整笔提交");
@@ -294,15 +326,27 @@ public final class WorldTarget {
         for (int i = 0; i < after.size(); i++) {
             var next = after.get(i);
             if (StackComparison.matches(before.get(i),next,level.registryAccess()) || next.isEmpty()) continue;
-            ItemStack.validateStrict(next).getOrThrow();
             if (next.getCount() > next.getMaxStackSize()) EditorSessions.fail("slot_invalid", "物品数量超过组件规定的堆叠上限");
-            if (block instanceof Container c && (!c.canPlaceItem(i,next) || next.getCount() > c.getMaxStackSize(next)))
+            ItemStack.validateStrict(next).getOrThrow();
+            if (block instanceof Container c && (!canReplaceContainerItem(c,i,next) || next.getCount() > c.getMaxStackSize(next)))
                 EditorSessions.fail("slot_invalid", "修改后的物品不符合该容器槽位限制");
             if (copy instanceof LecternBlockEntity && (!next.is(net.minecraft.tags.ItemTags.LECTERN_BOOKS) || next.getCount() != 1))
                 EditorSessions.fail("slot_invalid", "讲台仅接受实时 lectern_books 标签中的单本书");
             if (copy instanceof CampfireBlockEntity && (next.getCount() != 1 || ((ServerLevel)level).recipeAccess().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.CAMPFIRE_COOKING,new net.minecraft.world.item.crafting.SingleRecipeInput(next),level).isEmpty()))
                 EditorSessions.fail("slot_invalid", "营火仅接受实时营火配方中的单件物品");
         }
+    }
+    /** Jukebox insertion also tests whether its slot is empty. Editing the
+     * existing record is a replacement, so ask its real factory's empty slot
+     * without removing the live record or hardcoding playable item IDs. Other
+     * containers retain their existing slot-specific acceptance rules. */
+    private static boolean canReplaceContainerItem(Container container, int index, ItemStack next) {
+        if (container instanceof JukeboxBlockEntity jukebox) {
+            var empty = jukebox.getType().create(jukebox.getBlockPos(),jukebox.getBlockState());
+            if (!(empty instanceof Container)) EditorSessions.fail("unsupported_target", "唱片机无法创建槽位验证副本");
+            return ((Container)empty).canPlaceItem(index,next);
+        }
+        return container.canPlaceItem(index,next);
     }
     public void write(CompoundTag next) {
         write(next,blockState(),true);

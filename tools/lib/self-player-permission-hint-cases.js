@@ -1,0 +1,16 @@
+let notes=[];const permissionBody={appendChild(n){notes.push(n);}};c.msgText=v=>v||'';
+reset([]);c.wpStatusTab(permissionBody);
+const levelHint=controls.find(x=>x.title==='等级').sub, pointsHint=controls.find(x=>x.title==='当前等级点数').sub, healthHint=controls.find(x=>x.title==='生命').sub;
+assert.match(levelHint,/缺少对应原版命令或权威查询权限/);assert.doesNotMatch(levelHint,/需要服务端/);
+assert.match(pointsHint,/缺少对应原版命令或权威查询权限/);assert.doesNotMatch(pointsHint,/需要服务端/);assert.match(pointsHint,/XpTotal 不变/);
+assert.match(healthHint,/需要服务端 Editor/);assert.doesNotMatch(healthHint,/缺少对应原版命令/);
+assert.ok(notes.some(n=>n.text===c.wpCommandRestriction('playerGameType')),'mode section has persistent permission explanation');
+notes=[];c.wpCommandPosition(permissionBody);assert.ok(notes.some(n=>n.text===c.wpCommandRestriction('commandPosition')),'position page has persistent permission explanation');
+c.Reg.nameOf2=()=>null;c.attrName=id=>id;c.attrIconEl=()=>({});
+c.WE.w.views.player.schema.attributes=[{id:'minecraft:max_health',base:20,min:1,max:1024}];controls=[];c.wpAttrTab(permissionBody);
+const baseHint=controls.find(x=>x.title==='minecraft:max_health').sub;assert.match(baseHint,/缺少对应原版命令或权威查询权限/);assert.doesNotMatch(baseHint,/需要服务端/);
+c.evSet('player','experience',{XpLevel:5,XpP:0.25,XpTotal:43},'XpLevel');assert.match(c.wpCommandNote(),/缺少对应原版命令或权威查询权限/);
+reset();c.wpStatusTab(permissionBody);assert.doesNotMatch(controls.find(x=>x.title==='等级').sub||'',/缺少|需要服务端/);assert.doesNotMatch(controls.find(x=>x.title==='当前等级点数').sub,/缺少|需要服务端/);
+assert.match(controls.find(x=>x.title==='生命').sub,/需要服务端 Editor/,'OP does not make native Health setter available');
+reset([], 'server');c.wpStatusTab(permissionBody);assert.doesNotMatch(controls.find(x=>x.title==='生命').sub||'',/缺少|需要服务端/,'complete backend keeps original controls');
+console.log('PASS real control hints: no-OP level/points/mode/position/base state missing command/query permission; Health states server requirement; OP and complete backend remain distinct');

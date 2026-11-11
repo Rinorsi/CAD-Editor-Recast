@@ -24,21 +24,26 @@ public final class EntityDataProbe implements ClientModInitializer {
             if (stage == 91) { if (mc.getSingleplayerServer() == null) { stage = 99; mc.stop(); } return; }
             if (System.nanoTime() - start > 180_000_000_000L) throw new AssertionError("entity probe timeout");
             if (mc.level == null || mc.player == null) return;
+            var requestLevel = mc.level;
+            String worldScope = "entity-probe-" + start;
+            java.util.function.BooleanSupplier current = () -> mc.isSameThread() && mc.level == requestLevel && stage < 90;
             if (types == null) {
                 types = BuiltInRegistries.ENTITY_TYPE.keySet().stream().sorted(java.util.Comparator.comparing(Object::toString)).iterator();
                 check(org.lwjgl.glfw.GLFW.glfwGetWindowAttrib(mc.getWindow().handle(), org.lwjgl.glfw.GLFW.GLFW_FOCUSED) == 0, "window unfocused");
                 JsonObject request = new JsonObject(); request.addProperty("name", "spawner_info");
-                EntityRegistryChannel.request(request, "spawner_info", (pages, context) -> pages.forEach(page -> {
+                EntityRegistryChannel.request(request, "spawner_info", worldScope, current, (pages, context) -> pages.forEach(page -> {
+                    check(worldScope.equals(context.get("worldGeneration").getAsString()), "spawner world scope");
                     var data = com.google.gson.JsonParser.parseString(page).getAsJsonObject(); check(!data.has("error"), "spawner export " + data); result.add("spawners", data.get("entries"));
                 }));
             }
             if (types.hasNext()) {
                 String id = types.next().toString(); JsonObject request = new JsonObject(); request.addProperty("id", id);
                 int before = mc.level.getEntityCount();
-                EntityRegistryChannel.request(request, "entity_info", (pages, context) -> {
+                EntityRegistryChannel.request(request, "entity_info", worldScope, current, (pages, context) -> {
                     for (String page : pages) {
                         check(page.length() <= 24000, "page budget");
                         var data = com.google.gson.JsonParser.parseString(page).getAsJsonObject();
+                        check(worldScope.equals(data.get("worldGeneration").getAsString()), "entity page world scope");
                         check(!data.has("error"), "entity export " + id + " " + data);
                         check(data.get("id").getAsString().equals(id), "correlated id");
                         for (var entity : data.getAsJsonArray("entries")) {

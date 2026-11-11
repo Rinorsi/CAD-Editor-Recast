@@ -113,8 +113,9 @@ public final class GenericSchemaTest {
             check(data.energy==12,"preparation does not mutate live target");
             var preview=target.preview(plan.nbt(),new JsonObject(),true);
             check(preview.getAsJsonObject("views").getAsJsonObject("generic").getAsJsonObject("value").get("energy").getAsString().equals("37"),"saved preview/reopen reads requested value");
-            data.energy=99;reject(()->WorldMergePlan.prepare(target,baseline,null,request));
-            check(data.energy==99,"conflict leaves current state intact");data.energy=12;
+            data.energy=99;var overwrite=WorldMergePlan.prepare(target,baseline,null,request);
+            check(overwrite.nbt().getInt("energy").orElseThrow()==37,"explicit edit overrides concurrently changed value");
+            check(data.energy==99,"overwrite preparation leaves current state intact");data.energy=12;
             var raw=target.save();raw.putInt("energy",44);raw.getCompound("opaque").orElseThrow().putLong("data_page",Long.MAX_VALUE);
             var rawRequest=new JsonObject();rawRequest.addProperty("snbt",raw.toString());
             var rawPlan=WorldMergePlan.prepare(target,target.sessionData(),null,rawRequest);

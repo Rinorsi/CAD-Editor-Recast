@@ -39,6 +39,9 @@ function uiIcon(name, size, cls) {
 /* 搜索框 + 「搜索」按钮。输入时不搜（装了几百个模组后，每个字符都跑一遍拼音匹配很吃性能）；
    按回车或点「搜索」才执行 onSearch(文字)；把输入框清空则立即恢复全部（不需要匹配，零成本）。返回 { el, input, go } */
 function kSearchBox(input, onSearch) {
+  /* 长语法说明放到悬停提示，窄窗口里保留可读的搜索名称。 */
+  var hint = input.getAttribute('placeholder') || '';
+  if (hint.indexOf('；') >= 0) { if (!input.getAttribute('data-tip')) setTip(input, hint); input.setAttribute('placeholder', hint.split('；')[0]); }
   var last = input.value;
   function go() { last = input.value; onSearch(input.value); }
   input.addEventListener('input', function () { if (input.value === '' && last !== '') go(); });
@@ -53,7 +56,7 @@ function nameOf(reg, id) { return Reg.nameOf2(reg, id) || humanId(shortId(id)); 
 function entityName(id) { return nameOf('entity_type', id); }
 /* 选项（{v, label}）的显示名：游戏没给翻译（label 等于 ID）时转成可读文字 */
 function optLabel(e) { return e.label === e.v ? humanId(shortId(e.v)) : e.label; }
-/* 物品类别：优先用游戏里的真实事实（默认组件 + item_meta），数据没到、或离线时才退回内置表 EDATA.ikind。
+/* 物品类别：优先用游戏里的真实事实（默认组件 + item_meta），仅浏览器样例预览退回内置表 EDATA.ikind。
    facts：dc = 默认组件（短 ID 键），meta = item_meta_one 的一行。不靠物品名后缀猜（书除外：原版只有这两本）。 */
 function kindFromFacts(id, dc, meta) {
   function has(k) { return dc[k] !== undefined; }
@@ -68,6 +71,7 @@ function kindFromFacts(id, dc, meta) {
   if (meta.armor_slot) return 'armor';
   if (has('glider')) return 'armor';
   if (meta.spawn_egg_entity) return 'spawn';
+  if (meta.mob_bucket) return 'bucket';
   if (has('jukebox_playable')) return 'disc';
   if (has('fireworks') || has('firework_explosion')) return 'firework';
   if (has('banner_patterns') && meta.block_item) return 'banner';
@@ -82,17 +86,19 @@ function liveKind(id) {
   if (!dc || meta === null) return null;
   return kindFromFacts(shortId(id), dc, meta || {});
 }
-function kindOfItem(id) { var s = shortId(id); return liveKind(id) || (s === 'spawner' || s === 'trial_spawner' ? 'spawner' : EDATA.ikind[s]) || 'generic'; }
+function kindOfItem(id) { var s = shortId(id), live = liveKind(id); if (!Reg.preview()) return live || 'generic'; return live || (s === 'spawner' || s === 'trial_spawner' ? 'spawner' : EDATA.ikind[s]) || 'generic'; }
 
 /* ---------- 浮层 / 弹出 ---------- */
 var KPop = { el: null, owner: null, onClose: null };
-function kPopClose() { if (KPop.el) { KPop.el.remove(); KPop.el = null; if (KPop.onClose) KPop.onClose(); KPop.onClose = null; } KPop.owner = null; }
+function kPopClose(immediate) { if (KPop.el) { var el = KPop.el; KPop.el = null; if (KPop.onClose) KPop.onClose(); KPop.onClose = null; if (typeof uiDismiss === 'function') uiDismiss(el, immediate === true); else el.remove(); } KPop.owner = null; }
 function kPopover(anchor, node, o) {
   o = o || {};
-  kPopClose();
+  kPopClose(true);
   var box = h('div', { class: 'k-pop' + (o.cls ? ' ' + o.cls : '') }, [node]);
   document.getElementById('overlays').appendChild(box);
-  var r = anchor.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight;
+  var scale = typeof uiScaleFactor === 'function' ? uiScaleFactor() : 1, ar = anchor.getBoundingClientRect();
+  var r = { left: ar.left / scale, right: ar.right / scale, top: ar.top / scale, bottom: ar.bottom / scale, width: ar.width / scale, height: ar.height / scale };
+  var vw = window.innerWidth / scale, vh = window.innerHeight / scale;
   var w = Math.min(Math.round((o.width || Math.max(r.width, 160)) * 0.74), vw - 16);
   var left = Math.max(4, Math.min(r.left, vw - w - 4));
   var below = vh - r.bottom - 6, above = r.top - 6, up = below < 180 && above > below;
@@ -102,11 +108,76 @@ function kPopover(anchor, node, o) {
 }
 document.addEventListener('mousedown', function (e) { if (KPop.el && !KPop.el.contains(e.target) && !(KPop.owner && KPop.owner.contains && KPop.owner.contains(e.target))) kPopClose(); });
 
+/* 最近编辑的完整 typed 快照，与恢复草稿独立。大物品只留本页内存。 */
+// Display a bounded window; all items remain in the underlying typed document.
+function kListPage(total, state, bar, redraw) {
+  var size = 24, pages = Math.max(1, Math.ceil(total / size));
+  state.page = Math.max(0, Math.min(pages - 1, state.page || 0)); clear(bar);
+  if (pages > 1) {
+    bar.appendChild(kBtn('上一页', function () { state.page = Math.max(0, state.page - 1); redraw(); }, { cls:'sm' }));
+    bar.appendChild(h('span', { class:'k-sub', text:(state.page + 1) + ' / ' + pages + ' · ' + total + ' 项' }));
+    bar.appendChild(kBtn('下一页', function () { state.page = Math.min(pages - 1, state.page + 1); redraw(); }, { cls:'sm' }));
+  }
+  return { start:state.page * size, end:Math.min(total, (state.page + 1) * size) };
+}
+var ItemHistory = {
+  entries: [], loaded: false, timer: null, owners: new WeakMap(), sequence: 0, limit: 48,
+  labelOf: function (d) {
+    var eff = effectiveView(d), name = eff.custom_name !== undefined ? eff.custom_name : eff.item_name;
+    var rich = name === undefined ? null : tcRuns(name);
+    return rich ? rich.runs.map(function (r) { return r._object ? (r._object.fallback || '▣') : r.text; }).join('') : displayName(d);
+  },
+  icon: function (entry) {
+    try { return stackUiIcon(this.wire(entry), 16); }
+    catch (error) { if (typeof EditorDiag !== 'undefined') EditorDiag.error('history.preview', error); return itemIcon(entry.id, 16); }
+  },
+  init: function () {
+    if (this.loaded || typeof Prefs === 'undefined') return;
+    this.loaded = true;
+    var saved = Prefs.get('itemHistory', []);
+    if (!Array.isArray(saved)) return;
+    for (var i = 0; i < saved.length && i < this.limit; i++) {
+      var e = saved[i];
+      try { if (e && typeof e.snap === 'string') { var d = nbtReadSnapshot(e.snap); if (d.id && d.comps && d.removed) this.entries.push({ id: d.id, snap: e.snap, label: this.labelOf(d), count: d.count }); } }
+      catch (error) { if (typeof EditorDiag !== 'undefined') EditorDiag.error('history.read', error); }
+    }
+  },
+  note: function (d, snapshot) {
+    if (!d || !snapshot || snapshot.length > 8 * 1024 * 1024) return;
+    this.init();
+    var owner = this.owners.get(d); if (!owner) { owner = ++this.sequence; this.owners.set(d, owner); }
+    var old = this.entries.filter(function (e) { return e.owner === owner; })[0];
+    if (old && old.snap === snapshot) return;
+    this.entries = this.entries.filter(function (e) { return e.owner !== owner && e.snap !== snapshot; });
+    this.entries.unshift({ id: d.id, snap: snapshot, owner: owner, label: this.labelOf(d), count: d.count });
+    var total = 0;
+    var limit = this.limit;
+    this.entries = this.entries.filter(function (e, i) { total += e.snap.length; return i < limit && total <= 16 * 1024 * 1024; });
+    var self = this; clearTimeout(this.timer); this.timer = setTimeout(function () { self.flush(); }, 300);
+  },
+  flush: function () {
+    clearTimeout(this.timer); this.timer = null;
+    if (!this.loaded || typeof Prefs === 'undefined') return;
+    var saved = [], used = 2;
+    this.entries.forEach(function (e) {
+      if (e.snap.length > 16000) return;
+      var entry = { id: e.id, snap: e.snap }, size = JSON.stringify(entry).length + (saved.length ? 1 : 0);
+      if (used + size <= 16000) { saved.push(entry); used += size; }
+    });
+    Prefs.set('itemHistory', saved);
+  },
+  wire: function (e) {
+    var d = nbtReadSnapshot(e.snap), sn = {};
+    Object.keys(d.comps).forEach(function (cid) { sn[cid] = nbtComponentText(d, cid); });
+    return { id: d.id, count: d.count, comps: d.comps, removed: d.removed, component_snbt: sn };
+  }
+};
+
 /* 物品选择弹出：搜索 + 图标网格 */
 function pickItem(anchor, onPick, o) {
   o = o || {};
   var q = h('input', { class: 'k-input', type: 'text', placeholder: o.placeholder || '搜索物品，如「钻石」「sword」', spellcheck: 'false' });
-  var grid = h('div', { class: 'k-pgrid' }), hint = h('div', { class: 'k-phint' }), cancel = null;
+  var grid = h('div', { class: 'k-pgrid' }), hint = h('div', { class: 'k-phint' }), cancel = null, revision = 0;
   /* 候选来自游戏实时注册表（含模组物品）；没有宿主时才用内置清单。原版物品用短 ID，模组物品用完整 ID。
      搜索按时间片分批（kFilterSliced）：一千多个物品的拼音匹配不能在一次脚本入口里做完，否则会被引擎停页 */
   function show(list, s, src, hostTotal) {
@@ -122,37 +193,52 @@ function pickItem(anchor, onPick, o) {
     }
     var custom = s && /^[a-z0-9_.\-]+:[a-z0-9_.\/\-]+$/.test(s) && src.indexOf(shortId(s)) < 0;
     if (custom) { var cu = h('div', { class: 'k-add', text: '使用自定义 ID：' + s }); cu.addEventListener('mousedown', function (e) { e.preventDefault(); kPopClose(); onPick(shortId(s)); }); grid.appendChild(cu); }
-    hint.textContent = total ? '共 ' + total + ' 个' : '没有匹配的物品';
+    hint.textContent = total ? '共 ' + total + ' 个' : (!Reg.preview() && !Reg.list('items') && !Reg.isLazy('item') ? '正在读取游戏物品，可以手动输入完整 ID' : '没有匹配的物品；可以手动输入完整 ID');
+  }
+  function history() {
+    clear(grid); ItemHistory.init();
+    var rows = ItemHistory.entries.filter(function (e) { return !o.filter || o.filter(shortId(e.id)); });
+    rows.forEach(function (entry) {
+      var icon = ItemHistory.icon(entry), c = h('div', { class: 'k-pcell' }, [icon]);
+      if (!icon.tagName || icon.tagName.toLowerCase() !== 'item') setTip(c, (entry.label || nameOfItem(entry.id)) + ' × ' + (entry.count || 1) + '\n' + entry.id);
+      c.addEventListener('mousedown', function (ev) {
+        ev.preventDefault();
+        try { var st = o.onStack ? ItemHistory.wire(entry) : null; kPopClose(); if (st) o.onStack(st); else onPick(shortId(entry.id)); }
+        catch (error) { if (typeof EditorDiag !== 'undefined') EditorDiag.error('history.take', error); toast('历史物品读取失败', 'error'); }
+      });
+      grid.appendChild(c);
+    });
+    hint.textContent = rows.length ? '最近编辑 · ' + rows.length + ' 件' : '暂无编辑历史，输入名称或 ID 搜索';
   }
   function paint() {
     if (cancel) { cancel(); cancel = null; }
-    var s = q.value.trim().toLowerCase();
+    var rev = ++revision, s = q.value.trim().toLowerCase();
+    if (!s) { history(); return; }
+    function current() { return rev === revision && KPop.el === pop && q.value.trim().toLowerCase() === s; }
     var ilk = Reg.lazyKind('item');
-    var src = ilk ? [] : (Reg.has('items') ? Reg.list('items').map(function (e) { return shortId(e.id); }) : EDATA.items);
+    var src = ilk ? [] : (Reg.list('items') ? Reg.list('items').map(function (e) { return shortId(e.id); }) : (Reg.preview() ? EDATA.items : []));
     var pool = o.filter ? src.filter(function (id) { return o.filter(id); }) : src;
-    if (ilk) {   // 物品目录在宿主：空搜索词也问宿主要第一页
-      if (!HostSearch.query({ view: 'item-picker', kind: ilk, query: s, limit: 56 }, function (r) {
-        if (r.fallback) { show([], s, src); hint.textContent = '游戏没有返回搜索结果，可以直接输入完整 ID'; return; }
-        Reg.noteRows(ilk, r.entries);
+    function local() { cancel = kFilterSliced(pool, function (id) { return kMatch(id, s) || kMatch(nameOfItem(id), s); }, function (list) { if (current()) show(list, s, src); }); }
+    if (ilk || !o.filter) {
+      if (HostSearch.query({ view: 'item-picker', kind: ilk || 'items', query: s, limit: 56 }, function (r) {
+        if (!current()) return;
+        if (r.fallback) { if (!ilk) local(); else { show([], s, src); hint.textContent = '游戏未返回结果，可输入完整 ID'; } return; }
+        if (ilk) Reg.noteRows(ilk, r.entries);
         var ids = (r.entries || []).map(function (e) { return Reg.isMod(Reg.full(e.id)) ? e.id : shortId(e.id); });
         if (o.filter) ids = ids.filter(function (id) { return o.filter(id); });
         show(ids, s, src, r.total);
-      })) { show([], s, src); hint.textContent = '当前宿主不支持搜索，可以直接输入完整 ID'; }
-      return;
+      })) return;
+      if (ilk) { show([], s, src); return; }
     }
-    if (!s) { show(pool, s, src); return; }
-    /* 没有额外过滤条件时让宿主的后台索引搜（含拼音 / 模组物品），否则本地分批 */
-    if (!o.filter && HostSearch.query({ view: 'item-picker', kind: 'items', query: s, limit: 56 }, function (r) {
-      if (r.fallback) { cancel = kFilterSliced(pool, function (id) { return kMatch(id, s) || kMatch(nameOfItem(id), s); }, function (list) { show(list, s, src); }); return; }
-      var ids = (r.entries || []).map(function (e) { return Reg.isMod(Reg.full(e.id)) ? e.id : shortId(e.id); });
-      show(ids, s, src, r.total);
-    })) return;
-    cancel = kFilterSliced(pool, function (id) { return kMatch(id, s) || kMatch(nameOfItem(id), s); }, function (list) { show(list, s, src); });
+    local();
   }
   var sbox = kSearchBox(q, paint);
   onKey(q, { Escape: function () { kPopClose(); } });
-  var foot = h('div', { class: 'k-pfoot' }, [hint]);
-  if (o.onStack) foot.appendChild(kBtn('保险库', function () { kPopClose(); openVault({ pick: function (stack, entry) { o.onStack(stack, entry); } }); }, { icon: 'chest', title: '从保险库取一件（带着它的全部自定义组件）' }));
+  var foot = h('div', { class: 'k-pfoot k-item-foot' }, [hint]);
+  if (o.onStack) {
+    foot.appendChild(kBtn('所有物品', function () { kPopClose(); openRegPick({ reg: 'item', title: '选择物品', onPick: onPick, onStack: o.onStack }); }, { icon: 'grid' }));
+    foot.appendChild(kBtn('保险库', function () { kPopClose(); openVault({ pick: function (stack, entry) { o.onStack(stack, entry); } }); }, { icon: 'chest', title: '从保险库取一件（带着它的全部自定义组件）' }));
+  }
   if (o.reset) foot.appendChild(kBtn(o.reset.label, function () { kPopClose(); o.reset.fn(); }, { icon: 'undo' }));
   var box = h('div', { class: 'k-pickbox' }, [sbox.el, grid, foot]);
   var pop = kPopover(anchor, box, { width: 292, maxHeight: 340 });
@@ -206,7 +292,8 @@ function pickFrom(anchor, entries, onPick, o) {
 function kPopPin(box, scroller) {
   var m = /max-height:(\d+)px/.exec(box.getAttribute('style') || ''); if (!m) return;
   var inner = box.firstChild, other = 0;
-  if (inner && inner.children) for (var i = 0; i < inner.children.length; i++) { var c = inner.children[i]; if (c !== scroller) other += c.getBoundingClientRect().height + 4; }
+  var scale = typeof uiScaleFactor === 'function' ? uiScaleFactor() : 1;
+  if (inner && inner.children) for (var i = 0; i < inner.children.length; i++) { var c = inner.children[i]; if (c !== scroller) other += c.getBoundingClientRect().height / scale + 4; }
   box.style.overflowY = 'hidden';
   scroller.style.overflowY = 'auto';
   scroller.style.maxHeight = Math.max(60, +m[1] - other - 16) + 'px';
@@ -274,25 +361,47 @@ function charW() {
   return CHAR_W || 6;
 }
 function centerInput(input) {
-  var w = input.getBoundingClientRect().width; if (!w) return;
+  if (!String(input.value).length) { input.style.paddingLeft = '5px'; return; }
+  var scale = typeof uiScaleFactor === 'function' ? uiScaleFactor() : 1, w = input.getBoundingClientRect().width / scale; if (!w) return;
   var pad = Math.max(3, Math.floor((w - 6 - String(input.value).length * charW()) / 2));
   input.style.paddingLeft = pad + 'px';
+}
+/* Numeric editors share one shell; callers only own parsing, limits and typed values. */
+function kStepper(input, o) {
+  o = o || {};
+  input.classList.add('k-numin');
+  function button(dir, text) {
+    var b = h('div', { class: 'k-step', text: text, title: (dir < 0 ? '减少' : '增加') + '（Shift 加速）' });
+    activate(b, function (e) { o.onStep(dir, e); });
+    return b;
+  }
+  return h('div', { class: 'k-stepper' + (o.cls ? ' ' + o.cls : '') }, [button(-1, '−'), input, button(1, '+'), o.unit ? h('span', { class: 'u', text: o.unit }) : null, o.extra || null]);
 }
 function kNumber(value, o) {
   var step = o.step || 1, dec = o.dec !== undefined ? o.dec : (step < 1 ? (String(step).split('.')[1] || '').length : 0);
   var min = o.min, max = o.max;
   var smin = o.softMin !== undefined ? o.softMin : (min !== undefined && min > -1e6 ? min : 0);
   var smax0 = o.softMax !== undefined ? o.softMax : (max !== undefined && max < 1e6 ? max : smin + 100);
-  var wrap = h('div', { class: 'k-num' }), cur = value, smax = smax0, ustep = step;
+  var wrap = h('div', { class: 'k-num' }), cur = value === undefined ? undefined : nbtNumberValue(value), smax = smax0, ustep = step, editing = false;
   var input = h('input', { class: 'k-input k-numin' + (o.big ? ' big' : ''), type: 'text', spellcheck: 'false' });
+  function emptyText() { return (typeof o.placeholder === 'function' ? o.placeholder() : o.placeholder) || '未设置'; }
   var err = h('div', { class: 'k-numerr' }), warn = h('div', { class: 'k-numwarn' });
+  var warningDetail = '';
+  if (o.warnText) { warn.classList.add('link'); setTip(warn, '点击查看说明'); activate(warn, function () { if (warningDetail) kPopover(warn, kHint(warningDetail, 'note'), { width: 360 }); }); }
   var track = h('div', { class: 'k-slider', tabindex: '0' }, [h('div', { class: 'tr' }), h('div', { class: 'fl' }), h('div', { class: 'th' })]);
   var fl = track.children[1], th = track.children[2];
   var big = h('span', { class: 'k-big' });
   function round(v) { return +v.toFixed(dec); }
-  function ok(v) { return !(isNaN(v) || (min !== undefined && v < min) || (max !== undefined && v > max)); }
+  function specialSchema() { return typeof o.special === 'function' ? o.special() : o.special; }
+  function ok(v) {
+    if (isFinite(v)) return !(min !== undefined && v < min) && !(max !== undefined && v > max);
+    var sc = specialSchema();
+    return !!(sc && sc.live && sc.t === 'num' && (sc.nbtType === 'f' || sc.nbtType === 'd') &&
+      (isNaN(v) ? sc.allowNaN : v === Infinity ? sc.allowPositiveInfinity : sc.allowNegativeInfinity));
+  }
   function range() { smax = smax0; ustep = step; if (cur > smax0) { smax = niceCeil(cur * 1.25); ustep = Math.max(step, Math.pow(10, Math.floor(Math.log(smax) / Math.LN10) - 2)); } }
   function paintSlider() {
+    if (!isFinite(cur)) { fl.style.width = '0%'; th.style.left = '0%'; track.classList.remove('over'); setTip(track, cur === undefined ? '默认值读取中，可直接输入或选择数值' : '特殊浮点值不对应滑块位置；拖动可重新设置有限数字'); return; }
     range();
     var t = smax > smin ? Math.max(0, Math.min(1, (cur - smin) / (smax - smin))) : 0;
     fl.style.width = (t * 100) + '%'; th.style.left = (t * 100) + '%';
@@ -300,19 +409,27 @@ function kNumber(value, o) {
     setTip(track, cur > smax0 ? '数值已超出常规滑块范围，滑块已自动放大到 ' + fmtInt(smax) + '，也可直接在输入框修改' : '');
   }
   function paintWarn() {
+    if (!isFinite(cur)) { warn.textContent = ''; warn.style.display = 'none'; big.textContent = ''; big.style.display = 'none'; return; }
     var w = '';
     if (o.warnMax !== undefined && cur > o.warnMax) w = '超过原版上限 ' + fmtNum(o.warnMax) + (o.warnWhy ? '（' + o.warnWhy + '）' : '') + '：原版游戏可能忽略或拒绝；安装了解除上限的模组才有效';
     else if (o.warnMin !== undefined && cur < o.warnMin) w = '低于原版下限 ' + fmtNum(o.warnMin) + (o.warnWhy ? '（' + o.warnWhy + '）' : '') + '：原版游戏可能忽略或拒绝';
-    warn.textContent = w; warn.style.display = w ? 'block' : 'none';
+    warningDetail = w ? (o.warnDetail || w) : '';
+    warn.textContent = w && o.warnText ? o.warnText : w; warn.style.display = w ? 'block' : 'none';
     var b = bigText(cur); big.textContent = b && !o.unitBig ? '≈ ' + b : ''; big.style.display = b ? '' : 'none';
   }
-  function paint() { input.value = fmtNum(cur); setTimeout(function () { centerInput(input); }, 0); err.style.display = 'none'; input.classList.remove('bad'); if (!o.noSlider) paintSlider(); paintWarn(); }
-  function commit(v, key) { v = round(v); if (!ok(v)) { showErr(v); return; } cur = v; paint(); if (o.onChange) o.onChange(cur, key); }
+  function paint(keepInput) {
+    if (!keepInput) { input.value = cur === undefined ? '' : !isFinite(cur) ? numLabel(cur) : o.preservePrecision ? String(cur) : fmtNum(cur); editing = false; err.style.display = 'none'; input.classList.remove('bad'); }
+    input.setAttribute('placeholder', emptyText());
+    setTip(input, cur === undefined ? emptyText() + '，可直接输入' : '');
+    setTimeout(function () { centerInput(input); }, 0); if (!o.noSlider) paintSlider(); paintWarn();
+  }
+  function commit(v, key) { if (isFinite(v) && (!o.preservePrecision || key === 'drag')) v = round(v); if (!ok(v)) { showErr(v); return; } if (o.validate) { var why = o.validate(v); if (why) { input.classList.add('bad'); err.style.display = ''; err.textContent = why; return; } } cur = v; paint(); if (o.onChange) o.onChange(isFinite(cur) ? cur : nbtSpecialScalar(cur, specialSchema().nbtType), key); }
   function showErr(v) {
     input.classList.add('bad'); err.style.display = ''; clear(err);
-    var msg = isNaN(v) ? '请输入数字' : (max !== undefined && v > max ? '最大只能是 ' + fmtInt(max) : '最小只能是 ' + fmtInt(min));
+    var sc = specialSchema();
+    var msg = typeof v !== 'number' ? '请输入数字或明确的 NaN / Infinity / -Infinity' : !isFinite(v) ? (o.special ? (!sc || !sc.live ? '正在读取此字段的游戏 Codec；输入已保留，读取后可重新确认' : '此字段的游戏 Codec 不接受 ' + fmtNum(v) + '，输入已保留，未写入草稿') : '请输入有限数字；此字段不支持 NaN / Infinity') : (max !== undefined && v > max ? '最大只能是 ' + String(max) : '最小只能是 ' + String(min));
     err.appendChild(document.createTextNode(msg + (o.limitWhy ? '（' + o.limitWhy + '）' : '') + ' '));
-    if (!isNaN(v)) { var fix = h('span', { class: 'fix', text: '改为' + (v > max ? '上限' : '下限') }); fix.addEventListener('click', function () { commit(v > max ? max : min, 'fix'); }); err.appendChild(fix); }
+    if (typeof v === 'number' && isFinite(v)) { var fix = h('span', { class: 'fix', text: '改为' + (v > max ? '上限' : '下限') }); fix.addEventListener('click', function () { commit(v > max ? max : min, 'fix'); }); err.appendChild(fix); }
   }
   function fromEvent(e) {
     var r = track.getBoundingClientRect(), t = Math.max(0, Math.min(1, (e.clientX - r.left) / Math.max(1, r.width)));
@@ -325,16 +442,17 @@ function kNumber(value, o) {
     var up = function () { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); };
     document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
   });
-  function nudge(dir, e) { var mult = e && e.shiftKey ? 10 : 1; commit(cur + dir * ustep * mult, 'step'); }
+  function nudge(dir, e) { var from = editing ? readInput() : cur; if (from === undefined) { err.style.display = ''; err.textContent = '请先输入数值'; return; } if (from === null) { showErr(null); return; } if (!isFinite(from)) { err.style.display = ''; err.textContent = numLabel(from) + ' 不能逐步增减；可输入普通数字或拖动滑块'; return; } var mult = e && e.shiftKey ? 10 : 1; commit(from + dir * ustep * mult, 'step'); }
   onKey(track, { ArrowRight: function (e) { nudge(1, e); }, ArrowUp: function (e) { nudge(1, e); }, ArrowLeft: function (e) { nudge(-1, e); }, ArrowDown: function (e) { nudge(-1, e); } });
-  var minus = h('div', { class: 'k-step', text: '−', title: '减少（按住 Shift 一次 ×10）' }), plus = h('div', { class: 'k-step', text: '+', title: '增加（按住 Shift 一次 ×10）' });
-  minus.addEventListener('click', function (e) { nudge(-1, e); });
-  plus.addEventListener('click', function (e) { nudge(1, e); });
-  function typed() { var t = input.value.trim().replace(/[,，\s]/g, ''); if (t === '') { paint(); return; } var mult = 1; if (/万$/.test(t)) { mult = 1e4; t = t.slice(0, -1); } else if (/亿$/.test(t)) { mult = 1e8; t = t.slice(0, -1); } else if (/[kK]$/.test(t)) { mult = 1e3; t = t.slice(0, -1); } else if (/[mM]$/.test(t)) { mult = 1e6; t = t.slice(0, -1); } var n = Number(t) * mult; if (isNaN(n)) { showErr(NaN); return; } commit(n, 'type'); }
+  function readInput() { var t = input.value.trim().replace(/[,，\s]/g, ''); if (t === '') return undefined;
+    if (/^[+\-−]?∞$/.test(t)) return t.charAt(0) === '-' || t.charAt(0) === '−' ? -Infinity : Infinity;
+    if (/^(?:NaN|[+-]?Infinity)$/i.test(t)) return /^NaN$/i.test(t) ? NaN : t.charAt(0) === '-' ? -Infinity : Infinity;
+    var mult = 1; if (/万$/.test(t)) { mult = 1e4; t = t.slice(0, -1); } else if (/亿$/.test(t)) { mult = 1e8; t = t.slice(0, -1); } else if (/[kK]$/.test(t)) { mult = 1e3; t = t.slice(0, -1); } else if (/[mM]$/.test(t)) { mult = 1e6; t = t.slice(0, -1); } var n = t === '' ? NaN : Number(t) * mult; return isNaN(n) ? null : n; }
+  function typed() { var n = readInput(); if (n === undefined) paint(); else if (n === null) showErr(null); else commit(n, 'type'); }
   input.addEventListener('change', typed);
-  input.addEventListener('input', function () { centerInput(input); err.style.display = 'none'; input.classList.remove('bad'); });
+  input.addEventListener('input', function () { editing = true; centerInput(input); err.style.display = 'none'; input.classList.remove('bad'); });
   onKey(input, { Enter: function () { typed(); input.blur && input.blur(); }, ArrowUp: function (e) { nudge(1, e); }, ArrowDown: function (e) { nudge(-1, e); } });
-  var field = h('div', { class: 'k-stepper' }, [minus, input, plus, o.unit ? h('span', { class: 'u', text: o.unit }) : null, big]);
+  var field = kStepper(input, { onStep: nudge, unit: o.unit, extra: big });
   wrap.appendChild(h('div', { class: 'k-numrow' }, [field, o.noSlider ? null : track]));
   wrap.appendChild(err); wrap.appendChild(warn);
   if (o.presets && o.presets.length) {
@@ -343,7 +461,19 @@ function kNumber(value, o) {
     wrap.appendChild(pr);
   }
   paint();
-  return { el: wrap, set: function (v) { cur = v; paint(); }, get: function () { return cur; } };
+  return { el: wrap, set: function (v) { cur = v === undefined ? undefined : nbtNumberValue(v); paint(editing && document.activeElement === input); }, get: function () { return cur; }, commitInput: function () { typed(); return !input.classList.contains('bad'); } };
+}
+
+/* Compact vector: reuse the standard numeric input width; wrap complete axes on narrow pages. */
+function kVector(values, o) {
+  o = o || {}; var axes = o.axes || ['X', 'Y', 'Z'], numbers = [], el = h('div', { class: 'k-vector' });
+  axes.forEach(function (axis, i) {
+    var q = {}; Object.keys(o).forEach(function (k) { if (k !== 'axes' && k !== 'onChange') q[k] = o[k]; });
+    q.noSlider = true; q.onChange = function (v) { if (o.onChange) o.onChange(i, v); };
+    var num = kNumber(values[i], q); numbers.push(num);
+    el.appendChild(h('div', { class: 'k-vector-axis' }, [h('span', { class: 'k-vector-label', text: axis }), num.el]));
+  });
+  return { el: el, set: function (v) { numbers.forEach(function (n, i) { n.set(v[i]); }); }, get: function () { return numbers.map(function (n) { return n.get(); }); } };
 }
 
 /* 颜色：value 为 0xRRGGBB 整数或 null；palette 为 16 色 + 自定义 */
@@ -391,7 +521,7 @@ function kEffect(text, tone) {
 /* 提示文字（一小段灰字说明、错误、备注）。tone：'sub'（默认，灰色小字）/ 'note'（备注，下面留白）/ 'err'（错误）/ 'hint'（提示）。
    新写的提示一律用它，不要再自己选类名。 */
 var HINT_CLASS = { sub: 'k-sub', note: 'world-note', err: 'ed-err', hint: 'ed-hint' };
-function kHint(text, tone) { return h('div', { class: HINT_CLASS[tone || 'sub'], text: text }); }
+function kHint(text, tone) { return h('div', { class: HINT_CLASS[tone || 'sub'] + (!tone || tone === 'sub' ? ' k-desc' : ''), text: text, title: !tone || tone === 'sub' ? text : '' }); }
 function kBtn(label, onClick, o) {
   o = o || {};
   var b = h('div', { class: 'k-btn' + (o.cls ? ' ' + o.cls : ''), title: o.title || '' }, [o.icon ? uiIcon(o.icon, 12) : null, label ? h('span', { text: label }) : null]);
@@ -460,12 +590,15 @@ function kCard(spec, ctx) {
     el.classList.toggle('off', !isOn());
   }
   card.update = function () {
+    var previousReads = ComponentReads; ComponentReads = card.depends || (card.depends = {});
+    try {
     var mod = card.comps.some(function (c) { return ctx.modified(c); });
     el.classList.toggle('mod', mod);
     if (tg) sw.classList.toggle('on', isOn());
     if (spec.value) { var v = spec.value(ctx); valEl.textContent = v === undefined || v === null ? '' : v; }
     sumEl.textContent = spec.summary ? (spec.summary(ctx) || '') : '';
     for (var i = 0; i < card.live.length; i++) card.live[i]();
+    } finally { ComponentReads = previousReads; }
   };
   card.update();
   if (KLAZY && collapsed && !spec.eager) throw new LazyCard(card);

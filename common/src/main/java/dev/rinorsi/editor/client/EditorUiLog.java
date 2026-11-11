@@ -41,6 +41,10 @@ final class EditorUiLog implements AutoCloseable {
             case "warn" -> Level.WARN; case "error" -> Level.ERROR; default -> null;
         };
         if (severity == null) return;
+        log(severity, msg.getAsString());
+    }
+
+    void log(Level severity, String message) {
         synchronized (this) {
             if (closed) return;
             long now = clock.getAsLong(); expire(received, now);
@@ -48,7 +52,7 @@ final class EditorUiLog implements AutoCloseable {
                 if (dropped < Long.MAX_VALUE) dropped++;
             } else {
                 received.addLast(now);
-                pending.addLast(new Entry(severity, sanitize(msg.getAsString()))); // Only accepted entries cost up to 1500 UTF-16 units.
+                pending.addLast(new Entry(severity, sanitize(message))); // Only accepted entries cost up to 1500 UTF-16 units.
             }
             if (asynchronous && worker == null) {
                 worker = Executors.newSingleThreadScheduledExecutor(task -> {

@@ -90,7 +90,7 @@ public final class RegistryWarmup {
         if (finished && ready.size() == futures.size()) completeNs = System.nanoTime();
     }
     public RegistryIndex index(String name) { return ready.get(name); }
-    private RegistryIndex error(String name,Throwable error) { if(!generation.equals("prime"))SearchChannel.failed(name,generation); return RegistryIndex.error(name,generation,error); }
+    private RegistryIndex error(String name,Throwable error) { dev.rinorsi.editor.EditorDiagnostics.failure("registry.warmup", name + " generation=" + generation, error); if(!generation.equals("prime"))SearchChannel.failed(name,generation); return RegistryIndex.error(name,generation,error); }
     public boolean complete() { return completeNs != 0; }
     public String generation() { return generation; }
     public Map<String, RegistryIndex> indexes() { return Collections.unmodifiableMap(ready); }

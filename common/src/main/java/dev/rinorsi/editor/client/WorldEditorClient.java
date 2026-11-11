@@ -17,10 +17,13 @@ public final class WorldEditorClient {
     private static WorldPageTarget.Binding binding;
     private static dev.rinorsi.editor.vault.PlayerPresetPage presetPage;
     private static OrielScreen openingOwner;
+    private static JsonObject openingPreset;
     private static final java.util.Set<String> abandonedOpens=new java.util.LinkedHashSet<>();
     private static String opening, pending, queued;
     private static JsonObject queuedPos;
     private static long deadline;
+    private static SelfPlayerCommands selfCommands;
+    private static boolean selfDocumentNotified;
     private WorldEditorClient() {}
     private static com.mojang.brigadier.builder.LiteralArgumentBuilder<Object> literal(String name) { return com.mojang.brigadier.builder.LiteralArgumentBuilder.literal(name); }
     private static <T> com.mojang.brigadier.builder.RequiredArgumentBuilder<Object,T> argument(String name, com.mojang.brigadier.arguments.ArgumentType<T> type) { return com.mojang.brigadier.builder.RequiredArgumentBuilder.argument(name,type); }
@@ -37,16 +40,20 @@ public final class WorldEditorClient {
             dispatcher.register(literal("cadeditor").then(block).then(literal("entity").executes(c -> queue("entity", null))).then(player));
         });
         ClientPlatform.get().onTick(mc -> {
+            if(selfCommands!=null&&selfDocumentCurrent())selfCommands.tick(mc);
             PlayerExtendedClient.tick();
             if (queued != null) { String kind = queued; var pos = queuedPos; queued = null; queuedPos = null; open(kind, pos); }
             if ((opening != null || pending != null) && System.nanoTime() > deadline) {
                 if(opening!=null)abandon(opening);
+                var owner=openingOwner;
                 String id = pending != null ? pending : opening; opening = null; pending = null;
-                openingOwner=null;
-                reject(id, "request_timeout", "服务器未确认世界编辑结果；保留草稿，请重新读取目标核对");
+                EditorWriteLog.warning("client.world.timeout",id,"outcome=unknown permission_denial_not_proven=true reason=no_matching_receipt");
+                openingOwner=null;openingPreset=null;
+                if(owner!=null)EditorPageHost.notice(owner,"服务器未确认目标切换；草稿已保留，请重新读取目标核对");
+                else reject(id, "request_timeout", "服务器未确认世界编辑结果；保留草稿，请重新读取目标核对");
             }
         });
-        ClientPlatform.get().onDisconnect(mc -> { PlayerExtendedClient.clear(); screen = null; binding = null; presetPage=null; opening = null; openingOwner=null; abandonedOpens.clear(); pending = null; queued = null; queuedPos=null; });
+        ClientPlatform.get().onDisconnect(mc -> { if(selfCommands!=null)selfCommands.cancel();selfCommands=null; PlayerExtendedClient.clear(); screen = null; binding = null; presetPage=null; opening = null; openingOwner=null; openingPreset=null; abandonedOpens.clear(); pending = null; queued = null; queuedPos=null; });
     }
     private static int queue(String kind, JsonObject pos) { queued = kind; queuedPos = pos; return 1; }
     public static void openSelf(){queue("player",null);}
@@ -88,7 +95,10 @@ public final class WorldEditorClient {
     private static void open(String kind, JsonObject pos) {
         var mc = Minecraft.getInstance(); if (mc.player == null || mc.level == null || active() || mc.gui.screen() instanceof OrielScreen) return;
         try {
-            if (!ClientPlatform.get().canSend(EditorPackets.Request.TYPE)) throw new EditorSessions.Failure("UNAVAILABLE", "服务器未安装物品工坊，无法读取或修改世界目标");
+            if (!ClientPlatform.get().canSend(EditorPackets.Request.TYPE)) {
+                if(kind.equals("player")&&pos==null){openCommandSelf(mc,null);return;}
+                throw new EditorSessions.Failure("UNAVAILABLE", "服务器未安装物品工坊；命令后端只支持自身玩家");
+            }
             var target = new JsonObject(); target.addProperty("dim", mc.level.dimension().identifier().toString());
             var picked = editorHit(mc);
             if (kind.equals("crosshair")) kind = picked instanceof EntityHitResult ? "entity" : "block";
@@ -106,12 +116,33 @@ public final class WorldEditorClient {
                 if(hit.getEntity() instanceof net.minecraft.world.entity.player.Player)target.addProperty("player","online");
             }
             beginOpen(target,null);
-        } catch (RuntimeException e) { opening = null; openingOwner=null; message((e instanceof EditorSessions.Failure f ? f.code + "：" : "") + e.getMessage()); }
+        } catch (RuntimeException e) { EditorWriteLog.failure("client.world.open_failure",opening,"kind="+kind,e);opening = null; openingOwner=null; message((e instanceof EditorSessions.Failure f ? f.code + "：" : "") + e.getMessage()); }
     }
     private static void beginOpen(JsonObject target,OrielScreen owner){
+        beginOpen(target,owner,null);
+    }
+    private static void beginOpen(JsonObject target,OrielScreen owner,JsonObject preset){
+        openingPreset=preset;
         opening="world-open-"+UUID.randomUUID();openingOwner=owner;deadline=System.nanoTime()+10_000_000_000L;
         var request=request("open",opening);request.add("slot",target);
-        try{send(request);}catch(RuntimeException e){abandon(opening);opening=null;openingOwner=null;throw e;}
+        try{send(request);}catch(RuntimeException e){abandon(opening);opening=null;openingOwner=null;openingPreset=null;throw e;}
+    }
+    private static void openCommandSelf(Minecraft mc,OrielScreen owner){
+        var commands=new SelfPlayerCommands(mc);var world=commands.world(mc);
+        if(screen!=owner||owner==null)show(world);
+        else{presetPage=null;binding=WorldPageTarget.Binding.opened(world);owner.driver().patch("world",world);PlayerExtendedClient.resetViews();}
+        if(selfCommands!=null)selfCommands.cancel();selfCommands=commands;
+        var pageOwner=screen;commands.bindDocument(()->screen==pageOwner?pageOwner.driver().document():null);
+        selfDocumentNotified=false;
+    }
+    private static boolean selfDocumentCurrent(){
+        if(selfCommands==null||selfCommands.documentCurrent())return true;
+        if(!selfCommands.documentStale())return false; // initial asynchronous Document load
+        pending=null;binding=null;
+        if(!selfDocumentNotified&&screen!=null&&screen.driver().document()!=null){
+            selfDocumentNotified=true;EditorPageHost.notice(screen,selfCommands.documentReason());
+        }
+        return false;
     }
     private static void abandon(String id){abandonedOpens.add(id);while(abandonedOpens.size()>32)abandonedOpens.remove(abandonedOpens.iterator().next());}
     public static void attachNavigation(DocumentDriver driver){
@@ -125,33 +156,56 @@ public final class WorldEditorClient {
             var mc=Minecraft.getInstance();if(mc.player==null||mc.level==null)throw new IllegalArgumentException("当前未进入世界");
             if(opening!=null||pending!=null||PlayerExtendedClient.busy())throw new IllegalArgumentException("上一笔编辑尚未收到回执，请稍后切换玩家");
             var selector=value.getAsJsonObject();
+            if(selector.size()==1&&selector.has("apply_preset")){
+                if(!ClientPlatform.get().canSend(EditorPackets.Request.TYPE))throw new IllegalArgumentException("套用玩家预设需要服务端安装物品工坊；客户端单装暂不支持整份预设套用");
+                var source=dev.rinorsi.editor.registry.VaultChannel.openPlayerPreset(StackCodec.string(selector,"apply_preset")).world();
+                var entry=new JsonObject();entry.add("id",source.getAsJsonObject("player").get("vault_id"));entry.add("name",source.getAsJsonObject("player").get("name"));entry.add("sections",source.getAsJsonObject("player").get("sections"));
+                var self=new JsonObject();self.addProperty("self",true);
+                beginOpen(WorldPageTarget.playerSlot(self,mc.level.dimension().identifier().toString()),owner,entry);return;
+            }
             if(selector.size()==1&&selector.has("vault_id")){
                 var page=dev.rinorsi.editor.registry.VaultChannel.openPlayerPreset(StackCodec.string(selector,"vault_id"));var world=page.world();
                 if(presetPage==null&&binding!=null)closeTarget(binding.slot());
+                if(selfCommands!=null)selfCommands.cancel();selfCommands=null;
                 if(screen!=owner){show(world);presetPage=page;}else{presetPage=page;binding=WorldPageTarget.Binding.opened(world);owner.driver().patch("world",world);}
                 queued=null;queuedPos=null;PlayerExtendedClient.resetViews();return;
             }
-            if(!ClientPlatform.get().canSend(EditorPackets.Request.TYPE))throw new IllegalArgumentException("服务器未安装物品工坊，无法读取或修改世界目标");
+            if(!ClientPlatform.get().canSend(EditorPackets.Request.TYPE)){
+                var target=WorldPageTarget.playerSlot(selector,mc.level.dimension().identifier().toString());
+                if("self".equals(StackCodec.string(target,"player"))){openCommandSelf(mc,owner);return;}
+                throw new IllegalArgumentException("服务器未安装物品工坊；命令后端只支持自身玩家");
+            }
             beginOpen(WorldPageTarget.playerSlot(value.getAsJsonObject(),mc.level.dimension().identifier().toString()),owner);
-        }catch(RuntimeException e){message("无法打开玩家数据："+e.getMessage());}
+        }catch(RuntimeException e){EditorWriteLog.failure("client.world.navigation_failure",opening,"phase=open_from_page",e);EditorPageHost.notice(owner,"无法打开玩家数据："+e.getMessage());}
     }
-    private static void closeTarget(JsonObject target){if(Minecraft.getInstance().getConnection()!=null){var close=request("close","world-close-"+UUID.randomUUID());close.add("slot",target);send(close);}}
+    private static void closeTarget(JsonObject target){if(Minecraft.getInstance().getConnection()!=null&&ClientPlatform.get().canSend(EditorPackets.Request.TYPE)){var close=request("close","world-close-"+UUID.randomUUID());close.add("slot",target);send(close);}}
     public static boolean receive(JsonObject result) {
+        if(selfCommands!=null&&presetPage==null&&!selfDocumentCurrent())return true;
         if (PlayerExtendedClient.receive(result)) return true;
         String id = result.has("requestId") ? result.get("requestId").getAsString() : "";
         if(abandonedOpens.remove(id)){if("opened".equals(result.get("status").getAsString()))closeTarget(result.getAsJsonObject("world").getAsJsonObject("slot"));return true;}
         if (opening != null && opening.equals(id)) {
-            var owner=openingOwner;opening = null;openingOwner=null;
-            if (!result.get("status").getAsString().equals("opened")) { message(result.get("reason").getAsString()); return true; }
+            var owner=openingOwner;var preset=openingPreset;opening = null;openingOwner=null;openingPreset=null;
+            if (!result.get("status").getAsString().equals("opened")) {
+                EditorWriteLog.warning("client.world.open_rejected",id,"code="+result.get("code")+" reason="+result.get("reason"));
+                if(owner!=null)EditorPageHost.notice(owner,result.get("reason").getAsString());
+                else message(result.get("reason").getAsString());
+                return true;
+            }
             var world=result.getAsJsonObject("world");
+            if(preset!=null)world.add("vault_apply",preset);
             if(owner!=null){
                 if(screen!=owner){if(Minecraft.getInstance().gui.screen()==owner)show(world);else closeTarget(world.getAsJsonObject("slot"));return true;}
+                if(selfCommands!=null)selfCommands.cancel();selfCommands=null;
                 presetPage=null;binding=WorldPageTarget.Binding.opened(world);pending=null;queued=null;queuedPos=null;PlayerExtendedClient.resetViews();
                 owner.driver().patch("world",world);
             }else show(world);
             return true;
         }
         if (pending == null || !pending.equals(id)) return false;
+        String resultContext="status="+result.get("status")+" code="+result.get("code")+" reason="+result.get("reason");
+        if("saved".equals(result.get("status").getAsString()))EditorWriteLog.event("client.world.result",id,resultContext);
+        else EditorWriteLog.warning("client.world.result",id,resultContext);
         if(result.get("status").getAsString().equals("saved"))binding=WorldPageTarget.Binding.opened(result.getAsJsonObject("world"));
         pending = null;
         if (screen != null) {
@@ -163,6 +217,7 @@ public final class WorldEditorClient {
         return true;
     }
     private static void show(JsonObject world) {
+        if(selfCommands!=null)selfCommands.cancel();selfCommands=null;
         presetPage=null;
         binding=WorldPageTarget.Binding.opened(world);
         var data = new JsonObject(); data.add("world", world); data.add("prefs", EditorPrefs.read());
@@ -172,22 +227,24 @@ public final class WorldEditorClient {
         owner.driver().onMessage("undo", value -> Minecraft.getInstance().execute(() -> apply(owner, value, true)));
         owner.driver().onClose(() -> {
             if (screen != owner) return;
-            try{if(binding!=null&&presetPage==null)closeTarget(binding.slot());}finally{screen=null;binding=null;presetPage=null;pending=null;}
+            try{if(binding!=null&&presetPage==null)closeTarget(binding.slot());}finally{if(selfCommands!=null)selfCommands.cancel();selfCommands=null;screen=null;binding=null;presetPage=null;pending=null;openingPreset=null;}
         });
     }
     private static void apply(OrielScreen owner, JsonElement value, boolean undo) {
-        if (screen != owner) return; String id = "";boolean reserved=false;
+        if (screen != owner) {EditorWriteLog.warning("client.world.apply_stale_page",null,"write_sent=false reason=page_owner_changed");return;} String id = "";boolean reserved=false;
         try {
             var edit = value.getAsJsonObject(); id = StackCodec.string(edit,"requestId");
+            EditorWriteLog.event("client.world.apply",id,"backend="+(presetPage!=null?"local_preset":selfCommands!=null?"vanilla_self":"editor_server")+" undo="+undo+" pending="+(pending!=null)+" binding="+(binding!=null));
+            if(selfCommands!=null&&presetPage==null&&!selfDocumentCurrent())throw new IllegalArgumentException(selfCommands.documentReason());
             if (pending != null||opening!=null) throw new IllegalArgumentException("上一笔世界编辑或目标切换尚未收到回执");
             if(binding==null)throw new IllegalArgumentException("世界编辑会话已关闭");
             var request=binding.bind(edit,undo);
             pending = id;reserved=true;deadline = System.nanoTime() + 10_000_000_000L;
-            if(presetPage!=null)receive(presetPage.apply(request));else send(request);
-        } catch (RuntimeException e) {if(reserved&&id.equals(pending))pending=null;reject(id,e instanceof EditorSessions.Failure f?f.code:e instanceof dev.rinorsi.editor.vault.VaultStore.Failure f?f.code:"invalid_request","玩家或世界数据保存失败："+e.getMessage()); }
+            if(presetPage!=null)receive(presetPage.apply(request));else if(selfCommands!=null)selfCommands.apply(Minecraft.getInstance(),request,WorldEditorClient::receive);else send(request);
+        } catch (RuntimeException e) {EditorWriteLog.failure("client.world.apply_failure",id,"reserved="+reserved+" backend="+(selfCommands!=null?"vanilla_self":"other"),e);if(reserved&&id.equals(pending)){pending=null;if(selfCommands!=null)selfCommands.cancel();}reject(id,e instanceof EditorSessions.Failure f?f.code:e instanceof dev.rinorsi.editor.vault.VaultStore.Failure f?f.code:"invalid_request","玩家或世界数据保存失败："+e.getMessage()); }
     }
     private static JsonObject request(String op, String id) { var r = new JsonObject(); r.addProperty("op",op); r.addProperty("requestId",id); return r; }
     private static void send(JsonObject request) { ClientPlatform.get().send(new EditorPackets.Request(dev.rinorsi.editor.world.WorldWire.encode(request))); }
-    private static void reject(String id, String code, String reason) { var r = request("result",id); r.addProperty("status","rejected"); r.addProperty("code",code); r.addProperty("reason",reason); if (screen != null) screen.driver().patch("result",r); else message(reason); }
+    private static void reject(String id, String code, String reason) { EditorWriteLog.warning("client.world.rejected",id,"code="+code+" reason="+reason);var r = request("result",id); r.addProperty("status","rejected"); r.addProperty("code",code); r.addProperty("reason",reason); if (screen != null) screen.driver().patch("result",r); else message(reason); }
     private static void message(String reason) { EditorToast.show(EditorToast.Level.ERROR, reason); }
 }

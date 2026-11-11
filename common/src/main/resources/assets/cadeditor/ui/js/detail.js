@@ -61,7 +61,8 @@ function openDetail(o) {
   var secs = useCard ? [{ id: 'all', label: title, keys: null }] : detailSections(cid), sel = secs[0].id;
   UI.detail = o; UI.detailSel = UI.detailSel && UI.detailCid === cid ? UI.detailSel : sel; UI.detailCid = cid;
   if (!secs.some(function (s) { return s.id === UI.detailSel; })) UI.detailSel = secs[0].id;
-  var nav = h('div', { class: 'advnav' }), main = h('div', { class: 'advmain', id: 'detailmain' });
+  if (!useCard) Reg.formStatus(cid);
+  var nav = h('div', { class: 'detail-tabs' }), main = h('div', { class: 'advmain', id: 'detailmain' });
   var rst = h('div', { class: 'k-btn det-reset', title: '放弃这里的修改，使用物品原本的值' }, [h('span', { text: '恢复默认' })]);
   activate(rst, function () { var cs = o.cid ? [o.cid] : []; if (o.key && !cs.length) cs = cardComps(o.key); cs.forEach(function (c) { Ctx.reset(c); }); if (WORLD_DETAIL.indexOf(cid) >= 0 && !Ctx.has(cid)) closeModal(); });
   var win = modalShell({ icon: o.icon || 'edit', title: title, sub: nameOfItem(Store.doc().id), actions: [rst], id: 'detailwin',
@@ -69,14 +70,14 @@ function openDetail(o) {
     body: h('div', { class: 'advbody' }, [secs.length > 1 ? nav : null, main]) });
   function paintNav() {
     clear(nav);
-    secs.forEach(function (s) { var it = h('div', { class: 'advnav-i' + (UI.detailSel === s.id ? ' on' : '') }, [h('span', { text: s.label })]); activate(it, function () { UI.detailSel = s.id; paintNav(); drawDetail(); }); nav.appendChild(it); });
+    secs.forEach(function (s) { var it = h('div', { class: 'ed-tab' + (UI.detailSel === s.id ? ' on' : ''), title: s.label }, [h('span', { text: s.label })]); activate(it, function () { UI.detailSel = s.id; paintNav(); drawDetail(); }); nav.appendChild(it); });
   }
   UI.detailSecs = secs;
-  paintNav(); openModal(win); windowify(win, 'detail'); drawDetail();
+  paintNav(); openModal(win, true); windowify(win, 'detail'); drawDetail();
 }
 function drawDetail() {
   var host = $('detailmain'), o = UI.detail; if (!host || !o) return;
-  var top = host.scrollTop; clear(host);
+  var top = host.scrollTop; clear(host); UI.detailRefresh = [];
   var cid = o.cid, d = Store.doc(), pad = h('div', { class: 'pad detail-pad' });
   host.appendChild(pad);
   var secs = UI.detailSecs || [], sec = secs.filter(function (s) { return s.id === UI.detailSel; })[0] || secs[0];
@@ -85,10 +86,10 @@ function drawDetail() {
     try { var card = makeCard(o.key || ['auto', cid]); if (card) { card.el.classList.add('in-detail'); if (card.setCollapsed) card.setCollapsed(false); pad.appendChild(card.el); UI.detailCard = card; } }
     finally { DETAIL_IN = false; }
   } else {
-    var c = CIDX[cid], sp = SPEC_FORMS[cid] || {}, val = d.comps[cid] !== undefined ? d.comps[cid] : clone(Ctx.proto(cid));
+    var c = CIDX[cid], sp = SPEC_FORMS[cid] || {}, val = Ctx.get(cid);
     var spec = { order: sec.keys || undefined, over: sp.over, compact: sp.compact, only: true };
     CURCID = cid;
-    pad.appendChild(renderNode(c.schema, val, function (v, op) { Store.set(cid, v, { key: 'f-' + cid + (op && op.key ? op.key : ''), structural: false }); }, { compId: cid, path: '', spec: spec }));
+    pad.appendChild(renderNode(c.schema, val, function (v, op) { Store.set(cid, v, { key: 'f-' + cid + (op && op.key ? op.key : ''), structural: false }); }, { compId: cid, path: '', spec: spec, refreshDefaults: UI.detailRefresh }));
   }
   host.scrollTop = top;
   decorate();

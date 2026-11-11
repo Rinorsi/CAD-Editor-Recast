@@ -1,0 +1,59 @@
+# 纯客户端自身玩家命令后端
+
+仅当 Editor Request 通道不可用且目标为自身时启用。单人集成服、双端安装仍走现有完整后端及原权限，不读 fallback 白名单。没有命令权限也能打开同步数据页，能力提示持续显示在底栏和页内容上方。
+
+## 扩展候选状态（2026-11-09）
+
+第二批冻结补丁已整合为5D15产物：在游戏模式、经验等级之外，增加本级整数经验点数、同维度位置/旋转、单个可同步属性基础值。Fabric26.1.2新哈希的26个必测实机用例已分轮覆盖，旧失败保留，最终归档完成，tester正式终态与清理验收通过。具体量化、容差、原始 NBT 基线、修饰符保留和未实机边界见[第二批合同](self-player-next-contract.md)。每笔仍只发一条修改命令，不承诺多字段原子提交。
+
+第二批同时修复保存等待期间把字段改回旧值时丢草稿的问题，并区分“缺少命令/权威查询权限”和“字段确实需要服务端”。独立复审的 26 项主用例及 7 项边界用例通过；这些是生产页面 VM 回归，不是整合产物的编译或 LAN 通过结论。新产物尚待构建和真实验收。下面保留第一批合同与证据范围，不能把第一批未适配的字段解释为第二批永久不可用。
+
+## 第一批范围（候选 49143，历史合同）
+
+- `playerGameType`：真实 `GameType.values()`；`gamemode <mode> @s`，会连带切换模式能力。
+- `experience.XpLevel`：整数 0–1000000（沿用编辑器安全上限）；`experience set @s <level> levels`。不写 XpP、XpTotal。
+- 每笔只允许其中一项。修改两项或混有受限字段时提交按钮提前受限，草稿保留；宿主也再次拒绝。无多命令原子性承诺。
+- 生命、吸收、饥饿、饱和、独立能力、选中槽位：在本页仅作为同步数据/本地草稿。库存写入由独立库存后端处理，不混入本页的自身状态命令。
+- 末影箱、名称、标签不作为客户端权威快照；属性永久修饰符及效果隐藏链不完整，整个属性效果页明确说明暂未提供。位置、重生、配方、成就、统计、存档名单本轮未提供命令适配，不发送扩展请求。以上“本轮未提供”不等于原版完全不支持相关命令。
+
+## 第一批能力合同
+
+新增可选 `world.capabilities = {backend:'vanilla_self', editable:[字段路径], reason:中文提示}`。没有该标记的完整后端不受限。字段列表取服务器下发的命令树：`data get entity` + 对应 `gamemode` 或 `experience set`。提交时重新检查。权限消失或查询被服务端过滤时，不假称成功。
+
+## 失败与权限诊断日志（2026-11-10）
+
+客户端 `logs/latest.log` 使用 `[CAD-Editor-Write]` 记录这条路径。`client.self.capabilities` 在打开/更新自身页时记录命令树中的 `data get entity`、`gamemode`、`experience set`、`teleport`、`attribute`，客户端获知的 gamemaster 标记、可编辑字段与提前只读原因。命令树只是能力提示，不作为服务器最终授权证据。
+
+每次提交以 requestId 关联 `client.world.apply`、`client.self.preflight`、`query.begin`、`command.sent` 和 `result`。终态包含是否已发出修改、查询次数/回包次数、错误码与中文原因；无响应仍记结果未知，不推断权限拒绝。回调/回读内部异常保留原异常堆栈；页面失效取消、打开失败、切换失败、同步拒绝及无匹配回执超时均记录。完整命令、NBT、坐标和玩家资料不写入这些诊断事件。
+
+能执行 `/gamemode` 并不证明服务器允许原版实体调试查询。看到 `gamemode_visible=true data_get_entity_visible=false` 时，可定位为前置命令树检查受限；`queries=1 replies=0 sent=false` 只能证明未收到前置查询响应，不能据此断言服务器拒绝了权限。
+
+## 权威确认
+
+这里没有轮询本地玩家值，也没有用 menu stateId。采用原版 `DebugQueryHandler.queryEntityTag`：请求和响应由原版 transactionId 关联，内部回调另绑定本次页面 requestId、connection/player/level 身份。
+
+1. 查询自身玩家 NBT；目标字段必须仍等于页面基线，否则不发送命令。
+2. 只发送一条固定 `@s` 命令。
+3. 再次查询自身 NBT；`playerGameType` 或 `XpLevel` 精确匹配后才发送带原 requestId 的 `saved`。这提供服务器查询响应证据，不依赖新建玩家同步 Mixin 或测试探针。
+4. 命令和查询使用不同的服务端执行队列，首次后查询可能读到旧值。不匹配时每隔 200ms 重发一次只读查询，直到目标值匹配或原有 8 秒总期限到达；修改命令始终只发送一次。前置查询基线不匹配仍直接拒绝，不发送修改命令。超时、断线、换世界或查询被其他调试查询占用时明确未知/拒绝并保留草稿。
+5. 第二次查询延迟到下一客户端 tick。三个版本的 `DebugQueryHandler.handleResponse` 都在调用回调后清空 callback，不能重入发起下一查询。
+
+会话同时绑定打开时的页面 Document。初始 Document 尚未解析时等待首次有效对象；绑定后 Document 改变或消失即永久失效。Apply、查询回调、延迟步骤、tick 和宿主回执入口均检查身份；失效后不继续写入或查询，不把旧 saved 应用到新页面，也不覆盖新草稿。若修改命令已经发送，提示结果未知并要求关闭后重新读取，不声称已取消服务器动作。
+
+此机制是查询前置校验，不是服务器 CAS；前置查询到执行间仍可能发生其他修改。命令权限与实体查询权限最终由服务器判定。`data get entity` 命令树仅为提前能力提示，实际 NBT 查询须服务端 `COMMANDS_GAMEMASTER`。查询无响应时不会发送写入命令。
+
+保存回读时，已确认字段清除草稿；等待期间新增的其他字段/槽位草稿保留，并重新显示限制。完整 NBT 及多字段 payload 在宿主再次拒绝。
+
+## 验证范围
+
+第一批候选 49143 的后续结果已齐：Orca Worker developer 实际六目标完整 check 通过（159 个 JavaExec 检查重新执行，14m57s），Orca Worker tester 的 Fabric 26.1.2 实际 LAN 23/23 通过。准确产物、哈希和日志见[客户端命令验证证据](client-only-hotbar.md)。这些结果不覆盖第二批整合源码。下面是实现阶段的历史交接记录，其中“未运行”仅描述当时 Worker 的执行范围。
+
+### 实现阶段历史交接（不代表最新验收状态）
+
+项目后续由 Orca Worker developer 统一完成三版本、两加载器的稳定候选编译与相称回归，日志为 `../Oriel-UI-Workspace/daily/2026-11-09/logs/client-inventory-vault/stable-six-target-gates.log` 及同目录 `stable-self-player-document-test.cjs.log`、`stable-ui-self-player-capabilities-test.cjs.log`。当前 Fabric 26.1.2 候选哈希为 `49143F44FAB953FA1343CD9C2B899F793EA8AA424491167F39AE114BD7232FC9`；真实 LAN 与最终完整回归仍待结果。下文保留自身字段实现 Worker 的原始执行范围，不能将其未运行 Gradle 与后续统一构建混为一谈。
+
+已执行 Node 自身能力/混合草稿/保存期间草稿测试、既有 world/playerx 回归，并检查 26.1.2、26.2、26.3 查询权限/transaction API 字节码。日志目录：`C:/Storage/Minecraft/project/Mods/Oriel-UI-Workspace/daily/2026-11-09/logs/self-player-capabilities`。未执行 Gradle、游戏或联网测试。
+
+交 sole Gradle developer：将 `node tools/ui-self-player-capabilities-test.cjs` 加入 UI gate；编译共用新增 `SelfPlayerCommands.java` 的三版本两加载器组合。没有额外事件/Mixin 注册要求。实机须覆盖纯客户端连接无 Editor 服务端，无 OP 生存提前只读提示、有 OP 生存改等级/模式且前后查询回读，撤权/断线/换世界/查询超时无误报，单人和双端完整字段不缩水，编辑期间新增草稿在 saved 后仍存在。
+
+`app.js` 由另一个 developer 持有：若 bridge 将 world/result 合并成一个 data patch，需按 world 然后 result 分别处理（原 else-if 会漏 result）。本任务不修改 app.js。

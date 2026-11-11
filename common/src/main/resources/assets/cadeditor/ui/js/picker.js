@@ -1,30 +1,97 @@
 var AUTO_BODY = {};   /* 通用卡片展开后的专门控件（cards4.js 填充） */
 /* 所有试听共用宿主的一条通道，按钮状态只取已确认的回执。 */
 var SoundPreview = {
-  id: '', state: 'stopped',
+  id: '', state: 'stopped', position: 0, duration: 0, ready: false, seekable: false,
   toggle: function (id, volume, pitch) {
+    this.send('toggle', id, volume, pitch);
+  },
+  send: function (action, id, volume, pitch, position) {
     if (!id) return;
-    if (typeof oriel === 'undefined' || !oriel.send || !oriel.data || !oriel.data.hostAudio) { toast('暂停试听需要新版物品工坊宿主，请更新模组并重启客户端', 'warn'); return; }
-    oriel.send('sound_preview', { action: 'toggle', id: id, volume: volume === undefined ? 1 : volume, pitch: pitch === undefined ? 1 : pitch });
+    if (typeof oriel === 'undefined' || !oriel.send || !oriel.data || !oriel.data.hostAudio) { toast('当前页面未接入声音试听', 'error'); if (typeof EditorDiag !== 'undefined') EditorDiag.warn('sound.preview.channel', 'hostAudio unavailable'); return; }
+    var request = {action:action,id:id}; if (volume !== undefined) request.volume = volume; if (pitch !== undefined) request.pitch = pitch;
+    if (position !== undefined) request.position = position;
+    if (oriel.send('sound_preview', request) === false) { toast('试听请求未被接受，请重试', 'error'); if (typeof EditorDiag !== 'undefined') EditorDiag.warn('sound.preview.send', id); }
   },
   accept: function (data) {
     if (!data) return;
-    if (data.state === 'error') { toast(data.error || '试听失败', 'warn'); return; }
-    this.id = data.id || ''; this.state = data.state; this.paint();
+    var oldProgressError = this.progressError, oldId = this.id;
+    this.id = data.id || ''; this.state = data.state; this.position = Math.max(0, Number(data.position) || 0); this.duration = Math.max(0, Number(data.duration) || 0); this.ready = !!data.ready; this.seekable = !!data.seekable; this.progressError = data.progressError || ''; this.paint();
+    if (data.error || data.state === 'error') toast(data.error || '试听失败', 'error');
+    else if (this.progressError && (oldId !== this.id || oldProgressError !== this.progressError)) toast(this.progressError, 'error');
   },
   paint: function () {
     Array.prototype.forEach.call(document.querySelectorAll('[data-sound-preview]'), function (button) { SoundPreview.paintButton(button); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-sound-player]'), function (node) { SoundPreview.paintPlayer(node); });
   },
   paintButton: function (button) {
-    var active = button.getAttribute('data-sound-preview') === this.id, playing = active && this.state === 'playing', paused = active && this.state === 'paused';
+    var active = button.getAttribute('data-sound-preview') === this.id, playing = active && this.state === 'playing';
+    var status = playing ? 'playing' : 'stopped'; if (button._previewState === status) return; button._previewState = status;
     clear(button); button.appendChild(playing ? h('span', { text: 'Ⅱ' }) : uiIcon('play', 14));
-    button.setAttribute('data-tip', playing ? '暂停试听' : paused ? '继续试听' : '试听');
-    button.setAttribute('aria-label', playing ? '暂停试听' : paused ? '继续试听' : '试听');
+    button.setAttribute('data-tip', playing ? '暂停试听' : '试听');
+    button.setAttribute('aria-label', playing ? '暂停试听' : '试听');
     button.classList.toggle('on', playing);
   },
   button: function (id, fn) {
     var button = h('div', { class: 'k-mini', 'data-sound-preview': id || '' });
     activate(button, function (ev) { ev.stopPropagation(); fn(); }); this.paintButton(button); return button;
+  },
+  player: function () {
+    var node = h('div', {class:'snd-player', 'data-sound-player':'true'});
+    node.appendChild(uiIcon('music', 14));
+    node.appendChild(h('span', {class:'snd-player-name'}));
+    var track = h('div', {class:'snd-track', role:'slider', tabindex:'0', 'aria-label':'试听进度'}, [h('div', {class:'snd-rail'}, [h('div', {class:'snd-fill'})])]);
+    node.appendChild(track);
+    node.appendChild(h('span', {class:'snd-time'}));
+    function seek(position, id) {
+      if (id !== SoundPreview.id || !SoundPreview.seekable) return;
+      SoundPreview.send('seek', id, undefined, undefined, Math.max(0, Math.min(SoundPreview.duration, position)));
+    }
+    track.addEventListener('mousedown', function (ev) {
+      if (ev.button !== 0 || !SoundPreview.seekable) return;
+      ev.preventDefault(); ev.stopPropagation(); track.focus();
+      var id = SoundPreview.id;
+      function move(e) {
+        if (SoundPreview.id !== id || !SoundPreview.seekable) { finish(null); return; }
+        var rect = track.getBoundingClientRect();
+        node._seekPosition = Math.max(0, Math.min(1, (e.clientX - rect.left) / Math.max(1, rect.width))) * SoundPreview.duration;
+        node._seekId = id; SoundPreview.paintPlayer(node);
+      }
+      function finish(e) {
+        document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', finish);
+        var position = node._seekPosition; node._seekPosition = undefined;
+        if (e && position !== undefined) seek(position, id);
+        SoundPreview.paintPlayer(node);
+      }
+      move(ev); document.addEventListener('mousemove', move); document.addEventListener('mouseup', finish);
+    });
+    track.addEventListener('keydown', function (ev) {
+      if (!SoundPreview.seekable) return;
+      var key = ev.key, step = ev.shiftKey ? 10 : 5, position = SoundPreview.position;
+      if (key === 'ArrowRight' || key === 'ArrowUp') position += step;
+      else if (key === 'ArrowLeft' || key === 'ArrowDown') position -= step;
+      else if (key === 'Home') position = 0;
+      else if (key === 'End') position = SoundPreview.duration;
+      else return;
+      ev.preventDefault(); ev.stopPropagation(); seek(position, SoundPreview.id);
+    });
+    this.paintPlayer(node); return node;
+  },
+  paintPlayer: function (node) {
+    function time(n) { n = Math.floor(n); return Math.floor(n / 60) + ':' + ('0' + n % 60).slice(-2); }
+    var name = node.querySelector('.snd-player-name'); name.textContent = this.id ? (Reg.nameOf('sounds', this.id) || this.id) : '未播放'; name.setAttribute('data-tip', this.id || '');
+    var track = node.querySelector('.snd-track'), position = this.duration > 0 ? Math.min(this.position, this.duration) : this.position;
+    if (node._seekPosition !== undefined && node._seekId === this.id && this.seekable) position = node._seekPosition;
+    track.setAttribute('aria-disabled', String(!this.seekable));
+    track.setAttribute('data-tip', this.seekable ? '点击或拖动跳转；方向键前后5秒' : this.progressError || (this.state === 'error' ? '试听失败' : this.state === 'stopped' ? '请先播放' : '等待音频和总时长加载'));
+    track.querySelector('.snd-fill').style.width = (this.duration > 0 ? 100 * position / this.duration : 0) + '%';
+    if (this.duration > 0 && this.ready) {
+      track.setAttribute('aria-valuemin', '0'); track.setAttribute('aria-valuemax', String(this.duration)); track.setAttribute('aria-valuenow', String(position));
+      track.removeAttribute('aria-valuetext');
+    } else {
+      track.removeAttribute('aria-valuemin'); track.removeAttribute('aria-valuemax'); track.removeAttribute('aria-valuenow');
+      track.setAttribute('aria-valuetext', this.state === 'playing' && !this.ready ? '加载中' : '暂无总时长');
+    }
+    node.querySelector('.snd-time').textContent = this.state === 'error' ? '试听失败' : this.state === 'playing' && !this.ready ? '加载中…' : time(position) + ' / ' + (this.duration > 0 ? time(this.duration) : '--:--');
   }
 };
 if (typeof oriel !== 'undefined' && oriel.on) oriel.on('data', function (data, key) { if (key === 'sound_preview') SoundPreview.accept(data.sound_preview || data); });
@@ -34,14 +101,32 @@ var ENCH_TAG_ZH = Labels.enchTag;
 var SOUND_GROUP_ZH = { block: '方块', entity: '实体', item: '物品', ui: '界面', music: '音乐', music_disc: '唱片', ambient: '环境', weather: '天气', event: '事件', particle: '粒子', enchant: '附魔', entity_effect: '效果', intentionally_empty: '空' };
 var EFFECT_CAT_ZH = { beneficial: '正面', harmful: '负面', neutral: '中性' };
 function pathOf(full) { var i = String(full).indexOf(':'); return i < 0 ? full : full.substring(i + 1); }
+function pickerId(id) { id = String(id); return id.charAt(0) === '#' ? '#' + Reg.full(id.substring(1)) : Reg.full(id); }
+/* -1 is the native permanent sentinel, not a negative number of seconds to scale. */
+function effectTicksFromSeconds(seconds) { return Number(seconds) === -1 ? -1 : Math.round(seconds * 20); }
+function effectSecondsFromTicks(ticks) { return Number(ticks) === -1 ? -1 : ticks / 20; }
+/* Reconcile the complete selection, retaining existing order and untouched payloads. */
+function pickerSyncList(list, ids, keyOf, make, update) {
+  var wanted = {}, have = {}; ids.forEach(function (id) { wanted[pickerId(id)] = true; });
+  var next = list.filter(function (entry) { return wanted[pickerId(keyOf(entry))]; }).map(function (entry) { var id = pickerId(keyOf(entry)); have[id] = true; var copy = clone(entry); if (update) update(copy, id); return copy; });
+  ids.forEach(function (id) { id = pickerId(id); if (!have[id]) { have[id] = true; next.push(make(id)); } });
+  return next;
+}
 
 /* o: { kind, title, sub, entries:[{full,name,sub,note,disabled,icon():el,tag}], cats:[{id,name,icon,filter(e)}], locked:{full:1}, single, custom:{placeholder}, confirmLabel, onConfirm(ids), preview(full), live } */
 function openPicker(o) {
   var openedAt = Date.now();
-  var sel = {}, selN = 0, catSel = 'all', limit = 80, q = '', vals = {}, defs = {}, PR = o.params || [];
+  var managing = o.selected !== undefined, initial = Array.isArray(o.selected) ? o.selected.slice() : Object.keys(o.selected || {});
+  if (!managing && o.single && o.initialId) initial = [Reg.full(o.initialId)];
+  var sel = {}, selN = 0, catSel = 'all', limit = 80, q = '', vals = clone(o.values || {}), defs = {}, PR = o.params || [], touched = {}, adopted = {};
+  initial.forEach(function (id) { if (!sel[id]) { sel[id] = 1; selN++; adopted[id] = 1; } });
+  if (managing) o.cats = [{ id: 'selected', name: '已选', icon: 'check' }].concat(o.cats);
   PR.forEach(function (p) { defs[p.key] = p.def; });
-  function valOf(full) { if (!vals[full]) { vals[full] = {}; PR.forEach(function (p) { vals[full][p.key] = defs[p.key]; }); } return vals[full]; }
-  function clampP(p, v, e) { var mx = p.max; if (p.maxOf && e && e[p.maxOf]) mx = e[p.maxOf]; v = Math.round(v); if (isNaN(v)) v = p.def; if (v < p.min) v = p.min; if (!p.soft && mx !== undefined && v > mx) v = mx; return v; }
+  function valOf(full) { if (!vals[full]) vals[full] = {}; PR.forEach(function (p) { if (vals[full][p.key] === undefined) vals[full][p.key] = defs[p.key]; }); return vals[full]; }
+  function changed(full, key) { if (!touched[full]) touched[full] = {}; touched[full][key] = true; }
+  function clampP(p, v, e) { if (p.permanent && v === -1) return -1; var mx = p.max; if (p.maxOf && e && e[p.maxOf]) mx = e[p.maxOf]; v = Math.round(v); if (isNaN(v)) v = p.def; if (v < p.min) v = p.min; if (!p.soft && mx !== undefined && v > mx) v = mx; return v; }
+  function validP(p, n) { return isFinite(n) && (n >= p.min || (p.permanent && n === -1)); }
+  function paintParamUnit(input, p, value) { var unit = input.parentNode && input.parentNode.querySelector('[data-unit="' + p.key + '"]'); if (unit) unit.textContent = p.permanent && value === -1 ? '永久' : p.unit; }
   /* 每行右侧的参数输入：只在勾选后出现 */
   function paramsEl(full, e) {
     if (!PR.length) return null;
@@ -49,26 +134,27 @@ function openPicker(o) {
     box.addEventListener('click', function (ev) { ev.stopPropagation(); }); box.addEventListener('mousedown', function (ev) { ev.stopPropagation(); });
     PR.forEach(function (p) {
       var inp = h('input', { class: 'k-input pkn', type: 'text', spellcheck: 'false' }); inp.value = String(cur[p.key]);
-      inp.addEventListener('input', function () { var n = parseInt(inp.value, 10); if (!isNaN(n) && n >= p.min) cur[p.key] = n; });
-      inp.addEventListener('blur', function () { cur[p.key] = clampP(p, parseInt(inp.value, 10), e); inp.value = String(cur[p.key]); });
+      inp.addEventListener('input', function () { var n = parseInt(inp.value, 10); if (validP(p, n)) { cur[p.key] = n; changed(full, p.key); paintParamUnit(inp, p, n); } });
+      inp.addEventListener('blur', function () { if (inp.value === String(cur[p.key]) && !(touched[full] && touched[full][p.key])) return; cur[p.key] = clampP(p, parseInt(inp.value, 10), e); inp.value = String(cur[p.key]); paintParamUnit(inp, p, cur[p.key]); changed(full, p.key); });
       inp.setAttribute('data-k', p.key);
       box.appendChild(h('span', { class: 'k-sub', text: p.label })); box.appendChild(inp);
-      if (p.unit) box.appendChild(h('span', { class: 'k-sub', text: p.unit }));
+      if (p.unit) box.appendChild(h('span', { class: 'k-sub', 'data-unit': p.key, text: p.permanent && cur[p.key] === -1 ? '永久' : p.unit }));
+      if (p.permanent) setTip(inp, '-1 表示永久');
     });
     return box;
   }
   /* 勾选时，这一行直接带上「统一设置」里当前的值 */
-  function adopt(full, e) { if (!PR.length) return; var cur = valOf(full); PR.forEach(function (p) { cur[p.key] = clampP(p, defs[p.key], e); }); syncRows(); }
+  function adopt(full, e) { if (!PR.length || adopted[full]) return; adopted[full] = 1; var cur = valOf(full); PR.forEach(function (p) { cur[p.key] = clampP(p, defs[p.key], e); }); syncRows(); }
   function syncRows() {
     Array.prototype.forEach.call(list.querySelectorAll('.addrow.on'), function (r) {
       var f = r.getAttribute('data-full'); if (!f || !vals[f]) return;
-      Array.prototype.forEach.call(r.querySelectorAll('.pkn'), function (i) { i.value = String(vals[f][i.getAttribute('data-k')]); });
+      Array.prototype.forEach.call(r.querySelectorAll('.pkn'), function (i) { var key = i.getAttribute('data-k'); i.value = String(vals[f][key]); PR.forEach(function (p) { if (p.key === key) paintParamUnit(i, p, vals[f][key]); }); });
     });
   }
   var list = h('div', { class: 'addlist' }), cats = h('div', { class: 'addcats' }), foot = h('div', { class: 'k-mf' });
   var info = h('span', { class: 'k-sub' }), confirm;
   var LZ = !!(o.lazy || o.lazySources);   /* 大目录：页面里没有整张表，列表完全来自宿主搜索 */
-  if (LZ) { var unsubLz = Reg.on(function (kind, kinds) { if (!$('modal')) { unsubLz(); return; } if ((kinds || []).indexOf('item_meta') >= 0) paint(); }); }
+  if (LZ) { var unsubLz = Reg.on(function (kind, kinds) { if (!$('modal')) { unsubLz(); return; } if ((kinds || []).some(function (k) { return k === 'item_meta' || k.indexOf('lookup:') === 0; })) paint(); }); }
   if (LZ) o.entries = o.entries || [];
   if (o.entriesFn && !LZ) { o.entries = o.entriesFn(); var unsub = Reg.on(function () { if (!$('modal')) { unsub(); return; } o.entries = o.entriesFn(); byFull = null; paintCats(); paint(); }); }
   var search = h('input', { class: 'k-input', type: 'text', placeholder: (o.searchHint || '搜索名称或 ID') + (o.custom && !o.custom.hash ? '；也可直接输入 模组id:名字' : ''), spellcheck: 'false' });
@@ -83,7 +169,7 @@ function openPicker(o) {
   function paintCats() {
     clear(cats);
     o.cats.forEach(function (c) {
-      var n = LZ ? (o.lazy ? (c.id === 'mod' ? (modCount === null ? '' : modCount) : (Reg.lazy[o.lazyKind] || '')) : '') : o.entries.filter(function (e) { return !c.filter || c.filter(e); }).length;
+      var n = c.id === 'selected' ? selN : LZ ? (o.lazy ? (c.id === 'mod' ? (modCount === null ? '' : modCount) : (Reg.lazy[o.lazyKind] || '')) : '') : o.entries.filter(function (e) { return !c.filter || c.filter(e); }).length;
       var t = h('div', { class: 'addcat' + (catSel === c.id ? ' on' : '') }, [uiIcon(c.icon || 'grid', 14), h('span', { text: c.name }), h('em', { class: 'n', text: String(n) })]);
       activate(t, function () { catSel = c.id; limit = 80; paintCats(); paint(); });
       cats.appendChild(t);
@@ -91,7 +177,7 @@ function openPicker(o) {
   }
   function paintFoot() {
     info.textContent = o.single ? (selN ? '已选：' + Object.keys(sel)[0] : (o.preview ? '点一条试听并选中' : '点一条选中')) : '已勾选 ' + selN + ' 项';
-    if (confirm) { confirm.classList.toggle('dim', !selN); }
+    if (confirm) { confirm.classList.toggle('dim', !selN && !managing); }
   }
   function pick(e, row) {
     if (e.disabled || (o.locked && o.locked[e.full])) return;
@@ -100,6 +186,14 @@ function openPicker(o) {
     else { sel[e.full] = 1; selN++; row.classList.add('on'); adopt(e.full, e); }
     if (o.single && o.preview) o.preview(e.full);
     paintFoot();
+    if (managing) paintCats();
+  }
+  function rowEdit(id) {
+    if (!o.onEditSelection) return null;
+    var btn = kBtn('编辑所选', function () { if (sel[id]) o.onEditSelection(id); }, { cls: 'pk-edit-selection', icon: 'edit' });
+    btn.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+    btn.addEventListener('click', function (e) { e.stopPropagation(); });
+    return btn;
   }
   /* 过滤：条目多时按时间片分批（kFilterSliced），每批都是一次新的脚本入口，不会触发单次入口指令预算而停页。
      分批期间旧列表保持原样，算完再换，不会闪空白。 */
@@ -117,7 +211,7 @@ function openPicker(o) {
   function hostFilters(cat) { return o.lazy && cat.id === 'mod' ? { namespaces: nsList.filter(function (n) { return n !== 'minecraft'; }) } : undefined; }
   function lazySourcesPaint(s, cat) {
     var srcs = o.lazySources.filter(function (x) { return cat.id === 'all' || x.group === cat.id; });
-    var quick = (cat.id === 'all' || cat.id === 'quick') ? (o.lazyQuick || []).filter(function (e) { return !s || kMatch(e.name + ' ' + e.full + ' ' + (e.sub || ''), s); }) : [];
+    var quick = (cat.id === 'all' || cat.id === 'quick') ? (o.lazyQuickFn ? o.lazyQuickFn() : o.lazyQuick || []).filter(function (e) { return !s || kMatch(e.name + ' ' + e.full + ' ' + (e.sub || ''), s); }) : [];
     var parts = [], pending = srcs.length, failed = '';
     if (!pending) { render(quick); return; }
     srcs.forEach(function (src, i) {
@@ -166,6 +260,10 @@ function openPicker(o) {
     if (filterCancel) { filterCancel(); filterCancel = null; }
     var cat = catOf(catSel), s = q.trim().toLowerCase();
     hostMore = null;
+    if (catSel === 'selected') {
+      var known = {}; (o.selectionEntries || []).concat(o.entries || []).forEach(function (e) { known[e.full] = e; });
+      render(Object.keys(sel).map(function (id) { return known[id] || { full: id, name: id, sub: '当前列表中的条目' }; }).filter(function (e) { return !s || kMatch(e.name + ' ' + e.full, s); })); return;
+    }
     if ((s || LZ) && hostPaint(s, cat)) return;
     localPaint(s, cat);
   }
@@ -182,17 +280,21 @@ function openPicker(o) {
     if (o.custom && (o.custom.hash ? /^#?[a-z0-9_.\-]+:[a-z0-9_.\/\-]+$/ : /^[a-z0-9_.\-]+:[a-z0-9_.\/\-]+$/).test(qq) && !o.entries.some(function (e) { return e.full === qq; })) {
       var crow = h('div', { class: 'addrow pk custom' + (sel[qq] ? ' on' : '') }, [o.single ? null : h('div', { class: 'pkc', text: '✓' }), h('div', { class: 'ic' }, [uiIcon('plus', 16)]), h('div', { class: 'tx' }, [h('div', { class: 'z', text: '使用自定义 ID：' + qq }), h('div', { class: 's', text: '不在列表里（比如还没加载的模组内容），按这个 ID 原样写入' })]), paramsEl(qq, null)]);
       crow.setAttribute('data-full', qq);
-      crow.addEventListener('click', function () { if (o.single) { sel = {}; selN = 0; } if (sel[qq]) { delete sel[qq]; selN--; crow.classList.remove('on'); } else { sel[qq] = 1; selN++; crow.classList.add('on'); adopt(qq, null); } paintFoot(); });
+      setTip(crow.querySelector('.tx'), qq);
+      var customEdit = rowEdit(qq); if (customEdit) crow.appendChild(customEdit);
+      crow.addEventListener('click', function () { pick({ full: qq }, crow); });
       list.appendChild(crow);
     }
     shown.forEach(function (e) {
       var locked = !!(o.locked && o.locked[e.full]);
       var kids = [o.single ? null : h('div', { class: 'pkc', text: '✓' })];
       kids.push(h('div', { class: 'ic' }, [e.icon ? e.icon() : uiIcon('grid', 16)]));
-      kids.push(h('div', { class: 'tx' }, [h('div', { class: 'z', text: e.name }), h('div', { class: 's', text: e.note || e.sub || e.full })]));
-      if (o.single && o.preview) kids.push(SoundPreview.button(o.soundOf ? o.soundOf(e.full) : e.full, function () { o.preview(e.full); }));
+      var text = h('div', { class: 'tx' }, [h('div', { class: 'z', text: e.name }), h('div', { class: 's', text: e.note || e.sub || e.full })]);
+      kids.push(text);
+      if (o.single && o.preview) kids.push(SoundPreview.button(o.soundOf ? o.soundOf(e.full) : e.full, function () { o.preview(e.full, 'toggle'); }));
       if (locked) kids.push(h('span', { class: 'k-tag dim', text: '已有' })); else if (e.tag) kids.push(h('span', { class: 'k-tag dim', text: e.tag }));
       var pe = paramsEl(e.full, e); if (pe) kids.push(pe);
+      var editButton = rowEdit(e.full); if (editButton) kids.push(editButton);
       var row = h('div', { 'data-full': e.full, class: 'addrow pk' + (locked || e.disabled ? ' has' : '') + (sel[e.full] ? ' on' : '') }, kids);
       row.addEventListener('click', function () { pick(e, row); });
       list.appendChild(row);
@@ -203,50 +305,57 @@ function openPicker(o) {
   }
   var sbox = kSearchBox(search, function (v) { q = v; limit = 80; paint(); });   // 回车或点「搜索」才搜
   var top = [sbox.el];
+  if (o.controls) top.push(o.controls);
   if (PR.length && !o.single) {
     var bar = h('div', { class: 'k-row pk-ctl pk-bulk' }, [h('span', { class: 'k-sub', text: '统一设置' })]);
     PR.forEach(function (p) {
       var bi = h('input', { class: 'k-input pkn', type: 'text', spellcheck: 'false' }); bi.value = String(p.def);
-      function apply() { var v = clampP(p, parseInt(bi.value, 10), null); if (p.maxOf) v = Math.max(p.min, parseInt(bi.value, 10) || p.def); defs[p.key] = v; bi.value = String(v); Object.keys(sel).forEach(function (f) { var e = o.entries.filter(function (x) { return x.full === f; })[0]; valOf(f)[p.key] = clampP(p, v, e); }); syncRows(); }
-      bi.addEventListener('blur', apply); bi.addEventListener('input', function () { var n = parseInt(bi.value, 10); if (isNaN(n) || n < p.min) return; defs[p.key] = n; Object.keys(sel).forEach(function (f) { var e = o.entries.filter(function (x) { return x.full === f; })[0]; valOf(f)[p.key] = clampP(p, n, e); }); syncRows(); }); onKey(bi, { Enter: apply });
-      bar.appendChild(h('span', { class: 'k-sub', text: p.label })); bar.appendChild(bi); if (p.unit) bar.appendChild(h('span', { class: 'k-sub', text: p.unit }));
-      if (p.maxOf) bar.appendChild(kBtn('各自最高', function () { Object.keys(sel).forEach(function (f) { var e = o.entries.filter(function (x) { return x.full === f; })[0]; if (e && e[p.maxOf]) valOf(f)[p.key] = e[p.maxOf]; }); syncRows(); }, { cls: 'sm' }));
+      var edited = false;
+      function apply() { if (!edited) return; var v = clampP(p, parseInt(bi.value, 10), null); if (p.maxOf) v = Math.max(p.min, parseInt(bi.value, 10) || p.def); defs[p.key] = v; bi.value = String(v); paintParamUnit(bi, p, v); Object.keys(sel).forEach(function (f) { var e = o.entries.filter(function (x) { return x.full === f; })[0]; valOf(f)[p.key] = clampP(p, v, e); changed(f, p.key); }); syncRows(); edited = false; }
+      bi.addEventListener('blur', apply); bi.addEventListener('input', function () { edited = true; var n = parseInt(bi.value, 10); if (!validP(p, n)) return; defs[p.key] = n; paintParamUnit(bi, p, n); Object.keys(sel).forEach(function (f) { var e = o.entries.filter(function (x) { return x.full === f; })[0]; valOf(f)[p.key] = clampP(p, n, e); changed(f, p.key); }); syncRows(); }); onKey(bi, { Enter: apply });
+      bar.appendChild(h('span', { class: 'k-sub', text: p.label })); bar.appendChild(bi); if (p.unit) bar.appendChild(h('span', { class: 'k-sub', 'data-unit': p.key, text: p.unit }));
+      if (p.permanent) setTip(bi, '-1 表示永久');
+      if (p.maxOf) bar.appendChild(kBtn('各自最高', function () { Object.keys(sel).forEach(function (f) { var e = o.entries.filter(function (x) { return x.full === f; })[0]; if (e && e[p.maxOf]) { valOf(f)[p.key] = e[p.maxOf]; changed(f, p.key); } }); syncRows(); }, { cls: 'sm' }));
     });
     top.push(bar);
   }
   if (o.single && o.preview) {
     var vol = 1, pit = 1;
-    o.preview = function (full) {
+    o.preview = function (full, action) {
       var sid = o.soundOf ? o.soundOf(full) : full;
-      if (!sid) { toast('这一项没有可试听的声音：游戏没有提供它的声音事件（游戏里的编辑器模组可能是旧版，请更新并重启）', 'warn'); dbg('试听失败：' + full + ' 没有 sound_event'); return; }
-      SoundPreview.toggle(sid, vol, pit); dbg('试听控制 ' + sid + ' 音量 ' + vol + ' 音调 ' + pit + '（来自 ' + full + '）');
+      if (!sid) { toast('这一项没有可试听的声音', 'warn'); dbg('试听失败：' + full + ' 没有 sound_event'); return; }
+      SoundPreview.send(action || 'play', sid, vol, pit); dbg('试听控制 ' + sid + ' 音量 ' + vol + ' 音调 ' + pit + '（来自 ' + full + '）');
     };
     top.push(h('div', { class: 'k-row pk-ctl' }, [h('span', { class: 'k-sub', text: '音量' }), kSeg([{ v: 0.5, label: '50%' }, { v: 1, label: '100%' }], 1, function (v) { vol = v; }).el, h('span', { class: 'k-sub', text: '音调' }), kSeg([{ v: 0.5, label: '低' }, { v: 1, label: '正常' }, { v: 1.5, label: '高' }, { v: 2, label: '很高' }], 1, function (v) { pit = v; }).el]));
   }
   var cancel = kBtn('取消', closeModal);
-  confirm = kBtn(o.confirmLabel || '添加所选', function () { if (!selN) return; var ids = Object.keys(sel); closeModal(); o.onConfirm(ids, vals); }, { cls: 'pri' });
-  foot.appendChild(info); (o.footExtra || []).forEach(function (b) { foot.appendChild(b); }); foot.appendChild(h('div', { class: 'grow' })); foot.appendChild(cancel); foot.appendChild(confirm);
-  var srcTag = h('span', { class: 'k-tag' + (o.live ? '' : ' dim'), text: o.live ? '游戏实时注册表' : '内置数据（未连接游戏）' });
+  confirm = kBtn(managing ? '确认修改' : o.confirmLabel || '添加所选', function () { if (!selN && !managing || o.validateConfirm && o.validateConfirm() === false) return; var ids = Object.keys(sel); closeModal(); o.onConfirm(ids, vals, { changes: touched, removed: initial.filter(function (id) { return !sel[id]; }) }); }, { cls: 'pri' });
+  foot.appendChild(info); (o.footExtra || []).forEach(function (b) { foot.appendChild(b); });
+  foot.appendChild(h('div', { class: 'grow' })); foot.appendChild(cancel); foot.appendChild(confirm);
+  var srcTag = h('span', { class: 'k-tag' + (o.live ? '' : ' dim'), text: Reg.preview() ? '浏览器样例预览' : (Reg.live() ? '游戏实时注册表' : '正在读取游戏实时数据') });
+  var pickerBody = h('div', { class: 'addbody' }, [cats, h('div', { class: 'addmain' }, [h('div', { class: 'addtop' }, top), list])]);
+  if (o.single && o.preview) pickerBody = h('div', {class:'snd-picker-body'}, [pickerBody, SoundPreview.player()]);
   var win = modalShell({ icon: o.icon || 'plus', title: o.title, sub: o.sub || '', actions: [srcTag], cls: 'addwin pickwin',
-    body: h('div', { class: 'addbody' }, [cats, h('div', { class: 'addmain' }, [h('div', { class: 'addtop' }, top), list])]), foot: foot });
+    body: pickerBody, foot: foot });
   paintCats(); paint(); paintFoot(); openModal(win, true); windowify(win, 'pick-' + (o.kind || 'x')); search.focus();
 }
 
 /* ---- 附魔 ---- */
 function openEnchantPicker(o) {   /* o: { itemId, any, present:{full:1}, stored, onConfirm(ids) } */
   var all = Reg.enchants(), item = Reg.full(o.itemId);
-  function fits(e) { return o.any || !e.supported || !!e.supported[item]; }
+  function fits(e) { return o.any || Reg.enchantFits(e, item) === true; }
   var tagCount = {}; all.forEach(function (e) { (e.tags || []).forEach(function (t) { tagCount[t] = (tagCount[t] || 0) + 1; }); });
   var tags = Object.keys(tagCount).sort(function (a, b) { return tagCount[b] - tagCount[a]; }).filter(function (t) { return tagCount[t] < all.length; }).slice(0, 9);
   var cats = [{ id: 'all', name: '全部', icon: 'grid' }];
   if (!o.any) cats.push({ id: 'fit', name: '适用于它', icon: 'check', filter: function (en) { return fits(en.src); } });
   tags.forEach(function (t) { cats.push({ id: t, name: ENCH_TAG_ZH[pathOf(t)] || pathOf(t), icon: pathOf(t) === 'curse' ? 'skull' : 'enchant', filter: function (en) { return (en.src.tags || []).indexOf(t) >= 0; } }); });
   if (all.some(function (e) { return Reg.isMod(e.full); })) cats.push({ id: 'mod', name: '模组', icon: 'cube', filter: function (en) { return Reg.isMod(en.full); } });
-  var entries = all.map(function (e) {
+  function entries() { return Reg.enchants().map(function (e) {
     var ok = fits(e);
-    return { src: e, full: e.full, max: e.max, name: e.name, sub: '最高 ' + e.max + ' 级' + (ok ? '' : ' · 通常不适用于此物品') + (e.desc && e.desc !== e.name ? ' · ' + e.desc : ''), tag: (e.tags || []).indexOf('minecraft:curse') >= 0 ? '诅咒' : '', icon: function () { return itemIcon(ENCH_ICON[pathOf(e.full)] || 'enchanted_book', 16); } };
-  });
-  openPicker({ kind: 'ench', title: '添加附魔', sub: o.stored ? '选择要存进书里的附魔' : '勾选后一次添加', icon: 'enchant', entries: entries, cats: cats, locked: o.present, live: !!(all.length && all[0].live), params: [{ key: 'level', label: '等级', def: 1, min: 1, max: 255, maxOf: 'max', soft: true, unit: '' }], searchHint: '搜索附魔名称或 ID', custom: { placeholder: '输入附魔 ID 手动添加，如 mymod:fireball，回车选中' }, onConfirm: o.onConfirm });
+    var fit = Reg.enchantFits(e, item);
+    return { src: e, full: e.full, max: e.max, name: e.name, sub: (e.max !== null ? '最高 ' + e.max + ' 级' : '最高等级尚未读取') + (ok ? '' : (fit === null ? ' · 适用关系正在读取' : ' · 通常不适用于此物品')) + (e.desc && e.desc !== e.name ? ' · ' + e.desc : ''), tag: (e.tags || []).indexOf('minecraft:curse') >= 0 ? '诅咒' : '', icon: function () { return itemIcon(ENCH_ICON[pathOf(e.full)] || 'enchanted_book', 16); } };
+  }); }
+  openPicker({ kind: 'ench', emptyReg: 'enchantment', title: '添加附魔', sub: o.stored ? '选择要存进书里的附魔' : '勾选后一次添加', icon: 'enchant', entriesFn: entries, cats: cats, selected: o.present, values: o.values, live: !Reg.preview(), params: [{ key: 'level', label: '等级', def: 1, min: 1, max: 255, maxOf: 'max', soft: true, unit: '' }], searchHint: '搜索附魔名称或 ID', custom: { placeholder: '输入附魔 ID 手动添加，如 mymod:fireball，回车选中' }, onConfirm: o.onConfirm });
 }
 
 /* ---- 状态效果 ---- */
@@ -256,7 +365,7 @@ function openEffectPicker(o) {   /* o: { present:{full:1}, full:true=带等级, 
   ['beneficial', 'neutral', 'harmful'].forEach(function (c) { cats.push({ id: c, name: EFFECT_CAT_ZH[c], icon: c === 'harmful' ? 'poison' : c === 'beneficial' ? 'regen' : 'flask', filter: function (e) { return e.cat === c; } }); });
   if (all.some(function (e) { return Reg.isMod(e.full); })) cats.push({ id: 'mod', name: '模组', icon: 'cube', filter: function (e) { return Reg.isMod(e.full); } });
   var entries = all.map(function (e) { return { full: e.full, name: e.name, sub: e.desc || e.full, cat: e.cat, tag: EFFECT_CAT_ZH[e.cat] || '', icon: function () { return effectIcon(pathOf(e.full), 16); } }; });
-  openPicker({ kind: 'fx', title: '添加状态效果', sub: '勾选后一次添加', icon: 'flask', entries: entries, cats: cats, locked: o.present, live: !!(all.length && all[0].live), params: o.noParams ? [] : (o.full ? [{ key: 'level', label: '等级', def: 1, min: 1, max: 255, soft: true }] : []).concat([{ key: 'seconds', label: '时长', def: o.full ? 30 : 8, min: 1, max: 1000000, soft: true, unit: '秒' }]), searchHint: '搜索效果名称或 ID', custom: { placeholder: '输入效果 ID 手动添加，如 mymod:frost，回车选中' }, onConfirm: o.onConfirm });
+  openPicker({ kind: 'fx', title: '添加状态效果', sub: '勾选后一次添加', icon: 'flask', entries: entries, cats: cats, selected: o.present, values: o.values, live: !!(all.length && all[0].live), params: o.noParams ? [] : (o.full ? [{ key: 'level', label: '等级', def: 1, min: 1, max: 255, soft: true }] : []).concat([{ key: 'seconds', label: '时长', def: o.full ? 30 : 8, min: 1, max: 1000000, soft: true, unit: '秒', permanent: true }]), searchHint: '搜索效果名称或 ID', custom: { placeholder: '输入效果 ID 手动添加，如 mymod:frost，回车选中' }, onConfirm: o.onConfirm });
 }
 
 /* ---- 音效：分类 + 点一下试听 + 确认 ---- */
@@ -264,7 +373,7 @@ function openSoundPicker(o) {   /* o: { current, onConfirm(full) } */
   var slk = Reg.lazyKind('sound_event');
   if (slk) {   // 音效目录很大：搜索走宿主；分类只有“全部 / 模组”（宿主按命名空间过滤）
     openPicker({ kind: 'snd', title: '选择音效', sub: o.current ? '当前：' + o.current : '', icon: 'music', single: true, entries: [], lazy: true, lazyKind: slk,
-      rowFn: function (r) { return { full: Reg.full(r.id), name: r.subtitle || r.name || r.id, sub: r.id, icon: function () { return uiIcon('music', 16); } }; },
+      rowFn: function (r) { return { full: Reg.full(r.id), name: Reg.soundLabel(r), sub: r.id, icon: function () { return uiIcon('music', 16); } }; },
       cats: [{ id: 'all', name: '全部', icon: 'grid' }, { id: 'mod', name: '模组', icon: 'cube' }], live: true, searchHint: '搜索音效名称、字幕或 ID', custom: { placeholder: '或输入音效 ID，回车选中' }, preview: function () {}, soundOf: function (full) { return full; },
       confirmLabel: '使用这个', onConfirm: function (ids) { o.onConfirm(ids[0]); } });
     return;
@@ -274,7 +383,7 @@ function openSoundPicker(o) {   /* o: { current, onConfirm(full) } */
   var cats = [{ id: 'all', name: '全部', icon: 'grid' }];
   Object.keys(groups).filter(function (g) { return g !== 'mod'; }).sort(function (a, b) { return groups[b] - groups[a]; }).slice(0, 12).forEach(function (g) { cats.push({ id: g, name: SOUND_GROUP_ZH[g] || g, icon: 'music', filter: function (e) { return e.group === g; } }); });
   if (groups.mod) cats.push({ id: 'mod', name: '模组', icon: 'cube', filter: function (e) { return e.group === 'mod'; } });
-  var entries = all.map(function (s) { return { full: s.full, name: s.sub || s.name, sub: s.full, group: s.group, icon: function () { return uiIcon('music', 16); } }; });
+  var entries = all.map(function (s) { return { full: s.full, name: s.name, sub: s.full, group: s.group, icon: function () { return uiIcon('music', 16); } }; });
   openPicker({ kind: 'snd', title: '选择音效', sub: o.current ? '当前：' + o.current : '', icon: 'music', single: true, entries: entries, cats: cats, live: !!(all.length && all[0].live), searchHint: '搜索音效名称、字幕或 ID', custom: { placeholder: '或输入音效 ID，回车选中' }, preview: function () {}, confirmLabel: '使用这个音效', onConfirm: function (ids) { o.onConfirm(ids[0]); } });
 }
 /* 音效输入框：当前值 + 试听 + 选择 */
@@ -302,7 +411,7 @@ function kRegSelect(o) {
   var nm = h("span", { class: "rs-name" }), idEl = h("span", { class: "rs-id" });
   function entry(id) {
     if (Reg.isLazy(o.reg)) return Reg.optionFor(o.reg, id);
-    var l = Reg.options(o.reg) || o.fallback || [], f = Reg.full(id);
+    var l = Reg.options(o.reg) || (Reg.preview() ? o.fallback : null) || [], f = Reg.full(id);
     for (var i = 0; i < l.length; i++) if (l[i].v === f || l[i].v === id) return l[i];
     return null;
   }
@@ -316,7 +425,7 @@ function kRegSelect(o) {
     idEl.textContent = (name === cur || name === humanId(shortId(cur)) && !e) ? (isTag ? cur : "") : cur;
   }
   var pick = kBtn("选择…", function () {
-    openRegPick({ reg: o.reg, tag: o.tag, current: cur, title: o.title, fallback: o.fallback, onEntityNbt: o.onEntityNbt, onPick: function (id) { cur = id; paint(); o.onChange(cur); } });
+    openRegPick({ reg: o.reg, tag: o.tag, current: cur, title: o.title, fallback: o.fallback, entityText: o.entityText, onEntityNbt: o.onEntityNbt, onPick: function (id) { cur = id; paint(); o.onChange(cur); } });
   }, { icon: "grid" });
   var kids = [h("div", { class: "rs-txt" }, [nm, idEl]), pick];
   if (o.allowClear) kids.push(kBtn("清除", function () { cur = ""; paint(); o.onChange(""); }, { icon: "close" }));
@@ -361,34 +470,35 @@ function kBlockState(value, onChange, o) {
 }
 /* ---- 属性：读游戏当前的 attribute 注册表（含模组属性） ---- */
 function openAttrPicker(o) {   /* o: { exclude:[short ids], onConfirm(fullIds) } */
-  var live = Reg.options('attribute');
-  var src = live || EDATA.attrs.map(function (a) { return { v: 'minecraft:' + a.id, label: a.name, sub: a.desc || a.id }; });
   var present = {}; (o.exclude || []).forEach(function (x) { present[Reg.full(x)] = 1; });
-  var entries = src.map(function (e) { return { full: Reg.full(e.v), name: optLabel(e), sub: e.v, icon: function () { return attrIconEl(shortId(e.v)); } }; });
-  var cats = [{ id: 'all', name: '全部', icon: 'grid' }];
-  if (entries.some(function (e) { return Reg.isMod(e.full); })) cats.push({ id: 'mod', name: '模组', icon: 'cube', filter: function (e) { return Reg.isMod(e.full); } });
-  openPicker({ kind: 'attr', title: '添加属性加成', sub: '勾选后一次添加', icon: 'plus', entries: entries, cats: cats, locked: present, live: !!live, searchHint: '搜索属性名称或 ID', custom: { placeholder: '' }, onConfirm: o.onConfirm });
+  function entries() {
+    var src = Reg.options('attribute') || (Reg.preview() ? EDATA.attrs.map(function (a) { return { v: Reg.full(a.id), label: a.name, sub: a.desc || a.id }; }) : []);
+    return src.map(function (e) { return { full: Reg.full(e.v), name: optLabel(e), sub: e.v, icon: function () { return attrIconEl(shortId(e.v)); } }; });
+  }
+  var cats = [{ id: 'all', name: '全部', icon: 'grid' }, { id: 'mod', name: '模组', icon: 'cube', filter: function (e) { return Reg.isMod(e.full); } }];
+  openPicker({ kind: 'attr', emptyReg: 'attribute', title: '添加属性加成', sub: '勾选后一次添加', icon: 'plus', entriesFn: entries, cats: cats, selected: o.selected, locked: present, live: !Reg.preview(), searchHint: '搜索属性名称或 ID', custom: { placeholder: '' }, onConfirm: o.onConfirm });
 }
 
 /* ---- 标签 / 条目 单选：工具规则、免疫伤害、修理材料。标签与条目都读游戏实时注册表，常用快捷项排最前，也可手输 #模组id:标签 ----
    o: { title, tagsReg:'block', entryReg:'block'|null, quick:[{v,label,sub}], tagsOnly, onConfirm(id) } */
 function openTagPicker(o) {
+  function quicks() { return (o.quick || []).filter(function (q) { return Reg.preview() || (q.v.charAt(0) === '#' ? Reg.entryState('tags:' + o.tagsReg, q.v.substring(1)) : (o.entryReg ? Reg.entryState(o.entryReg, q.v) : null)) === true; }); }
   var tk = Reg.lazyKind('tags:' + o.tagsReg), ek = o.entryReg && !o.tagsOnly ? Reg.lazyKind(o.entryReg) : null;
   if (tk || ek) {   // 标签 / 条目目录很大：各自问宿主，合并显示；常用快捷项（本地）排最前
     var srcs = [];
     if (tk) srcs.push({ kind: tk, group: 'tag', rowFn: function (r) { var v = '#' + Reg.full(r.id); return { full: v, name: r.name && r.name !== r.id ? r.name : r.id, sub: (r.count !== undefined ? r.count + ' 个成员' : '标签'), group: 'tag' }; } });
     if (ek) srcs.push({ kind: ek, group: 'entry', rowFn: function (r) { var e = Reg.rowToOpt(o.entryReg, r); return { full: e.v, name: optLabel(e), sub: e.v, group: 'entry', icon: o.entryIcon ? function () { return o.entryIcon(e); } : null }; } });
-    var qk = (o.quick || []).map(function (q) { return { full: q.v, name: q.label, sub: q.sub || q.v, group: 'quick' }; });
+    function qk() { return quicks().map(function (q) { return { full: q.v, name: q.label, sub: q.sub || q.v, group: 'quick' }; }); }
     var tcats = [{ id: 'all', name: '全部', icon: 'grid' }];
-    if (qk.length) tcats.push({ id: 'quick', name: '常用', icon: 'star' });
+    if ((o.quick || []).length) tcats.push({ id: 'quick', name: '常用', icon: 'star' });
     if (tk) tcats.push({ id: 'tag', name: '标签', icon: 'tag' });
     if (ek) tcats.push({ id: 'entry', name: '单个条目', icon: 'cube' });
-    openPicker({ kind: 'tagpick', title: o.title, sub: '', icon: 'tag', single: !o.multi, entries: [], lazySources: srcs, lazyQuick: qk, cats: tcats, live: true, searchHint: '搜索名称或 ID；也可输入 #模组id:标签', custom: { hash: true }, confirmLabel: o.multi ? '添加所选' : '使用这个', onConfirm: function (ids) { if (o.multi) o.onConfirm(ids); else o.onConfirm(ids[0]); } });
+    openPicker({ kind: 'tagpick', title: o.title, sub: '', icon: 'tag', single: !o.multi, selected: o.selected, controls: o.controls, validateConfirm: o.validateConfirm, footExtra: o.footExtra, entries: [], lazySources: srcs, lazyQuickFn: qk, cats: tcats, live: true, searchHint: '搜索名称或 ID；也可输入 #模组id:标签', custom: { hash: true }, confirmLabel: o.multi ? '添加所选' : '使用这个', onConfirm: function (ids) { if (o.multi) o.onConfirm(ids); else o.onConfirm(ids[0]); } });
     return;
   }
   function build() {
-    var quick = {}; (o.quick || []).forEach(function (q) { quick[q.v] = q; });
-    var out = (o.quick || []).map(function (q) { return { full: q.v, name: q.label, sub: q.sub || q.v, group: 'quick' }; });
+    var quick = {}; quicks().forEach(function (q) { quick[q.v] = q; });
+    var out = quicks().map(function (q) { return { full: q.v, name: q.label, sub: q.sub || q.v, group: 'quick' }; });
     var tags = Reg.options('tags:' + o.tagsReg) || [];
     tags.forEach(function (t) { var v = '#' + t.v; if (quick[v]) return; out.push({ full: v, name: t.v, sub: (t.n !== undefined ? t.n + ' 个成员' : '标签'), group: 'tag' }); });
     if (o.entryReg && !o.tagsOnly) (Reg.options(o.entryReg) || []).forEach(function (e) { out.push({ full: e.v, name: optLabel(e), sub: e.v, group: 'entry', icon: o.entryIcon ? function () { return o.entryIcon(e); } : null }); });
@@ -397,7 +507,7 @@ function openTagPicker(o) {
   var cats = [{ id: 'all', name: '全部', icon: 'grid' }, { id: 'quick', name: '常用', icon: 'star', filter: function (e) { return e.group === 'quick'; } }, { id: 'tag', name: '标签', icon: 'tag', filter: function (e) { return e.group === 'tag'; } }];
   if (o.entryReg && !o.tagsOnly) cats.push({ id: 'entry', name: '单个条目', icon: 'cube', filter: function (e) { return e.group === 'entry'; } });
   if (!(o.quick && o.quick.length)) cats.splice(1, 1);
-  openPicker({ kind: 'tagpick', title: o.title, sub: '', icon: 'tag', single: !o.multi, entriesFn: build, cats: cats, live: Reg.live(), searchHint: '搜索名称或 ID；也可输入 #模组id:标签', custom: { hash: true }, confirmLabel: o.multi ? '添加所选' : '使用这个', onConfirm: function (ids) { if (o.multi) o.onConfirm(ids); else o.onConfirm(ids[0]); } });
+  openPicker({ kind: 'tagpick', title: o.title, sub: '', icon: 'tag', single: !o.multi, selected: o.selected, controls: o.controls, validateConfirm: o.validateConfirm, footExtra: o.footExtra, entriesFn: build, cats: cats, live: Reg.live(), searchHint: '搜索名称或 ID；也可输入 #模组id:标签', custom: { hash: true }, confirmLabel: o.multi ? '添加所选' : '使用这个', onConfirm: function (ids) { if (o.multi) o.onConfirm(ids); else o.onConfirm(ids[0]); } });
 }
 
 regEnumTable('attribute_operation', OPS, function (x) { return x.v; }, function (id, n) { return { v: id, label: n, title: id }; });
@@ -406,8 +516,41 @@ regEnumTable('equipment_slot_group', SLOTS, function (x) { return x; }, function
 
 /* ---- 通用表单里的“选择…”：单选一个注册表条目，标签字段还能选 #标签；数据到达后列表自动刷新，也能手输 ---- */
 function openRegPick(o) {   /* o: { reg, tag, current, title, fallback, onPick(id), onEntityNbt(snbtText, entry) } */
-  if (o.reg === 'entity_type' && !o.tag && o.onEntityNbt && !o.footExtra) {
-    o = Object.assign({}, o, { footExtra: [kBtn('从保险库取生物', function () { openVault({ kind: 'entity', pickEntity: function (snbt, entry) { closeModal(); o.onEntityNbt(snbt, entry); } }); }, { icon: 'chest', title: '取出保险库里存好的整只生物（带外观、属性、装备等全部数据）' })] });
+  var fullData = !o.tag && !o.multi && ((o.reg === 'entity_type' && typeof o.onEntityNbt === 'function') || (o.reg === 'item' && typeof o.onStack === 'function'));
+  function editSelected(id) {
+    var selector = $('modal'), valid = nestedDraftGuard();
+    function commit(value) { if ($('modal') !== selector) return; closeModal(); if (o.reg === 'entity_type') o.onEntityNbt(value); else o.onStack(value); }
+    if (o.reg === 'entity_type') {
+      try {
+        var obj = o.entityText && o.current && Reg.full(o.current) === Reg.full(id) ? vaultEntityObj(o.entityText()) : { id: Reg.full(id) };
+        if (!obj.id) obj.id = Reg.full(id);
+        openEntityDraft(nbtMerge(obj, null), { commit: commit, valid: valid });
+      } catch (e) { if (typeof EditorDiag !== 'undefined') EditorDiag.error('entity.selection.edit', e); toast('生物数据无法读取：' + (e.message || e), 'error'); }
+    } else openNestedItem({ id: Reg.full(id), count: 1, comps: {}, removed: {} }, { title: '编辑所选物品', commitUnchanged: true, valid: valid, commit: commit });
+  }
+  if (o.reg === 'entity_type' && !o.multi) {
+    var fullEntity = !o.tag && typeof o.onEntityNbt === 'function';
+    var vaultPick = kBtn(fullEntity ? '从保险库取生物' : '从保险库选择类型', function () {
+      var selector = $('modal'), doc = Store.doc(), before = doc ? snapOf(doc) : null;
+      var world = typeof WE !== 'undefined' ? WE.w : null, revision = world && world.revision;
+      openVault({ kind: 'entity', stacked: true, pickEntity: function (snbt, entry) {
+        // The Vault restores this selector before delivering. Never write a stale form.
+        if ($('modal') !== selector || Store.doc() !== doc || (doc && snapOf(doc) !== before) ||
+            (typeof WE !== 'undefined' && (WE.w !== world || (world && world.revision !== revision)))) {
+          toast('编辑目标或草稿已变化，请重新选择；没有导入生物数据', 'warn'); return;
+        }
+        var payload;
+        try {
+          if (entry && entry.kind !== undefined && entry.kind !== 'entity') throw new Error('这一条不是生物');
+          payload = vaultEntityPayload(snbt);
+          if (!/^(?:[a-z0-9_.-]+:)?[a-z0-9/._-]+$/.test(payload.type)) throw new Error('生物类型 ID 格式无效');
+        } catch (e) { toast(e.message || '保险库生物数据无法读取', 'warn'); return; }
+        closeModal();
+        if (fullEntity) o.onEntityNbt(snbt, entry);
+        else { o.onPick(Reg.full(payload.type)); toast('仅选择类型；没有导入保险库中的属性、装备或其他生物数据', 'info'); }
+      } });
+    }, { icon: 'chest', title: fullEntity ? '取出保险库里存好的整只生物（带外观、属性、装备等全部数据）' : '此字段只保存实体类型 ID，不导入属性、装备或其他生物数据' });
+    o = Object.assign({}, o, { footExtra: (o.footExtra || []).concat([vaultPick]) });
   }
   if (o.reg === "sound_event") { openSoundPicker({ current: o.current, onConfirm: o.onPick }); return; }   // 和食用/穿戴音效是同一个带试听的音效选择窗
   if (o.reg === "jukebox_song" || o.reg === "instrument") {   // 唱片曲目 / 山羊角：带试听（用它们各自的声音事件）
@@ -416,20 +559,20 @@ function openRegPick(o) {   /* o: { reg, tag, current, title, fallback, onPick(i
     openPicker({ kind: "regpick-" + o.reg, emptyReg: o.reg, title: o.title || "选择", sub: "", icon: "music", single: true, entriesFn: buildS, cats: [{ id: "all", name: "全部", icon: "grid" }, { id: "mod", name: "模组", icon: "cube", filter: function (en) { return Reg.isMod(en.full); } }], live: Reg.live(), searchHint: "搜索名称或 ID", custom: {}, preview: function () {}, soundOf: function (full) { return snds[full]; }, confirmLabel: "使用这个", onConfirm: function (ids) { o.onPick(ids[0]); } });
     return;
   }
-  if (o.tag) { openTagPicker({ title: o.title || "选择标签或条目", tagsReg: o.reg, entryReg: o.reg, entryIcon: function (e) { return refIcon(o.reg, e.v); }, onConfirm: o.onPick }); return; }
+  if (o.tag) { openTagPicker({ title: o.title || "选择标签或条目", tagsReg: o.reg, entryReg: o.reg, entryIcon: function (e) { return refIcon(o.reg, e.v); }, footExtra: o.footExtra, onConfirm: o.onPick }); return; }
   function build() {
-    var l = Reg.options(o.reg) || o.fallback || [];
+    var l = Reg.options(o.reg) || (Reg.preview() ? o.fallback : null) || [];
     return l.map(function (e) { return { full: Reg.full(e.v), name: refName(o.reg, e), sub: e.v, icon: function () { return refIcon(o.reg, e.v); } }; });
   }
   var cats = [{ id: "all", name: "全部", icon: "grid" }, { id: "mod", name: "模组", icon: "cube", filter: function (en) { return Reg.isMod(en.full); } }];
   var lk = Reg.lazyKind(o.reg);
   if (lk) {   // 大目录：不在页面里，选择窗直接问宿主
     openPicker({ kind: "regpick-" + o.reg, emptyReg: o.reg, lazy: true, lazyKind: lk, rowFn: function (r) { var e = Reg.rowToOpt(o.reg, r); return { full: Reg.full(e.v), name: refName(o.reg, e), sub: e.v, icon: function () { return refIcon(o.reg, e.v); } }; },
-      footExtra: o.footExtra, title: o.title || "选择", sub: o.multi ? "勾选后一次添加" : "", icon: "grid", single: !o.multi, locked: o.locked, entries: [], cats: [{ id: "all", name: "全部", icon: "grid" }, { id: "mod", name: "模组", icon: "cube" }],
+      footExtra: o.footExtra, onEditSelection: fullData ? editSelected : null, initialId: fullData ? o.current : null, title: o.title || "选择", sub: o.multi ? "勾选后一次添加" : "", icon: "grid", single: !o.multi, selected: o.selected, locked: o.locked, entries: [], cats: [{ id: "all", name: "全部", icon: "grid" }, { id: "mod", name: "模组", icon: "cube" }],
       live: true, searchHint: "搜索名称或 ID", custom: { placeholder: "或输入 ID，回车选中" }, confirmLabel: o.multi ? "添加所选" : "使用这个", onConfirm: function (ids) { if (o.multi) o.onPickMany(ids); else o.onPick(ids[0]); } });
     return;
   }
-  openPicker({ kind: "regpick-" + o.reg, emptyReg: o.reg, hostKind: Reg.hostKind(o.reg), footExtra: o.footExtra, title: o.title || "选择", sub: o.multi ? "勾选后一次添加" : "", icon: "grid", single: !o.multi, locked: o.locked, entriesFn: build, cats: cats, live: Reg.live(), searchHint: "搜索名称或 ID", custom: { placeholder: "或输入 ID，回车选中" }, confirmLabel: o.multi ? "添加所选" : "使用这个", onConfirm: function (ids) { if (o.multi) o.onPickMany(ids); else o.onPick(ids[0]); } });
+  openPicker({ kind: "regpick-" + o.reg, emptyReg: o.reg, hostKind: Reg.hostKind(o.reg), footExtra: o.footExtra, onEditSelection: fullData ? editSelected : null, initialId: fullData ? o.current : null, title: o.title || "选择", sub: o.multi ? "勾选后一次添加" : "", icon: "grid", single: !o.multi, selected: o.selected, locked: o.locked, entriesFn: build, cats: cats, live: Reg.live(), searchHint: "搜索名称或 ID", custom: { placeholder: "或输入 ID，回车选中" }, confirmLabel: o.multi ? "添加所选" : "使用这个", onConfirm: function (ids) { if (o.multi) o.onPickMany(ids); else o.onPick(ids[0]); } });
 }
 /* 条目名：有翻译名就用翻译名；没有就用物品名（装备外观、方块和物品同名）；再不行才把路径变成易读的英文。完整 ID 不再当名字 */
 function refName(reg, e) {
@@ -488,7 +631,8 @@ var EMPTY_T0 = Date.now();
 function emptyReason(q, since, reg) {
   if (q && String(q).trim()) return "没有匹配“" + String(q).trim() + "”的项";
   if (reg && Reg.live() && Reg.unavailable(reg)) return Reg.unavailable(reg) + "。可以在上面的搜索框里直接输入完整 ID。";
-  if (!Reg.live()) return "游戏还没有把注册表发给编辑器（未连接游戏，或游戏里的编辑器模组需要更新并重启）";
+  if (!Reg.live()) return Reg.preview() ? "浏览器样例预览；可以手动输入 ID。" : "正在读取游戏实时数据；可以手动输入完整 ID。";
+  if (reg) { var kind = Reg.hostKind(reg), k = Reg.kinds[kind]; if (k && k.done && !k.unavail && !k.error) return "实时列表为空，可以手动输入完整 ID。"; }
   var waited = Date.now() - (since || EMPTY_T0);
   return waited < 4000 ? "正在向游戏读取…" : "游戏没有返回这类数据。常见原因：游戏里的编辑器模组还是旧版本，请更新并重启游戏";
 }

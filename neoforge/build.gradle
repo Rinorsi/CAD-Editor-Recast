@@ -1,9 +1,28 @@
 plugins { id 'multiloader-loader'; id 'net.neoforged.moddev' }
+if (orielEmbedded) {
+    dependencies {
+        jarJar("dev.oriel:oriel-neoforge-${minecraft_version}") {
+            transitive = false
+            version { strictly('[0.15.0,0.16.0)'); prefer(oriel_version.toString()) }
+        }
+    }
+}
+configurations.jarJar.incoming.afterResolve {
+    configurations.jarJar.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+        def id = artifact.moduleVersion.id
+        if (id.group == 'dev.oriel' && id.version != oriel_version)
+            throw new GradleException("Refusing to embed non-slim Oriel ${id.version}")
+    }
+}
 neoForge {
     version = neoforge_version
     accessTransformers.from(stonecutter.process(rootProject.file('common/src/main/resources/META-INF/accesstransformer.cfg'), 'build/stonecutter-processed/accesstransformer.cfg'))
     runs {
-        client { client(); gameDirectory = rootProject.file('../Oriel-UI-Workspace/daily/' + java.time.LocalDate.now() + "/run/editor-neoforge-${minecraft_version}-client") }
+        client {
+            client()
+            gameDirectory = rootProject.file('../Oriel-UI-Workspace/daily/' + java.time.LocalDate.now() + "/run/editor-neoforge-${minecraft_version}-client")
+            if (!providers.gradleProperty('editorSmokeRun').isPresent()) systemProperty('oriel.sourceRoot', rootProject.file('common').absolutePath)
+        }
         server { server(); programArguments.add('--nogui'); gameDirectory = rootProject.file('../Oriel-UI-Workspace/daily/' + java.time.LocalDate.now() + "/run/editor-neoforge-${minecraft_version}-server") }
     }
     mods { cadeditor { sourceSet sourceSets.main } }

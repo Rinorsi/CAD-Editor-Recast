@@ -42,7 +42,7 @@ public final class OfflinePlayerEdit {
             var data=DataFixTypes.PLAYER.updateToCurrentVersion(server.getFixerUpper(),raw,raw.getIntOr("DataVersion",-1));
             var nativeData=roundTrip(server,uuid,data);var editable=new CompoundTag();
             for(String k:new TreeSet<>(FIELDS))if(nativeData.contains(k))editable.put(k,nativeData.get(k).copy());
-            if(editable.toString().length()>WorldNbt.MAX_SNBT)PlayerExtendedEditor.fail("payload_too_large","离线玩家可编辑数据超过 24000 字符");
+            if(editable.toString().length()>WorldNbt.MAX_SNBT)PlayerExtendedEditor.fail("payload_too_large","离线玩家可编辑数据超过 1 Mi 字符");
             var summary=PlayerProfiles.loaded(server,data,p->PlayerProfiles.summary(p,PlayerProfiles.name(server,uuid)));
             return new Snapshot(path,PlayerExtendedEditor.hash(bytes),data,editable,summary);
         }catch(IOException e){throw io(e);}

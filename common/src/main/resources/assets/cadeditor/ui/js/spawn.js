@@ -5,6 +5,148 @@
 
 function spNum(v) { return fmtNum(+(+v).toFixed(3)); }
 
+/* The bucket tag has a limited loader. A matching entity_data component is
+   loaded separately by EntityType before that loader, without changing species. */
+function bucketMeta(d) { return Reg.itemMeta((d || Store.doc()).id) || {}; }
+function bucketData(d) { var v = effectiveGet(d || Store.doc(), 'bucket_entity_data'); return isObj(v) ? clone(v) : {}; }
+function bucketFullEntity(d) { var v = effectiveGet(d || Store.doc(), 'entity_data'); return isObj(v) ? clone(v) : {}; }
+function bucketEntityMatches(meta, data) { return data.id === undefined || (typeof data.id === 'string' && Reg.full(data.id) === meta.bucket_entity); }
+function bucketHealthAttribute(meta) {
+  var schema = meta.bucket_entity ? Reg.entitySchema(meta.bucket_entity) : null;
+  return schema && schema.available && (schema.attributes || []).filter(function (a) { return a.id === 'minecraft:max_health'; })[0];
+}
+function bucketHealthPlan(meta, requested) {
+  // Sulfur growth can reset attributes after entity_data has loaded.
+  if (meta.bucket_health_dynamic || requested < 0) return null;
+  var attr = bucketHealthAttribute(meta), data = bucketFullEntity();
+  if (!attr || !bucketEntityMatches(meta, data)) return null;
+  var row = (data.attributes || []).filter(function (a) { return Reg.full(a.id) === attr.id; })[0] || {};
+  var plan = linkedAttributePlan(attr, Object.assign({}, row, {base:esAttrBase(data, attr)}), requested);
+  if (!plan.changed) return null;
+  data.id = meta.bucket_entity; esAttrSet(data, attr, plan.base);
+  return {data:data, before:plan.before, after:plan.effective};
+}
+function bucketWriteEntity(data) {
+  var meta = bucketMeta(), before = bucketHealthRange(meta), after = bucketHealthRange(meta, data), values = {entity_data:data}, bucket = bucketData();
+  if (before && after && after.max < before.max && bucket.Health !== undefined && nbtNumberValue(bucket.Health) > after.max) {
+    nbtSetTyped(bucket, 'Health', after.max, 'f'); values.bucket_entity_data = bucket;
+  }
+  Store.setLinked(values, '桶内实体属性');
+}
+function bucketPreview(d, old) {
+  var meta = bucketMeta(d), data = bucketData(d), complete = bucketFullEntity(d), preview = bucketEntityMatches(meta, complete) ? complete : {}, ageKey = meta.bucket_age_key;
+  // Only the verified bucket age is a preview input. Full-entity equipment/Age
+  // in an opaque bucket tag must not look effective when its loader ignores it.
+  if (ageKey && data[ageKey] !== undefined) preview.Age = nbtNumberValue(data[ageKey]);
+  var entity = heroEntity(meta.bucket_entity, preview, old), comps = effectiveView(d), parts = [];
+  (meta.bucket_components || []).forEach(function (id) { var key = shortId(id); if (comps[key] !== undefined) parts.push(snbtKey(id) + ':' + toSnbt(comps[key], null, false)); });
+  if (parts.length) entity.setAttribute('components', '{' + parts.join(',') + '}');
+  return entity;
+}
+CARDS.bucketEntity = function () {
+  var card = eggCard('bucketEntity', 'paw', '桶内实体', '种类由桶决定，数据可自定义', ['bucket_entity_data']), meta = bucketMeta();
+  if (meta.bucket_entity) card.body.appendChild(h('div', { class:'egg-who' }, [h('span', { text:entityName(meta.bucket_entity), title:meta.bucket_entity }), h('span', { class:'k-sub', text:meta.bucket_entity })]));
+  else card.body.appendChild(kHint(meta.bucket_metadata_error ? '桶信息读取失败' : '读取桶内实体…', 'note'));
+  if (!meta.bucket_fields_verified) card.body.appendChild(kHint('专用字段未确认，可编辑原始 NBT', 'note'));
+  return card;
+};
+function bucketHealthRange(meta, entityData) {
+  var schema = meta.bucket_entity ? Reg.entitySchema(meta.bucket_entity) : null, health = null;
+  if (schema && schema.available) (schema.flags || []).some(function (f) { if (f.id === 'health' && typeof f.max === 'number' && isFinite(f.max) && f.max > 0) { health = f; return true; } return false; });
+  if (!health) return null;
+  var ratio = meta.bucket_health_dynamic ? meta.bucket_health_size_ratio : 1;
+  if (typeof ratio !== 'number' || !isFinite(ratio) || ratio < 1) return null;
+  var max = health.max * ratio, complete = entityData || bucketFullEntity(), attr = bucketHealthAttribute(meta);
+  if (!meta.bucket_health_dynamic && attr && bucketEntityMatches(meta, complete)) {
+    var row = (complete.attributes || []).filter(function (a) { return Reg.full(a.id) === attr.id; })[0] || {};
+    try { max = linkedAttributeValue(attr, row, esAttrBase(complete, attr)); } catch (ignored) {}
+  }
+  return { min:typeof health.min === 'number' ? health.min : 0, max:max, templateMax:health.max, dynamic:!!meta.bucket_health_dynamic };
+}
+function bucketHealthControl(meta, value, put) {
+  var hint = h('div', { class:'k-sub link',title:'点击查看放出规则' }), wrap = h('div'), input, number, detail = '';
+  var initialMax = (bucketHealthRange(meta) || {}).max;
+  function check() {
+    var range = bucketHealthRange(meta), raw = input.value.trim(), n = Number(raw.replace(/[fFdD]$/, '')), valid = raw !== '' && isFinite(n) && isFinite(Math.fround(n));
+    var message = '放出上限读取中…';
+    detail = '桶标签保存生命值；最大生命等属性写入类型匹配的 entity_data，放出时先加载实体数据，再加载桶标签。';
+    if (range) {
+      if (range.dynamic) { message = '放出上限 ' + fmtNum(range.templateMax) + '–' + fmtNum(range.max); detail += ' 上限随体型变化，成长可能重设生命。'; }
+      else if (valid && (n < range.min || n > range.max)) {
+        var plan = null; try { plan = bucketHealthPlan(meta, n); } catch (ignored) {}
+        message = plan ? '上限：' + fmtNum(plan.before) + ' → ' + fmtNum(plan.after) + '（同步）' : '放出时：' + fmtNum(n) + ' → ' + fmtNum(Math.max(range.min, Math.min(range.max,n)));
+      }
+      else message = initialMax !== undefined && range.max !== initialMax ? '上限：' + fmtNum(initialMax) + ' → ' + fmtNum(range.max) + '（同步）' : '放出上限 ' + fmtNum(range.max);
+    }
+    if (!range && meta.bucket_entity) {
+      var schema = Reg.entitySchema(meta.bucket_entity);
+      if (schema && schema.error) { message = '放出上限读取失败'; detail = String(schema.error); }
+      else if (schema === false || (schema && (schema.available === false || schema.available === true))) message = '未提供放出上限';
+    }
+    if (raw && !valid) message = '请输入有效的 Float 数值';
+    hint.textContent = message; number.classList.toggle('bad', !!raw && !valid);
+    return valid;
+  }
+  // The entity consumer's clamp is not a restriction on the bucket's NBT storage.
+  // Valid custom floats are writable even while the consumer range is loading.
+  number = wNum({t:'num',nbtType:'f'}, value, function (v) { if (check()) put(v); }, {placeholder:'未设置（游戏默认）',onEmpty:function () { put(undefined); }});
+  input = number.querySelector('input'); input.addEventListener('input', check); input.addEventListener('change', check);
+  activate(hint, function () { kPopover(hint, kHint(detail, 'hint'), {width:280}); });
+  wrap.appendChild(number); wrap.appendChild(hint); check(); return wrap;
+}
+CARDS.bucketFields = function () {
+  var meta = bucketMeta(), card = eggCard('bucketFields', 'sliders', '桶内生物设置', '留空使用游戏默认值', ['bucket_entity_data']);
+  if (!meta.bucket_fields_verified) return null;
+  (meta.bucket_fields || []).forEach(function (field) {
+    var key = field.key, value = bucketData()[key], label = ({Age:'生长时间（刻）',AgeLocked:'锁定生长',age:'生长时间（刻）',age_locked:'锁定生长',HuntingCooldown:'捕猎冷却（刻）'})[key] || (Labels.entFlag[key] || [key])[0], node;
+    function put(v) {
+      var data = bucketData(); if (v === undefined) delete data[key]; else if (field.type === 'float' || field.type === 'int') nbtSetTyped(data, key, v, field.type === 'float' ? 'f' : 'i'); else nbtPut(data, key, v);
+      var plan = null; if (key === 'Health' && v !== undefined) { try { plan = bucketHealthPlan(meta, nbtNumberValue(v)); } catch (ignored) {} }
+      if (plan) Store.setLinked({bucket_entity_data:data, entity_data:plan.data}, '桶内生命与上限：' + fmtNum(plan.before) + ' → ' + fmtNum(plan.after));
+      else Ctx.setSmart('bucket_entity_data', data, { label:'桶内实体 · ' + label });
+    }
+    if (key === 'Health' && field.type === 'float') node = bucketHealthControl(meta, value, put);
+    else if (field.type === 'boolean') {
+      node = kSeg([{v:'inherit',label:'未设置'},{v:'true',label:'是'},{v:'false',label:'否'}], value === undefined ? 'inherit' : nbtNumberValue(value) === true || nbtNumberValue(value) === 1 ? 'true' : 'false', function (v) { put(v === 'inherit' ? undefined : v === 'true'); }).el;
+    } else if (field.type === 'long') {
+      node = kInput(value === undefined ? '' : toSnbt(value, null, false).replace(/[lL]$/, ''), function (v) {
+        if (!v.trim()) { put(undefined); return; }
+        try { if (!/^[+-]?[0-9]+$/.test(v.trim())) throw new Error('请输入整数'); put(parseSnbtUser(v.trim() + 'L')); }
+        catch (e) { toast('字段 ' + key + '：' + (e.message || e), 'warn'); }
+      }, { placeholder:'未设置（游戏默认）' });
+    } else node = wNum({ t:field.type === 'int' ? 'int' : 'num', nbtType:field.type === 'float' ? 'f' : 'i', min:field.type === 'int' ? -2147483648 : undefined, max:field.type === 'int' ? 2147483647 : undefined }, value, put, {placeholder:'未设置（游戏默认）',onEmpty:function () { put(undefined); }});
+    card.body.appendChild(fieldRow(label, node, key));
+  });
+  return card;
+};
+CARDS.bucketAppearance = function () {
+  var meta = bucketMeta(), ids = meta.bucket_components || []; if (!ids.length) return null;
+  var card = eggCard('bucketAppearance', 'palette', '桶内生物外观', '外观保存在专用物品组件，不写到桶实体数据的旧 Variant 键', ids.map(shortId));
+  ids.forEach(function (id) { var key = shortId(id), val = effectiveGet(Store.doc(), key);
+    function put(v, o) { Ctx.setSmart(key, v, {key:o && o.key, label:'桶内生物外观'}); }
+    var sc = CIDX[key] && CIDX[key].schema;
+    // Even short enum lists retain manual IDs; options are the current host Codec/registry facts.
+    var control = sc && sc.t === 'str' && sc.en && !dyeFieldFor(key, '') ? combo({value:val,options:function () { return liveEnumOptions(key, '') || Reg.schemaEnumOptions(sc); },free:true,placeholder:'选择或手动输入 ID',onPick:put}) : renderComponentForm(key, val, put, Store.doc());
+    card.body.appendChild(fieldRow(CIDX[key] ? CIDX[key].name : id, control, id));
+  });
+  return card;
+};
+CARDS.bucketAttrs = function () {
+  var meta = bucketMeta(), data = bucketFullEntity();
+  var card = eggCard('bucketAttrs', 'sliders', '实体属性', '最大生命、体型等', ['entity_data']);
+  if (!bucketEntityMatches(meta, data)) { card.body.appendChild(kHint('实体类型不匹配，放出时忽略此数据', 'note')); return card; }
+  var schema = esReady(meta.bucket_entity, card.body);
+  if (schema) card.body.appendChild(esAttrList(schema, {get:bucketFullEntity, set:function (obj) { obj.id = meta.bucket_entity; bucketWriteEntity(obj); }, redraw:eggRedraw}));
+  return card;
+};
+CARDS.bucketEntityData = function () {
+  var meta = bucketMeta(), card = eggCard('bucketEntityData', 'code', '实体数据', 'SNBT 自定义字段', ['entity_data']);
+  var data = bucketFullEntity(); if (!data.id && meta.bucket_entity) data.id = meta.bucket_entity;
+  card.body.appendChild(worldMap(data, function (obj) { bucketWriteEntity(obj); }, false));
+  card.body.appendChild(Valid.badge('entity_data'));
+  return card;
+};
+
 /* ---------- 刷怪蛋 ---------- */
 function eggDefaultEntity() {
   var id = Ctx.doc().id, m = Reg.live() ? Reg.itemMeta(id) : false;
@@ -14,7 +156,7 @@ function eggDefaultEntity() {
 }
 /* 蛋现在会生成的生物：entity_data.id，没有就用蛋本来的生物 */
 function eggEntityOf(d) {
-  var ed = effectiveComps(d).entity_data;
+  var ed = effectiveView(d).entity_data;
   if (isObj(ed) && typeof ed.id === 'string' && ed.id) return ed.id;
   var m = Reg.live() ? Reg.itemMeta(d.id) : false;
   return m && m.spawn_egg_entity ? m.spawn_egg_entity : '';
@@ -44,10 +186,10 @@ function eggCard(id, icon, title, desc, comps) {
 CARDS.spawnEgg = function () {
   var card = eggCard('spawnEgg', 'paw', '生成的生物', '用这个蛋点击地面时生成的生物', ['entity_data']);
   var id = eggCur(), def = eggDefaultEntity(), info = id ? Reg.entityInfo(id) : null;
-  var sub = id ? Reg.full(id) + (def && Reg.full(id) === Reg.full(def) ? ' · 这个蛋本来的生物' : ' · 本来是' + entityName(def)) : '';
-  card.body.appendChild(esEntityHeader({ id: id, sub: sub, iconFn: function (n) { return eggIconOf(id, n); },
+  var sub = id ? Reg.full(id) : '', originHint = id && def && Reg.full(id) !== Reg.full(def) ? '本来是' + entityName(def) : '';
+  card.body.appendChild(esEntityHeader({ id: id, sub: sub, originHint: originHint, iconFn: function (n) { return eggIconOf(id, n); },
     onPick: function (x) { var o = clone(eggData()); o.id = Reg.full(x); Ctx.setSmart('entity_data', o, { label: '刷怪蛋生物' }); eggRedraw(); },
-    onEntityNbt: function (snbt) { var o = vaultEntityObj(snbt); NBT_FORCE.entity_data = true; Ctx.setSmart('entity_data', o, { label: '刷怪蛋生物（来自保险库）' }); eggRedraw(); },
+    onEntityNbt: function (snbt) { var o = vaultEntityObj(snbt); NBT_FORCE.entity_data = true; Ctx.setSmart('entity_data', o, { label: '刷怪蛋生物' }); eggRedraw(); },
     snbtText: eggEntityText }));
   if (id && info === null) card.body.appendChild(xEmpty('正在向游戏读取这只生物的信息…'));
   card.body.appendChild(Valid.badge('entity_data'));
@@ -89,15 +231,15 @@ CARDS.eggGear = function () {
 CARDS.eggData = function () {
   var id = eggCur(), card = eggCard('eggData', 'code', '其他数据', '上面没有的字段，直接按游戏的数据格式添加');
   var owned = esOwnedKeys(id ? Reg.entitySchema(id) : null), cur = eggData();
-  var rest = {}; Object.keys(cur).forEach(function (k) { if (k !== 'id' && !owned[k]) rest[k] = cur[k]; });
+  var rest = {}; Object.keys(cur).forEach(function (k) { if (k !== 'id' && !Object.prototype.hasOwnProperty.call(owned, k)) nbtPut(rest, k, nbtTake(cur, k)); });
   var sug = kBtn('常用字段', function () {
-    suggestEntityFields(id, function (k) { return owned[k] || Object.prototype.hasOwnProperty.call(rest, k); }, function (k, val) { try { mapEl.addField(k, val); } catch (e) { toast(e.message || String(e), 'warn'); } }, sug);
+    suggestEntityFields(id, function (k) { return Object.prototype.hasOwnProperty.call(owned, k) || Object.prototype.hasOwnProperty.call(rest, k); }, function (k, val) { try { mapEl.addField(k, val); } catch (e) { toast(e.message || String(e), 'warn'); } }, sug);
   }, { title: '从这只生物的默认数据里挑字段' });
   var mapEl = worldMap(rest, function (x) {
     if (Object.prototype.hasOwnProperty.call(x, 'id')) throw new Error('生物请在「生成的生物」里更换');
-    Object.keys(x).forEach(function (k) { if (owned[k]) throw new Error(k + ' 请在上面的卡片里修改'); });
+    Object.keys(x).forEach(function (k) { if (Object.prototype.hasOwnProperty.call(owned, k)) throw new Error(k + ' 请在上面的卡片里修改'); });
     var base = eggData(), o = clone(x);
-    Object.keys(base).forEach(function (k) { if (owned[k]) o[k] = base[k]; });
+    Object.keys(base).forEach(function (k) { if (Object.prototype.hasOwnProperty.call(owned, k)) nbtPut(o, k, nbtTake(base, k)); });
     eggWrite(o);
   }, false);
   card.body.appendChild(h('div', { class: 'egg-datahd' }, [h('div', { class: 'grow' }), sug]));
@@ -174,14 +316,14 @@ function spPool(arr, onChange, emptyText) {
     row: function (it, i) {
       var eid = it.data && it.data.entity && typeof it.data.entity.id === 'string' ? it.data.entity.id : '';
       var wt = xNumCtl(typeof it.weight === 'number' ? it.weight : 1, { min: 1, max: 1000000, step: 1, noSlider: true, onChange: function (v) { it.weight = v; onChange(); } }, true);
-      return { chevron: true, icon: eid ? entityIcon(eid, 14) : uiIcon('paw', 14), title: eid ? entityName(eid) : '（未选择生物）', sub: eid || '', tip: eid, right: wt.el, body: function () {
+      return { chevron: true, icon: eid ? entityIcon(eid, 14) : uiIcon('paw', 14), title: eid ? entityName(eid) : '（未选择生物）', sub: eid || '', tip: eid, right: wt.el, onDelete: function () { arr.splice(i, 1); onChange(); xl.select(-1); }, body: function () {
         return [
-          esEntityHeader({ id: eid, empty: '（未选择）',
+          esEntityHeader({ id: eid, empty: '（未选择）', snbtText: function () { return nbtMerge(it.data.entity, null); },
             onPick: function (x) { it.data = it.data || {}; it.data.entity = it.data.entity || {}; it.data.entity.id = Reg.full(x); onChange(); xl.draw(); },
             onEntityNbt: function (snbt) { it.data = it.data || {}; it.data.entity = vaultEntityObj(snbt); NBT_FORCE.block_entity_data = true; onChange(); xl.draw(); } }),
           eid ? esPanel({ type: Reg.full(eid), get: function () { return (it.data && it.data.entity) || { id: eid }; }, set: function (e) { it.data = it.data || {}; it.data.entity = e; onChange(); } }) : null,
           eid ? spEquipTable(it, onChange, function () { xl.draw(); }) : null,
-          xFoot('右上角的数字是权重：越大越容易被选中', function () { arr.splice(i, 1); onChange(); xl.select(-1); })
+          kHint('权重越大，越容易选中')
         ];
       } };
     }
@@ -212,16 +354,20 @@ CARDS.spawner = function () {
 function spEntityText(obj) { var e = obj && obj.SpawnData && obj.SpawnData.entity; if (!e) return '{}'; var t = null; try { var n = nbtParse(Valid.textOf(Store.doc(), 'block_entity_data')); if (n && n.map && n.map.SpawnData && n.map.SpawnData.map && n.map.SpawnData.map.entity) t = nbtPrint(n.map.SpawnData.map.entity, false); } catch (x) {} return t || toSnbt(e, null, false); }
 function buildMobSpawner(body, obj, beId, put) {
   /* 当前刷怪实体：SpawnData.entity.id（没写 = 新放下的刷怪笼还没有指定） */
-  var eid = obj.SpawnData && obj.SpawnData.entity && typeof obj.SpawnData.entity.id === 'string' ? obj.SpawnData.entity.id : '';
-  body.appendChild(xSec('paw', '刷什么生物'));
-  body.appendChild(esEntityHeader({ id: eid, empty: '（未指定）',
-    onPick: function (x) { obj.SpawnData = isObj(obj.SpawnData) ? obj.SpawnData : {}; obj.SpawnData.entity = isObj(obj.SpawnData.entity) ? obj.SpawnData.entity : {}; obj.SpawnData.entity.id = Reg.full(x); put(); },
-    onEntityNbt: function (snbt) { obj.SpawnData = isObj(obj.SpawnData) ? obj.SpawnData : {}; obj.SpawnData.entity = vaultEntityObj(snbt); NBT_FORCE.block_entity_data = true; put(); } }));
-  /* 刷出来的生物自己的设置：外观、开关、属性、状态效果、装备——和刷怪蛋 / 世界实体共用同一个面板，写进 SpawnData.entity */
-  if (eid) {
-    body.appendChild(xSec('paw', '刷出的生物', '外观、属性、效果、装备'));
-    body.appendChild(esPanel({ type: Reg.full(eid), get: function () { return obj.SpawnData.entity; }, set: function (e) { obj.SpawnData.entity = e; put(); } }));
+  var entityRegion = h('div', { class: 'spawner-entity' }); body.appendChild(entityRegion);
+  function paintEntity() {
+    clear(entityRegion);
+    var eid = obj.SpawnData && obj.SpawnData.entity && typeof obj.SpawnData.entity.id === 'string' ? obj.SpawnData.entity.id : '';
+    entityRegion.appendChild(xSec('paw', '刷什么生物'));
+    entityRegion.appendChild(esEntityHeader({ id: eid, empty: '（未指定）', snbtText: function () { return spEntityText(obj); },
+      onPick: function (x) { obj.SpawnData = isObj(obj.SpawnData) ? obj.SpawnData : {}; obj.SpawnData.entity = isObj(obj.SpawnData.entity) ? obj.SpawnData.entity : {}; obj.SpawnData.entity.id = Reg.full(x); put(); paintEntity(); },
+      onEntityNbt: function (snbt) { obj.SpawnData = isObj(obj.SpawnData) ? obj.SpawnData : {}; obj.SpawnData.entity = vaultEntityObj(snbt); NBT_FORCE.block_entity_data = true; put(); paintEntity(); } }));
+    if (eid) {
+      entityRegion.appendChild(xSec('paw', '刷出的生物', '外观、属性、效果、装备'));
+      entityRegion.appendChild(esPanel({ type: Reg.full(eid), get: function () { return obj.SpawnData.entity; }, set: function (e) { obj.SpawnData.entity = e; put(); } }));
+    }
   }
+  paintEntity();
   body.appendChild(xSec('list', '随机池', '有池子时，每次按权重从里面挑一种'));
   var pot = Array.isArray(obj.SpawnPotentials) ? obj.SpawnPotentials : [];
   var pool = spPool(pot, function () { if (pot.length) obj.SpawnPotentials = pot; else delete obj.SpawnPotentials; put(); }, '没有随机池，只刷上面的生物');

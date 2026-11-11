@@ -1,0 +1,17 @@
+// Explicitly opt-in. This sourceSet is never added to editor/main or release jars.
+gradle.projectsEvaluated {
+    def p = gradle.rootProject.findProject(':fabric:26.1')
+    if (p == null) return
+    p.sourceSets.create('clientOnlyProbe') {
+        java.srcDirs = [gradle.rootProject.file('fabric/src/autotest/java')]
+        java.include('dev/rinorsi/editor/clientonly/**')
+        resources.srcDirs = [gradle.rootProject.file('tools/client-only/resources')]
+        compileClasspath += p.sourceSets.main.compileClasspath
+    }
+    p.tasks.register('clientOnlyProbeJar', Jar) {
+        dependsOn p.tasks.named('clientOnlyProbeClasses')
+        archiveFileName = 'client-only-lan-instrumentation.jar'
+        destinationDirectory = p.layout.buildDirectory.dir('client-only-probe')
+        from(p.sourceSets.clientOnlyProbe.output)
+    }
+}

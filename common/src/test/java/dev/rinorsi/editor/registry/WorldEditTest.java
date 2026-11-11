@@ -118,19 +118,16 @@ public final class WorldEditTest {
         reject("out_of_reach",() -> WorldAccess.reach(false)); reject("chunk_unloaded",() -> WorldAccess.loaded(false));
         reject("player_target",() -> WorldAccess.nonPlayer(true)); reject("protected_area",() -> WorldAccess.area(false));
         // Verify the real one-target transport; the combined evidence file is not a protocol message.
-        //? if >=26.3 {
         for(var entry:captured.entrySet()) {
             var message=new JsonObject();message.add("world",entry.getValue());var encoded=WorldWire.encode(message);
             check(StackCodec.sameJson(WorldWire.decode(JsonParser.parseString(encoded).getAsJsonObject()),message),"full target snapshot wire roundtrip " + entry.getKey());
         }
-        //?} else {
-        /*var message = new JsonObject(); message.add("world",captured); var encoded = WorldWire.encode(message); check(StackCodec.sameJson(WorldWire.decode(JsonParser.parseString(encoded).getAsJsonObject()),message),"compressed large full inventory helper snapshot exact decimal wire values");
-        *///?}
         receipt.addProperty("status","PASSED"); receipt.addProperty("checks",checks); receipt.addProperty("mode","pure-jvm-factories-and-loaders-not-live-server");
         Path output = Path.of(args.length == 0 ? "logs/world-edit" : args[0]); Files.createDirectories(output);
         Files.writeString(output.resolve("captured.json"),new GsonBuilder().setPrettyPrinting().create().toJson(captured)); Files.writeString(output.resolve("receipt.json"),receipt.toString());
         System.out.println("PASS WorldEditTest " + checks + " checks; real block/entity factories, loaders, inventories, typed NBT, conflict and transport; live server pending");
         DoubleChestWorldEditTest.run(access);
+        JukeboxReplacementTest.run(access);
         BlockWorldEditTest.run(access,Path.of("logs/block-edit"));
     }
     private static void check(boolean condition,String message) { if (!condition) throw new AssertionError(message); checks++; }

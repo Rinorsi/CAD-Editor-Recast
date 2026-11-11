@@ -1,6 +1,9 @@
 CAD Editor Recast is the next generation of the author's own CAD Editor.
 
-Oriel UI 0.11.x is an external required dependency. It is based on Vellum by
-Max Leiter (MIT); Vellum's engine design is the inspiration for its UI engine.
-Its JAR retains its own notices and nested dependencies.
+Oriel UI 0.12.x (author: 云诺羲Rinorsi, https://github.com/Rinorsi/Oriel-UI)
+provides the UI runtime. Release builds embed the unmodified slim 0.13.0 JAR;
+external-dependency builds require a separately installed compatible Oriel.
+Oriel is based on Vellum, Copyright (c) 2026 Max Leiter (MIT).
+The embedded JAR retains the Oriel/Vellum MIT licenses, Rhino MPL-2.0
+notices and source/patch information, and font license notices.
 Minecraft textures and browser preview atlases are not distributed here.

@@ -18,8 +18,7 @@ public final class VaultGiveServer {
         if (player.isCreative()) EditorSessions.fail("creative_path_required", "创造模式请使用客户端创造栏位写入路径");
         if (player.connection == null || !player.isAlive())
             EditorSessions.fail("not_connected", "玩家已离线或当前状态无法接收物品");
-        if (request.toString().length() > EditorPackets.MAX_JSON)
-            EditorSessions.fail("payload_too_large", "保险库取出数据超过32767字符，未发放物品");
+        EditorWire.requirePayload(request.toString());
         VaultStore.checkDepth(request);
         JsonObject reply = RECEIPTS.computeIfAbsent(player.getUUID(), ignored -> new GiveReceipts()).execute(request, () -> write(player, request));
         // Record the mutation before network sends, so a send failure can never make a retry insert twice.

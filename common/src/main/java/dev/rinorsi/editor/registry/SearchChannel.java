@@ -11,7 +11,7 @@ import net.minecraft.resources.Identifier;
 
 /** Additive local-page search. MC capture stays on its owning thread; indexing/querying never does. */
 public final class SearchChannel {
-    private static final SearchCatalog CATALOG=new SearchCatalog();
+    private static final SearchCatalog CATALOG=new SearchCatalog((kind,error)->logFailure("search.build",kind,error));
     private static final ExecutorService QUERIES=new ThreadPoolExecutor(2,2,0,TimeUnit.MILLISECONDS,new ArrayBlockingQueue<>(32),r->{Thread t=new Thread(r,"cadeditor-search-query");t.setDaemon(true);return t;});
     private static final ExecutorService RESOURCES=new ThreadPoolExecutor(1,1,0,TimeUnit.MILLISECONDS,new ArrayBlockingQueue<>(32),r->{Thread t=new Thread(r,"cadeditor-search-resources");t.setDaemon(true);return t;});
     private static final CompletableFuture<Pinyin> PINYIN=CompletableFuture.supplyAsync(()->{try{return new Pinyin(SearchChannel.class.getResourceAsStream("/assets/cadeditor/ui/js/pinyin-data.js"));}catch(Exception e){throw new CompletionException(e);}},RESOURCES);
@@ -24,6 +24,10 @@ public final class SearchChannel {
     private static final class View {final SearchCatalog.Session session=new SearchCatalog.Session();Pending pending;int lastProgress=-1,lastTotal=-1;long lastUpdate;}
     private record Pending(String id,String kind,String query,int offset,int limit,List<String> ids,Set<String> namespaces,Set<String> tags,Object document,String generation,long token){}
     private SearchChannel(){}
+    private static void logFailure(String stage,String kind,Throwable error){
+        if(error instanceof RejectedExecutionException || error instanceof IllegalArgumentException && "INDEX_LIMIT".equals(error.getMessage())) dev.rinorsi.editor.EditorDiagnostics.warning(stage,kind,error);
+        else dev.rinorsi.editor.EditorDiagnostics.failure(stage,kind,error);
+    }
     public static void attach(DocumentDriver driver){
         VIEWS.put(driver,new LinkedHashMap<>());
         VIEW_DOCUMENTS.put(driver,driver.document());
@@ -40,21 +44,21 @@ public final class SearchChannel {
         // Reserve protocol-required sources before arbitrary lazy registries can fill the kind cap.
         // Reservation captures/encodes nothing; it prevents negotiation waiting forever at capacity.
         RegistrySnapshot.KINDS.values().forEach(path->CATALOG.reserve("minecraft:"+path));
-        for(String raw:List.of("item_model","camera_overlay","profile_texture","profile_cape","profile_elytra","loot_table","recipe"))CATALOG.reserve(canonical(raw));
+        for(String raw:List.of("item_model","camera_overlay","profile_texture","profile_cape","profile_elytra","loot_table","recipe","sprite_atlas","sprite"))CATALOG.reserve(canonical(raw));
         VIEWS.values().forEach(views->views.values().forEach(v->{v.session.cancel();v.pending=null;}));
         if(Minecraft.getInstance().level==null)return;
         var resources=Minecraft.getInstance().getResourceManager();
         try { english=CompletableFuture.supplyAsync(()->{
             Map<String,String> names=new HashMap<>();
             resources.listResources("lang",id->id.getPath().equals("lang/en_us.json")).forEach((id,resource)->{
-                try(var reader=resource.openAsReader()){JsonParser.parseReader(reader).getAsJsonObject().entrySet().forEach(e->{if(e.getValue().isJsonPrimitive())names.put(e.getKey(),e.getValue().getAsString());});}catch(Exception ignored){}
+                try(var reader=resource.openAsReader()){JsonParser.parseReader(reader).getAsJsonObject().entrySet().forEach(e->{if(e.getValue().isJsonPrimitive())names.put(e.getKey(),e.getValue().getAsString());});}catch(Exception error){dev.rinorsi.editor.EditorDiagnostics.warning("search.external_language_resource",id.toString(),error);}
             });return Map.copyOf(names);
-        },RESOURCES); } catch(RejectedExecutionException busy) { english=CompletableFuture.completedFuture(Map.of()); }
+        },RESOURCES).exceptionally(error->{logFailure("search.language_index","en_us",error);return Map.of();}); } catch(RejectedExecutionException busy) { logFailure("search.language_queue","en_us",busy);english=CompletableFuture.completedFuture(Map.of()); }
     }
     public static String canonical(String raw){
         if(raw.startsWith("tags:")){String suffix=raw.substring(5);return "tags:"+(suffix.indexOf(':')<0?"minecraft:":"")+suffix;}
         if(RegistrySnapshot.KINDS.containsKey(raw))return "minecraft:"+RegistrySnapshot.KINDS.get(raw);
-        if(ResourceIds.handles(raw)||raw.equals("tooltip_style")||raw.equals("equipment_asset")||raw.startsWith("enum:"))return raw;
+        if(SpriteCatalog.handles(raw)||ResourceIds.handles(raw)||raw.equals("tooltip_style")||raw.equals("equipment_asset")||raw.startsWith("enum:"))return raw;
         if(raw.equals("recipes"))return "minecraft:recipe";if(raw.equals("loot_tables"))return "minecraft:loot_table";
         return raw.indexOf(':')<0?"minecraft:"+raw:raw;
     }
@@ -75,9 +79,9 @@ public final class SearchChannel {
                     minimal.add(new SearchIndex.Row(id,name,string(row,"english_name",names.getOrDefault(key,"")),subtitle,tags,SearchRows.compact(row)));
                 }
                 CATALOG.build(kind,generation,minimal,py);
-            }catch(RuntimeException error){if(generation.equals(CATALOG.generation()))CATALOG.fail(kind,"INDEX_FAILED");}
+            }catch(RuntimeException error){if(generation.equals(CATALOG.generation())){logFailure("search.index_rows",kind,error);CATALOG.fail(kind,"INDEX_FAILED");}}
             return null;
-        },RESOURCES).exceptionally(error->{if(generation.equals(CATALOG.generation()))CATALOG.fail(kind,"INDEX_FAILED");return null;});
+        },RESOURCES).exceptionally(error->{if(generation.equals(CATALOG.generation())){logFailure("search.index_task",kind,error);CATALOG.fail(kind,"INDEX_FAILED");}return null;});
     }
     public static Map<String,Integer> counts(){return CATALOG.counts();}
     public static boolean currentGeneration(String generation){return generation.equals(CATALOG.generation());}
@@ -132,23 +136,24 @@ public final class SearchChannel {
         try{
             if(ResourceIds.handles(kind)||kind.equals("tooltip_style")||kind.equals("equipment_asset")){
                 var resources=mc.getResourceManager();CompletableFuture.runAsync(()->{
-                    try{JsonArray rows=ResourceIds.handles(kind)?ResourceIds.entries(resources,kind):kind.equals("tooltip_style")?RegistryChoices.tooltipStyles(resources):RegistryChoices.equipmentAssets(resources);offer(kind,generation,objects(rows));}catch(RuntimeException error){if(generation.equals(CATALOG.generation()))CATALOG.fail(kind,"INDEX_FAILED");}
+                    try{JsonArray rows=ResourceIds.handles(kind)?ResourceIds.entries(resources,kind):kind.equals("tooltip_style")?RegistryChoices.tooltipStyles(resources):RegistryChoices.equipmentAssets(resources);offer(kind,generation,objects(rows));}catch(RuntimeException error){if(generation.equals(CATALOG.generation())){logFailure("search.resources",kind,error);CATALOG.fail(kind,"INDEX_FAILED");}}
                 },RESOURCES);return;
             }
             if(RegistrySupplement.handles(kind)){
                 RegistrySupplement.read(mc,kind,null).whenComplete((result,error)->{
                     if(!generation.equals(CATALOG.generation()))return;
-                    if(error!=null)CATALOG.fail(kind,"INDEX_FAILED");else if(result.context().has("availability")&&result.context().get("availability").getAsString().equals("unavailable"))CATALOG.fail(kind,"UNAVAILABLE");else offer(kind,generation,objects(result.entries()));
+                    if(error!=null){logFailure("search.supplement",kind,error);CATALOG.fail(kind,"INDEX_FAILED");}else if(result.context().has("availability")&&result.context().get("availability").getAsString().equals("unavailable"))CATALOG.fail(kind,"UNAVAILABLE");else offer(kind,generation,objects(result.entries()));
                 });return;
             }
             if(CAPTURES.size()>=8)throw new IllegalArgumentException("BUSY");
             Iterator<JsonObject> iterator;
-            if(kind.startsWith("enum:"))iterator=objects(RegistryChoices.enumEntries(kind.substring(5))).iterator();
+            if(SpriteCatalog.handles(kind))iterator=SpriteCatalog.iterator(kind);
+            else if(kind.startsWith("enum:"))iterator=objects(RegistryChoices.enumEntries(kind.substring(5))).iterator();
             else {RegistrySnapshot snapshot=new RegistrySnapshot(mc.level.registryAccess(),id->{var event=mc.getSoundManager().getSoundEvent(id);return event==null?null:event.getSubtitle();});
                 iterator=kind.startsWith("tags:")?snapshot.tagIterator(Identifier.parse(kind.substring(5))):snapshot.iterator(Identifier.parse(kind));}
             CAPTURES.add(new Capture(kind,generation,iterator,new ArrayList<>()));
         }catch(RejectedExecutionException busy){CATALOG.fail(kind,"BUSY");}
-        catch(RuntimeException error){CATALOG.fail(kind,"UNKNOWN_KIND");}
+        catch(RuntimeException error){logFailure("search.capture_start",kind,error);CATALOG.fail(kind,SpriteCatalog.handles(kind)?"INDEX_FAILED":"UNKNOWN_KIND");}
     }
     private static List<JsonObject> objects(JsonArray rows){List<JsonObject> out=new ArrayList<>(rows.size());for(var row:rows)out.add(row.getAsJsonObject());return out;}
     /** Client tick only: bounded live capture and bounded result delivery; no indexing/filtering here. */
@@ -157,7 +162,7 @@ public final class SearchChannel {
         while(!CAPTURES.isEmpty()&&System.nanoTime()-start<350_000){var c=CAPTURES.peek();try{
             if(c.iterator().hasNext()){if(c.rows().size()>=SearchIndex.MAX_ROWS)throw new IllegalArgumentException("INDEX_LIMIT");c.rows().add(c.iterator().next());var slot=CATALOG.slot(c.kind());if(slot!=null)slot.progress.set(c.rows().size());}
             else {CAPTURES.remove();offer(c.kind(),c.generation(),c.rows());}
-        }catch(RuntimeException error){CAPTURES.remove();CATALOG.fail(c.kind(),"INDEX_LIMIT".equals(error.getMessage())?"INDEX_LIMIT":"INDEX_FAILED");}}
+        }catch(RuntimeException error){CAPTURES.remove();logFailure("search.capture",c.kind(),error);CATALOG.fail(c.kind(),"INDEX_LIMIT".equals(error.getMessage())?"INDEX_LIMIT":"INDEX_FAILED");}}
         for(var driver:List.copyOf(VIEWS.keySet()))documentViews(driver);
         for(var entry:List.copyOf(VIEWS.entrySet()))for(var v:entry.getValue().values()){
             Pending p=v.pending;if(p==null)continue;if(entry.getKey().document()!=p.document()||!p.generation().equals(CATALOG.generation())){v.session.cancel();v.pending=null;continue;}
@@ -180,7 +185,7 @@ public final class SearchChannel {
                 json.add("entries",rows);if(lookup!=null){JsonArray missing=new JsonArray();lookup.missing().forEach(missing::add);json.add("missing",missing);json.addProperty("offset",0);}int next=(lookup==null?p.offset():0)+rows.size();json.addProperty("nextOffset",next);json.addProperty("done",next>=result.total());JsonArray mods=new JsonArray();index.namespaces().entrySet().stream().sorted(Map.Entry.comparingByKey()).limit(512).forEach(e->{JsonObject m=new JsonObject();m.addProperty("id",e.getKey());m.addProperty("count",e.getValue());mods.add(m);});json.add("namespaces",mods);json.addProperty("namespacesTruncated",index.namespaces().size()>512);
                 String wire=json.toString();if(wire.length()>24000){json.remove("namespaces");json.addProperty("namespacesTruncated",true);wire=json.toString();}final String encoded=wire;
                 Minecraft.getInstance().execute(()->{if(!cancelled.getAsBoolean()&&VIEWS.containsKey(driver)&&driver.document()==p.document())driver.patchJson("search.result",encoded);});
-            }catch(CancellationException ignored){}catch(RuntimeException error){Minecraft.getInstance().execute(()->{if(!cancelled.getAsBoolean()&&VIEWS.containsKey(driver)&&driver.document()==p.document())sendError(driver,p.id(),p.kind(),"QUERY_FAILED");});}
+            }catch(CancellationException ignored){}catch(RuntimeException error){if(!cancelled.getAsBoolean())logFailure("search.query",p.kind()+" request="+p.id(),error);Minecraft.getInstance().execute(()->{if(!cancelled.getAsBoolean()&&VIEWS.containsKey(driver)&&driver.document()==p.document())sendError(driver,p.id(),p.kind(),"QUERY_FAILED");});}
         });}catch(RejectedExecutionException error){sendError(driver,p.id(),p.kind(),"BUSY");}
     }
 }

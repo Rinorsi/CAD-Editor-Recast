@@ -1,6 +1,0 @@
-{
-  "restrictedPassenger": "accepted by vanilla riding rules",
-  "scope": "Real ServerLevel / detached ServerPlayer: GM survival/adventure/spectator and disabled mayBuild accepted, self spectator undo succeeds; no-GM restrictions, border/reach and native OP spawn-protection semantics retained; no client network",
-  "passed": true,
-  "checks": 47
-}

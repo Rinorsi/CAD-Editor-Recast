@@ -59,6 +59,9 @@ final class ComponentSchemaChannel {
             if (id != null) {
                 id = net.minecraft.resources.Identifier.parse(id).toString(); context.addProperty("id", id); ComponentValidation.type(id); ids = List.of(id);
             } else ids = ComponentSchema.persistentIds();
+            if (id != null && request.has("rangesOnly") && request.get("rangesOnly").isJsonPrimitive()
+                && request.getAsJsonPrimitive("rangesOnly").isBoolean() && request.get("rangesOnly").getAsBoolean())
+                context.addProperty("rangesOnly", true);
             if (JOBS.size() >= 8) throw new IllegalArgumentException("组件结构索引繁忙，请稍后重试");
             JOBS.add(new Job(name, currentGeneration, context, ids.iterator(), new JsonArray(), world, reply));
         } catch (RuntimeException error) { error(name, currentGeneration, context, error, reply); }
@@ -72,13 +75,20 @@ final class ComponentSchemaChannel {
             if (job.ids.hasNext()) {
                 String id = job.ids.next();
                 var schema = CACHE.computeIfAbsent(id, key -> ComponentSchema.derive(key, mc.level.registryAccess()));
-                job.entries.add(schema.entry().deepCopy());
+                if (job.context.has("rangesOnly")) {
+                    // Quick controls need the actual numeric capabilities, not the
+                    // potentially oversized recursive form of the entire component.
+                    var numeric = new JsonObject();
+                    numeric.addProperty("id", id);
+                    numeric.add("ranges_for_ui", schema.numericRanges().deepCopy());
+                    job.entries.add(numeric);
+                } else job.entries.add(schema.entry().deepCopy());
             }
             if (job.ids.hasNext()) { JOBS.add(job); return; }
             var context = job.context.deepCopy(); context.addProperty("source", "runtime_codec_structural_adapter"); context.addProperty("availability", "complete");
             var pages = RegistryPages.split(job.name, job.generation, job.entries, context).stream().map(Object::toString).toList();
             job.reply.accept(pages, job.context);
-        } catch (RuntimeException error) { error(job.name, job.generation, job.context, error, job.reply); }
+        } catch (RuntimeException error) { dev.rinorsi.editor.EditorDiagnostics.failure("schema.derive", job.name + " generation=" + job.generation, error); error(job.name, job.generation, job.context, error, job.reply); }
     }
     private static void error(String name, String generation, JsonObject context, RuntimeException error, BiConsumer<List<String>, JsonObject> reply) {
         var page = RegistryPages.split(name, generation, new JsonArray(), context).getFirst();

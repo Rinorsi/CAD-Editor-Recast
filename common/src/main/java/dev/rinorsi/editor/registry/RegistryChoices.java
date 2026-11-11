@@ -72,6 +72,7 @@ public final class RegistryChoices {
             JsonObject entry = row(id, display);
             if (value instanceof Enum<?> constant) entry.addProperty("symbol", constant.name());
             if (value instanceof FireworkExplosion.Shape shape) entry.addProperty("name", shape.getName().getString());
+            if (name.equals("tropical_fish_pattern")) entry.addProperty("name", translated("entity.minecraft.tropical_fish.type." + id, id));
             if (value instanceof DyeColor color) {
                 entry.addProperty("name", translated("color.minecraft." + id, id));
                 entry.addProperty("rgb", color.getTextureDiffuseColor() & 0xffffff);

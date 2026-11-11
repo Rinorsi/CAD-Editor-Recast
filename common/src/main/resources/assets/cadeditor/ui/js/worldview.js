@@ -6,19 +6,43 @@ var WEV = {};
 WE.views = {}; WE.bstate = {}; WE.btype = ''; WE.upd = true; WE.face = 'front';
 function weResetEdits() { WE.views = {}; WE.bstate = {}; WE.btype = ''; }
 function weViews() { return (WE.w && WE.w.views) || {}; }
-function weViewGroups() { var v = weViews(); return Object.keys(v).filter(function (g) { return g !== 'unsupported' && g !== 'generic' && v[g] && v[g].value; }); }
-function weViewOrig(g) { var v = weViews()[g]; return v && v.value ? v.value : {}; }
+function weViewGroups() {
+  var v = weViews(), groups = Object.keys(v);
+  return groups.filter(function (g) {
+    if (g === 'unsupported' || g === 'generic' || !v[g] || !v[g].value) return false;
+    // Legacy raw helpers (e.g. bees) coexist with normalized form groups.
+    // Do not claim a field is raw-only when a real form already covers it.
+    if (!v[g].schema && groups.some(function (other) {
+      var entry = v[other], fields = entry && entry.schema && entry.schema.fields;
+      return other !== g && typeof WEV[other] === 'function' && fields && Object.prototype.hasOwnProperty.call(fields, g)
+        && entry.value && Object.prototype.hasOwnProperty.call(entry.value, g);
+    })) return false;
+    return true;
+  });
+}
+var WE_VIEW_TYPED = new WeakMap();
+function weViewOrig(g) {
+  var v = weViews()[g]; if (!v || !v.value) return {};
+  var cached = WE_VIEW_TYPED.get(v); if (cached) return cached;
+  var fields = v.schema && v.schema.fields || {}, texts = {}, ast = null;
+  Object.keys(fields).forEach(function (key) {
+    if (!fields[key].wire_snbt || v.value[key] === null || v.value[key] === undefined) return;
+    if (!ast) ast = nbtParse(v.snbt);
+    if (ast.k === 'obj' && ast.map[key]) texts[key] = nbtPrint(ast.map[key], false);
+  });
+  cached = nbtHydrate(v.value, texts); WE_VIEW_TYPED.set(v, cached); return cached;
+}
 /* 草稿存储（方块视图 WE.views、实体 / 玩家 WE.ent 共用）：只记和原值不同的字段，改回原值就删掉；改完刷新顶栏 / 底栏 */
 function weDraftGet(store, g, k, orig) { var e = store[g]; if (e && Object.prototype.hasOwnProperty.call(e, k)) return e[k]; return orig[k]; }
-function weVal(g, k) { return weDraftGet(WE.views, g, k, weViewOrig(g)); }
-function weNorm(v) { return JSON.stringify(v === undefined ? null : v); }
+function weVal(g, k) { var orig = weViewOrig(g), e = WE.views[g]; return nbtTake(e && Object.prototype.hasOwnProperty.call(e, k) ? e : orig, k); }
+function weNorm(v) { return JSON.stringify(v === undefined ? null : v) + (v === undefined || v === null ? '' : '\n' + nbtMerge(v, null)); }
 function weDraftSet(store, g, k, v, orig) {
   var e = store[g] || (store[g] = {});
-  if (weNorm(v) === weNorm(orig[k])) delete e[k]; else e[k] = v;
+  if (weNorm(v) === weNorm(nbtTake(orig, k))) delete e[k]; else nbtPut(e, k, v);
   if (!Object.keys(e).length) delete store[g];
   weMarkDirty();
 }
-function weSetV(g, k, v) { weDraftSet(WE.views, g, k, v, weViewOrig(g)); }
+function weSetV(g, k, v) { weDraftSet(WE.views, g, k, v, weViewOrig(g)); if (k === 'minecraft:profile') weHeroLive(); }
 function weViewField(g, k) { var s = weViews()[g]; return s && s.schema && s.schema.fields ? s.schema.fields[k] || {} : {}; }
 function weStateSchema() { return (WE.w && WE.w.block_state_schema) || []; }
 function weTypeSchema() { var t = WE.w && WE.w.block_type_schema; return Array.isArray(t) ? t.map(function (x) { return typeof x === 'string' ? x : x.id; }) : []; }
@@ -26,7 +50,15 @@ function weStateCur(p) { return WE.bstate[p.name] !== undefined ? WE.bstate[p.na
 function weViewsDirty() { return !!WE.w && (Object.keys(WE.views).length > 0 || Object.keys(WE.bstate).length > 0 || !!(WE.btype && WE.btype !== WE.w.block)); }
 function weViewsMsg(msg) {
   var vg = Object.keys(WE.views);
-  if (vg.length) { msg.views = {}; vg.forEach(function (g) { msg.views[g] = clone(WE.views[g]); }); }
+  if (vg.length) { msg.views = {}; vg.forEach(function (g) {
+    msg.views[g] = clone(WE.views[g]);
+    Object.keys(WE.views[g]).forEach(function (k) {
+      if (!weViewField(g, k).wire_snbt || WE.views[g][k] === null) return;
+      if (!msg.views_snbt) msg.views_snbt = {};
+      if (!msg.views_snbt[g]) msg.views_snbt[g] = {};
+      msg.views_snbt[g][k] = nbtMerge(nbtTake(WE.views[g], k), null);
+    });
+  }); }
   var bs = {}, any = false;
   weStateSchema().forEach(function (p) { if (WE.bstate[p.name] !== undefined && WE.bstate[p.name] !== p.current) { bs[p.name] = WE.bstate[p.name]; any = true; } });
   if (any) msg.block_state = bs;
@@ -51,8 +83,9 @@ function wvToggle(g, k, label, sub) { return xToggle({ title: label, sub: sub, v
 function wvItem(cur, onSet) {
   var has = cur && cur.id;
   var btn = kItemBtn(has ? cur : null);
-  activate(btn, function () { pickItem(btn, function (id) { onSet({ id: fullId(id), count: 1 }); kPopClose(); }); });
+  activate(btn, function () { pickItem(btn, function (id) { onSet({ id: fullId(id), count: 1 }); kPopClose(); }, { onStack: function (stack) { onSet(vaultNested(stack)); kPopClose(); } }); });
   var kids = [btn];
+  if (has) kids.push(kBtn('编辑物品', function () { editNestedStack(cur, '编辑物品', onSet, weRedrawBody); }, { icon: 'edit' }));
   if (has) kids.push(kBtn('清空', function () { onSet(null); }, { icon: 'trash' }));
   return h('div', { class: 'k-row' }, kids);
 }
@@ -111,7 +144,7 @@ WEV.beehive = function (body, g) {
     var rm = kBtn('放走', function () { list.splice(i, 1); save(); weRender(); }, { icon: 'trash', title: '放走这只蜜蜂' });
     body.appendChild(xRow({ icon: entityIcon(ed.id || 'minecraft:bee', 22), title: '蜜蜂 ' + (i + 1), sub: '已在里面 ' + (b.ticks_in_hive || 0) + ' 刻 · 最短待 ' + (b.min_ticks_in_hive === undefined ? 600 : b.min_ticks_in_hive) + ' 刻', chevron: true, open: !!UIOpen['we:bee:' + i],
       onHead: function () { UIOpen['we:bee:' + i] = !UIOpen['we:bee:' + i]; weRender(); },
-      body: function () { return [esEntityHeader({ id: ed.id || 'minecraft:bee', onPick: function (id) { list[i].entity_data = Object.assign({}, list[i].entity_data, { id: id }); save(); weRender(); }, onEntityNbt: function (snbt) { list[i].entity_data = vaultEntityObj(snbt); save(); weRender(); } }), xField('clock', '已在里面', t1.el), xField('hourglass', '最短待多久', t2.el), h('div', { class: 'x2f' }, [h('div', { class: 'grow' }), rm])]; } }));
+      body: function () { return [esEntityHeader({ id: ed.id || 'minecraft:bee', snbtText: function () { var e = clone(list[i].entity_data || {}); if (!e.id) e.id = 'minecraft:bee'; return nbtMerge(e, null); }, onPick: function (id) { list[i].entity_data = Object.assign(clone(list[i].entity_data), { id: id }); save(); weRender(); }, onEntityNbt: function (snbt) { list[i].entity_data = vaultEntityObj(snbt); save(); weRender(); } }), xField('clock', '已在里面', t1.el), xField('hourglass', '最短待多久', t2.el), h('div', { class: 'x2f' }, [h('div', { class: 'grow' }), rm])]; } }));
   });
   if (!max || list.length < max) body.appendChild(xAdd('放进一只蜜蜂', function () { list.push({ entity_data: { id: 'minecraft:bee' }, ticks_in_hive: 0, min_ticks_in_hive: 600 }); save(); weRender(); }));
   body.appendChild(kHint('蜂蜜等级在「方块状态」里改。'));
@@ -125,8 +158,27 @@ WEV.lectern = function (body, g) {
 };
 WEV.jukebox = function (body, g) {
   body.appendChild(xSec('music', '唱片'));
-  body.appendChild(xRow({ icon: false, title: '放着的唱片', sub: '换唱片会从头开始播', right: wvItem(weVal(g, 'RecordItem'), function (v) { weSetV(g, 'RecordItem', v); weRender(); }) }));
+  body.appendChild(xRow({ icon: false, title: '播放物品', sub: '需要唱片机可播放组件', tip: 'minecraft:jukebox_playable；不限物品种类，换物品后从头播放', right: wvItem(weVal(g, 'RecordItem'), function (v) { weSetV(g, 'RecordItem', v); weRender(); }) }));
 };
+/* Explicit patches/removals precede actual game defaults. Unknown is not unsupported. */
+function wvJukeboxProblem(stack) {
+  if (!stack || stack.empty || !stack.id || Reg.full(stack.id) === 'minecraft:air') return '';
+  var cid = 'minecraft:jukebox_playable', short = 'jukebox_playable', c = stack.components || stack.comps || {}, removed = stack.removed || {};
+  var missing = '此物品缺少 minecraft:jukebox_playable';
+  if (c['!' + cid] !== undefined || c['!' + short] !== undefined || removed[cid] || removed[short]) return missing;
+  if (Object.prototype.hasOwnProperty.call(c, cid) || Object.prototype.hasOwnProperty.call(c, short)) return '';
+  var meta = Reg.itemMeta(stack.id);
+  if (meta && typeof meta.jukebox_playable === 'boolean') return meta.jukebox_playable ? '' : missing;
+  var defaults = Reg.defaultsOf(stack.id);
+  if (defaults) return defaults[cid] !== undefined || defaults[short] !== undefined ? '' : missing;
+  return '正在读取物品的播放组件';
+}
+function weViewProblems() {
+  var problems = [], j = WE.views && WE.views.jukebox;
+  if (j && Object.prototype.hasOwnProperty.call(j, 'RecordItem')) { var p = wvJukeboxProblem(j.RecordItem); if (p) problems.push(p); }
+  if (WE.w && WE.w.type === 'minecraft:jukebox') Object.keys(WE.slots || {}).forEach(function (k) { var p = wvJukeboxProblem(WE.slots[k]); if (p && problems.indexOf(p) < 0) problems.push(p); });
+  return problems;
+}
 
 /* ---------- 纹饰陶罐：后 / 左 / 右 / 前 ---------- */
 WEV.decorated_pot = function (body, g) {
@@ -160,7 +212,7 @@ WEV.command_block = function (body, g) {
   body.appendChild(ta);
   body.appendChild(wvToggle(g, 'auto', '始终活动', '不需要红石也会一直执行'));
   body.appendChild(wvToggle(g, 'TrackOutput', '记录上次输出', '关掉后命令方块里看不到输出'));
-  body.appendChild(wvToggle(g, 'powered', '当前通电'));
+  body.appendChild(wvToggle(g, 'powered', '当前激活', '是否收到红石信号'));
   var cond = weStateSchema().filter(function (p) { return p.name === 'conditional'; })[0];
   if (cond) body.appendChild(xToggle({ title: '有条件', sub: '只有后面那个方块成功才执行', value: weStateCur(cond) === 'true', onChange: function (on) { var v = on ? 'true' : 'false'; if (v === cond.current) delete WE.bstate.conditional; else WE.bstate.conditional = v; weMarkDirty(); } }));
 };
@@ -171,7 +223,11 @@ WEV.skull = function (body, g) {
   body.appendChild(xSec('skull', '头颅'));
   if (simple) {
     var nm = typeof prof === 'string' ? prof : (prof && prof.name) || '';
-    body.appendChild(xText({ title: '头颅的主人', sub: '玩家名；联网时游戏会补全皮肤', value: nm, placeholder: '玩家名', cls: 'we-in', onCommit: function (t) { var v = t.trim(); weSetV(g, 'minecraft:profile', v ? { name: v } : null); } }));
+    var owner = WE.w, previewTimer = null;
+    var ownerRow = xText({ title: '头颅的主人', sub: '输入玩家名后预览皮肤；需要联网，首次读取可能稍有延迟', value: nm, placeholder: '玩家名', cls: 'we-in',
+      onInput: function (t) { clearTimeout(previewTimer); previewTimer = setTimeout(function () { if (WE.w === owner && ownerRow.parentNode) { var v = t.trim(); weHeroLive(v ? { name: v } : null); } }, 500); },
+      onCommit: function (t) { clearTimeout(previewTimer); var v = t.trim(); weSetV(g, 'minecraft:profile', v ? { name: v } : null); } });
+    body.appendChild(ownerRow);
   } else body.appendChild(xRow({ icon: false, title: '头颅的主人', sub: '带有皮肤数据，这里不改；要换请先清除', right: kBtn('清除', function () { weSetV(g, 'minecraft:profile', null); weRender(); }, { icon: 'trash' }) }));
   body.appendChild(xText({ title: '名称', value: msgText(weVal(g, 'minecraft:custom_name')), placeholder: '自定义名称（可空）', cls: 'we-in', onCommit: function (t) { weSetV(g, 'minecraft:custom_name', t ? textMsg(t) : null); } }));
 };
@@ -263,6 +319,14 @@ function wvText(g, k, label, o) {
 /* 整数字段当前值超出 JS 能精确表示的范围时，不在这里改（会被四舍五入），提示去「数据」页 */
 function wvBigInt(g, k, label, o) {
   o = o || {}; var v = weVal(g, k);
+  if (weViewField(g, k).wire_snbt) {
+    var meta = nbtMeta(v), raw = meta && meta.scalar ? meta.scalar.raw.replace(/[lL]$/, '') : String(v === undefined ? 0 : v);
+    if (Math.abs(Number(v)) > 9007199254740991) return xText({ title: label, sub: o.sub, value: raw, cls: 'we-in', onCommit: function (text) {
+      if (!/^[+-]?\d+$/.test(text.trim())) { toast('请填写完整整数', 'error'); return; }
+      weSetV(g, k, parseSnbt(text.trim() + 'L'));
+    } });
+    return xNum({ title: label, sub: o.sub, value: Number(v) || 0, step: 1, unit: o.unit, noSlider: true, onChange: function (x) { weSetV(g, k, parseSnbt(String(x) + 'L')); } });
+  }
   if (typeof v === 'number' && !(Math.abs(v) <= 9007199254740991)) return wvReadonly(label, String(v), '数值太大，在「数据」页改');
   return xNum({ title: label, sub: o.sub, value: typeof v === 'number' ? v : 0, step: 1, unit: o.unit, noSlider: true, onChange: function (x) { weSetV(g, k, x); } });
 }
@@ -314,7 +378,7 @@ WEV.structure_block = function (body, g) {
   body.appendChild(wvToggle(g, 'ignoreEntities', '忽略实体'));
   body.appendChild(wvToggle(g, 'showair', '显示空气'));
   body.appendChild(wvToggle(g, 'showboundingbox', '显示边框'));
-  body.appendChild(wvToggle(g, 'powered', '已通电'));
+  body.appendChild(wvToggle(g, 'powered', '当前激活', '是否收到红石信号'));
 };
 /* ---------- 拼图方块 ---------- */
 WEV.jigsaw = function (body, g) {
@@ -379,7 +443,7 @@ function wePropVal(v) { return WE_VAL[v] !== undefined ? WE_VAL[v] : v; }
 /* ---------- 方块状态 ---------- */
 function weStateRow(p) {
   var cur = weStateCur(p), nm = p.name;
-  function set(v) { if (v === p.current) delete WE.bstate[nm]; else WE.bstate[nm] = v; weMarkDirty(); }
+  function set(v) { if (v === p.current) delete WE.bstate[nm]; else WE.bstate[nm] = v; weMarkDirty(); weHeroLive(); }
   var ctl;
   if (p.type === 'boolean') ctl = kToggle(cur === 'true', function (on) { set(on ? 'true' : 'false'); }).el;
   else if (p.values.length <= 5) ctl = kSeg(p.values.map(function (v) { return { v: v, label: wePropVal(v) }; }), cur, set).el;

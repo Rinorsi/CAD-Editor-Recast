@@ -513,7 +513,7 @@ div
               div.k-xhead
                 div.tx
                   div.z "生命"
-                  div.s "范围 0 ~ 20"
+                  div.s "当前服务端尚未提供属性联动数据；请更新并重启游戏或服务端后重开此页"
                 div.k-num.k-xnum
                   div.k-numrow
                     div.k-stepper
@@ -527,6 +527,7 @@ div
               div.k-xhead
                 div.tx
                   div.z "伤害吸收"
+                  div.s "当前服务端尚未提供属性联动数据；请更新并重启游戏或服务端后重开此页"
                 div.k-num.k-xnum
                   div.k-numrow
                     div.k-stepper
@@ -540,7 +541,7 @@ div
               div.k-xhead
                 div.tx
                   div.z "饥饿值"
-                  div.s "范围 0 ~ 20"
+                  div.s "范围：0 ~ 20 · 降低时同步限制饱和度"
                 div.k-num.k-xnum
                   div.k-numrow
                     div.k-stepper
@@ -554,7 +555,7 @@ div
               div.k-xhead
                 div.tx
                   div.z "饱和度"
-                  div.s "不能超过饥饿值"
+                  div.s "当前上限：20 · 可联动至 20（同步提高饥饿值）"
                 div.k-num.k-xnum
                   div.k-numrow
                     div.k-stepper
@@ -598,7 +599,7 @@ div
               div.k-xhead
                 div.tx
                   div.z "当前等级进度"
-                  div.s "0 ~ 1，满了就升级"
+                  div.s "0 ≤ 进度 < 1，按原版 float 精度保存；步进不限制手动输入的小数位数。"
                 div.k-num.k-xnum
                   div.k-numrow
                     div.k-stepper

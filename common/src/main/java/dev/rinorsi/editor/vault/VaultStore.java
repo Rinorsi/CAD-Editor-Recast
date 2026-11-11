@@ -13,9 +13,9 @@ import java.util.function.*;
 /** Local storage. No Minecraft objects or page-selected filesystem paths cross this boundary. */
 public final class VaultStore implements AutoCloseable {
   public static final int MAX_ENTRIES = 2000,
-      MAX_ENTRY_BYTES = 65536,
-      MAX_FILE_BYTES = 8 * 1024 * 1024;
-  public static final int RESPONSE_CHARS = 24000;
+      MAX_ENTRY_BYTES = 8 * 1024 * 1024,
+      MAX_FILE_BYTES = 64 * 1024 * 1024;
+  public static final int RESPONSE_CHARS = 8 * 1024 * 1024;
   public static final long WRITE_DELAY_MS = 300, FLUSH_TIMEOUT_MS = 5000;
 
   public record Validated(
@@ -275,9 +275,9 @@ public final class VaultStore implements AutoCloseable {
   private void checkQuota(Collection<JsonObject> values) {
     if (values.size() > MAX_ENTRIES) throw fail("ENTRY_LIMIT", "保险库最多2000个条目");
     for (var e : values)
-      if (bytes(e.toString()) > MAX_ENTRY_BYTES) throw fail("ENTRY_TOO_LARGE", "单个条目最多64KiB");
+      if (bytes(e.toString()) > MAX_ENTRY_BYTES) throw fail("ENTRY_TOO_LARGE", "单个条目最多8MiB");
     if (bytes(envelope(values).toString()) > MAX_FILE_BYTES)
-      throw fail("FILE_LIMIT", "保险库文件最多8MiB");
+      throw fail("FILE_LIMIT", "保险库文件最多64MiB");
   }
 
   private void put(JsonObject e) {
@@ -417,7 +417,7 @@ public final class VaultStore implements AutoCloseable {
   }
 
   public static JsonObject parse(String text) {
-    if (bytes(text) > MAX_FILE_BYTES) throw fail("FILE_LIMIT", "导入最多8MiB");
+    if (bytes(text) > MAX_FILE_BYTES) throw fail("FILE_LIMIT", "导入最多64MiB");
     int depth = 0;
     boolean quote = false, escape = false;
     for (char c : text.toCharArray()) {
@@ -835,7 +835,7 @@ public final class VaultStore implements AutoCloseable {
     if (VaultTemplates.supported(kind(request))) return saveTemplate(request, validator);
     if (kind(request).equals("entity")) return saveEntity(request, validator);
     if (bytes(object(request, "stack").toString()) > MAX_ENTRY_BYTES)
-      throw fail("ENTRY_TOO_LARGE", "单个条目最多64KiB");
+      throw fail("ENTRY_TOO_LARGE", "单个条目最多8MiB");
     Validated valid = validate(validator, object(request, "stack"));
     String digest = hash(valid.stack());
     if (!bool(request, "force"))
@@ -1166,7 +1166,7 @@ public final class VaultStore implements AutoCloseable {
     out.addProperty("readOnly", readOnly);
     if (!warning.isEmpty()) out.addProperty("warning", warning);
     if (!writeError.isEmpty()) out.addProperty("storageError", writeError);
-    if (out.toString().length() > RESPONSE_CHARS) throw fail("RESPONSE_LIMIT", "响应超过24000字符");
+    if (out.toString().length() > RESPONSE_CHARS) throw fail("RESPONSE_LIMIT", "响应超过8Mi字符");
     return out;
   }
 

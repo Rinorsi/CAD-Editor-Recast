@@ -7,6 +7,9 @@ import dev.oriel.mod.client.DocumentDriver;
 import dev.rinorsi.editor.StackCodec;
 import dev.rinorsi.editor.EditorPackets;
 import dev.rinorsi.editor.client.EditorToast;
+import dev.rinorsi.editor.client.ClientInventoryCommands;
+import dev.rinorsi.editor.client.HotbarCommandCodec;
+import dev.rinorsi.editor.client.HotbarCommandSession;
 import dev.rinorsi.editor.registry.search.Pinyin;
 import dev.rinorsi.editor.vault.*;
 import java.util.*;
@@ -25,6 +28,7 @@ public final class VaultChannel {
   private static final Set<Integer> reservedSlots = new HashSet<>();
   private record PendingGive(DocumentDriver driver, Object document, Object connection, String pageId, String entryId, long deadline) {}
   private static final Map<String, PendingGive> GIVES = new HashMap<>();
+  private static final Map<String, HotbarCommandSession> COMMAND_GIVES = new HashMap<>();
 
   private static final class State {
     Object document;
@@ -188,7 +192,26 @@ public final class VaultChannel {
     for (var entry : new ArrayList<>(GIVES.entrySet())) {
       var pending = entry.getValue();
       var mc = Minecraft.getInstance();
+      var command = COMMAND_GIVES.get(entry.getKey());
+      if (command != null) {
+        boolean live = STATES.containsKey(pending.driver) && pending.driver.document() == pending.document;
+        var outcome = command.observe(live ? ClientInventoryCommands.context(mc, command.index()) : null,
+                pending.pageId, System.nanoTime());
+        if (outcome == HotbarCommandSession.Outcome.WAITING) continue;
+        COMMAND_GIVES.remove(entry.getKey());
+        boolean saved = outcome == HotbarCommandSession.Outcome.SAVED;
+        if (saved) GIVES.remove(entry.getKey());
+        else GIVES.put(entry.getKey(), new PendingGive(pending.driver, pending.document, pending.connection, pending.pageId, pending.entryId, Long.MAX_VALUE));
+        var result = new JsonObject();
+        result.addProperty("path", "command"); result.addProperty("confirmed", saved);
+        result.addProperty("status", saved ? "saved" : "unknown"); result.addProperty("inventoryIndex", command.index());
+        giveReply(pending, saved, saved ? "ok" : "request_timeout", saved ? "服务器已同步确认放入自己的背包第" + (command.index()+1) + "格"
+                : "取出结果未知或槽位已改变；保险库已保留，请核对背包，勿重复取出", result);
+        continue;
+      }
       if (mc.getConnection() != pending.connection || System.nanoTime() > pending.deadline) {
+        // A MAX_VALUE record is an already-reported unknown tombstone, not a live request.
+        if (pending.deadline == Long.MAX_VALUE) { GIVES.remove(entry.getKey()); continue; }
         if (mc.getConnection() != pending.connection) GIVES.remove(entry.getKey());
         else GIVES.put(entry.getKey(), new PendingGive(pending.driver, pending.document, pending.connection, pending.pageId, pending.entryId, Long.MAX_VALUE));
         giveReply(pending, false, mc.getConnection() != pending.connection ? "not_connected" : "request_timeout",
@@ -234,7 +257,7 @@ public final class VaultChannel {
       if (s.upload.length() + chunk.length() > VaultStore.MAX_FILE_BYTES) {
         s.upload = null;
         s.uploadToken = null;
-        throw new VaultStore.Failure("FILE_LIMIT", "上传最多8Mi字符，解析后最多8MiB");
+        throw new VaultStore.Failure("FILE_LIMIT", "上传最多64Mi字符，解析后最多64MiB");
       }
       s.upload.append(chunk);
       s.uploadUntil = now + 30000;
@@ -287,6 +310,10 @@ public final class VaultChannel {
         throw new VaultStore.Failure("UNAVAILABLE", "保存需要进入世界以严格验证组件");
       result = store.join().execute(r, validator());
     }
+    var mc = Minecraft.getInstance();
+    result.addProperty("giveCapability", mc.player != null && mc.player.isCreative() ? "创造模式取出到自己背包空槽，等待服务端处理"
+            : ClientPlatform.get().canSend(EditorPackets.Request.TYPE) ? "取出需要服务器授权；仅放入自己的普通背包空槽，不覆盖物品"
+            : ClientInventoryCommands.capabilityHint(mc) + "；取出仅放入所选区域空槽，不覆盖物品");
     driver.patchJson("vault.result", result.toString());
   }
 
@@ -297,7 +324,7 @@ public final class VaultChannel {
       throw new VaultStore.Failure("UNAVAILABLE", "当前未进入世界");
     if (InventoryWrites.givePath(mc.player.isCreative(), ClientPlatform.get().canSend(EditorPackets.Request.TYPE)) != InventoryWrites.GivePath.CREATIVE) {
       if (!ClientPlatform.get().canSend(EditorPackets.Request.TYPE))
-        throw new VaultStore.Failure("not_connected", "服务器没有安装物品工坊，生存模式不能写回；冒险和旁观模式同样需要服务端支持");
+        return commandGive(driver, r);
       var request = new JsonObject();
       if (GIVES.size() >= 8) throw new VaultStore.Failure("request_pending", "最多同时等待8笔取出回执，请先核对背包");
       String networkId = "vault-give-" + UUID.randomUUID();
@@ -306,7 +333,7 @@ public final class VaultChannel {
       request.addProperty("slot", VaultStore.text(r, "slot", "inventory", 16));
       if (r.has("inventoryIndex")) request.add("inventoryIndex", r.get("inventoryIndex").deepCopy());
       String json = request.toString();
-      if (json.length() > EditorPackets.MAX_JSON) throw new VaultStore.Failure("payload_too_large", "保险库取出数据超过32767字符，未发送请求");
+      dev.rinorsi.editor.EditorWire.requirePayload(json);
       GIVES.put(networkId, new PendingGive(driver, driver.document(), mc.getConnection(),
               VaultStore.text(r, "requestId", "", 128), VaultStore.text(r, "id", "", 36), System.nanoTime()+10_000_000_000L));
       try { ClientPlatform.get().send(new EditorPackets.Request(json)); }
@@ -367,6 +394,27 @@ public final class VaultChannel {
     return out;
   }
 
+  private static JsonObject commandGive(DocumentDriver driver, JsonObject r) {
+    var mc = Minecraft.getInstance();
+    ClientInventoryCommands.requireAvailable(mc);
+    if (mc.player.containerMenu != mc.player.inventoryMenu)
+      throw new VaultStore.Failure("NOT_ALLOWED", "请先关闭容器界面；仅支持自己的普通背包空槽");
+    String region = VaultStore.text(r, "slot", "inventory", 16);
+    int requested = r.has("inventoryIndex") ? StackCodec.integer(r, "inventoryIndex", 0, 35) : -1;
+    int index = HotbarCommandCodec.emptySlot(region, requested, i -> mc.player.getInventory().getItem(i).isEmpty());
+    var next = StackCodec.decode(store.join().stack(VaultStore.text(r, "id", "", 36)), mc.level.registryAccess());
+    dev.rinorsi.editor.registry.EntitySchemaValidation.validateStack(next, mc.level);
+    var session = new HotbarCommandSession(index, ClientInventoryCommands.context(mc, index));
+    String id = "vault-command-" + UUID.randomUUID();
+    String pageId = VaultStore.text(r, "requestId", "", 128);
+    if (GIVES.size() >= 8) throw new VaultStore.Failure("request_pending", "请先核对尚未确认的取出结果");
+    GIVES.put(id, new PendingGive(driver, driver.document(), mc.getConnection(), pageId, VaultStore.text(r, "id", "", 36), Long.MAX_VALUE));
+    COMMAND_GIVES.put(id, session);
+    try { ClientInventoryCommands.send(mc, session, pageId, net.minecraft.world.item.ItemStack.EMPTY, next); }
+    catch (RuntimeException failure) { COMMAND_GIVES.remove(id); GIVES.remove(id); session.invalidate(); throw failure; }
+    return null;
+  }
+
   public static boolean receive(JsonObject result) {
     if (!result.has("op") || !result.get("op").getAsString().equals("vault_give")) return false;
     String id = result.has("requestId") ? result.get("requestId").getAsString() : "";
@@ -386,7 +434,8 @@ public final class VaultChannel {
     if (Minecraft.getInstance().getConnection() != pending.connection && ok) return;
     var out = result == null ? new JsonObject() : result.deepCopy();
     out.addProperty("version", 1); out.addProperty("op", "give"); out.addProperty("requestId", pending.pageId);
-    out.addProperty("ok", ok); out.addProperty("code", code); out.addProperty("reason", reason); out.addProperty("path", "server");
+    out.addProperty("ok", ok); out.addProperty("code", code); out.addProperty("reason", reason);
+    if (!out.has("path")) out.addProperty("path", "server");
     if (!ok) out.addProperty("error", code);
     var state = STATES.get(pending.driver);
     if (state != null && pending.driver.document() == pending.document) { remember(state, pending.pageId, out); pending.driver.patch("vault.result", out); }
@@ -411,7 +460,7 @@ public final class VaultChannel {
     out.addProperty("error", e instanceof VaultStore.Failure f ? f.code : "BAD_REQUEST");
     out.addProperty("reason", VaultStore.reason(e));
     if (op.equals("give")) {
-      String code = e instanceof VaultStore.Failure f ? f.code : "invalid_request";
+      String code = e instanceof VaultStore.Failure f ? f.code : e instanceof dev.rinorsi.editor.EditorSessions.Failure f ? f.code : "invalid_request";
       out.addProperty("code", switch (code) { case "UNAVAILABLE" -> "not_connected"; case "BAD_REQUEST" -> "invalid_request"; default -> code.toLowerCase(Locale.ROOT); });
       EditorToast.show(EditorToast.Level.ERROR, VaultStore.reason(e));
     }

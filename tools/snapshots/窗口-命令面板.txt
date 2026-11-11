@@ -27,25 +27,30 @@ div.k-modal.k-pal
       span "高级…"
       span.sb "原始组件、物品数据、命令"
     div.k-pr
+      img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
+      span "跳到：物品栈"
+      span.sb "分页"
+      span.k-kbd "Ctrl+1"
+    div.k-pr
       img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
       span "跳到：外观"
       span.sb "分页"
-      span.k-kbd "Ctrl+1"
+      span.k-kbd "Ctrl+2"
     div.k-pr
       img.o-ico [src="oriel:textures/icons/sword.png" style="height:16px;width:16px"]
       span "跳到：战斗"
       span.sb "分页"
-      span.k-kbd "Ctrl+2"
+      span.k-kbd "Ctrl+3"
     div.k-pr
       img.o-ico [src="oriel:textures/icons/shield.png" style="height:16px;width:16px"]
       span "跳到：耐久"
       span.sb "分页"
-      span.k-kbd "Ctrl+3"
+      span.k-kbd "Ctrl+4"
     div.k-pr
       img.o-ico [src="oriel:textures/icons/enchant.png" style="height:16px;width:16px"]
       span "跳到：附魔"
       span.sb "分页"
-      span.k-kbd "Ctrl+4"
+      span.k-kbd "Ctrl+5"
     div.k-pr
       img.o-ico [src="oriel:textures/icons/restore.png" style="height:16px;width:16px"]
       span "还原全部修改"

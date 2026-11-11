@@ -15,6 +15,7 @@ var KIND_INFO = {
   banner: { name: '旗帜', color: '#4ac8d9', icon: 'banner' },
   disc: { name: '音乐唱片', color: '#6ed1a8', icon: 'music' },
   spawn: { name: '刷怪蛋', color: '#7bc74d', icon: 'paw' },
+  bucket: { name: '生物桶', color: '#4ac8d9', icon: 'paw' },
   spawner: { name: '刷怪笼', color: '#8f7be0', icon: 'paw' },
   generic: { name: '物品 / 方块', color: '#6cc349', icon: 'cube' },
 };
@@ -28,6 +29,10 @@ var ATTR_ARMOR = ['armor', 'armor_toughness', 'knockback_resistance'];
 
 /* 每类物品的分页。cards 里：字符串=CARDS 的键；[键, 参数…]=带参数调用 */
 var PAGES = {
+  bucket: [
+    { id:'bucket', label:'桶内实体', icon:'paw', cards:['bucketEntity', 'bucketFields', 'bucketAttrs', 'bucketAppearance', 'bucketEntityData'] },
+    { id:'look', label:'外观', icon:'palette', cards:APPEAR },
+  ],
   melee: [
     { id: 'look', label: '外观', icon: 'palette', cards: APPEAR },
     { id: 'combat', label: '战斗', icon: 'sword', cards: ['#基础数值', 'attackDamage', 'attackSpeed', '#攻击特性', 'weapon', 'reach', 'swing', 'cooldown', '#额外属性', ['extraAttrs', ATTR_MAIN]] },
@@ -124,8 +129,11 @@ function makeCard(spec) {
   var skipLazy = DETAIL_IN || DETAIL_BIG[key] || (key === 'auto' && DETAIL_AUTO[args[0]]);
   var card = null;
   KLAZY = skipLazy ? 0 : 1;
+  var previousReads = ComponentReads, reads = {}; ComponentReads = reads;
   try { card = f.apply(null, args); }
   catch (e) { if (e instanceof LazyCard) { card = e.card; card.lazy = { f: f, args: args }; lazyHook(card); } else { KLAZY = 0; throw e; } }
+  finally { ComponentReads = previousReads; }
+  if (card) { card.depends = card.depends || {}; Object.keys(reads).forEach(function (cid) { card.depends[cid] = true; }); }
   KLAZY = 0;
   if (card && DETAIL_BIG[key] && !DETAIL_IN) detailize(card, { key: spec, cid: (card.comps && card.comps[0]) || '', title: card.spec && card.spec.title });
   return card;
@@ -148,6 +156,9 @@ function cardComps(c) {
   var key = Array.isArray(c) ? c[0] : c;
   if (key === 'auto' || key === 'enchants') return [c[1]];
   if (key === 'extraAttrs') return ['attribute_modifiers'];
+  if (key === 'bucketEntity' || key === 'bucketFields') return ['bucket_entity_data'];
+  if (key === 'bucketAttrs' || key === 'bucketEntityData') return ['entity_data'];
+  if (key === 'bucketAppearance') return (bucketMeta().bucket_components || []).map(shortId);
   return CARD_COMPS[key] || [];
 }
 function cardKey(c) { var key = Array.isArray(c) ? c[0] : c; return key === 'auto' || key === 'enchants' ? key + ':' + c[1] : key; }
@@ -170,7 +181,7 @@ function compBrief(cid, val) {
       case 'custom_name': case 'item_name': { var r = tcRuns(val); return r ? '「' + r.runs.map(function (x) { return x.text; }).join('') + '」' : '（复杂文本）'; }
       case 'lore': return val.length + ' 行说明';
       case 'rarity': return RARITY_ZH[val] || val;
-      case 'enchantments': case 'stored_enchantments': { var k = Object.keys(val); return k.length ? k.map(function (x) { var e = ENIDX[shortId(x)]; return (e ? e.name : shortId(x)) + ' ' + levelText(val[x]); }).join('、') : '无附魔'; }
+      case 'enchantments': case 'stored_enchantments': { var k = Object.keys(val); return k.length ? k.map(function (x) { var e = Reg.enchant(x); return (e ? e.name : shortId(x)) + ' ' + levelText(val[x]); }).join('、') : '无附魔'; }
       case 'attribute_modifiers': return val.length ? val.map(function (m) { return attrName(m.type) + ' ' + modSummary(m); }).join('、') : '无属性加成';
       case 'max_damage': case 'damage': case 'max_stack_size': case 'repair_cost': return bigOrNum(val);
       case 'unbreakable': return '不可破坏';
@@ -193,6 +204,38 @@ function describeDiff(x) {
   function side(st) { if (st.k === 'inherit') return '原版默认'; if (st.k === 'remove') return '已移除'; return x.cid.charAt(0) === '#' ? String(st.v) : compBrief(x.cid, st.v); }
   if (a.k === 'remove') kind = 'rm'; else if (b.k === 'inherit' && a.k === 'set') kind = 'add'; else if (a.k === 'inherit') kind = 'rv'; else kind = 'ch';
   return { name: name, kind: kind, before: side(b), after: side(a) };
+}
+/* Apply and Advanced share the same field-level comparison. Pair modifiers by
+   their actual ID, never by display name; unchanged attack speed is not a change. */
+function describeDiffRows(x, d) {
+  var summary = describeDiff(x);
+  if (x.cid !== 'attribute_modifiers') return [summary];
+  var base = nbtReadSnapshot(d.base), beforeDefaults = protoOf(base.id), afterDefaults = protoOf(d.id);
+  function list(state, defaults) { return state.k === 'set' ? state.v : state.k === 'remove' ? [] : defaults.attribute_modifiers; }
+  var before = list(x.before, beforeDefaults), after = list(x.after, afterDefaults);
+  if (!Array.isArray(before) || !Array.isArray(after)) return [summary];
+  var bm = Object.create(null), am = Object.create(null), keys = [], duplicate = false;
+  function index(rows, map) { rows.forEach(function (m) { if (!isObj(m) || !m.id) { duplicate = true; return; } var k = String(m.id); if (map[k]) { duplicate = true; return; } map[k] = m; if (keys.indexOf(k) < 0) keys.push(k); }); }
+  index(before, bm); index(after, am);
+  if (duplicate) return [{name:summary.name,kind:summary.kind,before:nbtMerge(before,null),after:nbtMerge(after,null)}];
+  var rows = [];
+  function value(v) { return v === undefined ? '未设置' : typeof v === 'number' || nbtMeta(v) && nbtMeta(v).scalar ? numLabel(v) : typeof v === 'string' ? v : nbtMerge(v, null); }
+  keys.forEach(function (key) {
+    var b = bm[key], a = am[key]; if (deepEq(b, a)) return;
+    var m = a || b, title = attrName(m.type), slot = SLOT_ZH[m.slot || 'any'] || m.slot || '任意槽位';
+    var op = (OPMODES.filter(function (o) { return o.v === (m.operation || 'add_value'); })[0] || {}).label || m.operation;
+    var sub = slot + (m.operation && m.operation !== 'add_value' && op ? ' · ' + op : ''), kind = !b ? 'add' : !a ? 'rm' : 'ch';
+    if (!b || !a) { rows.push({name:title + ' · 加成',sub:sub,kind:kind,before:b ? numLabel(b.amount) : '无此修饰器',after:a ? numLabel(a.amount) : '移除',id:key}); return; }
+    var fields = Object.keys(b).concat(Object.keys(a).filter(function (k) { return !Object.prototype.hasOwnProperty.call(b,k); }));
+    fields.forEach(function (field) {
+      if (deepEq(nbtTake(b,field), nbtTake(a,field))) return;
+      var labels = {amount:'加成',type:'属性',id:'修饰器 ID',operation:'计算方式',slot:'生效位置',display:'提示显示'};
+      function fieldValue(o) { var v = nbtTake(o,field); if (field === 'slot') return SLOT_ZH[v || 'any'] || value(v); if (field === 'operation') return (OPMODES.filter(function (op) { return op.v === v; })[0] || {}).label || value(v); if (field === 'type') return attrName(v); return value(v); }
+      rows.push({name:title + ' · ' + (labels[field] || field),sub:sub,kind:'ch',before:fieldValue(b),after:fieldValue(a),id:key});
+    });
+  });
+  if (!rows.length) rows.push({name:summary.name,kind:summary.kind,before:x.before.k === 'inherit' ? '原版默认' : '自定义覆盖',after:x.after.k === 'inherit' ? '恢复原版默认' : '修饰器顺序或覆盖方式已调整'});
+  return rows;
 }
 
 /* ---------- 通用分页：任何物品都能打开 ----------
@@ -286,8 +329,10 @@ function lazyHook(stub) {
     var lz = stub.lazy; stub.lazy = null;
     UIOpen['card:' + (stub.spec.id || stub.spec.title)] = false;
     KLAZY = 0;
-    var real = lz.f.apply(null, lz.args);
+    var previousReads = ComponentReads, reads = {}; ComponentReads = reads;
+    var real; try { real = lz.f.apply(null, lz.args); } finally { ComponentReads = previousReads; }
     if (!real) return;
+    real.depends = real.depends || {}; Object.keys(reads).forEach(function (cid) { real.depends[cid] = true; });
     if (stub.el.parentNode) stub.el.parentNode.replaceChild(real.el, stub.el);
     if (UI.page) for (var i = 0; i < UI.page.cards.length; i++) if (UI.page.cards[i] === stub) UI.page.cards[i] = real;
     try { real.update(); } catch (e) {}

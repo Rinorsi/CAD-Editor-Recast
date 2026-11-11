@@ -43,7 +43,7 @@ function suggestEntityFields(typeId, have, onPick, anchor) {
   var nbt; try { nbt = parseSnbt(info.default_nbt); } catch (e) { toast('默认数据无法解析，请手动添加', 'warn'); return; }
   var entries = Object.keys(nbt).filter(function (k) { return k !== 'id' && !have(k); }).map(function (k) { return { v: k, label: k, sub: toSnbt(nbt[k], null, false) }; });
   if (!entries.length) { toast('默认数据里的字段都已经添加了'); return; }
-  pickFrom(anchor, entries, function (e) { onPick(e.v, nbt[e.v]); }, { width: 260 });
+  pickFrom(anchor, entries, function (e) { onPick(e.v, nbtTake(nbt, e.v)); }, { width: 260 });
 }
 function worldCompound(v) { if(!isObj(v) || Array.isArray(v)) throw new Error('需要 {键:值} 形式的复合数据'); }
 function worldMap(value, set, strings, ph) {
@@ -59,7 +59,7 @@ function worldMap(value, set, strings, ph) {
       var t = TYPE[typeof val] || (Array.isArray(val) ? ['list', '列表'] : ['folder', '复合数据']);
       var rm = kBtn('', function () { delete obj[key]; put(); xl.draw(); }, { icon: 'trash', title: '删除这个字段' });
       if (prim) {
-        var ctl, update = function (x) { obj[key] = x; put(); };
+        var ctl, update = function (x) { nbtPut(obj, key, x); put(); };
         if (typeof val === 'boolean') ctl = kToggle(val, update, '').el;
         else if (typeof val === 'number') ctl = numField5(val, 0, { min: -9007199254740991, max: 9007199254740991, step: Number.isInteger(val) ? 1 : 0.1 }, update);
         else { ctl = kInput(val, update, { placeholder: ph.val || '属性值' }); ctl.classList.add('world-inline-value'); }
@@ -68,17 +68,17 @@ function worldMap(value, set, strings, ph) {
       }
       var text = toSnbt(val, null, false);
       return { icon: uiIcon(t[0], 14), title: key, sub: text, tip: text, body: function () {
-        return [kSnbtEditor(val, function (x) { obj[key] = x; put(); }), xFoot('', function () { delete obj[key]; put(); xl.draw(); })];
+        return [kSnbtEditor(nbtTake(obj, key), function (x) { nbtPut(obj, key, x); put(); }), xFoot('', function () { delete obj[key]; put(); xl.draw(); })];
       } };
     }
   });
   var key = kInput('', function () {}, { placeholder: ph.key || (strings ? '属性名' : '字段名') }), val = kInput('', function () {}, { placeholder: ph.val || (strings ? '属性值' : '值（SNBT）') });
   add.appendChild(key); add.appendChild(val); add.appendChild(kBtn('添加', function () {
     try { var name = key.value.trim(); if (!name) throw new Error('请填写字段名'); if (Object.prototype.hasOwnProperty.call(obj, name)) throw new Error('同名字段已存在');
-      var next = strings ? val.value : parseSnbtUser(val.value), candidate = clone(obj); candidate[name] = next; set(candidate); obj = candidate; xl.draw(); key.value = ''; val.value = ''; msg.textContent = '';
+      var next = strings ? val.value : parseSnbtUser(val.value), candidate = clone(obj); nbtPut(candidate, name, next); set(candidate); obj = candidate; xl.draw(); key.value = ''; val.value = ''; msg.textContent = '';
     } catch (e) { msg.textContent = e.message || String(e); }
   }));
-  box.addField = function (name, next) { if (Object.prototype.hasOwnProperty.call(obj, name)) return false; var candidate = clone(obj); candidate[name] = next; set(candidate); obj = candidate; xl.draw(); return true; };
+  box.addField = function (name, next) { if (Object.prototype.hasOwnProperty.call(obj, name)) return false; var candidate = clone(obj); nbtPut(candidate, name, next); set(candidate); obj = candidate; xl.draw(); return true; };
   box.appendChild(xl.el); box.appendChild(add); box.appendChild(msg); return box;
 }
 
@@ -96,10 +96,10 @@ function list5(host, items, rowFn, ops, label, empty) {
 }
 
 function worldBlockPicker(current,set,title){
-  openTagPicker({title:title||'选择目标方块',tagsReg:'block',entryReg:'block',multi:true,entryIcon:function(e){return refIcon('block',e.v);},onConfirm:function(ids){
+  openTagPicker({title:title||'选择目标方块',tagsReg:'block',entryReg:'block',multi:true,selected:(current===undefined?[]:Array.isArray(current)?current:[current]).map(pickerId),entryIcon:function(e){return refIcon('block',e.v);},onConfirm:function(ids){
     var tags=ids.filter(function(x){return x.charAt(0)==='#';}), entries=ids.filter(function(x){return x.charAt(0)!=='#';});
     if(tags.length && (tags.length>1||entries.length)) {toast('一条规则只能使用一个标签或多个方块，请分别添加规则','warn');return;}
-    if(ids.length)set(tags.length?tags[0]:(entries.length===1?entries[0]:entries));
+    set(tags.length?tags[0]:(entries.length===1?entries[0]:entries));
   }});
 }
 function worldBlockName(blocks){
@@ -119,7 +119,11 @@ function worldCond(title,hint,action,content){
   var DATA_NOTE={block_entity_data:'这个物品被放下变成方块时，方块内部会带上这些数据，例如箱子里的物品、告示牌文字。',entity_data:'用这个物品生成实体时，实体会带上这些数据，例如 NoAI = 1 表示生物不会自己行动。',bucket_entity_data:'用桶放出生物时，生物会带上这些数据，例如 NoAI = 1 表示生物不会自己行动。',custom_data:'随物品保存的自定义数据，游戏本身不使用，常给数据包、命令或其他模组读取。'};
   card.body.appendChild(h('div',{class:'world-note',text:DATA_NOTE[cid]}));
   function put(){autoPut(id,clone(obj));}
-  if(typed)card.body.appendChild(fieldRow('类型',kRegSelect({reg:cid==='entity_data'?'entity_type':'block_entity_type',value:obj.id||'',title:'选择类型',onChange:function(x){obj.id=x;put();}}).el));
+  if(typed)card.body.appendChild(fieldRow('类型',kRegSelect({reg:cid==='entity_data'?'entity_type':'block_entity_type',value:obj.id||'',title:'选择类型',entityText:function(){return nbtMerge(obj,null);},onChange:function(x){obj.id=x;put();},onEntityNbt:cid==='entity_data'?function(snbt){
+    obj=vaultEntityObj(snbt);
+    Store.set(id,obj,{label:'实体数据',structural:false});
+    clear(card.body);AUTO_BODY[cid](card,id,obj);
+  }:null}).el));
   var extra=clone(obj);if(typed)delete extra.id;
   var mapEl=worldMap(extra,function(x){if(typed&&Object.prototype.hasOwnProperty.call(x,'id'))throw new Error('类型请通过上方选择器修改');var type=obj.id;obj=x;if(typed)obj.id=type;put();},false);
   var sug=cid==='entity_data'?kBtn('常用字段',function(){suggestEntityFields(obj.id,function(k){return Object.prototype.hasOwnProperty.call(obj,k);},function(k,val){try{mapEl.addField(k,val);}catch(e){toast(e.message||String(e),'warn');}},sug);},{title:'从这个实体的默认数据里挑字段'}):null;
@@ -166,9 +170,10 @@ AUTO_BODY.charged_projectiles=function(card,cid,v){
   card.body.appendChild(Valid.badge(cid));
   list5(card.body,function(){return arr;},function(body,it,i,ch){
     body.appendChild(fieldRow('弹药',kRegSelect({reg:'item',value:it.id||'',title:'选择弹药',onChange:function(x){it.id=x;ch();}}).el));
+    if(it.id)body.appendChild(kBtn('编辑物品',function(){editNestedStack(it,'装填弹药',function(next){arr[i]=next;NBT_FORCE.charged_projectiles=true;autoPut(cid,arr);},drawDetail);},{icon:'edit'}));
     body.appendChild(fieldRow('数量',numField5(it.count,1,{min:1,max:99,unit:'个'},function(n){it.count=n;ch();})));
     var rest=clone(it);delete rest.id;delete rest.count;
-    body.appendChild(worldFold('弹药附加数据',kSnbtEditor(rest,function(x){worldCompound(x);if(x.id!==undefined||x.count!==undefined)throw new Error('物品和数量请在上方修改');var id=it.id,n=it.count;Object.keys(it).forEach(function(k){delete it[k];});Object.keys(x).forEach(function(k){it[k]=x[k];});it.id=id;it.count=n;ch();}),false));
+    body.appendChild(worldFold('弹药附加数据',kSnbtEditor(rest,function(x){worldCompound(x);if(x.id!==undefined||x.count!==undefined)throw new Error('物品和数量请在上方修改');var id=it.id,n=it.count;Object.keys(it).forEach(function(k){delete it[k];});Object.keys(x).forEach(function(k){nbtPut(it,k,nbtTake(x,k));});it.id=id;it.count=n;ch();}),false));
   },{add:function(){openRegPick({reg:'item',title:'添加弹药',onPick:function(id){arr.push({id:id,count:1});autoPut(cid,arr);drawDetail();}});},remove:function(i){arr.splice(i,1);autoPut(cid,arr);},changed:function(){autoPut(cid,arr);},title:function(it){return nameOfItem(it.id);},icon:function(it){return itemIcon(it.id,16);},summary:function(it){return '× '+(it.count||1);}},'添加弹药','尚未装填弹药');
   card.body.appendChild(h('div',{class:'k-row'},[kBtn('从保险库取一件',function(){openVault({pick:function(stack){arr.push(vaultNested(stack));NBT_FORCE.charged_projectiles=true;autoPut(cid,arr);drawDetail();}});},{icon:'chest',title:'带着它的全部自定义组件放进来'})]));
 };
@@ -176,6 +181,7 @@ AUTO_BODY.charged_projectiles=function(card,cid,v){
 AUTO_BODY.bees=function(card,cid,v){
   var arr=clone(Array.isArray(v)?v:[]);
   list5(card.body,function(){return arr;},function(body,it,i,ch){
+    body.appendChild(esEntityHeader({id:it.entity_data&&it.entity_data.id||'minecraft:bee',snbtText:function(){return nbtMerge(it.entity_data||{id:'minecraft:bee'},null);},onPick:function(id){it.entity_data=clone(it.entity_data||{});it.entity_data.id=id;ch();drawDetail();},onEntityNbt:function(snbt){it.entity_data=vaultEntityObj(snbt);NBT_FORCE.bees=true;ch();drawDetail();}}));
     body.appendChild(fieldRow('已在巢中',numField5(it.ticks_in_hive,0,{min:0,step:20,unit:'刻'},function(n){it.ticks_in_hive=n;ch();})));
     body.appendChild(fieldRow('离巢所需',numField5(it.min_ticks_in_hive,600,{min:0,step:20,unit:'刻'},function(n){it.min_ticks_in_hive=n;ch();})));
     body.appendChild(h('div',{class:'world-note',text:'20 刻 = 1 秒；达到所需时间后才允许离巢。'}));
@@ -195,8 +201,8 @@ AUTO_BODY.profile=function(card,cid,v){
   [['texture','身体皮肤','profile_texture'],['cape','披风','profile_cape'],['elytra','鞘翅','profile_elytra']].forEach(function(f){resources.appendChild(fieldRow(f[1],res(f[0],f[2])));});
   resources.appendChild(fieldRow('手臂模型',kInput(obj.model||'',function(x){if(x)obj.model=x;else delete obj.model;put();},{placeholder:'资源定义中的模型名'})));
   card.body.appendChild(worldFold('资源包皮肤覆盖',resources,!!(obj.texture||obj.cape||obj.elytra)));
-  var advanced={};Object.keys(obj).forEach(function(k){if(['name','texture','cape','elytra','model'].indexOf(k)<0)advanced[k]=obj[k];});
-  card.body.appendChild(worldFold('UUID 与签名属性',kSnbtEditor(advanced,function(x){worldCompound(x);Object.keys(x).forEach(function(k){if(['name','texture','cape','elytra','model'].indexOf(k)>=0)throw new Error('请在对应字段修改 '+k);});Object.keys(advanced).forEach(function(k){delete obj[k];});Object.keys(x).forEach(function(k){obj[k]=x[k];});advanced=clone(x);put();}),false));
+  var advanced={};Object.keys(obj).forEach(function(k){if(['name','texture','cape','elytra','model'].indexOf(k)<0)nbtPut(advanced,k,nbtTake(obj,k));});
+  card.body.appendChild(worldFold('UUID 与签名属性',kSnbtEditor(advanced,function(x){worldCompound(x);Object.keys(x).forEach(function(k){if(['name','texture','cape','elytra','model'].indexOf(k)>=0)throw new Error('请在对应字段修改 '+k);});Object.keys(advanced).forEach(function(k){delete obj[k];});Object.keys(x).forEach(function(k){nbtPut(obj,k,nbtTake(x,k));});advanced=clone(x);put();}),false));
 };
 AUTO_BODY.map_decorations=function(card,cid,v){
   var obj=clone(isObj(v)?v:{}), arr=Object.keys(obj).map(function(k){return {key:k,val:obj[k]};});

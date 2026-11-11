@@ -9,7 +9,8 @@ var Tip = (function () {
       var txt = (n.textContent || '').replace(/\s+/g, ' ').trim(); if (!txt) return null;
       var nowrap = false; try { var cs = window.getComputedStyle && window.getComputedStyle(n); nowrap = !!cs && cs.whiteSpace === 'nowrap'; } catch (e) {}
       var c = n.cloneNode(true); c.removeAttribute('id');
-      c.setAttribute('style', 'position:absolute;visibility:hidden;pointer-events:none;overflow:visible;text-overflow:clip;line-clamp:none;max-height:none;height:auto;max-width:none;' + (nowrap ? 'width:auto;white-space:nowrap;' : 'width:' + r.width + 'px;white-space:normal;'));
+      var scale = typeof uiScaleFactor === 'function' ? uiScaleFactor() : 1;
+      c.setAttribute('style', 'position:absolute;visibility:hidden;pointer-events:none;overflow:visible;text-overflow:clip;line-clamp:none;max-height:none;height:auto;max-width:none;' + (nowrap ? 'width:auto;white-space:nowrap;' : 'width:' + (r.width / scale) + 'px;white-space:normal;'));
       var p = n.parentNode; if (p == null) return null; p.appendChild(c);
       var rc = c.getBoundingClientRect(); p.removeChild(c);
       var cut = nowrap ? rc.width > r.width + 1 : rc.height > r.height + 1;
@@ -40,8 +41,9 @@ var Tip = (function () {
     if (head) box.appendChild(h('div', { class: 'th', text: head }));
     box.appendChild(h('div', { class: 'tb', text: lines.join('\n') }));
     if (el == null) { box.setAttribute('style', 'left:0;top:0;visibility:hidden'); document.getElementById('overlays').appendChild(box); }
-    var r = f.el.getBoundingClientRect(), b = box.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight;
-    var left = Math.max(4, Math.min(mx - 14, vw - b.width - 4));
+    var scale = typeof uiScaleFactor === 'function' ? uiScaleFactor() : 1, rr = f.el.getBoundingClientRect(), br = box.getBoundingClientRect();
+    var r = { top: rr.top / scale, bottom: rr.bottom / scale }, b = { width: br.width / scale, height: br.height / scale }, vw = window.innerWidth / scale, vh = window.innerHeight / scale;
+    var left = Math.max(4, Math.min(mx / scale - 14, vw - b.width - 4));
     var top = r.bottom + 7; if (top + b.height > vh - 4) top = Math.max(4, r.top - b.height - 7);
     box.setAttribute('style', 'left:' + Math.round(left) + 'px;top:' + Math.round(top) + 'px');
     if (!warm) { box.classList.remove('out'); box.classList.add('in'); }

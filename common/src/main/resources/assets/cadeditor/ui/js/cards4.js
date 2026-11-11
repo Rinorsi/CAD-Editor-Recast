@@ -36,8 +36,8 @@ AUTO_BODY.tooltip_style = function (card, cid, v) {
 /* ---- 基础名称（和自定义名称不同：它是物品自己的“默认名字”，不会显示成斜体） ---- */
 AUTO_BODY.item_name = function (card, cid, v) {
   /* 三种写法：① 文字（可上色、加粗…）② 翻译键（游戏按当前语言显示，物品默认名就是这种）③ 高级：直接写 SNBT（带点击事件、extra 等复杂文本） */
-  var d = Store.doc(), isBlk = !!(Reg.options("block") && Reg.hasItem && false);
-  var defKey = "item.minecraft." + shortId(d.id);
+  var d = Store.doc(), originalName = Ctx.proto('item_name');
+  var defKey = isObj(originalName) && typeof originalName.translate === 'string' ? originalName.translate : '';
   function isTr(x) { return isObj(x) && typeof x.translate === "string" && Object.keys(x).every(function (k) { return k === "translate" || k === "with" || k === "fallback"; }) && (x.with === undefined || (Array.isArray(x.with) && x.with.every(function (a) { return typeof a === "string"; }))); }
   function modeOf(x) { if (x === undefined || typeof x === "string") return "text"; if (isTr(x)) return "tr"; if (typeof tcSimple === "function" && tcSimple(x)) return "text"; return "raw"; }
   var mode = modeOf(v), body = h("div", { class: "tc-body" });
@@ -45,7 +45,7 @@ AUTO_BODY.item_name = function (card, cid, v) {
     if (m === mode) return;
     if (m === "tr") v = isTr(v) ? v : { translate: defKey };
     else if (m === "text") v = (typeof v === "string" || (typeof tcSimple === "function" && tcSimple(v))) ? v : "";
-    mode = m; if (v !== "") autoPut(cid, v); draw();
+    mode = m; if (v !== "" && !(m === 'tr' && !v.translate)) autoPut(cid, v); draw();
   });
   card.body.appendChild(fieldRow("写法", modes.el));
   card.body.appendChild(body);
@@ -56,8 +56,8 @@ AUTO_BODY.item_name = function (card, cid, v) {
       body.appendChild(t.el);
     } else if (mode === "tr") {
       var key = isTr(v) ? v.translate : defKey, args = isTr(v) && v.with ? v.with.slice() : [];
-      function put() { var o = { translate: key }; if (args.length) o.with = args.slice(); v = o; autoPut(cid, o); }
-      body.appendChild(fieldRow("翻译键", kInput(key, function (x) { key = x; put(); }, { placeholder: defKey }), "游戏按玩家当前语言显示这个键对应的文字；这件物品的默认键是 " + defKey));
+      function put() { if (!key) return; var o = { translate: key }; if (args.length) o.with = args.slice(); v = o; autoPut(cid, o); }
+      body.appendChild(fieldRow("翻译键", kInput(key, function (x) { key = x; put(); }, { placeholder: defKey || '手动填写翻译键' }), "游戏按玩家当前语言显示这个键对应的文字；" + (defKey ? '当前原型的翻译键是 ' + defKey : '尚未取得原型翻译键，保留原值并可手动填写')));
       var list = h("div", { class: "k-sortlist" });
       var drawArgs = function () {
         clear(list);
@@ -70,7 +70,7 @@ AUTO_BODY.item_name = function (card, cid, v) {
       var add = h("div", { class: "k-add" }, [uiIcon("plus", 12), "添加参数"]); activate(add, function () { args.push(""); put(); drawArgs(); });
       drawArgs(); body.appendChild(fieldRow("文字参数", h("div", {}, [list, add]), "替换翻译里的 %s"));
     } else {
-      var code = kCode({ value: toSnbt(v === undefined ? "" : v, null, true), height: 180, validate: function (t) { parseSnbt(t); }, onInput: function (t, err) { if (err) return; try { var pv = parseSnbtUser(t); v = pv; autoPut(cid, pv); } catch (e) {} } });
+      var code = kCode({ value: toSnbt(v === undefined ? "" : v, null, true), height: 180, onInput: function (t, err, parsed) { if (err) return; try { var pv = parsed; v = pv; autoPut(cid, pv); } catch (e) {} } });
       body.appendChild(code.el);
       setTimeout(function () { if (typeof growable === "function") growable(body); }, 0);
     }

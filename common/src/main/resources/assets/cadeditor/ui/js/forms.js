@@ -23,7 +23,7 @@ function setTip(el, text) { if (text === undefined || text === null || text === 
 function icon(name, extra) { return h('img', { class: 'o-ico' + (extra ? ' ' + extra : ''), src: 'oriel:textures/icons/' + name + '.png', alt: '' }); }
 function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); return el; }
 function onKey(el, map) {
-  el.addEventListener('keydown', function (e) { var f = map[e.key]; if (f) { if (f(e) !== false) e.preventDefault(); } });
+  el.addEventListener('keydown', function (e) { if (e.key === 'Escape' && e.repeat) { e.preventDefault(); return; } var f = map[e.key]; if (f) { if (f(e) !== false) e.preventDefault(); } });
 }
 function activate(el, fn) {
   el.setAttribute('tabindex', '0');
@@ -65,24 +65,24 @@ function registryOptions(reg) {
     : reg === 'attribute' ? EDATA.attrs.map(function (a) { return { v: 'minecraft:' + a.id, label: a.name, sub: a.id }; })
     : reg === 'mob_effect' ? EDATA.effects.map(function (a) { return { v: 'minecraft:' + a.id, label: a.name, sub: a.id }; })
     : reg === 'data_component_type' ? EDATA.comps.map(function (c) { return { v: 'minecraft:' + c.id, label: c.name, sub: c.id }; }) : null;
-  if (!Reg.live()) return off ? function () { return off; } : null;
-  return function () { return Reg.options(reg) || off || []; };
+  return function () { return Reg.options(reg) || (Reg.preview() ? off : null) || []; };
 }
 var REG_HINT = { sound_event: '音效 ID，如 minecraft:entity.generic.eat', block: '方块 ID，如 minecraft:stone', entity_type: '实体 ID', damage_type: '伤害类型 ID', instrument: '乐器 ID', jukebox_song: '唱片歌曲 ID', trim_material: '纹饰材料 ID', trim_pattern: '纹饰图案 ID', banner_pattern: '旗帜图案 ID', recipe: '配方 ID', potion: '药水 ID', loot_table: '战利品表 ID', map_decoration_type: '地图标记类型' };
 
 /* ---------- 默认值 ---------- */
+function formDefault(f) { return typeof Reg !== 'undefined' ? Reg.fieldDefault(f) : undefined; }
 function defaultFor(sc) {
   if (!sc) return null;
   switch (sc.t) {
     case 'bool': return false;
     case 'int': case 'num': { var v = 0; if (sc.min !== undefined && v < sc.min) v = sc.min; if (sc.max !== undefined && v > sc.max) v = sc.max; return v; }
-    case 'str': return sc.en ? sc.en[0] : '';
+    case 'str': return sc.en && Reg.preview() ? sc.en[0] : '';
     case 'text': return '';
-    case 'obj': { var o = {}; sc.f.forEach(function (f) { if (f.r) o[f.k] = f.df !== undefined ? clone(f.df) : defaultFor(f.s); }); return o; }
+    case 'obj': { var o = {}; sc.f.forEach(function (f) { if (f.r) o[f.k] = formDefault(f) !== undefined ? clone(formDefault(f)) : defaultFor(f.s); }); return o; }
     case 'arr': return [];
     case 'map': return {};
     case 'union': return defaultFor(sc.a[0]);
-    case 'dunion': { var k = Object.keys(sc.br)[0], b = defaultFor(sc.br[k]); if (isObj(b)) b[sc.disc] = k; return b; }
+    case 'dunion': { if (!Reg.preview()) return {}; var k = Object.keys(sc.br)[0], b = defaultFor(sc.br[k]); if (isObj(b)) b[sc.disc] = k; return b; }
     default: return {};
   }
 }
@@ -113,35 +113,50 @@ function wBool(sc, val, commit) {
 function wNum(sc, val, commit, ctx) {
   var isInt = sc.t === 'int';
   var step = ctx && ctx.step ? ctx.step : (isInt ? 1 : 0.1);
-  var input = h('input', { class: 'ore-field ed-in ed-numin', type: 'text', value: val === undefined || val === null ? '' : fmtNum(val), placeholder: ctx && ctx.placeholder ? ctx.placeholder : '' });
-  var wrap = h('div', { class: 'ed-num' });
+  var input = h('input', { class: 'k-input ed-in ed-numin', type: 'text', value: val === undefined || val === null ? '' : isFinite(nbtNumberValue(val)) ? String(nbtNumberValue(val)) : numLabel(val), placeholder: ctx && ctx.placeholder ? ctx.placeholder : '未设置' });
+  var wrap = kStepper(input, { cls: 'ed-num', onStep: function (dir, e) { nudge(dir, e.shiftKey); } }), editing = false, pendingDefault = null;
   function clampv(v) { if (sc.min !== undefined && v < sc.min) v = sc.min; if (sc.max !== undefined && v > sc.max) v = sc.max; return v; }
+  function allowed(v) { return isFinite(v) || !isInt && sc.live && (isNaN(v) && sc.allowNaN || v === Infinity && sc.allowPositiveInfinity || v === -Infinity && sc.allowNegativeInfinity); }
+  function packed(v) { return isFinite(v) ? v : nbtSpecialScalar(v, sc.nbtType); }
   function parse() {
     var t = input.value.trim().replace(/[dfl]$/i, '');
     if (t === '' || t === '-' ) return undefined;
+    if (/^[+\-−]?∞$/.test(t)) return t.charAt(0) === '-' || t.charAt(0) === '−' ? -Infinity : Infinity;
+    if (/^NaN$/i.test(t)) return NaN;
+    if (/^\+?Infinity$/i.test(t)) return Infinity;
+    if (/^-Infinity$/i.test(t)) return -Infinity;
     var n = Number(t);
-    return isNaN(n) ? NaN : n;
+    return isNaN(n) ? null : n;
   }
   function mark(n) {
-    var bad = n === undefined ? false : (isNaN(n) || (isInt && !Number.isInteger(n)) || (sc.min !== undefined && n < sc.min) || (sc.minEx && sc.min !== undefined && n <= sc.min) || (sc.max !== undefined && n > sc.max));
+    var waiting = n !== null && n !== undefined && !isFinite(n) && !isInt && !sc.live && typeof Reg !== 'undefined' && !Reg.preview();
+    var bad = waiting || n === undefined ? false : (n === null || !allowed(n) || (isInt && !Number.isInteger(n)) || (isFinite(n) && ((sc.min !== undefined && n < sc.min) || (sc.minEx && sc.min !== undefined && n <= sc.min) || (sc.max !== undefined && n > sc.max))));
     wrap.classList.toggle('bad', bad);
   }
   function nudge(dir, big) {
-    var n = parse(); if (n === undefined || isNaN(n)) n = val === undefined ? 0 : val;
+    var n = parse(); if (n === undefined && (val === undefined || val === null)) { toast('请先输入数值', 'info'); return; }
+    if (n === undefined || n === null || !isFinite(n)) n = val === undefined ? 0 : nbtNumberValue(val);
+    if (!isFinite(n)) n = 0;
     var d = step * (big ? 10 : 1) * dir;
-    n = clampv(+(n + d).toFixed(6));
-    input.value = fmtNum(n); centerInput(input); mark(n); val = n; commit(n, { key: ctx && ctx.key ? ctx.key : 'num' });
+    n = clampv(isInt ? Math.round(n + d) : n + d);
+    input.value = String(n); centerInput(input); mark(n); val = n; commit(n, { key: ctx && ctx.key ? ctx.key : 'num' });
   }
-  var minus = h('div', { class: 'ed-step', text: '−', title: '减少（Shift 加速）' }), plus = h('div', { class: 'ed-step', text: '+', title: '增加（Shift 加速）' });
-  minus.addEventListener('click', function (e) { nudge(-1, e.shiftKey); });
-  plus.addEventListener('click', function (e) { nudge(1, e.shiftKey); });
   input.addEventListener('input', function () {
+    editing = true; pendingDefault = null;
     centerInput(input); var n = parse(); mark(n);
-    if (n !== undefined && !isNaN(n)) { val = n; commit(n, { key: ctx && ctx.key ? ctx.key : 'num' }); }
+    if (n !== undefined && n !== null && allowed(n)) { val = n; commit(packed(n), { key: ctx && ctx.key ? ctx.key : 'num' }); }
   });
-  input.addEventListener('change', function () { var n = parse(); if (n === undefined) { if (ctx && ctx.onEmpty) ctx.onEmpty(); } else if (!isNaN(n)) { var c = clampv(isInt ? Math.round(n) : n); if (c !== n) { input.value = fmtNum(c); mark(c); val = c; commit(c, { key: 'num' }); } } });
+  input.addEventListener('change', function () { var n = parse(); if (n === undefined) { if (ctx && ctx.onEmpty) ctx.onEmpty(); } else if (n !== null && allowed(n)) { var c = isFinite(n) ? clampv(isInt ? Math.round(n) : n) : n; if (c !== n) { input.value = fmtNum(c); mark(c); val = c; commit(packed(c), { key: 'num' }); } } });
   onKey(input, { ArrowUp: function (e) { nudge(1, e.shiftKey); }, ArrowDown: function (e) { nudge(-1, e.shiftKey); } });
-  wrap.appendChild(minus); wrap.appendChild(input); wrap.appendChild(plus);
+  wrap.refreshDefault = function (v, placeholder) {
+    input.setAttribute('placeholder', placeholder || '未设置');
+    if (editing) return;
+    if (document.activeElement === input) { pendingDefault = {value:v,placeholder:placeholder}; return; }
+    pendingDefault = null;
+    val = v; input.value = v === undefined || v === null ? '' : isFinite(nbtNumberValue(v)) ? String(nbtNumberValue(v)) : numLabel(v);
+    centerInput(input); mark(parse());
+  };
+  input.addEventListener('blur', function () { if (pendingDefault && !editing) wrap.refreshDefault(pendingDefault.value, pendingDefault.placeholder); });
   setTimeout(function () { centerInput(input); }, 0);
   mark(parse());
   return wrap;
@@ -164,14 +179,14 @@ function wStr(sc, val, commit, ctx) {
   if ((sc.en && sc.en.indexOf('light_blue') >= 0 && sc.en.indexOf('magenta') >= 0 && sc.en.indexOf('white') >= 0) || (typeof dyeFieldFor === 'function' && dyeFieldFor(CURCID, ctx && ctx.path))) return wDye(val, commit);
   if (sc.en) {
     /* 候选以游戏里的枚举为准（liveEnumOptions），没到 / 离线才用内置；多于 4 个的可以直接输入（不在列表里的会在问题列表里提示） */
-    var opts = liveEnumOptions(CURCID, ctx && ctx.path) || sc.en.map(function (v) { return { v: v, label: v }; });
-    if (opts.length <= 4) return wSeg(opts, val, function (v) { commit(v, {}); });
+    var opts = liveEnumOptions(CURCID, ctx && ctx.path) || Reg.schemaEnumOptions(sc);
+    if (opts.length > 0 && opts.length <= 4) return wSeg(opts, val, function (v) { commit(v, {}); });
     return combo({ value: val === undefined ? '' : val, options: opts, free: true, placeholder: '选择，或直接输入…', onPick: function (v) { if (v !== '') commit(v, {}); } });
   }
   if (typeof dyeFieldFor === 'function' && dyeFieldFor(CURCID, ctx && ctx.path)) return wDye(val, commit);
   var ropts = sc.reg ? registryOptions(sc.reg) : null;
   var ph = sc.tag ? '#标签，如 #minecraft:logs' : (sc.reg && REG_HINT[sc.reg]) || (sc.reg ? sc.reg + ' ID' : '');
-  if (sc.reg && Reg.live()) {
+  if (sc.reg && !Reg.preview()) {
     /* 注册表字段：统一的“名称 · ID  [选择…]”，音效字段用带试听的音效选择窗；手输 ID 在选择窗的搜索框里 */
     if (sc.reg === "sound_event") return kSoundField(val === undefined ? "" : val, function (x) { commit(x, {}); }).el;
     return kRegSelect({ reg: sc.reg, tag: !!sc.tag, value: val === undefined ? "" : String(val), empty: "（未选择）", onChange: function (x) { commit(x, {}); } }).el;
@@ -185,11 +200,11 @@ function wStr(sc, val, commit, ctx) {
 /* ---------- 文本组件 ---------- */
 var MC_COLORS = [['black', '000000', '黑色'], ['dark_blue', '0000AA', '深蓝'], ['dark_green', '00AA00', '深绿'], ['dark_aqua', '00AAAA', '深青'], ['dark_red', 'AA0000', '深红'], ['dark_purple', 'AA00AA', '深紫'], ['gold', 'FFAA00', '金色'], ['gray', 'AAAAAA', '灰色'], ['dark_gray', '555555', '深灰'], ['blue', '5555FF', '蓝色'], ['green', '55FF55', '绿色'], ['aqua', '55FFFF', '青色'], ['red', 'FF5555', '红色'], ['light_purple', 'FF55FF', '粉紫'], ['yellow', 'FFFF55', '黄色'], ['white', 'FFFFFF', '白色']];
 var MC_HEX = {}; MC_COLORS.forEach(function (c) { MC_HEX[c[0]] = '#' + c[1]; });
-/* 文本颜色：以游戏里的 enum:text_color（ChatFormatting 的颜色）为准，带 rgb；没到 / 离线用上面内置的 16 色。
+/* 文本颜色：以游戏里的 enum:text_color（ChatFormatting 的颜色）为准，带 rgb；仅浏览器样例预览使用上面内置的 16 色。
    中文名沿用内置表（按 id 对），游戏里多出来的颜色用它自己的名字 */
 function mcColors() {
-  var l = typeof Reg !== 'undefined' && Reg.live() ? Reg.options('enum:text_color') : null;
-  if (!l || !l.length) return MC_COLORS;
+  var l = typeof Reg !== 'undefined' ? Reg.options('enum:text_color') : null;
+  if (!l || !l.length) return typeof Reg !== 'undefined' && !Reg.preview() ? [] : MC_COLORS;
   var zh = {}; MC_COLORS.forEach(function (c) { zh[c[0]] = c[2]; });
   var out = [];
   l.forEach(function (e) {
@@ -198,7 +213,13 @@ function mcColors() {
     MC_HEX[e.v] = '#' + hex;
     out.push([e.v, hex, zh[e.v] || e.label || e.v]);
   });
-  return out.length ? out : MC_COLORS;
+  return out.length ? out : (Reg.preview() ? MC_COLORS : []);
+}
+/* First-open palettes wait for real enum data; update only swatches, never the RGB input. */
+function watchColorOptions(get, paint) {
+  if (get().length || typeof Reg === 'undefined' || Reg.preview()) return function () {};
+  var off = Reg.on(function () { if (get().length) { off(); paint(); } });
+  return off;
 }
 var TC_KEYS = { text: 1, color: 1, bold: 1, italic: 1, underlined: 1, strikethrough: 1, obfuscated: 1 };
 function tcSimple(v) {
@@ -241,22 +262,24 @@ function wText(sc, val, commit, ctx) {
   var input = h('input', { class: 'ore-field ed-in', type: 'text', value: cur.text, placeholder: ctx && ctx.placeholder || '输入文字', spellcheck: 'false' });
   var prev = h('div', { class: 'ed-tcprev' });
   var rowC = h('div', { class: 'ed-sw' });
+  var colorSwatches = h('div', { class: 'ed-sw' });
+  var hex = h('input', { class: 'ore-field ed-in ed-hex', type: 'text', value: cur.color && cur.color.charAt(0) === '#' ? cur.color : '', placeholder: '#RRGGBB', maxlength: '7' });
+  hex.addEventListener('change', function () { var t = hex.value.trim(); if (/^#[0-9a-fA-F]{6}$/.test(t)) { cur.color = t; paintSw(); emit('tc-color'); } else if (t === '') { delete cur.color; paintSw(); emit('tc-color'); } });
+  rowC.appendChild(colorSwatches); rowC.appendChild(hex);
   var rowS = h('div', { class: 'ed-tcstyle' });
   function emit(k) { tcPreview(prev, tcPack(cur), ctx && ctx.baseColor); commit(tcPack(cur), { key: k || 'tc' }); }
   input.addEventListener('input', function () { cur.text = input.value; emit('tc-text'); });
-  function paintSw() {
-    clear(rowC);
+  function paintSw(keepInput) {
+    clear(colorSwatches);
     var none = h('div', { class: 'swatch none' + (!cur.color ? ' on' : ''), title: '默认颜色' }, [h('i', { text: '⁄' })]);
     activate(none, function () { delete cur.color; paintSw(); emit('tc-color'); });
-    rowC.appendChild(none);
+    colorSwatches.appendChild(none);
     mcColors().forEach(function (c) {
       var s = h('div', { class: 'swatch' + (cur.color === c[0] ? ' on' : ''), title: c[2], style: 'background:#' + c[1] });
       activate(s, function () { cur.color = c[0]; paintSw(); emit('tc-color'); });
-      rowC.appendChild(s);
+      colorSwatches.appendChild(s);
     });
-    var hex = h('input', { class: 'ore-field ed-in ed-hex', type: 'text', value: cur.color && cur.color.charAt(0) === '#' ? cur.color : '', placeholder: '#RRGGBB', maxlength: '7' });
-    hex.addEventListener('change', function () { var t = hex.value.trim(); if (/^#[0-9a-fA-F]{6}$/.test(t)) { cur.color = t; paintSw(); emit('tc-color'); } else if (t === '') { delete cur.color; paintSw(); emit('tc-color'); } });
-    rowC.appendChild(hex);
+    if (!keepInput) hex.value = cur.color && cur.color.charAt(0) === '#' ? cur.color : '';
   }
   function paintStyle() {
     clear(rowS);
@@ -271,6 +294,7 @@ function wText(sc, val, commit, ctx) {
     rowS.appendChild(ib);
   }
   paintSw(); paintStyle(); tcPreview(prev, tcPack(cur), ctx && ctx.baseColor);
+  watchColorOptions(mcColors, function () { paintSw(true); });
   if (ctx && ctx.compact) {
     var key = (ctx.openKey || 'tc'), panel = h('div', { class: 'ed-tcpanel' }, [rowC, rowS]);
     var tg = h('div', { class: 'ed-mini wide', text: '样式', title: '颜色与粗体、斜体等' });
@@ -295,7 +319,8 @@ function wColor(sc, val, commit) {
   function set(v) { n = v; chip.setAttribute('style', 'background:' + hex()); input.value = hex(); commit(n, { key: 'color' }); }
   input.addEventListener('change', function () { var t = input.value.trim(); if (/^#?[0-9a-fA-F]{6}$/.test(t)) set(parseInt(t.replace('#', ''), 16)); else input.value = hex(); });
   var pal = h('div', { class: 'ed-sw' });
-  mcColors().forEach(function (c) { var s = h('div', { class: 'swatch', title: c[2], style: 'background:#' + c[1] }); activate(s, function () { set(parseInt(c[1], 16)); }); pal.appendChild(s); });
+  function paintPalette() { clear(pal); mcColors().forEach(function (c) { var s = h('div', { class: 'swatch', title: c[2], style: 'background:#' + c[1] }); activate(s, function () { set(parseInt(c[1], 16)); }); pal.appendChild(s); }); }
+  paintPalette(); watchColorOptions(mcColors, paintPalette);
   wrap.appendChild(h('div', { class: 'ed-row' }, [chip, input]));
   wrap.appendChild(pal);
   return wrap;
@@ -334,9 +359,9 @@ function wUnion(sc, val, commit, ctx) {
 
 function wDunion(sc, val, commit, ctx) {
   val = isObj(val) ? val : defaultFor(sc);
-  var names = Object.keys(sc.br), box = h('div', { class: 'ed-union' }), body = h('div', { class: 'ed-unionbody' });
-  function draw() { clear(body); body.appendChild(renderNode(sc.br[val[sc.disc]] || sc.br[names[0]], val, function (v, o) { v[sc.disc] = val[sc.disc]; val = v; commit(val, o); }, ctx)); }
-  var seg = wSeg(names.map(function (n) { return { v: n, label: n }; }), val[sc.disc], function (n) { var d = defaultFor(sc.br[n]); if (!isObj(d)) d = {}; d[sc.disc] = n; val = d; commit(val, {}); draw(); });
+  var box = h('div', { class: 'ed-union' }), body = h('div', { class: 'ed-unionbody' });
+  function draw() { clear(body); if (!val[sc.disc]) { body.appendChild(kHint('先选择当前游戏的类型，或手动填写类型 ID；不会自动采用内置分支。')); return; } body.appendChild(renderNode(sc.br[val[sc.disc]] || { t: 'raw' }, val, function (v, o) { if (isObj(v)) v[sc.disc] = val[sc.disc]; val = v; commit(val, o); }, ctx)); }
+  var seg = combo({ options: function () { return Reg.variantOptions(sc); }, value: val[sc.disc] || '', free: true, placeholder: '选择或手动填写类型 ID', onPick: function (n) { var d = sc.br[n] ? defaultFor(sc.br[n]) : {}; if (!isObj(d)) d = {}; d[sc.disc] = n; val = d; commit(val, {}); draw(); } });
   box.appendChild(seg); box.appendChild(body); draw();
   return box;
 }
@@ -353,7 +378,7 @@ function fieldLabel(f, ov, quiet) {
 var SPEC_FORMS = {};
 /* 紧凑规格表单：默认值可直接编辑；恢复默认是操作，不伪装成开关。 */
 function compactField(f, ov, sc, cur, commit, ctx) {
-  var has = cur[f.k] !== undefined, value = has ? cur[f.k] : (f.df !== undefined ? clone(f.df) : defaultFor(sc));
+  var has = cur[f.k] !== undefined, value = has ? cur[f.k] : (formDefault(f) !== undefined ? clone(formDefault(f)) : undefined);
   var path = (ctx && ctx.path || '') + '.' + f.k;
   function save(v, op) { cur[f.k] = v; commit(cur, op && op.key ? { key: path } : {}); }
   var box = h('div', { class: 'compact-field' });
@@ -363,7 +388,23 @@ function compactField(f, ov, sc, cur, commit, ctx) {
   if (sc.t === 'num' || sc.t === 'int') {
     var row = h('div', { class: 'compact-row' }, [fieldLabel(f, ov, true)]);
     var controls = h('div', { class: 'compact-controls' });
-    controls.appendChild(kNumber(value, { min: sc.min, max: sc.max, step: ov.step || (sc.t === 'int' ? 1 : 0.1), noSlider: true, onChange: function (v) { save(v, { key: path }); has = true; rst.classList.remove('dim'); } }).el);
+    var special = sc.allowNaN || sc.allowPositiveInfinity || sc.allowNegativeInfinity || nbtMeta(value) && nbtMeta(value).scalar && nbtSpecialNode(nbtMeta(value).scalar);
+    var numberChanged = function (v) { save(v, { key: path }); has = true; rst.classList.remove('dim'); };
+    var fieldCid = CURCID;
+    function placeholder() {
+      if (Reg.fieldDefaultReady(f)) return '未设置';
+      var status = Reg.formStatus(fieldCid);
+      return status.error ? '读取失败' : status.pending ? '读取中' : '未设置';
+    }
+    var number = special ? {el:wNum(sc, value, numberChanged, { step: ov.step || (sc.t === 'int' ? 1 : 0.1), key: path, placeholder: placeholder() })}
+      : codecNumber(value, { min: sc.min, max: sc.max, step: ov.step || (sc.t === 'int' ? 1 : 0.1), preservePrecision: sc.t === 'num', noSlider: true, onChange: numberChanged, placeholder: placeholder });
+    controls.appendChild(number.el);
+    if (ctx && ctx.refreshDefaults) ctx.refreshDefaults.push(function () {
+      if (cur[f.k] !== undefined) return;
+      var v = formDefault(f);
+      if (number.el.refreshDefault) number.el.refreshDefault(v === undefined ? undefined : clone(v), placeholder());
+      else number.set(v === undefined ? undefined : clone(v));
+    });
     controls.appendChild(h('span', { class: 'compact-unit', text: ov.unit || '' }));
     var rst = resetBtn(); controls.appendChild(rst); row.appendChild(controls); box.appendChild(row); return box;
   }
@@ -381,8 +422,7 @@ function compactField(f, ov, sc, cur, commit, ctx) {
     var chosen = h('span', { class: 'compact-set-value', text: label, 'data-tip': label });
     ctl.appendChild(chosen);
     ctl.appendChild(kBtn('选择…', function () {
-      openTagPicker({ title: '选择伤害类型或标签', tagsReg: reg, entryReg: reg, multi: true, onConfirm: function (ids) {
-        if (!ids.length) return;
+      openTagPicker({ title: '选择伤害类型或标签', tagsReg: reg, entryReg: reg, multi: true, selected: selected === undefined ? [] : (Array.isArray(selected) ? selected : [selected]).map(pickerId), onConfirm: function (ids) {
         var tags = ids.filter(function (id) { return id.charAt(0) === '#'; });
         if (tags.length && ids.length > 1) { toast('一个标签和多个伤害类型不能混用，请重新选择', 'warn'); return; }
         save(tags.length ? tags[0] : ids); redraw();
@@ -427,25 +467,25 @@ function wObj(sc, val, commit, ctx) {
       var unitEl = ov.unit ? h("span", { class: "fu", text: ov.unit }) : (spec && fs2 && fs2.t === "num" ? h("span", { class: "fu", text: " " }) : null);
       /* 每行同一个版式：左边字段名，右边取值（+单位），最右一列是“启用”开关（必填字段没有开关，留空位）。没启用时取值处只显示默认值 */
       if (fs2 && fs2.t === "bool") {
-        var bon = has ? !!cur[f.k] : !!f.df;
+        var bon = has ? !!cur[f.k] : !!formDefault(f);
         var btg = kToggle(bon, function (v) { cur[f.k] = v; commit(cur, {}); draw(); }, "");
-        ctl.appendChild(h("div", { class: "ed-unset" }, has ? [] : [h("span", { class: "dv", text: "默认 " + (f.df ? "开" : "关") })]));
+        ctl.appendChild(h("div", { class: "ed-unset" }, has ? [] : [h("span", { class: "dv", text: formDefault(f) === undefined ? "未设置（默认值尚未读取）" : "默认 " + (formDefault(f) ? "开" : "关") })]));
         ctl.appendChild(h("div", { class: "ed-sw" }, [btg.el]));
         row.appendChild(ctl); box.appendChild(row); return;
       }
       var sw = null;
       if (!f.r) {
         sw = kToggle(has, function (on) {
-          if (on) cur[f.k] = f.df !== undefined ? clone(f.df) : defaultFor(f.s); else delete cur[f.k];
+          if (on) { if (!Reg.fieldDefaultReady(f)) { toast('正在读取此字段的 Codec 默认值；可使用原始编辑手动输入。', 'warn'); draw(); return; } cur[f.k] = formDefault(f) !== undefined ? clone(formDefault(f)) : defaultFor(f.s); } else delete cur[f.k];
           commit(cur, {}); draw();
         }, "");
         row.classList.add("opt");
       }
       if (!has && !f.r) {
-        var dtxt = ov.dtxt || (f.df !== undefined ? "默认 " + (Array.isArray(f.df) ? f.df.length + " 项" : isObj(f.df) ? "一组预设" : String(f.df) + (ov.unit ? " " + ov.unit : "")) : "未设置");
-        ctl.appendChild(h("div", { class: "ed-unset", title: f.df !== undefined && (isObj(f.df) || Array.isArray(f.df)) ? toSnbt(f.df, null, false) : "" }, [h("span", { class: "dv", text: dtxt })]));
+        var dtxt = ov.dtxt || (formDefault(f) !== undefined ? "默认 " + (Array.isArray(formDefault(f)) ? formDefault(f).length + " 项" : isObj(formDefault(f)) ? "一组预设" : String(formDefault(f)) + (ov.unit ? " " + ov.unit : "")) : "未设置");
+        ctl.appendChild(h("div", { class: "ed-unset", title: formDefault(f) !== undefined && (isObj(formDefault(f)) || Array.isArray(formDefault(f))) ? toSnbt(formDefault(f), null, false) : "" }, [h("span", { class: "dv", text: dtxt })]));
       } else {
-        if (!has) cur[f.k] = f.df !== undefined ? clone(f.df) : defaultFor(f.s);
+        if (!has) cur[f.k] = formDefault(f) !== undefined ? clone(formDefault(f)) : defaultFor(f.s);
         var sub = { path: (ctx && ctx.path || "") + "." + f.k, step: ov.step, spec: ov.spec, itemSpec: ov.itemSpec, itemSummary: ov.itemSummary };
         var node = renderNode(fs2, cur[f.k], function (v, o) { cur[f.k] = v; commit(cur, o && o.key ? { key: (ctx && ctx.path || "") + "." + f.k } : o); }, sub);
         if (isSub) subNode = node; else { ctl.appendChild(node); if (unitEl) ctl.appendChild(unitEl); }
@@ -473,14 +513,17 @@ function wArr(sc, val, commit, ctx) {
   var cur = Array.isArray(val) ? val : [];
   var flat = !!(ctx && ctx.flatList);
   var box = h('div', { class: 'ed-arr' + (flat ? ' flat-rules' : '') }), list = h('div', { class: 'ed-list' });
+  var page = { page:0 }, pager = h('div', { class:'k-row wrap' });
   var path = (ctx && ctx.path || '') + '[]';
   var complex = sc.i.t === 'obj' || sc.i.t === 'map' || sc.i.t === 'dunion' || sc.i.t === 'union' || sc.i.t === 'raw' || sc.i.t === 'nbt' || sc.i.t === 'stack';
   function draw() {
     clear(list);
     if (flat) count.textContent = ctx.listLabel + ' · ' + cur.length;
-    cur.forEach(function (item, i) {
+    var range = kListPage(cur.length, page, pager, draw);
+    cur.slice(range.start, range.end).forEach(function (item, index) {
+      var i = range.start + index;
       var okey = path + i;
-      var node = renderNode(sc.i, item, function (v, o) { cur[i] = v; commit(cur, o && o.key ? { key: path + i } : o); }, { path: path + i, spec: ctx && ctx.itemSpec });
+      function makeNode() { return renderNode(sc.i, item, function (v, o) { cur[i] = v; commit(cur, o && o.key ? { key: path + i } : o); }, { path: path + i, spec: ctx && ctx.itemSpec }); }
       var tools = h('div', { class: 'ed-it-tools' });
       if (i > 0) { var up = h('div', { class: 'ed-mini', text: '↑', title: '上移' }); activate(up, function () { var t = cur[i - 1]; cur[i - 1] = cur[i]; cur[i] = t; commit(cur, {}); draw(); }); tools.appendChild(up); }
       if (i < cur.length - 1) { var dn = h('div', { class: 'ed-mini', text: '↓', title: '下移' }); activate(dn, function () { var t = cur[i + 1]; cur[i + 1] = cur[i]; cur[i] = t; commit(cur, {}); draw(); }); tools.appendChild(dn); }
@@ -489,14 +532,17 @@ function wArr(sc, val, commit, ctx) {
       var row;
       if (complex) {
         var openKey = (ctx && ctx.compId || '') + path + i;
-        var isOpen = UIOpen[openKey] !== false;
+        var isOpen = UIOpen[openKey] === true || UIOpen[openKey] !== false && cur.length <= 24;
         row = h('div', { class: 'ed-card' + (isOpen ? ' open' : '') });
         var summary = ctx && ctx.itemSummary ? ctx.itemSummary(item, i) : summarize(sc.i, item);
         var head = h('div', { class: 'ed-card-h', 'data-tip': summary }, [h('span', { class: 'ix', text: (flat ? '规则 ' : '#') + (i + 1) }), h('span', { class: 'sm', text: flat ? '' : summary }), tools]);
-        head.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.ed-it-tools') != null) return; UIOpen[openKey] = !(UIOpen[openKey] !== false); row.classList.toggle('open'); });
-        row.appendChild(head); row.appendChild(h('div', { class: 'ed-card-b' }, [node]));
+        var child = h('div', { class:'ed-card-b' }), mounted = false;
+        function mount() { if (!mounted) { child.appendChild(makeNode()); mounted = true; } }
+        if (isOpen) mount();
+        head.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.ed-it-tools') != null) return; isOpen = !isOpen; UIOpen[openKey] = isOpen; if (isOpen) mount(); row.classList.toggle('open', isOpen); });
+        row.appendChild(head); row.appendChild(child);
       } else {
-        row = h('div', { class: 'ed-itrow' }, [h('span', { class: 'ix', text: String(i + 1) }), h('div', { class: 'grow' }, [node]), tools]);
+        row = h('div', { class: 'ed-itrow' }, [h('span', { class: 'ix', text: String(i + 1) }), h('div', { class: 'grow' }, [makeNode()]), tools]);
       }
       list.appendChild(row);
     });
@@ -505,42 +551,50 @@ function wArr(sc, val, commit, ctx) {
   var keyF = keyRegField(sc.i);
   var add = h('div', { class: 'ed-addbtn' }, [icon('plus'), keyF ? '添加（可多选）' : '添加']);
   var atMax = function () { return sc.max !== undefined && cur.length >= sc.max; };
-  function pushMany(ids, vals) {
-    ids.forEach(function (id) {
-      if (atMax()) return;
-      if (!keyF.k) { cur.push(id); return; }
+  function pushMany(ids, vals, edit) {
+    var next = pickerSyncList(cur, ids, function (x) { return keyF.k ? x[keyF.k] : x; }, function (id) {
+      if (!keyF.k) return id;
       var it = defaultFor(sc.i); it[keyF.k] = id;
       var hasAmp = sc.i.f.some(function (x) { return x.k === 'amplifier'; }), hasDur = sc.i.f.some(function (x) { return x.k === 'duration'; }), v = (vals && vals[id]) || {};
       if (hasAmp && v.level) it.amplifier = Math.max(0, v.level - 1);
-      if (hasDur && v.seconds) it.duration = Math.max(1, Math.round(v.seconds * 20));
-      cur.push(it);
+      if (hasDur && v.seconds) it.duration = effectTicksFromSeconds(v.seconds);
+      return it;
+    }, function (it, id) {
+      if (!keyF.k) return;
+      var dirty = edit && edit.changes[id] || {}, v = vals && vals[id] || {};
+      if (dirty.level) it.amplifier = v.level - 1;
+      if (dirty.seconds) it.duration = effectTicksFromSeconds(v.seconds);
     });
+    if (sc.max !== undefined && next.length > sc.max) { toast('最多选择 ' + sc.max + ' 项，原列表未修改', 'warn'); return; }
+    cur = next;
     commit(cur, {}); draw();
   }
   activate(add, function () {
-    if (atMax()) return;
-    if (!keyF) { cur.push(defaultFor(sc.i)); commit(cur, {}); draw(); return; }
-    var present = {}; cur.forEach(function (x) { var xv = keyF.k ? (x && x[keyF.k]) : x; if (xv) present[Reg.full(String(xv))] = 1; });
+    if (atMax() && !keyF) return;
+    if (!keyF) { cur.push(defaultFor(sc.i)); page.page = Math.floor((cur.length - 1) / 24); commit(cur, {}); draw(); return; }
+    var present = {}, values = {}; cur.forEach(function (x) { var xv = keyF.k ? (x && x[keyF.k]) : x; if (xv) { var id = Reg.full(String(xv)); present[id] = 1; if (keyF.k) values[id] = { level: (x.amplifier || 0) + 1, seconds: x.duration === undefined ? undefined : effectSecondsFromTicks(x.duration) }; } });
     if (keyF.reg === 'mob_effect') {
       var hasAmp2 = !!keyF.k && sc.i.f.some(function (x) { return x.k === 'amplifier'; }), hasDur2 = !!keyF.k && sc.i.f.some(function (x) { return x.k === 'duration'; });
-      openEffectPicker({ present: present, full: hasAmp2, noParams: !hasDur2 && !hasAmp2, onConfirm: pushMany });
-    } else openRegPick({ reg: keyF.reg, multi: true, locked: present, title: '添加（可多选）', onPickMany: function (ids) { pushMany(ids); } });
+      openEffectPicker({ present: present, values: values, full: hasAmp2, noParams: !hasDur2 && !hasAmp2, onConfirm: pushMany });
+    } else openRegPick({ reg: keyF.reg, multi: true, selected: present, title: '选择条目', onPickMany: function (ids) { pushMany(ids); } });
   });
   var count;
   if (flat) { count = h('span', { class: 'flat-rules-title' }); box.appendChild(h('div', { class: 'flat-rules-head' }, [count, add])); }
-  box.appendChild(list); if (!flat) box.appendChild(add); draw();
+  box.appendChild(list); box.appendChild(pager); if (!flat) box.appendChild(add); draw();
   return box;
 }
 
 function wMap(sc, val, commit, ctx) {
   var cur = isObj(val) ? val : {};
   var box = h('div', { class: 'ed-map' }), list = h('div', { class: 'ed-list' });
+  var page = { page:0 }, pager = h('div', { class:'k-row wrap' });
   var ropts = sc.k && sc.k.reg ? registryOptions(sc.k.reg) : null;
   function draw() {
     clear(list);
-    Object.keys(cur).forEach(function (k) {
+    var keys = Object.keys(cur), range = kListPage(keys.length, page, pager, draw);
+    keys.slice(range.start, range.end).forEach(function (k) {
       var kin = h('input', { class: 'ore-field ed-in ed-key', type: 'text', value: k, spellcheck: 'false' });
-      kin.addEventListener('change', function () { var nk = kin.value.trim(); if (!nk || nk === k) { kin.value = k; return; } var nv = {}; Object.keys(cur).forEach(function (x) { nv[x === k ? nk : x] = cur[x]; }); cur = nv; commit(cur, {}); draw(); });
+      kin.addEventListener('change', function () { var nk = kin.value.trim(); if (!nk || nk === k) { kin.value = k; return; } var nv = {}; Object.keys(cur).forEach(function (x) { nbtPut(nv, x === k ? nk : x, nbtTake(cur, x)); }); cur = nv; commit(cur, {}); draw(); });
       var node = renderNode(sc.v, cur[k], function (v, o) { cur[k] = v; commit(cur, o && o.key ? { key: (ctx && ctx.path || '') + '{' + k + '}' } : o); }, { path: (ctx && ctx.path || '') + '{' + k + '}' });
       var rm = h('div', { class: 'ed-mini del', text: '×', title: '删除' }); activate(rm, function () { delete cur[k]; commit(cur, {}); draw(); });
       list.appendChild(h('div', { class: 'ed-itrow' }, [kin, h('div', { class: 'grow' }, [node]), rm]));
@@ -550,7 +604,7 @@ function wMap(sc, val, commit, ctx) {
   var addIn = ropts
     ? combo({ value: '', options: ropts, free: true, reset: true, placeholder: '添加键…', onPick: function (v) { if (v && cur[v] === undefined) { cur[v] = defaultFor(sc.v); commit(cur, {}); draw(); } } })
     : (function () { var i = h('input', { class: 'ore-field ed-in', type: 'text', placeholder: '新键名，回车添加' }); onKey(i, { Enter: function () { var v = i.value.trim(); if (v && cur[v] === undefined) { cur[v] = defaultFor(sc.v); i.value = ''; commit(cur, {}); draw(); } } }); return i; })();
-  box.appendChild(list); box.appendChild(h('div', { class: 'ed-addrow' }, [icon('plus'), addIn])); draw();
+  box.appendChild(list); box.appendChild(pager); box.appendChild(h('div', { class: 'ed-addrow' }, [icon('plus'), addIn])); draw();
   return box;
 }
 
@@ -577,18 +631,18 @@ function wEnchants(c, val, commit, ctx) {
   var d = ctx.doc;
   var box = h('div', { class: 'ed-ench' }), list = h('div', { class: 'ed-list' });
   function conflicts(id) {
-    var out = [], e = ENIDX[id]; if (!e) return out;
-    Object.keys(cur).forEach(function (k) { var o = shortId(k); if (o !== id && (e.excl.indexOf(o) >= 0)) out.push(ENIDX[o] ? ENIDX[o].name : o); });
+    var out = [];
+    Object.keys(cur).forEach(function (k) { if (Reg.full(k) !== Reg.full(id) && Reg.enchantConflict(id, k) === true) out.push(Reg.nameOf('enchantments', k) || k); });
     return out;
   }
   function draw() {
     clear(list);
     Object.keys(cur).forEach(function (k) {
-      var id = shortId(k), e = ENIDX[id], lv = cur[k];
+      var id = shortId(k), e = Reg.enchant(k), lv = cur[k];
       var warn = [];
-      if (!e) warn.push('未知附魔');
+      if (!e) warn.push('尚无实时信息，保留原 ID');
       else {
-        if (lv > e.max) warn.push('超过自然上限 ' + e.max);
+        if (e.max !== null && lv > e.max) warn.push('超过自然上限 ' + e.max);
         var cf = conflicts(id); if (cf.length) warn.push('与 ' + cf.join('、') + ' 互斥');
       }
       var num = wNum({ t: 'int', min: 1, max: 255 }, lv, function (v) { cur[k] = v; commit(cur, { key: 'ench-' + id }); rom.textContent = roman(v); }, { key: 'ench-' + id });
@@ -596,7 +650,7 @@ function wEnchants(c, val, commit, ctx) {
       var rm = h('div', { class: 'ed-mini del', text: '×', title: '移除此附魔' }); activate(rm, function () { delete cur[k]; commit(cur, {}); draw(); });
       var row = h('div', { class: 'ed-enrow' + (warn.length ? ' warn' : '') }, [
         icon('enchant'),
-        h('div', { class: 'nm' }, [h('div', { class: 'z', text: e ? e.name : id }), h('div', { class: 'id', text: 'minecraft:' + id + (e ? ' · 自然上限 ' + e.max : '') })]),
+        h('div', { class: 'nm' }, [h('div', { class: 'z', text: e ? e.name : id }), h('div', { class: 'id', text: Reg.full(k) + (e && e.max !== null ? ' · 自然上限 ' + e.max : '') })]),
         num, rom, rm,
       ]);
       if (warn.length) row.appendChild(h('div', { class: 'ed-warnline', text: '⚠ ' + warn.join('；') }));
@@ -604,30 +658,33 @@ function wEnchants(c, val, commit, ctx) {
     });
     if (!Object.keys(cur).length) list.appendChild(h('div', { class: 'ed-empty', text: '没有附魔' }));
   }
-  var opts = EDATA.enchants.map(function (e) { return { v: e.id, label: e.name, sub: e.id + ' · 最高 ' + e.max + (e.items.indexOf(shortId(d.id)) >= 0 ? ' · 适用' : '') }; });
-  var addIn = combo({ value: '', options: opts, free: false, reset: true, placeholder: '搜索并添加附魔…', onPick: function (id) { var key = 'minecraft:' + id; if (ENIDX[id] && cur[key] === undefined) { cur[key] = 1; commit(cur, {}); draw(); } } });
+  var opts = function () { return Reg.enchants().map(function (e) { return { v: e.full, label: e.name, sub: e.full + (e.max !== null ? ' · 最高 ' + e.max : ' · 最高等级尚未读取') + (Reg.enchantFits(e, d.id) === true ? ' · 适用' : '') }; }); };
+  var addIn = combo({ value: '', options: opts, free: true, reset: true, placeholder: '搜索或输入附魔 ID…', onPick: function (id) { var key = Reg.full(id); if (id && cur[key] === undefined) { cur[key] = 1; commit(cur, {}); draw(); } } });
   var tools = h('div', { class: 'ed-row wrap' });
   var maxb = h('div', { class: 'ed-mini wide', text: '全部设为自然上限' });
-  activate(maxb, function () { Object.keys(cur).forEach(function (k) { var e = ENIDX[shortId(k)]; if (e) cur[k] = e.max; }); commit(cur, {}); draw(); });
+  activate(maxb, function () { var changed = false; Object.keys(cur).forEach(function (k) { var e = Reg.enchant(k); if (e && e.max !== null && cur[k] !== e.max) { cur[k] = e.max; changed = true; } }); if (!changed) return; commit(cur, {}); draw(); });
   var clr = h('div', { class: 'ed-mini wide del', text: '清空' });
   activate(clr, function () { cur = {}; commit(cur, {}); draw(); });
   var apl = h('div', { class: 'ed-mini wide', text: '添加全部适用附魔' });
-  activate(apl, function () { var sid = shortId(d.id); EDATA.enchants.forEach(function (e) { var key = 'minecraft:' + e.id; if (e.items.indexOf(sid) >= 0 && cur[key] === undefined && conflicts(e.id).length === 0 && !e.excl.some(function (x) { return cur['minecraft:' + x] !== undefined; })) cur[key] = e.max; }); commit(cur, {}); draw(); });
+  activate(apl, function () { var changed = false; Reg.enchants().forEach(function (e) { if (e.max !== null && e.exclusiveKnown && Reg.enchantFits(e, d.id) === true && cur[e.full] === undefined && Object.keys(cur).every(function (k) { return Reg.enchantConflict(e, k) === false; })) { cur[e.full] = e.max; changed = true; } }); if (!changed) return; commit(cur, {}); draw(); });
   tools.appendChild(maxb); tools.appendChild(apl); tools.appendChild(clr);
-  box.appendChild(list); box.appendChild(h('div', { class: 'ed-addrow' }, [icon('plus'), addIn])); box.appendChild(tools); draw();
+  box.appendChild(list); box.appendChild(h('div', { class: 'ed-addrow' }, [icon('plus'), addIn])); box.appendChild(tools);
+  if (!Reg.preview() && !Reg.list('enchantments')) box.appendChild(h('div', { class: 'ed-hint', text: '正在读取实时附魔；可以手动输入 ID 和等级，自动最高/适用操作等待数据。' }));
+  draw();
   return box;
 }
 
 var OPS = Labels.opShort;
 var SLOTS = ['any', 'mainhand', 'offhand', 'hand', 'head', 'chest', 'legs', 'feet', 'armor', 'body', 'saddle'];
 var SLOT_ZH = Labels.slot;
+function attributeSlotOptions() { return Reg.options('enum:equipment_slot_group') || (Reg.preview() ? SLOTS.map(function (s) { return { v: s, label: SLOT_ZH[s] || s }; }) : []); }
 function wAttrMods(c, val, commit, ctx) {
   var cur = Array.isArray(val) ? val : [];
   var box = h('div', { class: 'ed-attrs' }), list = h('div', { class: 'ed-list' });
   function draw() {
     clear(list);
     cur.forEach(function (m, i) {
-      var id = shortId(m.type || ''), a = ATIDX[id];
+      var id = shortId(m.type || ''), a = (Reg.list('attributes') || []).filter(function (a) { return a.id === Reg.full(m.type); })[0] || (Reg.preview() ? ATIDX[id] : null);
       var openKey = 'attr' + i, isOpen = UIOpen[openKey] !== false;
       var rm = h('div', { class: 'ed-mini del', text: '×', title: '删除此修饰器' }); activate(rm, function () { cur.splice(i, 1); commit(cur, {}); draw(); });
       var amt = typeof m.amount === 'number' ? m.amount : 0;
@@ -638,24 +695,27 @@ function wAttrMods(c, val, commit, ctx) {
       var body = h('div', { class: 'ed-card-b' });
       function fld(label, note, ctl) { return h('div', { class: 'fld' }, [h('div', { class: 'fl' }, [h('div', { class: 'fk', text: label }), note ? h('div', { class: 'fn', text: note }) : null]), h('div', { class: 'fc' }, [ctl])]); }
       body.appendChild(fld('属性', 'type', combo({ value: m.type || '', options: registryOptions('attribute'), free: true, placeholder: '选择属性…', onPick: function (v) { m.type = v; commit(cur, {}); draw(); } })));
-      body.appendChild(fld('数值', a ? '范围 ' + a.min + ' ~ ' + a.max + '，基础 ' + a.def : 'amount', wNum({ t: 'num' }, m.amount, function (v) { m.amount = v; commit(cur, { key: 'attr-amt-' + i }); }, { key: 'attr-amt-' + i, step: m.operation === 'add_value' ? 0.5 : 0.05 })));
-      body.appendChild(fld('运算', 'operation', wSeg(OPS, m.operation || 'add_value', function (v) { m.operation = v; commit(cur, {}); draw(); })));
-      body.appendChild(fld('生效槽位', 'slot', wStr({ t: 'str', en: SLOTS }, m.slot || 'any', function (v) { m.slot = v; commit(cur, {}); draw(); })));
+      var rangeNote = a ? (typeof a.min === 'number' && typeof a.max === 'number' ? '范围 ' + a.min + ' ~ ' + a.max : '未提供固定范围') : '实时属性信息正在读取';
+      var attributeDefault = a && (typeof a.default === 'number' ? a.default : (Reg.preview() ? a.def : undefined));
+      if (attributeDefault !== undefined) rangeNote += '，属性默认 ' + attributeDefault;
+      body.appendChild(fld('数值', rangeNote, wNum({ t: 'num' }, m.amount, function (v) { m.amount = v; commit(cur, { key: 'attr-amt-' + i }); }, { key: 'attr-amt-' + i, step: m.operation === 'add_value' ? 0.5 : 0.05 })));
+      body.appendChild(fld('运算', 'operation', combo({ options: function () { return Reg.enumOptions('attribute_operation', OPS); }, value: m.operation || '', free: true, onPick: function (v) { m.operation = v; commit(cur, {}); draw(); } })));
+      body.appendChild(fld('生效槽位', 'slot', combo({ value: m.slot || 'any', options: attributeSlotOptions, free: true, placeholder: '读取槽位或手动输入…', onPick: function (v) { m.slot = v; commit(cur, {}); draw(); } })));
       body.appendChild(fld('修饰器 ID', 'id · 同槽同 ID 不叠加', wStr({ t: 'str' }, m.id || '', function (v) { m.id = v; commit(cur, { key: 'attr-id-' + i }); })));
       card.appendChild(head); card.appendChild(body); list.appendChild(card);
     });
     if (!cur.length) list.appendChild(h('div', { class: 'ed-empty', text: '没有属性修饰器（空列表会清除原型自带的修饰器）' }));
   }
-  var addIn = combo({ value: '', options: registryOptions('attribute'), free: false, reset: true, placeholder: '搜索属性并添加…', onPick: function (v) { cur.push({ type: v, id: 'cadeditor:' + shortId(v) + '_' + (cur.length + 1), amount: 1, operation: 'add_value', slot: 'mainhand' }); commit(cur, {}); draw(); } });
+  var addIn = combo({ value: '', options: registryOptions('attribute'), free: true, reset: true, placeholder: '搜索属性并添加…', onPick: function (v) { cur.push({ type: v, id: 'cadeditor:' + shortId(v).replace(/[^a-z0-9_./-]/g, '_') + '_' + (cur.length + 1), amount: 1, operation: 'add_value', slot: 'mainhand' }); commit(cur, {}); draw(); } });
   box.appendChild(list); box.appendChild(h('div', { class: 'ed-addrow' }, [icon('plus'), addIn])); draw();
   return box;
 }
 
 var RARITY = Labels.rarity;
-function wRarity(c, val, commit) { return wSeg(RARITY, val, function (v) { commit(v, {}); }, 'rarity'); }
+function wRarity(c, val, commit) { return combo({ options: function () { return Reg.enumOptions('rarity', RARITY); }, value: val || '', free: true, onPick: function (v) { commit(v, {}); } }); }
 
 function wDamage(c, val, commit, ctx) {
-  var eff = effectiveComps(ctx.doc), maxd = eff.max_damage;
+  var eff = effectiveView(ctx.doc), maxd = eff.max_damage;
   var box = h('div', { class: 'ed-dmg' });
   var bar = h('div', { class: 'o-meter' }, [h('i', {})]), txt = h('div', { class: 'ed-hint' });
   function paint(v) {
@@ -699,6 +759,7 @@ var COMP_WIDGETS = {
 /* 一个组件的完整表单 */
 var CURCID = null;
 function renderComponentForm(cid, val, commit, doc) {
+  val = clone(val); // Form initialization must not mutate a cached document snapshot.
   CURCID = cid;
   var c = CIDX[cid];
   if (!c) return wRaw({ t: 'raw' }, val, commit);
@@ -717,7 +778,7 @@ function dyeFieldFor(cid, path) {
 function dyeList() {
   var live = Reg.options('enum:dye_color');
   if (live) return live.map(function (e) { return { v: shortId(e.v), label: optLabel(e), rgb: typeof e.rgb === 'number' ? e.rgb : DYE_RGB[shortId(e.v)] }; });
-  return Object.keys(DYE_RGB).map(function (k) { return { v: k, label: k, rgb: DYE_RGB[k] }; });
+  return Reg.preview() ? Object.keys(DYE_RGB).map(function (k) { return { v: k, label: k, rgb: DYE_RGB[k] }; }) : [];
 }
 /* 染料颜色按钮：色块 + 颜色名，点开才出 16 个色块 */
 function dyeButton(val, onPick) {
@@ -730,11 +791,14 @@ function dyeButton(val, onPick) {
 }
 function wDye(val, commit) {
   var cur = shortId(String(val === undefined ? '' : val)), box = h('div', { class: 'ed-dyes' });
-  dyeList().forEach(function (d) {
+  var palette = h('div', { class: 'ed-dyes' });
+  function paintPalette() { clear(palette); dyeList().forEach(function (d) {
     var sw = h('div', { class: 'ed-dye' + (d.v === cur ? ' on' : ''), title: d.label + ' (' + d.v + ')', style: 'background:#' + ('000000' + (d.rgb || 0).toString(16)).slice(-6) });
-    activate(sw, function () { Array.prototype.forEach.call(box.children, function (x) { x.classList.remove('on'); }); sw.classList.add('on'); commit(d.v, {}); });
-    box.appendChild(sw);
-  });
+    activate(sw, function () { cur = d.v; Array.prototype.forEach.call(palette.children, function (x) { x.classList.remove('on'); }); sw.classList.add('on'); commit(d.v, {}); });
+    palette.appendChild(sw);
+  }); }
+  paintPalette(); watchColorOptions(dyeList, paintPalette); box.appendChild(palette);
+  box.appendChild(combo({ options: dyeList, value: cur, free: true, placeholder: '选择或手动填写颜色 ID', onPick: function (v) { commit(v, {}); } }));
   return box;
 }
 
@@ -762,10 +826,10 @@ function wHolderSet(reg, val, commit) {
     });
     var add = h("div", { class: "k-chip" }, [uiIcon("plus", 12), list.length ? "再加" : "添加"]);
     activate(add, function () {
-      openTagPicker({ title: "选择条目或标签", tagsReg: reg, entryReg: reg, multi: true, entryIcon: function (e) { return refIcon(reg, e.v); }, onConfirm: function (ids) {
+      openTagPicker({ title: "选择条目或标签", tagsReg: reg, entryReg: reg, multi: true, selected: list.map(pickerId), entryIcon: function (e) { return refIcon(reg, e.v); }, onConfirm: function (ids) {
         var tags = ids.filter(function (x) { return x.charAt(0) === "#"; }), ents = ids.filter(function (x) { return x.charAt(0) !== "#"; });
-        if (tags.length) { if (ents.length || tags.length > 1 || list.length) toast("游戏数据格式里，这里要么一个标签、要么若干条目，不能混用。已改为只用标签 " + tags[0], "warn"); list = [tags[0]]; }
-        else { if (list.length && list[0].charAt(0) === "#") list = []; ents.forEach(function (x) { if (list.indexOf(x) < 0) list.push(x); }); }
+        if (tags.length && (ents.length || tags.length > 1)) { toast("这里只能选择一个标签或多个条目；原列表未修改", "warn"); return; }
+        list = tags.length ? [tags[0]] : ents;
         save(); draw();
       } });
     });
@@ -780,9 +844,9 @@ function wHolderSet(reg, val, commit) {
 function isSoundUnion(s) { return !!(s && s.t === "union" && s.a && s.a[0] && s.a[0].reg === "sound_event"); }
 function soundUnionRow(label, hint, val, set) {
   var box = h("div", { class: "snd-u" }), id = "", range, extra = {}, rangeOpen = false;
-  if (isObj(val)) { id = val.sound_id || ""; range = typeof val.range === "number" ? val.range : undefined; Object.keys(val).forEach(function (k) { if (k !== "sound_id" && k !== "range") extra[k] = val[k]; }); }
+  if (isObj(val)) { id = val.sound_id || ""; range = typeof val.range === "number" ? val.range : undefined; Object.keys(val).forEach(function (k) { if (k !== "sound_id" && k !== "range") nbtPut(extra, k, nbtTake(val, k)); }); }
   else if (typeof val === "string") id = val;
-  function out() { if (!id) return undefined; var hasX = Object.keys(extra).length > 0; if (range === undefined && !hasX) return id; var o = { sound_id: id }; if (range !== undefined) o.range = range; Object.keys(extra).forEach(function (k) { o[k] = extra[k]; }); return o; }
+  function out() { if (!id) return undefined; var hasX = Object.keys(extra).length > 0; if (range === undefined && !hasX) return id; var o = { sound_id: id }; if (range !== undefined) o.range = range; Object.keys(extra).forEach(function (k) { nbtPut(o, k, nbtTake(extra, k)); }); return o; }
   function put() { set(out()); }
   function draw() {
     clear(box);

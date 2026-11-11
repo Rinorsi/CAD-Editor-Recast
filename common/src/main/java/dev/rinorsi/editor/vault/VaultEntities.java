@@ -28,7 +28,7 @@ public final class VaultEntities {
 
   public static Validated validate(String text) {
     if (text.getBytes(StandardCharsets.UTF_8).length > VaultStore.MAX_ENTRY_BYTES)
-      throw new VaultStore.Failure("ENTRY_TOO_LARGE", "生物SNBT最多64KiB");
+      throw new VaultStore.Failure("ENTRY_TOO_LARGE", "生物SNBT最多8MiB");
     int depth = 0;
     char quote = 0;
     boolean escape = false;

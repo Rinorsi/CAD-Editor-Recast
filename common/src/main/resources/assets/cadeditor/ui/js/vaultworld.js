@@ -2,6 +2,23 @@
    协议见 docs/vault-contract.md 的「P4-6」：保存带当前服务端 world 快照（走分段上传），套用先 preview 看会覆盖什么，
    用户确认后才发页面的 apply（带 vault_template），写入仍由服务端按权限和 revision 校验。 */
 var VW_SECTIONS = ['inventory', 'equipment', 'ender', 'attributes', 'effects', 'game_mode'];
+var VW_COPY_PENDING = false;
+function vwPlayerBackpackToSelf() {
+  var source = WE.w;
+  if (!source || !source.player || source.player.self || source.player.preset || WE.tab !== 'pinv' || VW_COPY_PENDING || vwBusy()) return;
+  if (weDirty()) { toast('先应用或放弃页面上的修改，再套用这位玩家的背包。', 'warn'); return; }
+  VW_COPY_PENDING = true; drawWorldTop();
+  function finish() { VW_COPY_PENDING = false; if (weActive()) drawWorldTop(); }
+  Vault.upload(JSON.stringify({ world: source, sections: ['inventory'] }), function (u) {
+    if (!u.ok) { finish(); vaultErr(u); return; }
+    Vault.call('save', { kind: 'player_preset', uploadToken: u.token, name: (source.player.name || '玩家') + ' 的背包', tags: [] }, function (r) {
+      finish();
+      if (!r.ok) { vaultErr(r); return; }
+      if (WE.w !== source || weDirty()) { toast('已存入保险库；页面已切换或出现新修改，请从保险库重新选择套用。', 'info'); return; }
+      vwApplyToSelf(r.entry || { id: r.id });
+    });
+  });
+}
 function vwKind() { var w = WE.w; return !w ? null : w.kind === 'block' ? 'block' : (w.kind === 'entity' && w.player && !w.player.preset) ? 'player_preset' : null; }
 function vwSecName(s) { return Labels.vaultSection[s] || s; }
 /* 左栏里的两个按钮；不适用的页面返回 null */
@@ -56,6 +73,15 @@ function vwPick(kind) {
   openVault({ kind: kind, pickEntry: function (e) { closeModal(); if (kind === 'player_preset') vwSections(e); else vwPreview(e, null); } });
 }
 /* 预设可以只套用其中几部分；条目里记着存了哪些 */
+function vwApplyToSelf(e) {
+  if (vwBusy() || (typeof EditorBridge !== 'undefined' && EditorBridge.pending)) return;
+  if ((weActive() && weDirty()) || (!weActive() && Store.docs.some(function (d) { return diffDoc(d).length > 0; }))) {
+    toast('先应用或放弃页面上的修改，再套用保险库的内容。', 'warn', 'vw-dirty'); return;
+  }
+  if (typeof oriel === 'undefined' || !oriel.send) { toast('请进入游戏后套用玩家预设。', 'warn'); return; }
+  oriel.send('open_world', { apply_preset: e.id });
+  closeModal();
+}
 function vwSections(e) {
   var have = (e.sections || (e.summary && e.summary.sections) || VW_SECTIONS).map(function (s) { return s.section || s; }), picked = {};
   have.forEach(function (s) { picked[s] = true; });

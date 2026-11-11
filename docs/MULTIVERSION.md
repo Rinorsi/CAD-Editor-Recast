@@ -1,4 +1,6 @@
-# 多版本、多加载器架构（目标设计）
+> 当前构建配置（<!-- editor-version -->0.99.7<!-- /editor-version -->）：六目标使用 Oriel 0.15.0 瘦包 Maven 工件；默认 Jar-in-Jar，`-PorielEmbedded=false` 生成外部依赖版。开发热更新仍使用官方 sourceRoot/dev-sources。下方历史验收按原版本和产物记录，不代表当前包已实测。
+
+# 多版本、多加载器架构
 
 目标：**同一份源码**，一个命令导出 Fabric / NeoForge × 26.1.2 / 26.2 / 26.3 共六个 jar。
 一个 bug 只在一处修，不在三个版本里各改一遍。
@@ -31,7 +33,7 @@ stonecutter.properties.toml   每个游戏版本的 MC / 加载器 / API / Oriel
 3. 游戏版本之间的差异**只用 Stonecutter**（`stonecutter.parameters` 里的 `replacements` 优先，其次 `//? if >=26.2` 条件注释），
    每处差异旁边写一行注释说明是哪个版本改了什么。源码以 vcs 版本（最新，26.3）为准。
 4. 每个版本的 MC / 加载器 / API / Oriel jar 版本写在 `stonecutter.properties.toml`，不散落在各 build.gradle。
-5. Oriel 依赖：26.1 / 26.2 / 26.3 分别用对应 `oriel-<loader>-<版本>-0.11.0.jar`（放 `libs/`，文件名带版本）。
+5. Oriel 依赖：每个目标使用对应 `dev.oriel:oriel-<loader>-<mc>:0.15.0` 瘦包，默认从 `libs/oriel-maven/` 解析，可用 `-PorielRepository=<目录>` 指定已核验的 Maven 来源。
 
 ## 构建与输出
 

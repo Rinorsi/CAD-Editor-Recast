@@ -6,6 +6,12 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const H = require('./lib/ui-harness.cjs');
+// DOM snapshots model the supported host API; glyph rendering is verified in Oriel/game tests.
+// Missing/rejected/throwing host APIs remain covered independently by ui-code-test.
+H.Element.prototype.setTextHighlights = function (source, ranges, numbers) {
+  if (source !== this.value) throw new Error('Highlight source differs from textarea value');
+  this.highlight = { source, ranges, numbers }; return true;
+};
 
 const SNAP = process.env.SNAP_DIR || path.resolve(__dirname, 'snapshots');
 const args = process.argv.slice(2), UPDATE = args.includes('--update'), only = args.filter(a => a[0] !== '-');
@@ -15,6 +21,7 @@ const exOne = k => { const e = examples[k]; return e.entries ? e.entries[0] : e;
 function fresh(opts) {
   const t = H.create(opts), c = t.c;
   c.Reg.meta = {}; c.Reg.kinds = {};
+  c.window.EDITOR_PREVIEW = true; // Offline visual fixtures; production uses live defaults/item_meta.
   ['cat', 'sheep', 'zombie', 'slime', 'armor_stand', 'wolf', 'villager'].forEach(k => { if (examples[k]) c.Reg.ingest('registry.entity_schema', { name: 'entity_schema', id: 'minecraft:' + k, entries: [exOne(k)], done: true }); });
   c.toast = c.toast; c.snd = () => {};
   return t;
@@ -124,6 +131,7 @@ for (const [name, fn] of SCENES) {
   ran++;
   let text; try { text = fn(); } catch (e) { text = '!! 场景渲染失败: ' + (e && e.stack || e).split('\n').slice(0, 4).join('\n') + '\n'; }
   const file = path.join(SNAP, name + '.txt');
+  if (text.indexOf('!!') >= 0) { bad++; console.log('FAIL', name, '：场景有渲染失败标记，拒绝作为通过结果或更新基线'); continue; }
   if (UPDATE) { fs.writeFileSync(file, text); console.log('写入', name, text.split('\n').length + ' 行' + (text.indexOf('!!') >= 0 ? '  ⚠ 含失败标记' : '')); continue; }
   const old = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split('\r').join('') : null;   // git 可能把 LF 换成 CRLF，比较前去掉 \r
   if (old === text) { console.log('PASS', name); continue; }

@@ -14,10 +14,13 @@ import org.slf4j.LoggerFactory;
 /** Server-owned concurrency protection; cache loss is recoverable using the caller's baseline. */
 public final class EditorMod  {
     private static final EditorSessions SESSIONS = new EditorSessions();
+    private static final java.util.Map<UUID,EditorWire.Receiver> TRANSFERS = new java.util.HashMap<>();
     private static final Logger LOG = LoggerFactory.getLogger("EditorSessions");
     private static EditorPolicy policy;
 
     public void onInitialize() {
+        Platform.get().onServerStarting(server -> TRANSFERS.clear());
+        Platform.get().onServerStopped(server -> TRANSFERS.clear());
         Platform.get().onServerStarting(server -> dev.rinorsi.editor.vault.VaultGiveServer.clear());
         Platform.get().onServerStopped(server -> dev.rinorsi.editor.vault.VaultGiveServer.clear());
         Platform.get().onDataReload(() -> dev.rinorsi.editor.registry.EntitySchemaValidation.invalidate());
@@ -26,6 +29,7 @@ public final class EditorMod  {
         Platform.get().onServerStarting(server -> { policy = EditorPolicy.load(); SESSIONS.clear(); dev.rinorsi.editor.vault.InventoryWrites.clear(); LOG.info("Editor session cache reset: server starting"); });
         Platform.get().onServerStopped(server -> { SESSIONS.clear(); dev.rinorsi.editor.vault.InventoryWrites.clear(); LOG.info("Editor session cache reset: server stopped"); });
         Platform.get().onDisconnect(player -> {
+            TRANSFERS.remove(player.getUUID());
             SESSIONS.remove(player.getUUID()); LOG.info("Editor session removed: disconnect {}", player.getUUID());
             dev.rinorsi.editor.vault.InventoryWrites.remove(player.getUUID());
             dev.rinorsi.editor.vault.VaultGiveServer.remove(player.getUUID());
@@ -38,6 +42,8 @@ public final class EditorMod  {
         boolean vaultGive = false;
         try {
             if (json.length() > EditorPackets.MAX_JSON) EditorSessions.fail("payload_too_large", "物品请求超过32767字符");
+            json=TRANSFERS.computeIfAbsent(player.getUUID(),ignored->new EditorWire.Receiver()).accept(json);
+            if(json==null)return;
             JsonObject request = JsonParser.parseString(json).getAsJsonObject();
             request = dev.rinorsi.editor.world.WorldWire.decode(request);
             vaultGive = request.has("op") && request.get("op").getAsString().equals("vault_give");
@@ -52,6 +58,9 @@ public final class EditorMod  {
             dev.rinorsi.editor.vault.InventoryWrites.rateLimit(player.getUUID());
             dev.rinorsi.editor.vault.VaultStore.checkDepth(request);
             String operation = StackCodec.string(request, "op");
+            EditorWriteLog.event("server.request.received", requestId, "op=" + operation
+                    + " creative=" + player.isCreative() + " gamemaster=" + EditorPolicy.gameMaster(player)
+                    + " payload_chars=" + json.length());
             JsonObject slot;
             try { slot = StackCodec.object(request, "slot"); EditorSessions.sameSlot(slot, slot); }
             catch (RuntimeException e) { EditorSessions.fail("slot_invalid", "槽位信息无效；草稿已保留"); return; }
@@ -74,6 +83,8 @@ public final class EditorMod  {
             }
             if (!operation.equals("apply") && !operation.equals("confirm")) StackCodec.fail("未知操作：" + operation);
             policy.require(player);
+            EditorWriteLog.event("server.permission.allowed", requestId, "op=" + operation
+                    + " inventory_index=" + target.inventoryIndex);
             var current = target.current(player);
             if (operation.equals("confirm")) {
                 if (!player.isCreative() || target.inventoryIndex < 0)
@@ -108,6 +119,7 @@ public final class EditorMod  {
                 saved(player, target, session, requestId);
             }
         } catch (RuntimeException e) {
+            if (!(e instanceof IllegalArgumentException)) EditorDiagnostics.failure("item.request", "request=" + requestId, e);
             var reply = result("rejected", requestId);
             String code = e instanceof EditorSessions.Failure failure ? failure.code : "invalid_request";
             if (code.equals("item_changed")) code = "slot_changed";
@@ -164,12 +176,18 @@ public final class EditorMod  {
     }
     private static void send(ServerPlayer player, JsonObject json) {
         String text = json.toString();
-        if (text.length() > EditorPackets.MAX_JSON) {
+        String status = json.get("status").getAsString();
+        if (text.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > EditorWire.MAX_JSON_BYTES) {
+            EditorWriteLog.warning("server.reply.oversize", json.get("requestId").getAsString(),
+                    "status=" + status + " payload_chars=" + text.length() + " outcome_requires_reread=true");
             var error = result("rejected", json.get("requestId").getAsString());
             error.addProperty("code", "payload_too_large");
             error.addProperty("reason", "物品数据超过消息上限，未能返回快照；请重新读取物品核对保存结果，草稿已保留"); text = error.toString();
+            status = "rejected";
         }
         Platform.get().send(player, new EditorPackets.Reply(text));
+        EditorWriteLog.event("server.reply.sent", json.get("requestId").getAsString(),
+                "status=" + status + " payload_chars=" + text.length());
     }
 
     private record Target(int inventoryIndex, AbstractContainerMenu menu, Slot menuSlot) {

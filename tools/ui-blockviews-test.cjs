@@ -12,6 +12,17 @@ function open(views, container) {
 }
 const body = () => c.h('div');
 
+// Real snapshots include both a raw bees helper and the editable beehive form.
+{
+  const raw = {value:[],snbt:'[]'};
+  open({bees:raw,beehive:view({bees:[]},{bees:{wire_snbt:true}}),unknown_field:{value:{x:1},snbt:'{x:1}'}});
+  assert.deepEqual(Array.from(c.weViewGroups()),['beehive','unknown_field'],'only duplicate raw-only warning is hidden; unknown fields remain available');
+  assert.equal(c.WE.w.views.bees,raw,'display deduplication cannot remove source data');
+  open({bees:raw});assert.deepEqual(Array.from(c.weViewGroups()),['bees'],'raw-only helper remains when no editable form exists');
+  open({bees:raw,beehive:view({bees:[]},{bees:{wire_snbt:true}})});
+  assert.equal(c.weViewTabInfo().label,'蜜蜂','duplicate helper does not disguise the actual form');
+}
+
 // ---- 信标：候选来自后端；清除 = null；等级只读显示
 {
   open({ beacon: view({ primary_effect: 'minecraft:speed', secondary_effect: null, Levels: 3 }, { primary_effect: { candidates: ['minecraft:speed', 'minecraft:haste'] }, secondary_effect: { candidates: ['minecraft:regeneration'] } }) });

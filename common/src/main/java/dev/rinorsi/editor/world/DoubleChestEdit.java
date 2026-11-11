@@ -18,7 +18,7 @@ public final class DoubleChestEdit {
     static void connect(WorldTarget target) {
         if(target.blockPos==null||!(target.blockState().getBlock() instanceof ChestBlock)||target.blockState().getValue(ChestBlock.TYPE)==ChestType.SINGLE)return;
         var pos=target.blockPos.relative(ChestBlock.getConnectedDirection(target.blockState()));
-        if(!target.level.hasChunkAt(pos))throw changed();
+        if(!WorldAccess.isLoaded(target.level,pos))throw changed();
         var other=target.level.getBlockEntity(pos);
         if(!(target.block instanceof ChestBlockEntity)||target.block.isRemoved()||!(other instanceof ChestBlockEntity)||other.isRemoved()||!connected(target.blockPos,target.blockState(),pos,target.level.getBlockState(pos)))throw changed();
         target.partner=target.half(other);
@@ -47,7 +47,7 @@ public final class DoubleChestEdit {
         if(!baseline.contains(TOPOLOGY))return;
         var topology=baseline.getCompound(TOPOLOGY).orElseThrow();
         var self=topology.getCompound("self").orElseThrow();var pos=new BlockPos(self.getInt("x").orElseThrow(),self.getInt("y").orElseThrow(),self.getInt("z").orElseThrow());
-        if(!level.hasChunkAt(pos)||!(level.getBlockEntity(pos) instanceof ChestBlockEntity))throw changed();
+        if(!WorldAccess.isLoaded(level,pos)||!(level.getBlockEntity(pos) instanceof ChestBlockEntity))throw changed();
         var target=WorldTarget.forBlock(level,level.getBlockEntity(pos));
         if(target.partner==null||!topology.equals(topology(target)))throw changed();
     }

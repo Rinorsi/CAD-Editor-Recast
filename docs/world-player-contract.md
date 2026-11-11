@@ -76,8 +76,13 @@ Exact schema keys:
 
 Changing playerGameType also adopts native GameType.updatePlayerAbilities values
 for the five boolean abilities unless explicitly supplied in the same patch.
-XP level/progress use native setExperienceLevels/setExperiencePoints; validated
-XpTotal uses the public totalExperience field followed by the native XP packet.
+XP levels use native setExperienceLevels with the nonnegative int range (0 to
+2147483647). Progress writes the public experienceProgress float directly, as
+native player persistence does; editing level or total does not quantize an
+unchanged fraction. XpTotal uses the public totalExperience field followed by the
+native XP packet. Levels above 238609311 overflow vanilla's int calculation of
+the next-level cost; the UI discloses this native limitation rather than imposing
+an arbitrary one-million-level cap.
 No full player-NBT load or connection field assignment is used.
 
 ## Safety, conflict and undo
@@ -109,7 +114,7 @@ See logs/world-player for bytecode audit, JVM gates and any dedicated-server pro
 Live client validation is pending while the user's Minecraft is running.
 
 Real captured normalized before/after/undo values and packet dispatch names:
-[world-player-samples.json](world-player-samples.json). The probe uses an actual
+历史采集回执（仅本地归档：`docs/archive/world-player-samples.json`，不随仓库分发）. The probe uses an actual
 ServerPlayer in an independent dedicated ServerLevel with a recording packet
 listener; no remote client is connected. Test-only player-list registration uses
 reflection to exercise actual online lookup and permission/reach resolution.
@@ -154,7 +159,7 @@ MinecraftServer javap.txt files under logs/world-player.
 |---|---|---|
 | Pos/Motion/Rotation/Dimension | Position omitted from stable hash; never written | Real probe moved ServerPlayer |
 | Air/Fire/fall_distance, foodExhaustionLevel/foodTickTimer, seenCredits | Absent from editable projection; never written | Player/ServerPlayer/FoodData bytecode under logs/world-player |
-| experience.XpP | Omitted from hash; current value merged unless edited | ServerPlayer.setExperiencePoints bytecode and real probe |
+| experience.XpP | Omitted from hash; current value merged unless edited | Native float field, explicit XP packet; command-only backend uses setExperiencePoints |
 | active_effects duration and hidden duration | Sign only in hash; current countdown merged when unchanged | Real MobEffectInstance.tickServer and JVM nested merge |
 | Health, foodLevel/saturation, XP level/total, items, attributes, effect membership/amplifier | Only different concurrent edits to the same path conflict | Real health conflict plus JVM session checks |
 
@@ -170,7 +175,9 @@ transient gameplay modifiers are retained. Absorption is bounded by effective
 minecraft:max_absorption; Health by effective minecraft:max_health. Raise the
 corresponding attribute in the same patch, or apply an effect first. XP level
 has an editor overflow safety bound 1,000,000; total is 0..Integer.MAX_VALUE.
-XP progress is normalized to whole points using native setExperiencePoints.
+XP progress keeps the native float fraction in [0,1). Only the command-only
+backend quantizes progress to whole points, because experience set points requires
+an integer. Decimal step sizes guide controls without truncating typed values.
 Effects/game mode can invoke vanilla side effects. Native death from zero health
 is not promised reversible after the game processes it.
 Requester guards are rechecked on undo. A game-master may edit/undo while spectator, adventure, or mayBuild=false, including after changing oneself into those states. Alive/reach/chunk/border and native area protection remain enforced; no-game-master behavior is unchanged.

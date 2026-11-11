@@ -37,6 +37,15 @@ public final class EditorClipboardHostTest {
             var hosted = Pattern.compile("(?:var|[\\w.]+)\\s+(\\w+)\\s*=\\s*new\\s+" + name
                     + "\\s*\\([^;]*;\\s*EditorPageHost\\.attachCommon\\(\\1\\s*,\\s*[^;]+\\);");
             for (var entry : sources.entrySet()) {
+                if (name.equals("EditorLayerScreen") && entry.getKey().equals("EditorPageHost.java")) {
+                    String source = entry.getValue();
+                    long count = creation.matcher(source).results().count();
+                    check(count == 1 && source.contains("layer.driver().pushData(data.toString())")
+                            && source.contains("screen = layer;") && source.contains("attachCommon(screen, null)"),
+                            "inventory layer passes initial data and every common channel through the same host");
+                    creations += (int) count;
+                    continue;
+                }
                 if (exempt(entry.getKey())) continue;
                 long count = creation.matcher(entry.getValue()).results().count();
                 check(count == hosted.matcher(entry.getValue()).results().count(),
@@ -66,10 +75,21 @@ public final class EditorClipboardHostTest {
         check(page.indexOf("declare(data);") < page.indexOf("OrielScreens.open(page, data)")
                 && page.contains("declare(dataOrNull);"), "both page entry paths declare shared data");
         check(page.contains("EditorClipboardHost.attach(screen, clipboard)")
-                && page.contains("onMessage(\"prefs\", EditorPrefs::accept)")
+                && page.contains("onMessage(\"prefs\", value ->")
+                && page.contains("EditorPrefs.accept(value);")
+                && page.contains("screen.driver().uiScale(uiScalePreference());")
                 && page.contains("RegistryBridge.attach(screen.driver())"), "common channels attached");
         check(page.contains("static final EditorClipboard clipboard = new EditorClipboard(System::nanoTime)"),
                 "all pages share clipboard quota");
+        check(page.contains("owner.driver().patch(\"notice\", notice)")
+                && (page.contains(".screen() != owner") || page.contains(".screen != owner")),
+                "page notice patches only the current owner");
+        check(page.contains("notice.addProperty(\"sequence\", ++noticeSequence)"),
+                "each host notice includes a fresh sequence even for repeated text");
+        String navigation = sources.get("WorldEditorClient.java");
+        check(navigation.contains("EditorPageHost.notice(owner,\"无法打开玩家数据：\"")
+                && navigation.contains("if(owner!=null)EditorPageHost.notice(owner,result.get(\"reason\")"),
+                "local and asynchronous navigation rejection use page notice instead of hidden HUD");
         String host = sources.get("EditorClipboardHost.java");
         check(host.contains("data.addProperty(\"hostClip\", true)"), "clipboard capability declared");
         check(host.contains("owner.driver().onMessage(\"clipboard\""), "write channel registered on owner");

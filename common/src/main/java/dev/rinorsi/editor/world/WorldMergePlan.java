@@ -17,7 +17,7 @@ public record WorldMergePlan(CompoundTag nbt,BlockState blockState,CompoundTag p
         else {
             var draft=target.draft(opened,openedState);var requested=request.has("snbt")?WorldNbt.parse(StackCodec.string(request,"snbt")):opened.copy();
             WorldNbt.protect(opened,requested,target.entity!=null);
-            if(request.has("views")&&draft.block!=null)requested=BlockViews.apply(draft.block,requested,StackCodec.object(request,"views"),target.level.registryAccess());
+            if(request.has("views")&&draft.block!=null)requested=BlockViews.apply(draft.block,requested,StackCodec.object(request,"views"),request.has("views_snbt")?StackCodec.object(request,"views_snbt"):new com.google.gson.JsonObject(),target.level.registryAccess());
             var canonicalInput=draft.prepare(requested,new JsonObject());
             var canonicalMine=draft.prepare(requested,request);
             // Only the user's SNBT delta plus the explicit normalized-operation delta is mine.
@@ -29,7 +29,7 @@ public record WorldMergePlan(CompoundTag nbt,BlockState blockState,CompoundTag p
         if(target.entity!=null)mine=EntityVolatile.rebase(opened,mine,current,undo!=null);
         mine=BlockVolatile.merge(mine,opened,current);
         var mineSession=target.entity!=null?EntitySessionData.pack(mine,target.entity):BlockSessionData.pack(mine,mineState);
-        var merged=WorldMerge.merge(base,mineSession,currentSession);var mergedData=data(merged,target);
+        var merged=WorldMerge.applyEdits(base,mineSession,currentSession);var mergedData=data(merged,target);
         // Slot-key merges retain current ordering; vanilla chest saves in slot order.
         // Normalize that representational difference before the loader-retention check.
         if(target.block instanceof net.minecraft.world.level.block.entity.ChestBlockEntity)

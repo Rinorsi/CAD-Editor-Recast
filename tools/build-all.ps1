@@ -48,13 +48,15 @@ try {
     # Verify the complete set before publishing anything into the local distribution directory.
     New-Item -ItemType Directory -Force $Destination | Out-Null
     foreach ($Jar in $Jars) { Copy-Item -LiteralPath $Jar.FullName -Destination $Destination -Force }
+    Copy-Item -LiteralPath (Join-Path $Root 'CHANGELOG.md') -Destination (Join-Path $Destination 'CHANGELOG.md') -Force
     $Jars | Sort-Object Name | ForEach-Object {
         (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $Destination $_.Name)).Hash.ToLowerInvariant() + '  ' + $_.Name
     } | Set-Content -LiteralPath (Join-Path $Destination 'SHA256SUMS.txt') -Encoding utf8NoBOM
     @(('# CAD Editor ' + $Version), '',
-      'Choose the jar matching both Minecraft and your loader. Install the corresponding Oriel 0.11.0 jar; Fabric also requires Fabric API.',
-      '', 'Targets: Fabric / NeoForge x Minecraft 26.1.2, 26.2, 26.3.',
-      'Build and headless checks passed. Runtime acceptance results are recorded separately in docs/MULTIVERSION.md.') |
+      '选择与 Minecraft 版本和加载器对应的一个 jar。已内嵌 Oriel UI 0.15.0 瘦包，无需另装 Oriel；Fabric 仍需安装对应版本的 Fabric API。',
+      '', '目标版本：Fabric / NeoForge × Minecraft 26.1.2、26.2、26.3。',
+      '六个 jar 放在同一目录；只安装与你当前环境匹配的一个。',
+      '游戏内打开编辑器 → 设置 → 更新日志，可按版本与分类折叠阅读；完整日志也在本目录 CHANGELOG.md。') |
       Set-Content -LiteralPath (Join-Path $Destination 'README.md') -Encoding utf8NoBOM
     Write-Output ('PASS: six jars and SHA256SUMS.txt in ' + $Destination)
 } finally {

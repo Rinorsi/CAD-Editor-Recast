@@ -39,17 +39,21 @@ public final class WorldEditor {
             if(kind.equals("entity")&&slot.has("player")&&slot.get("player").getAsString().equals("offline")){
                 OfflinePlayerWorld.route(player,request,policy.get(),SESSIONS,replySink);return true;
             }
-            if(op.equals("apply")||op.equals("undo"))SESSIONS.requireDoubleChestPresent(player.getUUID(),slot,player.level());
-            var target = WorldTarget.resolve(player, slot);
+            boolean mutation=op.equals("apply")||op.equals("undo");
+            var active=mutation?SESSIONS.require(player.getUUID(),slot,StackCodec.string(request,"revision")):null;
+            if(mutation)SESSIONS.requireDoubleChestPresent(player.getUUID(),slot,player.level());
+            var target = WorldTarget.resolve(player, slot,active==null || request.has("riding")?null:active.openingPosition);
             try { policy.get().require(player); } catch (RuntimeException e) { EditorSessions.fail("not_allowed", e.getMessage()); }
             if (op.equals("open")) {
                 SESSIONS.rateLimit(player.getUUID());
                 var canonical = target.canonicalSlot(); if(target.entity instanceof ServerPlayer){canonical.addProperty("self",target.entity==player);canonical.addProperty("player",target.entity==player?"self":"online");} var current = target.sessionData();
                 var snapshot = target.snapshot(canonical, false,current); // size checked before replacing session
                 var reply = result("opened", id); reply.add("world", snapshot); checkSize(reply);
-                var opened=SESSIONS.open(player.getUUID(), canonical, current);snapshot.addProperty("revision",opened.revision);replySink.accept(reply); return true;
+                var opened=SESSIONS.open(player.getUUID(), canonical, current,target.entity!=null && !(target.entity instanceof net.minecraft.world.entity.player.Player)?target.entity.position():null);snapshot.addProperty("revision",opened.revision);replySink.accept(reply); return true;
             }
             if (!op.equals("apply") && !op.equals("undo")) EditorSessions.fail("invalid_request", "未知世界编辑操作");
+            if (request.has("views_snbt") && (!request.has("views") || target.entity != null))
+                EditorSessions.fail("invalid_request", "带类型视图数据只能随方块字段提交");
             if(target.entity instanceof ServerPlayer && (request.has("snbt")||request.has("container")||request.has("views")||request.has("block_state")||request.has("block_type")||request.has("riding")))
                 EditorSessions.fail("protected_field","玩家仅支持 entity.player 规范化编辑，不能写入原始NBT、方块字段或骑乘关系");
             SESSIONS.rateLimit(player.getUUID());
@@ -77,6 +81,7 @@ public final class WorldEditor {
             var prepared=plan.nbt();
             WorldNbt.protect(before, prepared, target.entity != null);
             target.checkCommandPrivileges(player,prepared);
+            plan=target.withSessionReturn(plan);prepared=plan.nbt();
             // Loaders that silently ignore unknown/invalid values must not report a successful edit.
             if (prepared.toString().length() > WorldNbt.MAX_SNBT) EditorSessions.fail("payload_too_large", "修改后的 NBT 超出上限");
             var preview = result("saved",id); preview.add("world",DoubleChestEdit.preview(target,plan,state.slot,!op.equals("undo"))); checkSize(preview);
@@ -92,8 +97,10 @@ public final class WorldEditor {
             var after=capturedAfter[0];var world=capturedWorld[0];var reply=capturedReply[0];
             state.saved(beforeSession,after,op.equals("undo"));world.addProperty("revision",state.revision);
             LOG.info("[CAD-Editor-World] audit player={} op={} target={} before={} after={}", player.getUUID(), op, slot, WorldNbt.revision(beforeSession), WorldNbt.revision(state.baseline));
+            if(target.returnPosition()!=null)LOG.info("[CAD-Editor-World] entity_return player={} target={} from={} to={}",player.getUUID(),slot,before.get("Pos"),target.returnPosition());
             replySink.accept(reply);
         } catch (RuntimeException e) {
+            if (!(e instanceof IllegalArgumentException)) dev.rinorsi.editor.EditorDiagnostics.failure("world.request", "op=" + op + " request=" + id, e);
             String code = e instanceof WorldEditError error?error.code:e instanceof WorldMerge.Conflict ? "target_changed" : e instanceof EditorSessions.Failure f ? f.code : e instanceof dev.rinorsi.editor.vault.VaultStore.Failure f ? f.code : "invalid_request";
             LOG.warn("[CAD-Editor-World] denied player={} op={} request={} code={} target={} reason={}", player.getUUID(), op, id, code, slot, e.getMessage());
             var reply = result("rejected", id); reply.addProperty("code", code); String reason = e.getMessage() == null ? "世界编辑失败" : e.getMessage();

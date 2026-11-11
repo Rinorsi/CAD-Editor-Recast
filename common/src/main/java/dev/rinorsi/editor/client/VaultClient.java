@@ -24,7 +24,7 @@ public final class VaultClient {
     public static void initialize(BooleanSupplier editorBusy) {
         busy = editorBusy;
         var key = ClientPlatform.get().registerKey(new KeyMapping(
-                "key.cadeditor.vault", InputConstants.KEY_O, KeyMapping.Category.INVENTORY));
+                "key.cadeditor.vault", InputConstants.KEY_O, EditorKeyBindings.CATEGORY));
         ClientPlatform.get().onCommands(dispatcher -> dispatcher.register(
                 LiteralArgumentBuilder.<Object>literal("cadeditor").then(
                         LiteralArgumentBuilder.<Object>literal("vault").executes(c -> {

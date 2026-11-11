@@ -36,6 +36,17 @@ public final class SearchTest {
             catalog.build("items","2",List.of(row("new:item","新物品")),p).get(10,TimeUnit.SECONDS);check(catalog.slot("items").index.size()==1,"reload atomically publishes new generation");
         }
         try{SearchIndex.build(Collections.nCopies(SearchIndex.MAX_ROWS+1,rows.getFirst()),p,()->false,n->{});throw new AssertionError("unbounded rows");}catch(IllegalArgumentException expected){check(true,"row admission limit");}
+        AtomicInteger reports=new AtomicInteger();
+        try(var catalog=new SearchCatalog((kind,error)->{check(kind.equals("fixture")&&error instanceof NullPointerException,"diagnostic identifies failing index");reports.incrementAndGet();})){
+            catalog.reset("logging");catalog.build("fixture","logging",Arrays.asList((SearchIndex.Row)null),p).get(10,TimeUnit.SECONDS);
+            check(catalog.slot("fixture").error!=null&&reports.get()==1,"async failure keeps result and reports original exception");
+            try{catalog.build("fixture","stale",rows,p).join();}catch(CancellationException|CompletionException expected){}
+            check(reports.get()==1,"cancelled generation is not reported as failure");
+        }
+        try(var catalog=new SearchCatalog((kind,error)->{throw new IllegalStateException("logger fixture");})){
+            catalog.reset("logging");catalog.build("fixture","logging",Arrays.asList((SearchIndex.Row)null),p).get(10,TimeUnit.SECONDS);
+            check(catalog.slot("fixture").error!=null,"broken diagnostic sink does not break result delivery");
+        }
         System.out.println("PASS SearchTest");
     }
 }

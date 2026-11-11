@@ -1,0 +1,7 @@
+{
+  "required": true,
+  "package": "dev.rinorsi.editor.mixin.client",
+  "compatibilityLevel": "JAVA_25",
+  "client": ["ScreenLifecycleMixin", "EditorEscapeMixin", "EditorPreviewSnbtMixin", "EditorAudioChannelAccessor", "EditorPageRecoveryMixin", "EditorPageBudgetMixin", "EditorInlineFontMixin", "EditorAtlasAccessor"],
+  "injectors": {"defaultRequire": 1}
+}

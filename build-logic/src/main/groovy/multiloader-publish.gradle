@@ -6,7 +6,7 @@ def loader = project.parent.name
 def modVersion = project.version.toString()
 def dry = providers.gradleProperty('publishDryRun').isPresent() || providers.environmentVariable('PUBLISH_DRY_RUN').getOrElse('false') == 'true'
 def ready = { String site, String token ->
-    def configured = findProperty(site + '_id')?.toString()?.trim() && findProperty('oriel_' + site + '_id')?.toString()?.trim()
+    def configured = findProperty(site + '_id')?.toString()?.trim() && (orielEmbedded || findProperty('oriel_' + site + '_id')?.toString()?.trim())
     def enabled = configured && (dry || providers.environmentVariable(token).getOrNull())
     if (!enabled) logger.lifecycle("Skipping ${site} upload for ${project.path}: configure project / Oriel ids and ${token}.")
     enabled
@@ -38,7 +38,7 @@ publishMods {
             projectId = findProperty('modrinth_id').toString()
             accessToken = providers.environmentVariable('MODRINTH_TOKEN').getOrElse('dry-run')
             minecraftVersions.add(minecraft_version.toString())
-            requires(findProperty('oriel_modrinth_id').toString())
+            if (!orielEmbedded) requires(findProperty('oriel_modrinth_id').toString())
             if (loader == 'fabric') requires('fabric-api')
         }
     }
@@ -49,7 +49,7 @@ publishMods {
             minecraftVersions.add(minecraft_version.toString())
             client = true
             server = true
-            requires(findProperty('oriel_curseforge_id').toString())
+            if (!orielEmbedded) requires(findProperty('oriel_curseforge_id').toString())
             if (loader == 'fabric') requires('fabric-api')
         }
     }

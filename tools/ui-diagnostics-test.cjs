@@ -1,0 +1,37 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const H = require('./lib/ui-harness.cjs');
+const root = process.env.UI_DIR || path.resolve(__dirname, '../common/src/main/resources/assets/cadeditor/ui');
+const source = fs.readFileSync(path.join(root, 'js/diagnostics.js'), 'utf8');
+let now = 0;
+const messages = [], frames = [];
+const context = vm.createContext({ Date: { now: () => now }, requestAnimationFrame: fn => frames.push(fn),
+  oriel: { send: (channel, value) => { messages.push([channel, value]); return true; } } });
+vm.runInContext(source, context);
+context.EditorDiag.error('render', { name: 'TypeError', message: 'fixture', stack: 'at render (screens.js:1)' });
+assert.equal(messages.length, 1);
+assert.equal(messages[0][1].level, 'error');
+assert.match(messages[0][1].msg, /site=render TypeError: fixture.*screens.js:1/);
+for (let i = 0; i < 50; i++) context.EditorDiag.error('render', new Error('fixture'));
+assert.equal(messages.length, 1, 'repeat failure throttled independently of debug preference');
+now = 5000; context.EditorDiag.error('render', new Error('fixture'));
+assert.match(messages[1][1].msg, /repeated=50/);
+context.EditorDiag.ready(); context.EditorDiag.ready();
+assert.equal(messages.filter(m => m[0] === 'editor_ready').length, 1);
+assert.equal(frames.length, 1); frames[0]();
+assert.deepEqual(messages.filter(m => m[0] === 'editor_ready').map(m => m[1].phase), ['boot', 'first_frame_callback']);
+context.oriel.send = () => { throw new Error('transport fixture'); };
+assert.doesNotThrow(() => context.EditorDiag.warn('broken-transport', new Error('fixture')));
+
+const h = H.create();
+assert.equal(h.c.Prefs.get('debug', false), false);
+h.c.Reg.subs = [() => { throw new Error('registry-render-fixture'); }];
+h.c.Reg.flush();
+assert(h.sent.some(m => m[0] === 'log' && /registry.subscriber.*registry-render-fixture/.test(m[1].msg)));
+h.c.Valid.subs = [{ f() { throw new Error('validation-render-fixture'); } }];
+h.c.Valid.fire();
+assert(h.sent.some(m => m[0] === 'log' && /validation.subscriber.*validation-render-fixture/.test(m[1].msg)));
+assert(!h.sent.some(m => m[0] === 'apply'), 'diagnostics cannot issue writes');
+console.log('PASS diagnostics: always-on errors, stack/site, throttling, single load markers, broken transport isolation, real registry/validation failure paths');

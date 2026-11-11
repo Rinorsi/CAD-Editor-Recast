@@ -28,6 +28,7 @@ html, body { margin: 0; height: 100%; background: transparent; }
   function ico(level) { var n = tkIcon(level); var i = h('img', { class: 'o-ico', src: 'oriel:textures/icons/' + n + '.png', alt: '' }); i.style.width = '16px'; i.style.height = '16px'; return i; }
   function snd(id, vol, pitch) { try { if (oriel.playSound) oriel.playSound(id, vol, pitch); } catch (e) {} }
   function show(d) {
+    if (d && d.animations !== undefined) document.documentElement.setAttribute('data-motion', d.animations === false ? 'reduced' : 'full');
     if (!d || typeof d.text !== 'string' || !d.text) return;
     if (last !== null && d.seq !== undefined && d.seq === last) return;
     last = d.seq === undefined ? null : d.seq;
@@ -38,7 +39,7 @@ html, body { margin: 0; height: 100%; background: transparent; }
     stage.appendChild(t);
     var sd = tkSound(level); if (sd) snd(sd[0], sd[1], sd[2]);
     var ms = Math.max(2600, Math.min(9000, 1800 + d.text.length * 90));
-    timer = setTimeout(function () { t.classList.add('out'); gone = setTimeout(function () { try { oriel.close(); } catch (e) {} }, 450); }, ms);
+    timer = setTimeout(function () { t.classList.add('out'); gone = setTimeout(function () { try { oriel.close(); } catch (e) {} }, document.documentElement.getAttribute('data-motion') === 'reduced' ? 0 : 450); }, ms);
   }
   show(typeof oriel !== 'undefined' ? oriel.data : null);
   if (typeof oriel !== 'undefined' && oriel.on) oriel.on('data', function (data, key) { show(key === undefined && data && data.text ? data : oriel.data); });

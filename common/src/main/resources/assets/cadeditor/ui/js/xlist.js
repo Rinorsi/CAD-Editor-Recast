@@ -32,6 +32,7 @@ function xRow(o) {
   if (o.icon !== false) kids.push(h('div', { class: 'ic' }, [o.icon || uiIcon('cube', 14)]));
   kids.push(h('div', { class: 'tx', title: o.tip || '' }, [h('div', { class: 'z', text: o.title }), o.sub ? h('div', { class: 's', text: o.sub }) : null, o.meta || null]));
   if (o.right) kids.push(o.right);
+  if (o.onDelete) kids.push(kDelete(o.onDelete, o.deleteLabel));
   if (o.body || o.chevron) kids.push(foldArrow(open, 10));
   var head = h('div', { class: 'k-xhead' }, kids);
   var row = h('div', { class: 'k-xrow k-srow' + (open ? ' open' : '') }, [head]);
@@ -52,13 +53,20 @@ function xRow(o) {
   if (open && o.body) row.appendChild(h('div', { class: 'k-xbody x2' }, o.body()));
   return row;
 }
+/* 删除不依赖展开区，也不触发展开或排序。 */
+function kDelete(fn, label) {
+  var b = h('div', { class: 'k-mini del', role: 'button', tabindex: '0', title: label || '删除' }, [uiIcon('trash', 12)]);
+  b.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+  activate(b, function (e) { if (e) e.stopPropagation(); fn(); });
+  return b;
+}
 /* 展开区里的一行：左边 图标+标签，右边控件 */
 function xField(icon, label, control) {
   return h('div', { class: 'x2r' }, [h('span', { class: 'x2l' }, [icon ? uiIcon(icon, 14) : null, h('span', { text: label })]), control]);
 }
 /* 段标题：图标 + 标题 + 一句说明，右侧可放操作 */
 function xSec(icon, title, hint, action) {
-  return h('div', { class: 'x-sec' }, [icon ? uiIcon(icon, 14) : null, h('span', { class: 'x-st', text: title }), hint ? h('small', { text: hint }) : null, h('div', { class: 'grow' }), action || null]);
+  return h('div', { class: 'x-sec' }, [icon ? uiIcon(icon, 14) : null, h('span', { class: 'x-st', text: title }), hint ? h('small', { text: hint, title: hint }) : null, h('div', { class: 'grow' }), action || null]);
 }
 /* 世界 / 实体 / 玩家页和物品页用同一种卡片：把容器里「xSec 标题 + 后面的内容」自动收成一张 kCard（折叠、展开动画、状态记忆都是物品页那一套）。
    不用每个页面单独改；标题后面没有内容的分区保持原样。 */
@@ -105,9 +113,9 @@ function xNum(o) {
   var sub = o.sub, row;
   if (sub === undefined && o.subOf) sub = o.subOf(v);
   if (!sub && o.range && o.min !== undefined && o.max !== undefined) sub = '范围 ' + o.min + ' ~ ' + o.max;
-  var q = { min: o.min, max: o.max, softMin: o.softMin, softMax: o.softMax, step: o.step || 1, dec: o.dec, unit: o.unit, presets: o.presets, warnMax: o.warnMax, warnWhy: o.warnWhy,
-    noSlider: o.noSlider !== undefined ? o.noSlider : o.softMax === undefined,
-    onChange: function (x) { o.onChange(x); if (o.subOf && row) { var s = row.querySelector('.s'); if (s) s.textContent = o.subOf(x); } } };
+  var q = { min: o.min, max: o.max, softMin: o.softMin, softMax: o.softMax, step: o.step || 1, dec: o.dec, preservePrecision: o.preservePrecision, unit: o.unit, presets: o.presets, warnMax: o.warnMax, warnWhy: o.warnWhy, warnText: o.warnText, warnDetail: o.warnDetail,
+    noSlider: o.noSlider !== undefined ? o.noSlider : o.softMax === undefined, validate: o.validate, limitWhy: o.limitWhy,
+    onChange: function (x) { o.onChange(x); if (o.subOf && row) { var s = row.querySelector('.s'); if (s) { s.textContent = o.subOf(x); setTip(s, s.textContent); } } } };
   var n = xNumCtl(v, q, o.stop);
   row = xRow({ icon: o.icon === undefined ? false : o.icon, title: o.title, sub: sub, tip: o.tip, right: n.el });
   row.num = n; return row;
@@ -152,11 +160,14 @@ function xEmpty(text) { return h('div', { class: 'k-empty', text: text }); }
            context(it, i)→右键菜单项, scroll:像素（超过这个高度就在列表里滚动）, onDrawn?() } */
 function xList(cfg) {
   var box = h('div', { class: 'x-list' }), list = h('div', { class: 'k-sortlist' }), selected = cfg.selected === undefined ? -1 : cfg.selected, api;
+  var page = { page:selected < 0 ? 0 : Math.floor(selected / 24) }, pager = h('div', { class:'k-row wrap' });
   if (cfg.scroll) list.setAttribute('style', 'max-height:' + cfg.scroll + 'px;overflow-y:auto');
   function draw() {
     clear(list);
     var items = cfg.items();
-    items.forEach(function (it, i) {
+    var range = kListPage(items.length, page, pager, draw);
+    items.slice(range.start, range.end).forEach(function (it, index) {
+      var i = range.start + index;
       var o = cfg.row(it, i);
       o.open = selected === i && !!o.body;
       if (cfg.sortable && o.grip === undefined) o.grip = true;
@@ -167,9 +178,9 @@ function xList(cfg) {
     });
     if (!items.length && cfg.empty !== '') list.appendChild(xEmpty(cfg.empty || '暂无条目'));
   }
-  api = { el: box, draw: draw, select: function (i) { selected = i; draw(); }, selected: function () { return selected; } };
-  box.appendChild(list);
-  if (cfg.sortable) kSortable(list, { onMove: function (from, to) { if (cfg.onMove) cfg.onMove(from, to); draw(); } });
+  api = { el: box, draw: draw, select: function (i) { selected = i; if (i >= 0) page.page = Math.floor(i / 24); draw(); }, selected: function () { return selected; } };
+  box.appendChild(list); box.appendChild(pager);
+  if (cfg.sortable) kSortable(list, { onMove: function (from, to) { if (cfg.onMove) cfg.onMove(from + page.page * 24, to + page.page * 24); draw(); } });
   if (cfg.add) box.appendChild(xAdd(cfg.add.text, function () { cfg.add.fn(api); }));
   draw();
   return api;

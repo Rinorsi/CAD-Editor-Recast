@@ -38,14 +38,26 @@ var AMT_LIMIT = 2048;
 function modsList() { return Ctx.get('attribute_modifiers') || []; }
 function saveMods(list) { Ctx.setSmart('attribute_modifiers', list, { label: '修改属性' }); }
 function slotHit(m, slots) { var s = m.slot || 'any'; return s === 'any' || slots.indexOf(s) >= 0; }
-function attrSum(type, slots) { var s = 0; modsList().forEach(function (m) { if (shortId(m.type) === type && m.operation === 'add_value' && slotHit(m, slots)) s += m.amount; }); return s; }
+function attrSum(type, slots) { var s = 0; modsList().forEach(function (m) { if (shortId(m.type) === type && m.operation === 'add_value' && slotHit(m, slots)) s += nbtNumberValue(m.amount); }); return s; }
+function attrAmountSchema() {
+  if (typeof Reg !== 'undefined' && !Reg.preview()) Reg.askSchema();
+  var c = CIDX.attribute_modifiers, nodes = [];
+  if (c && c.schema) liveRangeNodes(c.schema, ['[]', 'amount'], 0, nodes);
+  return nodes.filter(function (n) { return n.live && n.t === 'num'; })[0] || null;
+}
 /* 把某属性在这些槽位的"总值"调整为 target（base 为玩家基础值）；只改主修饰器，其余保持原样 */
 function setAttrTotal(type, slots, target, base, make) {
   var list = modsList(), prim = -1, others = 0;
   list.forEach(function (m, i) { if (prim < 0 && m.id === make.id && shortId(m.type) === type && m.operation === 'add_value') prim = i; });
   if (prim < 0) list.forEach(function (m, i) { if (prim < 0 && shortId(m.type) === type && m.operation === 'add_value' && slotHit(m, slots)) prim = i; });
-  list.forEach(function (m, i) { if (i !== prim && shortId(m.type) === type && m.operation === 'add_value' && slotHit(m, slots)) others += m.amount; });
-  var amt = +(target - base - others).toFixed(6);
+  list.forEach(function (m, i) { if (i !== prim && shortId(m.type) === type && m.operation === 'add_value' && slotHit(m, slots)) others += nbtNumberValue(m.amount); });
+  var amt = nbtNumberValue(target) - base - others;
+  if (isFinite(amt)) amt = +amt.toFixed(6);
+  else {
+    var sc = attrAmountSchema();
+    if (!sc || !(isNaN(amt) ? sc.allowNaN : amt > 0 ? sc.allowPositiveInfinity : sc.allowNegativeInfinity)) throw new Error('游戏 Codec 未确认允许此修饰器特殊值');
+    amt = nbtSpecialScalar(amt, sc.nbtType);
+  }
   if (prim >= 0) list[prim].amount = amt; else list.push({ type: attrFull(type), id: make.id, amount: amt, operation: 'add_value', slot: make.slot });
   saveMods(list);
 }
@@ -57,6 +69,7 @@ function iconBar(cls) {
   var el = h('div', { class: 'k-hearts ' + (cls || '') });
   return { el: el, set: function (points, cap) {
     clear(el); cap = cap || 10;
+    if (!isFinite(points)) return;
     var full = Math.floor(points / 2), half = (points % 2) >= 1;
     var shown = Math.min(full, cap);
     var sp = SPR[cls === 'k-food' ? 'food' : cls === 'k-armorbar' ? 'armor' : 'heart'];
@@ -70,12 +83,21 @@ function iconBar(cls) {
 /* 通用"数值型属性"卡片：显示总值（含玩家基础值），改动写回主修饰器 */
 function attrCard(o) {
   function total() { return o.base + attrSum(o.type, o.slots()); }
-  var card = kCard({ id: 'attr-' + o.type, icon: uiIcon(o.icon, 16), title: o.title, desc: o.desc, comps: ['attribute_modifiers'], value: function () { return fmtNum(+total().toFixed(2)) + (o.unit ? ' ' + o.unit : ''); }, summary: function () { return o.brief ? o.brief(total()) : ''; } }, Ctx);
-  var num = kNumber(total(), { min: -1e15, max: 1e15, warnMax: o.warnMax, warnWhy: o.warnWhy, softMin: o.softMin, softMax: o.softMax, step: o.step, dec: o.dec, big: true, unit: o.unit, presets: o.presets, onChange: function (v) { setAttrTotal(o.type, o.slots(), v, o.base, { id: o.id, slot: o.slot() }); } });
+  if (!Reg.preview() && (o.base === null || !Reg.table('equipment_slot_groups'))) {
+    var waiting = kCard({ id: 'attr-' + o.type, icon: uiIcon(o.icon, 16), title: o.title, desc: o.desc, comps: ['attribute_modifiers'], value: function () { return '正在读取'; } }, Ctx);
+    waiting.body.appendChild(kHint('正在读取玩家基础属性和生效槽位，合计值控件等待实时数据；仍可在属性修饰器中直接输入 ID 和加成。'));
+    return waiting;
+  }
+  var card = kCard({ id: 'attr-' + o.type, icon: uiIcon(o.icon, 16), title: o.title, desc: o.desc, comps: ['attribute_modifiers'], value: function () { return isFinite(total()) ? fmtNum(+total().toFixed(2)) + (o.unit ? ' ' + o.unit : '') : numLabel(total()); }, summary: function () { return isFinite(total()) && o.brief ? o.brief(total()) : ''; } }, Ctx);
+  var presets = (o.presets || []).slice(), sc = attrAmountSchema();
+  if (sc && sc.allowNaN) presets.push({v:NaN,label:'NaN',title:'非数值（Double NaN）'});
+  if (sc && sc.allowPositiveInfinity) presets.push({v:Infinity,label:'∞',title:'正无穷（Double Infinity）'});
+  if (sc && sc.allowNegativeInfinity) presets.push({v:-Infinity,label:'−∞',title:'负无穷（Double -Infinity）'});
+  var num = kNumber(total(), { special: attrAmountSchema, min: -1e15, max: 1e15, warnMax: o.warnMax, warnWhy: o.warnWhy, softMin: o.softMin, softMax: o.softMax, step: o.step, dec: o.dec, big: true, unit: o.unit, presets: presets, onChange: function (v) { setAttrTotal(o.type, o.slots(), v, o.base, { id: o.id, slot: o.slot() }); } });
   var eff = kEffect('');
   card.body.appendChild(num.el); if (o.extra) card.body.appendChild(o.extra.el);
   card.body.appendChild(eff.el);
-  card.live.push(function () { var t = total(); num.set(t); if (o.extra && o.extra.update) o.extra.update(t); eff.set(o.effect ? o.effect(t) : '', o.tone ? o.tone(t) : ''); });
+  card.live.push(function () { var t = total(); num.set(t); if (o.extra && o.extra.update) o.extra.update(t); eff.set(isFinite(t) && o.effect ? o.effect(t) : '', isFinite(t) && o.tone ? o.tone(t) : ''); });
   card.live[card.live.length - 1]();
   return card;
 }
@@ -89,25 +111,26 @@ function meleeSlots() {
 }
 CARDS.attackDamage = function () {
   var hearts = iconBar();
-  var presets = [];
-  TIER_TOOLS.forEach(function (id) { var m = Ctx.protoItem(id, 'attribute_modifiers'); if (!m) return; m.forEach(function (x) { if (x.type === 'minecraft:attack_damage') presets.push({ v: 1 + x.amount, label: nameOfItem(id).replace('剑', '') + ' ' + fmtNum(1 + x.amount) }); }); });
-  presets.push({ v: 100, label: '100' }, { v: 1000, label: '1000' }, { v: Reg.attrMax('attack_damage', 2048), label: fmtNum(Reg.attrMax('attack_damage', 2048)) + ' 上限' });
+  var presets = [], base = Reg.baseAttr('minecraft:player', 'attack_damage', Reg.preview() ? 1 : null), max = Reg.attrMax('attack_damage', null);
+  TIER_TOOLS.forEach(function (id) { var m = Ctx.protoItem(id, 'attribute_modifiers'); if (!m || base === null) return; m.forEach(function (x) { if (x.type === 'minecraft:attack_damage') presets.push({ v: base + x.amount, label: nameOfItem(id).replace('剑', '') + ' ' + fmtNum(base + x.amount) }); }); });
+  presets.push({ v: 100, label: '100' }, { v: 1000, label: '1000' });
+  if (max !== null) presets.push({ v: max, label: fmtNum(max) + ' 上限' });
   return attrCard({
-    type: 'attack_damage', icon: 'sword', brief: function (t) { return '≈ ' + bigOrNum(+(t / 2).toFixed(1)) + ' 颗心'; }, title: '攻击伤害', desc: '每次完整蓄力攻击造成的伤害（含你自己的 1 点基础伤害）',
-    base: Reg.baseAttr('minecraft:player', 'attack_damage', 1), slots: function () { return meleeSlots(); }, slot: function () { return 'mainhand'; }, id: 'minecraft:base_attack_damage',
-    warnMax: Reg.attrMax('attack_damage', 2048) + 1, warnWhy: '攻击伤害属性自身的数值上限是 ' + fmtNum(Reg.attrMax('attack_damage', 2048)), softMin: 0, softMax: 30, step: 0.5, unit: '点', presets: presets,
+    type: 'attack_damage', icon: 'sword', brief: function (t) { return '≈ ' + bigOrNum(+(t / 2).toFixed(1)) + ' 颗心'; }, title: '攻击伤害', desc: '每次完整蓄力攻击造成的伤害（含当前玩家基础值）',
+    base: base, slots: function () { return meleeSlots(); }, slot: function () { return 'mainhand'; }, id: 'minecraft:base_attack_damage',
+    warnMax: max === null ? undefined : max + (base || 0), warnWhy: max === null ? '' : '攻击伤害属性自身的数值上限是 ' + fmtNum(max), softMin: 0, softMax: 30, step: 0.5, unit: '点', presets: presets,
     effect: function (t) { return '相当于 ' + bigOrNum(t / 2) + ' 颗心' + (t >= 20 ? '；一击可以秒杀普通生物（僵尸 20 点生命）' : (t >= 4 ? '；约 ' + Math.ceil(20 / Math.max(t, 1)) + ' 击打死一只僵尸' : '')); },
-    tone: function (t) { return t > Reg.attrMax('attack_damage', 2048) + 1 ? 'warn' : ''; }, extra: { el: hearts.el, update: function (t) { hearts.set(Math.max(0, t), 10); } },
+    tone: function (t) { return max !== null && t > max + (base || 0) ? 'warn' : ''; }, extra: { el: hearts.el, update: function (t) { hearts.set(Math.max(0, t), 10); } },
   });
 };
-function bigOrNum(n) { var b = bigText(n); return b ? fmtInt(n) + '（' + b + '）' : fmtNum(n); }
+function bigOrNum(n) { n = nbtNumberValue(n); if (!isFinite(n)) return numLabel(n); var b = bigText(n); return b ? fmtInt(n) + '（' + b + '）' : fmtNum(n); }
 
 CARDS.attackSpeed = function () {
   return attrCard({
-    type: 'attack_speed', icon: 'bolt', brief: function (t) { return t > 0 ? '约 ' + (+(1 / t).toFixed(2)) + ' 秒一刀' : ''; }, title: '攻击速度', desc: '每秒可以完整挥动几次（含基础值 4）',
-    base: Reg.baseAttr('minecraft:player', 'attack_speed', 4), slots: function () { return meleeSlots(); }, slot: function () { return 'mainhand'; }, id: 'minecraft:base_attack_speed',
-    warnMax: 1024, warnWhy: '攻击速度属性在原版最大 1024', softMin: 0.1, softMax: 4, step: 0.1, unit: '次/秒', dec: 2,
-    presets: [{ v: 0.8, label: '0.8 重武器' }, { v: 1, label: '1.0 斧' }, { v: 1.6, label: '1.6 剑' }, { v: 4, label: '4 无冷却' }, { v: 100, label: '100' }],
+    type: 'attack_speed', icon: 'bolt', brief: function (t) { return t > 0 ? '约 ' + (+(1 / t).toFixed(2)) + ' 秒一刀' : ''; }, title: '攻击速度', desc: '每秒可以完整挥动几次（含当前玩家基础值）',
+    base: Reg.baseAttr('minecraft:player', 'attack_speed', Reg.preview() ? 4 : null), slots: function () { return meleeSlots(); }, slot: function () { return 'mainhand'; }, id: 'minecraft:base_attack_speed',
+    warnMax: Reg.attrMax('attack_speed', undefined), warnWhy: '超过当前攻击速度属性的注册范围', softMin: 0.1, softMax: 4, step: 0.1, unit: '次/秒', dec: 2,
+    presets: [{ v: 0.8, label: '0.8' }, { v: 1, label: '1.0' }, { v: 1.6, label: '1.6' }, { v: 4, label: '4' }, { v: 100, label: '100' }],
     effect: function (t) { return t <= 0 ? '⚠ 攻击速度 ≤ 0 时无法完成蓄力攻击' : '蓄力满约需 ' + fmtNum(1 / t) + ' 秒；每秒最多 ' + fmtNum(t) + ' 次完整攻击'; },
     tone: function (t) { return t <= 0 ? 'warn' : ''; },
   });
@@ -115,11 +138,11 @@ CARDS.attackSpeed = function () {
 
 /* 其它属性（自由添加 / 编辑所有修饰器）：折叠态是预览行，点开编辑，可拖拽排序 */
 var OPMODES = Labels.opLong;
-function modSummary(m) { var add = m.operation === 'add_value'; var v = add ? m.amount : m.amount * 100; return (v >= 0 ? '+' : '') + bigOrNum(+v.toFixed(3)) + (add ? '' : '%'); }
+function modSummary(m) { var add = m.operation === 'add_value', amount = nbtNumberValue(m.amount); if (!isFinite(amount)) return numLabel(amount); var v = add ? amount : amount * 100; return (v >= 0 ? '+' : '') + bigOrNum(+v.toFixed(3)) + (add ? '' : '%'); }
 CARDS.extraAttrs = function (exclude, title) {
   exclude = exclude || [];
   function mine() { return modsList().filter(function (m) { return exclude.indexOf(shortId(m.type)) < 0; }); }
-  var card = kCard({ id: 'xattrs', icon: 'sliders', title: title || '其它属性加成', desc: '最大生命、移动速度、击退抗性、攻击距离…… 装备/拿在手里时给你的加成', comps: ['attribute_modifiers'], span: 2, value: function () { var n = mine().length; return n ? n + ' 项' : ''; } }, Ctx);
+  var card = kCard({ id: 'xattrs', icon: 'sliders', title: title || '其它属性加成', desc: '装备或持有时的属性加成', comps: ['attribute_modifiers'], span: 2, value: function () { var n = mine().length; return n ? n + ' 项' : ''; } }, Ctx);
   var list = h('div', { class: 'k-sortlist' });
   var openIdx = -1;
   function draw() {
@@ -131,15 +154,13 @@ CARDS.extraAttrs = function (exclude, title) {
       n++;
       var info = ATIDX[t], isAdd = m.operation === 'add_value', isOpen = openIdx === idx;
       /* 一行里直接改数值；展开才出现“计算方式 / 生效位置 / 删除” */
-      var val = isAdd ? m.amount : m.amount * 100, headRef = null;
-      var num = xNumCtl(+val.toFixed(4), { min: -1e15, max: 1e15, step: isAdd ? 0.5 : 5, unit: isAdd ? '' : '%', noSlider: true, onChange: function (v) { all[idx].amount = isAdd ? v : v / 100; saveMods(all); } }, true);
-      var row = xRow({ grip: true, chevron: true, icon: attrIconEl(t), title: attrName(t), sub: (SLOT_ZH[m.slot || 'any'] || m.slot) + (isAdd ? '' : ' · 比例'), tip: info ? info.desc : '模组属性 ' + m.type, right: num.el, open: isOpen, onHead: function () { openIdx = isOpen ? -1 : idx; draw(); } });
+      var val = nbtNumberValue(m.amount) * (isAdd ? 1 : 100), headRef = null;
+      var num = xNumCtl(isFinite(val) ? +val.toFixed(4) : val, { special: attrAmountSchema, min: -1e15, max: 1e15, step: isAdd ? 0.5 : 5, unit: isAdd ? '' : '%', noSlider: true, onChange: function (v) { var amount = nbtNumberValue(v) / (isAdd ? 1 : 100); nbtPut(all[idx], 'amount', isFinite(amount) ? amount : nbtSpecialScalar(amount, attrAmountSchema().nbtType)); saveMods(all); } }, true);
+      var row = xRow({ grip: true, chevron: true, icon: attrIconEl(t), title: attrName(t), sub: (SLOT_ZH[m.slot || 'any'] || m.slot) + (isAdd ? '' : ' · 比例'), tip: info ? info.desc : '模组属性 ' + m.type, right: num.el, onDelete: function () { all.splice(idx, 1); openIdx = -1; saveMods(all); draw(); }, open: isOpen, onHead: function () { openIdx = isOpen ? -1 : idx; draw(); } });
       if (isOpen) {
-        var opsel = kSeg(OPMODES, m.operation || 'add_value', function (v) { all[idx].operation = v; saveMods(all); draw(); });
-        var slotEntries = SLOTS.map(function (s) { return { v: s, label: SLOT_ZH[s] || s, icon: function () { return uiIcon(ATTR_SLOT_ICON[s] || 'grid', 12); } }; });
-        var slotSel = kSelect(slotEntries, m.slot || 'any', function (v) { all[idx].slot = v; saveMods(all); draw(); });
-        var rm = kBtn('删除', function () { all.splice(idx, 1); openIdx = -1; saveMods(all); draw(); }, { cls: 'dng', icon: 'trash' });
-        row.appendChild(h('div', { class: 'k-xbody x2' }, [h('div', { class: 'x2r' }, [h('span', { class: 'x2l' }, [uiIcon('sliders', 14), h('span', { text: '计算方式' })]), opsel.el]), h('div', { class: 'x2r' }, [h('span', { class: 'x2l' }, [uiIcon('pin', 14), h('span', { text: '生效位置' })]), slotSel.el]), h('div', { class: 'x2f' }, [h('span', { class: 'k-sub', text: isAdd ? '' : '比例填 10 表示 +10%' }), rm])]));
+        var opsel = { el: combo({ options: function () { return Reg.enumOptions('attribute_operation', OPMODES); }, value: m.operation || '', free: true, onPick: function (v) { all[idx].operation = v; saveMods(all); draw(); } }) };
+        var slotSel = { el: combo({ options: attributeSlotOptions, value: m.slot || 'any', free: true, placeholder: '读取槽位或手动输入…', onPick: function (v) { all[idx].slot = v; saveMods(all); draw(); } }) };
+        row.appendChild(h('div', { class: 'k-xbody x2' }, [h('div', { class: 'x2r' }, [h('span', { class: 'x2l' }, [uiIcon('sliders', 14), h('span', { text: '计算方式' })]), opsel.el]), h('div', { class: 'x2r' }, [h('span', { class: 'x2l' }, [uiIcon('pin', 14), h('span', { text: '生效位置' })]), slotSel.el]), h('div', { class: 'x2f' }, [h('span', { class: 'k-sub', text: isAdd ? '' : '比例填 10 表示 +10%' })])]));
       }
       onContext(row, function () { return [{ label: '复制这条', icon: 'copy', run: function () { all.splice(idx + 1, 0, clone(m)); all[idx + 1].id = 'cadeditor:' + t + '_' + (all.length); saveMods(all); draw(); } }, { sep: 1 }, { label: '删除', icon: 'trash', danger: 1, run: function () { all.splice(idx, 1); saveMods(all); draw(); } }]; });
       list.appendChild(row);
@@ -149,9 +170,12 @@ CARDS.extraAttrs = function (exclude, title) {
   kSortable(list, { onMove: function (from, to) { var vis = []; modsList().forEach(function (m, i) { if (exclude.indexOf(shortId(m.type)) < 0) vis.push(i); }); var all = modsList(); var a = vis[from], b = vis[to]; var x = all.splice(a, 1)[0]; all.splice(b, 0, x); openIdx = -1; saveMods(all); draw(); } });
   var add = xAdd('添加属性加成');
   activate(add, function () {
-    openAttrPicker({ exclude: exclude, onConfirm: function (ids) {
-      var l = modsList(); var slot = Ctx.kind() === 'armor' ? ((Ctx.get('equippable') || {}).slot || 'any') : 'mainhand';
-      ids.forEach(function (full) { l.push({ type: full, id: 'cadeditor:' + shortId(full).replace(/[^a-z0-9_./-]/g, '_') + '_' + (l.length + 1), amount: 1, operation: 'add_value', slot: slot }); });
+    var selected = {}; modsList().forEach(function (m) { if (exclude.indexOf(shortId(m.type)) < 0) selected[Reg.full(m.type)] = 1; });
+    openAttrPicker({ exclude: exclude, selected: selected, onConfirm: function (ids) {
+      var wanted = {}, have = {}; ids.forEach(function (id) { wanted[Reg.full(id)] = 1; });
+      var l = modsList().filter(function (m) { var keep = exclude.indexOf(shortId(m.type)) >= 0 || wanted[Reg.full(m.type)]; if (keep) have[Reg.full(m.type)] = 1; return keep; });
+      var slot = Ctx.kind() === 'armor' ? ((Ctx.get('equippable') || {}).slot || 'any') : 'mainhand';
+      ids.forEach(function (full) { if (have[full]) return; have[full] = 1; var base = 'cadeditor:' + shortId(full).replace(/[^a-z0-9_./-]/g, '_') + '_', n = l.length + 1; while (l.some(function (m) { return m.id === base + n; })) n++; l.push({ type: full, id: base + n, amount: 1, operation: 'add_value', slot: slot }); });
       openIdx = l.length - 1; saveMods(l); draw();
     } });
   });
@@ -164,39 +188,41 @@ CARDS.extraAttrs = function (exclude, title) {
 CARDS.weapon = function () {
   var card = kCard({ id: 'weapon', icon: 'swords', title: '武器特性', desc: '攻击时对耐久和敌方盾牌的影响', comps: ['weapon'] }, Ctx);
   var v = Ctx.get('weapon');
-  if (!v) return enableBox(card, ['这个物品不是武器', '启用后它的攻击会消耗耐久，并可设置破盾效果。'], '设为武器', function () { Ctx.enable('weapon', { item_damage_per_attack: 1, disable_blocking_for_seconds: 0 }, '设为武器'); });
-  var per = kNumber(v.item_damage_per_attack === undefined ? 1 : v.item_damage_per_attack, { min: 0, max: 2147483647, softMax: 10, step: 1, presets: [{ v: 0, label: '0 不损耗' }, { v: 1, label: '1 默认' }, { v: 2, label: '2' }], onChange: function (n) { var w = Ctx.get('weapon') || {}; w.item_damage_per_attack = n; Ctx.setSmart('weapon', w, { label: '攻击耐久损耗' }); } });
-  var dis = kNumber(v.disable_blocking_for_seconds === undefined ? 0 : v.disable_blocking_for_seconds, { min: 0, max: 3.4e38, softMax: 10, step: 0.5, dec: 1, unit: '秒', presets: [{ v: 0, label: '0 不破盾' }, { v: 5, label: '5 斧头' }, { v: 10, label: '10' }], onChange: function (n) { var w = Ctx.get('weapon') || {}; w.disable_blocking_for_seconds = n; Ctx.setSmart('weapon', w, { label: '破盾时间' }); } });
+  if (!v) return enableBox(card, ['这个物品不是武器', '启用后它的攻击会消耗耐久，并可设置破盾效果。'], '设为武器', function () { Ctx.enable('weapon', {}, '设为武器'); });
+  var per = codecNumber(codecField(v, 'weapon', 'item_damage_per_attack', 1), { min: 0, max: 2147483647, softMax: 10, step: 1, presets: [{ v: 0, label: '0 不损耗' }, { v: 1, label: '1' }, { v: 2, label: '2' }], onChange: function (n) { var w = Ctx.get('weapon') || {}; w.item_damage_per_attack = n; Ctx.setSmart('weapon', w, { label: '攻击耐久损耗' }); } });
+  var dis = codecNumber(codecField(v, 'weapon', 'disable_blocking_for_seconds', 0), { min: 0, max: 3.4e38, softMax: 10, step: 0.5, dec: 1, unit: '秒', presets: [{ v: 0, label: '0 不破盾' }, { v: 5, label: '5 斧头' }, { v: 10, label: '10' }], onChange: function (n) { var w = Ctx.get('weapon') || {}; w.disable_blocking_for_seconds = n; Ctx.setSmart('weapon', w, { label: '破盾时间' }); } });
   card.body.appendChild(fieldRow('每次攻击损耗的耐久', per.el, '0 = 打人不掉耐久'));
   card.body.appendChild(fieldRow('让对方盾牌失效', dis.el, '攻击举盾的玩家时，盾牌无法使用的秒数'));
-  card.live.push(function () { var w = Ctx.get('weapon'); if (w) { per.set(w.item_damage_per_attack === undefined ? 1 : w.item_damage_per_attack); dis.set(w.disable_blocking_for_seconds || 0); } });
+  card.live.push(function () { var w = Ctx.get('weapon'); if (w) { per.set(codecField(w, 'weapon', 'item_damage_per_attack', 1)); dis.set(codecField(w, 'weapon', 'disable_blocking_for_seconds', 0)); } });
   return card;
 };
 
 CARDS.reach = function () {
   var card = kCard({ id: 'reach', icon: 'target', title: '攻击距离', desc: '站多远能打到敌人（长矛、长柄武器用）', comps: ['attack_range'] }, Ctx);
   var v = Ctx.get('attack_range');
-  var base = v || { min_reach: 0, max_reach: 3, min_creative_reach: 0, max_creative_reach: 5, hitbox_margin: 0.3, mob_factor: 1 };
-  function put(k) { return function (n) { var o = Ctx.get('attack_range') || clone(base); o[k] = n; Ctx.setSmart('attack_range', o, { label: '攻击距离' }); }; }
-  var mx = kNumber(base.max_reach === undefined ? 3 : base.max_reach, { min: 0, max: 1e6, warnMax: 64, warnWhy: '原版上限 64 格', softMax: 10, step: 0.5, dec: 1, unit: '格', presets: [{ v: 3, label: '3 普通' }, { v: 4.5, label: '4.5' }, { v: 6, label: '6' }, { v: 12, label: '12' }, { v: 64, label: '64' }], onChange: put('max_reach') });
-  var mn = kNumber(base.min_reach || 0, { min: 0, max: 1e6, warnMax: 64, warnWhy: '原版上限 64 格', softMax: 5, step: 0.5, dec: 1, unit: '格', presets: [{ v: 0, label: '0' }, { v: 2, label: '2 长矛近身盲区' }], onChange: put('min_reach') });
-  var hb = kNumber(base.hitbox_margin === undefined ? 0.3 : base.hitbox_margin, { min: 0, max: 1e3, warnMax: 1, warnWhy: '原版范围 0~1', softMax: 1, step: 0.05, dec: 2, unit: '格', onChange: put('hitbox_margin') });
+  var base = v || {};
+  function put(k) { return function (n) { var o = Ctx.get('attack_range') || {}; o[k] = n; Ctx.setSmart('attack_range', o, { label: '攻击距离' }); }; }
+  var mx = codecNumber(codecField(base, 'attack_range', 'max_reach', 3), { min: 0, max: 1e6, warnMax: 64, warnWhy: '原版上限 64 格', softMax: 10, step: 0.5, dec: 1, unit: '格', presets: [{ v: 3, label: '3 普通' }, { v: 4.5, label: '4.5' }, { v: 6, label: '6' }, { v: 12, label: '12' }, { v: 64, label: '64' }], onChange: put('max_reach') });
+  var mn = codecNumber(codecField(base, 'attack_range', 'min_reach', 0), { min: 0, max: 1e6, warnMax: 64, warnWhy: '原版上限 64 格', softMax: 5, step: 0.5, dec: 1, unit: '格', presets: [{ v: 0, label: '0' }, { v: 2, label: '2 长矛近身盲区' }], onChange: put('min_reach') });
+  var hb = codecNumber(codecField(base, 'attack_range', 'hitbox_margin', 0.3), { min: 0, max: 1e3, warnMax: 1, warnWhy: '原版范围 0~1', softMax: 1, step: 0.05, dec: 2, unit: '格', onChange: put('hitbox_margin') });
   card.body.appendChild(fieldRow('最远能打到', mx.el, '从你的眼睛算起'));
   card.body.appendChild(fieldRow('最近要隔开', mn.el, '离得太近反而打不到'));
   card.body.appendChild(fieldRow('判定箱放大', hb.el, '数值越大越容易打中'));
-  card.live.push(function () { var o = Ctx.get('attack_range'); if (o) { mx.set(o.max_reach === undefined ? 3 : o.max_reach); mn.set(o.min_reach || 0); hb.set(o.hitbox_margin === undefined ? 0.3 : o.hitbox_margin); } });
+  card.live.push(function () { var o = Ctx.get('attack_range'); if (o) { mx.set(codecField(o, 'attack_range', 'max_reach', 3)); mn.set(codecField(o, 'attack_range', 'min_reach', 0)); hb.set(codecField(o, 'attack_range', 'hitbox_margin', 0.3)); } });
   if (!v) card.body.appendChild(kHint('这个物品没有自带的攻击距离，改动任何一项即启用。'));
   return card;
 };
 
 CARDS.swing = function () {
   var card = kCard({ id: 'swing', icon: 'wand', title: '挥动动作', desc: '攻击和使用时手臂的动画', comps: ['swing_animation'] }, Ctx);
-  var v = Ctx.get('swing_animation') || { type: 'whack', duration: 6 };
-  function put(k, val) { var o = Ctx.get('swing_animation') || { type: 'whack', duration: 6 }; o[k] = val; Ctx.setSmart('swing_animation', o, { label: '挥动动作' }); }
-  var seg = kSeg([{ v: 'whack', label: '挥砍' }, { v: 'stab', label: '刺击' }, { v: 'none', label: '无动作' }], v.type || 'whack', function (x) { put('type', x); });
-  var dur = kNumber(v.duration || 6, { min: 1, max: 2147483647, softMax: 40, step: 1, unit: '刻', presets: [{ v: 6, label: '6 默认' }, { v: 10, label: '10' }, { v: 20, label: '20 慢' }], onChange: function (n) { put('duration', n); } });
-  card.body.appendChild(seg.el); card.body.appendChild(fieldRow('动作持续', dur.el, '20 刻 = 1 秒'));
-  card.live.push(function () { var o = Ctx.get('swing_animation'); if (o) { seg.set(o.type || 'whack'); dur.set(o.duration || 6); } });
+  var v = Ctx.get('swing_animation') || {};
+  function put(k, val) { var o = Ctx.get('swing_animation') || {}; o[k] = val; Ctx.setSmart('swing_animation', o, { label: '挥动动作' }); }
+  function swingOptions() { return Reg.codecOptions('swing_animation', 'type', [{ v: 'whack', label: '挥砍' }, { v: 'stab', label: '刺击' }, { v: 'none', label: '无动作' }]); }
+  var options = swingOptions(), seg = options.length ? kSeg(options, codecField(v, 'swing_animation', 'type', 'whack'), function (x) { put('type', x); }) : null;
+  var manual = combo({ options: swingOptions, value: codecField(v, 'swing_animation', 'type', 'whack'), free: true, placeholder: '选择或手动填写动作', onPick: function (x) { put('type', x); } });
+  var dur = codecNumber(codecField(v, 'swing_animation', 'duration', 6), { min: 1, max: 2147483647, softMax: 40, step: 1, unit: '刻', presets: [{ v: 6, label: '6' }, { v: 10, label: '10' }, { v: 20, label: '20 慢' }], onChange: function (n) { put('duration', n); } });
+  if (seg) card.body.appendChild(seg.el); card.body.appendChild(manual); card.body.appendChild(fieldRow('动作持续', dur.el, '20 刻 = 1 秒'));
+  card.live.push(function () { var o = Ctx.get('swing_animation'); if (o) { if (seg) seg.set(codecField(o, 'swing_animation', 'type', 'whack')); dur.set(codecField(o, 'swing_animation', 'duration', 6)); } });
   return card;
 };
 
@@ -231,41 +257,76 @@ function groupLabel(b) {
   if (Array.isArray(b)) return b.map(function (x) { return x.replace('minecraft:', ''); }).join('、');
   return typeof b === 'string' ? b.replace('minecraft:', '') : '?';
 }
+var TOOL_BATCH_SEQ = 0;
 CARDS.tool = function () {
   var card = kCard({ id: 'tool', icon: itemIcon('diamond_pickaxe', 18), title: '挖掘能力', desc: '挖方块有多快、能不能正确掉落、耗多少耐久', comps: ['tool'], span: 2 }, Ctx);
   var v = Ctx.get('tool');
-  if (!v) return enableBox(card, ['这个物品不能当工具用', '启用后可以设置它挖哪些方块更快。'], '设为工具', function () { Ctx.enable('tool', { rules: [], default_mining_speed: 1, damage_per_block: 1, can_destroy_blocks_in_creative: true }, '设为工具'); });
-  function put(fn, label) { var o = Ctx.get('tool') || { rules: [] }; fn(o); Ctx.setSmart('tool', o, { label: label || '挖掘能力' }); }
-  var def = kNumber(v.default_mining_speed === undefined ? 1 : v.default_mining_speed, { min: 0, max: 3.4e38, softMax: 30, step: 0.5, dec: 2, big: true, presets: [{ v: 1, label: '1 徒手' }, { v: 4, label: '4' }, { v: 8, label: '8' }, { v: 12, label: '12' }, { v: 1000, label: '1000 瞬间' }], onChange: function (n) { put(function (o) { o.default_mining_speed = n; }, '默认挖掘速度'); } });
-  var dpb = kNumber(v.damage_per_block === undefined ? 1 : v.damage_per_block, { min: 0, max: 2147483647, softMax: 5, step: 1, presets: [{ v: 0, label: '0 不损耗' }, { v: 1, label: '1 默认' }, { v: 2, label: '2' }], onChange: function (n) { put(function (o) { o.damage_per_block = n; }, '挖掘耐久损耗'); } });
-  var cc = kToggle(v.can_destroy_blocks_in_creative !== false, function (on) { put(function (o) { o.can_destroy_blocks_in_creative = on; }, '创造模式挖掘'); }, '创造模式下也能用它挖方块（关闭=像剑一样不能）');
+  if (!v) return enableBox(card, ['这个物品不能当工具用', '启用后可以设置它挖哪些方块更快。'], '设为工具', function () { Ctx.enable('tool', { rules: [] }, '设为工具'); });
+  function put(fn, label, atomic) { var o = clone(Ctx.get('tool') || { rules: [] }); fn(o); seenRules = clone(o.rules || []); Ctx.setSmart('tool', o, { label: label || '挖掘能力', key: atomic ? '-batch-' + (++TOOL_BATCH_SEQ) : '' }); refreshSummaries(); }
+  var def = codecNumber(codecField(v, 'tool', 'default_mining_speed', 1), { min: 0, max: 3.4e38, softMax: 30, step: 0.5, dec: 2, big: true, presets: [{ v: 1, label: '1 徒手' }, { v: 4, label: '4' }, { v: 8, label: '8' }, { v: 12, label: '12' }, { v: 1000, label: '1000 瞬间' }], onChange: function (n) { put(function (o) { o.default_mining_speed = n; }, '默认挖掘速度'); } });
+  var dpb = codecNumber(codecField(v, 'tool', 'damage_per_block', 1), { min: 0, max: 2147483647, softMax: 5, step: 1, presets: [{ v: 0, label: '0 不损耗' }, { v: 1, label: '1' }, { v: 2, label: '2' }], onChange: function (n) { put(function (o) { o.damage_per_block = n; }, '挖掘耐久损耗'); } });
+  var cc = codecToggle(codecField(v, 'tool', 'can_destroy_blocks_in_creative', true), function (on) { put(function (o) { o.can_destroy_blocks_in_creative = on; }, '创造模式挖掘'); }, '创造模式下也能用它挖方块（关闭=像剑一样不能）');
   card.body.appendChild(fieldRow('挖其它方块的速度', def.el, '没被下面的规则选中的方块'));
-  var rules = h('div', { class: 'k-sortlist' }), openIdx = -1;
+  var rules = h('div', { class: 'k-sortlist' }), openIdx = -1, seenRules = clone(v.rules || []);
+  function summary(r) { return (r.speed === undefined ? '不改速度' : '速度 × ' + bigOrNum(r.speed)) + (r.correct_for_drops === undefined ? '' : r.correct_for_drops ? ' · 正确工具' : ' · 非正确工具'); }
+  function refreshSummaries() {
+    if (!rules) return;
+    var list = (Ctx.get('tool') || {}).rules || [];
+    Array.prototype.forEach.call(rules.children, function (row, i) { var sub = row.querySelector('.s'); if (sub && list[i]) sub.textContent = summary(list[i]); });
+  }
   function drawRules() {
     clear(rules);
     var o = Ctx.get('tool') || { rules: [] };
     (o.rules || []).forEach(function (r, i) {
-      var isOpen = openIdx === i, spTxt = r.speed === undefined ? '不改速度' : '速度 × ' + bigOrNum(r.speed), dp = r.correct_for_drops === undefined ? '' : (r.correct_for_drops ? ' · 正确掉落' : ' · 无掉落');
-      var row = xRow({ grip: true, chevron: true, icon: false, title: groupLabel(r.blocks), sub: spTxt + dp, open: isOpen, onHead: function () { openIdx = isOpen ? -1 : i; drawRules(); } });
+      var isOpen = openIdx === i;
+      var row = xRow({ grip: true, chevron: true, icon: false, title: groupLabel(r.blocks), sub: summary(r), onDelete: function () { put(function (t) { t.rules.splice(i, 1); }); openIdx = -1; drawRules(); }, open: isOpen, onHead: function () { openIdx = isOpen ? -1 : i; drawRules(); } });
       if (isOpen) {
-        var sp = kNumber(r.speed === undefined ? 1 : r.speed, { min: 0.001, max: 3.4e38, softMax: 30, step: 0.5, dec: 2, noSlider: true, unit: '倍', onChange: function (n) { put(function (t) { t.rules[i].speed = n; }); } });
-        var drops = kSeg([{ v: 'inherit', label: '默认' }, { v: 'yes', label: '正确掉落' }, { v: 'no', label: '无掉落' }], r.correct_for_drops === undefined ? 'inherit' : (r.correct_for_drops ? 'yes' : 'no'), function (x) { put(function (t) { if (x === 'inherit') delete t.rules[i].correct_for_drops; else t.rules[i].correct_for_drops = x === 'yes'; }); });
-        var rm = kBtn('删除这条规则', function () { put(function (t) { t.rules.splice(i, 1); }); openIdx = -1; drawRules(); }, { cls: 'dng', icon: 'trash' });
-        row.appendChild(h('div', { class: 'k-xbody' }, [fieldRow('挖这类方块的速度', sp.el, typeof r.blocks === 'string' ? r.blocks : ''), fieldRow('是否正确掉落', drops.el, '「无掉落」= 挖了但不掉东西'), rm]));
+        var sp = kNumber(r.speed === undefined ? 1 : r.speed, { min: 0, max: 3.4e38, softMax: 30, step: 0.5, dec: 2, preservePrecision: true, noSlider: true, unit: '倍', onChange: function (n) { put(function (t) { t.rules[i].speed = n; }); } });
+        var drops = kSeg([{ v: 'inherit', label: '不覆盖' }, { v: 'yes', label: '正确工具' }, { v: 'no', label: '非正确工具' }], r.correct_for_drops === undefined ? 'inherit' : (r.correct_for_drops ? 'yes' : 'no'), function (x) { put(function (t) { if (x === 'inherit') delete t.rules[i].correct_for_drops; else t.rules[i].correct_for_drops = x === 'yes'; }); });
+        row.appendChild(h('div', { class: 'k-xbody' }, [fieldRow('挖这类方块的速度', sp.el, typeof r.blocks === 'string' ? r.blocks : ''), fieldRow('正确掉落判定', drops.el, '仅影响要求正确工具的方块；不覆盖时继续匹配后续规则')]));
       }
       rules.appendChild(row);
     });
     if (!(o.rules || []).length) rules.appendChild(xEmpty('没有挖掘规则：所有方块都按「其它方块」处理'));
+    refreshSummaries();
   }
   kSortable(rules, { onMove: function (from, to) { put(function (t) { var x = t.rules.splice(from, 1)[0]; t.rules.splice(to, 0, x); }); openIdx = -1; drawRules(); } });
-  var add = xAdd('添加挖掘规则');
-  activate(add, function () { openTagPicker({ title: '选择挖掘规则针对的方块', tagsReg: 'block', entryReg: 'block', quick: keepKnownTags(TOOL_GROUPS, 'block').map(function (g) { return { v: g.v, label: g.label, sub: g.sub }; }), entryIcon: function (e) { return itemIcon(shortId(e.v), 16); }, onConfirm: function (v) { put(function (t) { t.rules = t.rules || []; t.rules.push({ blocks: v, speed: 4, correct_for_drops: true }); }); openIdx = (Ctx.get('tool').rules || []).length - 1; drawRules(); } }); });
+  var add = xAdd('选择挖掘规则');
+  activate(add, function () {
+    var owner = Store.doc(), source = clone(Ctx.get('tool')), selected = {}, speedTouched = false, checking = false, drop = (source.rules || []).length ? 'keep' : 'yes';
+    (source.rules || []).forEach(function (r) { (Array.isArray(r.blocks) ? r.blocks : [r.blocks]).forEach(function (id) { selected[pickerId(id)] = 1; }); });
+    var speed = kNumber(4, { min: 0, max: 3.4e38, step: 0.5, dec: 2, preservePrecision: true, noSlider: true, onChange: function () { if (!checking) speedTouched = true; } });
+    var speedInput = speed.el.querySelector('input'); speedInput.addEventListener('input', function () { speedTouched = true; });
+    if (Object.keys(selected).length) { speedInput.value = ''; speedInput.setAttribute('placeholder', '保持'); setTip(speedInput, '已有规则保持原速度；修改此处后统一设置。新规则默认速度为 4'); }
+    var drops = combo({ value: drop, options: [{ v: 'keep', label: '保持原判定' }, { v: 'yes', label: '正确工具' }, { v: 'no', label: '非正确工具' }, { v: 'inherit', label: '不覆盖判定' }], onPick: function (x) { drop = x; } });
+    var controls = h('div', { class: 'pk-ctl tool-pick-settings' }, [h('div', { class: 'tool-pick-field' }, [h('span', { class: 'k-sub', text: '速度' }), speed.el]), h('div', { class: 'tool-pick-field' }, [h('span', { class: 'k-sub', text: '掉落判定' }), drops])]);
+    openTagPicker({ title: '选择挖掘规则', multi: true, selected: selected, controls: controls, validateConfirm: function () {
+      if (Store.doc() !== owner || !deepEq(Ctx.get('tool'), source)) { toast('挖掘规则已变化，请关闭后重新选择', 'warn'); return false; }
+      checking = true; try { return speed.commitInput(); } finally { checking = false; }
+    }, tagsReg: 'block', entryReg: 'block', quick: keepKnownTags(TOOL_GROUPS, 'block').map(function (g) { return { v: g.v, label: g.label, sub: g.sub }; }), entryIcon: function (e) { return itemIcon(shortId(e.v), 16); }, onConfirm: function (ids) {
+    if (Store.doc() !== owner || !Ctx.get('tool')) return;
+    var wanted = {}, have = {}; ids.forEach(function (id) { wanted[pickerId(id)] = true; });
+    function settings(rule, fresh) { if (fresh || speedTouched) rule.speed = speed.get(); if (drop === 'inherit') delete rule.correct_for_drops; else if (drop !== 'keep' || fresh) rule.correct_for_drops = drop !== 'no'; return rule; }
+    put(function (t) {
+      var next = [];
+      (t.rules || []).forEach(function (r) {
+        var blocks = (Array.isArray(r.blocks) ? r.blocks : [r.blocks]).filter(function (id) { return wanted[pickerId(id)]; });
+        if (!blocks.length) return;
+        blocks.forEach(function (id) { have[pickerId(id)] = true; });
+        if (Array.isArray(r.blocks) && blocks.length !== r.blocks.length) r.blocks = blocks;
+        next.push(settings(r, false));
+      });
+      ids.forEach(function (id) { id = pickerId(id); if (!have[id]) { have[id] = true; next.push(settings({ blocks: id }, true)); } });
+      t.rules = next;
+    }, '选择挖掘规则', true);
+    openIdx = -1; drawRules();
+  } }); });
   card.body.appendChild(fieldRow('挖掘规则', h('div', { class: 'k-scrollbox' }, [rules]), '靠前的规则优先，拖 ⋮⋮ 调整顺序；点一条展开编辑'));
   card.body.appendChild(add);
   card.body.appendChild(fieldRow('每挖一个方块损耗', dpb.el, '耐久点数'));
   card.body.appendChild(cc.el);
   drawRules();
-  card.live.push(function () { var o = Ctx.get('tool'); if (o) { def.set(o.default_mining_speed === undefined ? 1 : o.default_mining_speed); dpb.set(o.damage_per_block === undefined ? 1 : o.damage_per_block); } });
+  card.live.push(function () { var o = Ctx.get('tool'); if (o) { def.set(codecField(o, 'tool', 'default_mining_speed', 1)); dpb.set(codecField(o, 'tool', 'damage_per_block', 1)); if (!deepEq(seenRules, o.rules || [])) { openIdx = -1; seenRules = clone(o.rules || []); drawRules(); } } });
   return card;
 };
 
@@ -276,16 +337,18 @@ var EQ_ASSETS = [{ v: 'minecraft:leather', label: '皮革' }, { v: 'minecraft:ch
 CARDS.equip = function () {
   var card = kCard({ id: 'equip', icon: 'helmet', title: '穿戴位置与行为', desc: '穿在哪个部位、怎么穿上、穿上后的外观', comps: ['equippable'], span: 2 }, Ctx);
   var v = Ctx.get('equippable');
-  if (!v) return enableBox(card, ['这个物品不能穿戴', '启用后可以选择穿戴部位。'], '让它可以穿戴', function () { Ctx.enable('equippable', { slot: 'head' }, '让它可以穿戴'); });
-  function put(fn, label) { var o = Ctx.get('equippable') || { slot: 'head' }; fn(o); Ctx.setSmart('equippable', o, { label: label || '穿戴设置' }); }
-  var slot = kTiles(EQ_SLOTS.map(function (s) { return { v: s.v, label: s.label, sub: s.sub, icon: s.icon }; }), v.slot, function (x) { put(function (o) { o.slot = x; }, '穿戴部位'); }, { cols: 8 });
+  function slots() { var live = Reg.options('enum:equipment_slot'); return live || (Reg.preview() ? EQ_SLOTS : []); }
+  if (!v) return enableBox(card, ['这个物品不能穿戴', '启用后可以选择穿戴部位。'], '让它可以穿戴', function () { pickFrom(card.el, slots(), function (s) { Ctx.enable('equippable', { slot: s.v }, '让它可以穿戴'); }, { manual: { label: '手动输入穿戴槽位', parse: function (s) { return s; } } }); });
+  function put(fn, label) { var o = Ctx.get('equippable') || {}; fn(o); Ctx.setSmart('equippable', o, { label: label || '穿戴设置' }); }
+  var slot = kTiles(slots().map(function (s) { return { v: s.v, label: s.label, sub: s.sub, icon: s.icon || function () { return uiIcon('grid', 16); } }; }), v.slot, function (x) { put(function (o) { o.slot = x; }, '穿戴部位'); }, { cols: 8 });
   card.body.appendChild(fieldRow('穿在哪里', slot.el));
+  card.body.appendChild(fieldRow('手动槽位', combo({ options: slots, free: true, value: v.slot || '', onPick: function (x) { put(function (o) { o.slot = x; }); } })));
   var look = kRegSelect({ reg: 'equipment_asset', value: v.asset_id || '', title: '选择穿着外观', empty: '默认（无外观材质）', allowClear: true, fallback: EQ_ASSETS, onChange: function (x) { put(function (o) { if (x) o.asset_id = x; else delete o.asset_id; }, '穿着外观'); } });
-  var snd = kSoundField(typeof v.equip_sound === 'string' ? v.equip_sound : 'minecraft:item.armor.equip_generic', function (x) { put(function (o) { o.equip_sound = x; }, '穿戴音效'); });
+  var snd = kSoundField(codecField(v, 'equippable', 'equip_sound', 'minecraft:item.armor.equip_generic') || '', function (x) { put(function (o) { o.equip_sound = x; }, '穿戴音效'); });
   card.body.appendChild(h('div', { class: 'k-row wrap' }, [fieldRow('穿着外观', look.el, '穿在身上看起来的材质'), fieldRow('穿戴音效', snd.el)]));
   var T = [['dispensable', '发射器可以给它穿上', true], ['swappable', '手持右键就能换装', true], ['damage_on_hurt', '受伤时消耗耐久', true], ['equip_on_interact', '可以对马、狗等右键穿给它们', false], ['can_be_sheared', '可以用剪刀剪下', false]];
   var togs = h('div', { class: 'k-fxlist' });
-  T.forEach(function (t) { var tg = kToggle(v[t[0]] === undefined ? t[2] : v[t[0]], function (on) { put(function (o) { o[t[0]] = on; }); }, t[1]); togs.appendChild(tg.el); });
+  T.forEach(function (t) { var tg = codecToggle(codecField(v, 'equippable', t[0], t[2]), function (on) { put(function (o) { o[t[0]] = on; }); }, t[1]); togs.appendChild(tg.el); });
   card.body.appendChild(togs);
   card.live.push(function () { var o = Ctx.get('equippable'); if (o) slot.set(o.slot); });
   return card;
@@ -326,10 +389,10 @@ var TRIM_MATS = ['amethyst', 'copper', 'diamond', 'emerald', 'gold', 'iron', 'la
 var TRIM_ICON = { amethyst: 'amethyst_shard', copper: 'copper_ingot', diamond: 'diamond', emerald: 'emerald', gold: 'gold_ingot', iron: 'iron_ingot', lapis: 'lapis_lazuli', netherite: 'netherite_ingot', quartz: 'quartz', redstone: 'redstone', resin: 'resin_brick' };
 CARDS.trim = function () {
   var card = kCard({ id: 'trim', icon: itemIcon('netherite_upgrade_smithing_template', 18), title: '盔甲纹饰', desc: '盔甲表面的图案与颜色', comps: ['trim'], toggle: true, eager: true }, Ctx);
-  card.make = function () { Ctx.enable('trim', { material: 'minecraft:gold', pattern: 'minecraft:coast' }, '添加纹饰'); };
+  card.make = function () { openRegPick({ reg: 'trim_material', title: '选择纹饰材料', onPick: function (material) { openRegPick({ reg: 'trim_pattern', title: '选择纹饰图案', onPick: function (pattern) { Ctx.enable('trim', { material: material, pattern: pattern }, '添加纹饰'); } }); } }); };
   var v = Ctx.get('trim');
   if (!v) { card.el.classList.add('off'); return card; }
-  function put(key, x) { var o = Ctx.get('trim') || { material: 'minecraft:gold', pattern: 'minecraft:coast' }; o[key] = x; Ctx.setSmart('trim', o, { label: '盔甲纹饰' }); }
+  function put(key, x) { var o = Ctx.get('trim') || {}; o[key] = x; Ctx.setSmart('trim', o, { label: '盔甲纹饰' }); }
   var picks = h('div', { class: 'trim-picks' });
   function trimPick(label, reg, key) {
     var art = h('div', { class: 'trim-pick-image' }, [refIcon(reg, v[key] || '', 32)]);
@@ -345,7 +408,7 @@ CARDS.trim = function () {
 CARDS.dye = function () {
   var card = kCard({ id: 'dye', icon: 'palette', title: '染色', desc: '皮革类物品的颜色（点色块，或输入 #RRGGBB）', comps: ['dyed_color'] }, Ctx);
   var v = Ctx.get('dyed_color');
-  var col = kColor(typeof v === 'number' ? v : (Array.isArray(v) ? ((Math.round(v[0] * 255) << 16) | (Math.round(v[1] * 255) << 8) | Math.round(v[2] * 255)) : 0xA06540), function (c) { Ctx.set('dyed_color', c, { label: '染色' }); });
+  var col = kColor(typeof v === 'number' ? v : (Array.isArray(v) ? ((Math.round(v[0] * 255) << 16) | (Math.round(v[1] * 255) << 8) | Math.round(v[2] * 255)) : (Reg.preview() ? 0xA06540 : null)), function (c) { Ctx.set('dyed_color', c, { label: '染色' }); });
   card.body.appendChild(col.el);
   card.live.push(function () { var x = Ctx.get('dyed_color'); if (typeof x === 'number') col.set(x); });
   return card;

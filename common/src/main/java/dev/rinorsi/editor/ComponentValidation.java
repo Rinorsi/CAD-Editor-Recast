@@ -8,7 +8,6 @@ import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
-import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.Identifier;
 
 /** The component's actual persistent codec; no guessed schemas or permitted-id lists. */
@@ -25,8 +24,14 @@ public final class ComponentValidation {
     }
 
     public static Tag parseSnbt(String text) {
-        if (text.length() > 8192) throw new IllegalArgumentException("SNBT 超过 8192 字符");
-        try { return TagParser.create(NbtOps.INSTANCE).parseFully(text); }
+        return parseSnbt(text, 8192);
+    }
+
+    /** The caller owns its transport/storage budget. The quick validation
+     * endpoint has a smaller budget than chunked vault storage. */
+    public static Tag parseSnbt(String text, int maxChars) {
+        if (text.length() > maxChars) throw new IllegalArgumentException("SNBT 超过 " + maxChars + " 字符");
+        try { return SpecialFloatingPointSnbt.parse(text); }
         catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) { throw new IllegalArgumentException(e.getMessage(), e); }
     }
 
@@ -61,7 +66,7 @@ public final class ComponentValidation {
         } else if (format.equals("json")) value = type.codec().parse(json, input).getOrThrow();
         else throw new IllegalArgumentException("format 仅支持 snbt 或 json");
         String snbt = type.codec().encodeStart(nbt, value).getOrThrow().toString();
-        JsonElement encoded = type.codec().encodeStart(json, value).getOrThrow();
+        JsonElement encoded = StackCodec.pageJson(type.codec().encodeStart(json, value).getOrThrow());
         out.addProperty("format", format); out.addProperty("snbt", snbt); out.add("json", encoded);
         out.add("normalized", format.equals("snbt") ? new com.google.gson.JsonPrimitive(snbt) : encoded.deepCopy());
     }

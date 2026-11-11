@@ -56,7 +56,9 @@ public final class DoubleChestWorldEditTest {
             var invalidBefore=target.sessionData();var invalid=edit(0,27);invalid.getAsJsonObject("container").getAsJsonArray("slots").get(1).getAsJsonObject().add("stack",JsonParser.parseString("{id:'minecraft:paper',count:65,comps:{},removed:{}}"));
             try{WorldMergePlan.prepare(target,invalidBefore,null,invalid);throw new AssertionError("expected invalid partner stack");}catch(RuntimeException expected){check(target.sessionData().equals(invalidBefore),"invalid partner leaves both halves intact");}
             var conflictBase=target.sessionData();second.setItem(0,new ItemStack(Items.PAPER,9));
-            try{WorldMergePlan.prepare(target,conflictBase,null,edit(27));throw new AssertionError("expected conflict");}catch(WorldMerge.Conflict e){check(e.paths.getFirst().contains("partner"),"partner conflict path");}
+            var overwrite=WorldMergePlan.prepare(target,conflictBase,null,edit(27));
+            check(overwrite.partnerNbt().getList("Items").orElse(new ListTag()).stream().noneMatch(raw->raw instanceof CompoundTag row&&row.getByte("Slot").orElse((byte)-1)==0),"explicit partner slot deletion overrides concurrent edit");
+            check(second.getItem(0).getCount()==9,"overwrite preparation leaves live partner intact");
             var before=target.sessionData();var rollbackPlan=WorldMergePlan.prepare(target,before,null,edit(0,27));
             for(var failAt:List.of(pos,otherPos)){
                 level.failAt=failAt;

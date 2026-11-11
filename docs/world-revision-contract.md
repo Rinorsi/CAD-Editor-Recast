@@ -50,4 +50,4 @@ logs/world-merge2/pre-merge-session-bytecode.log 来自保留的三方合并前�
 
 现场运行客户端 PID 36224 创建于2026-11-08 01:25:21（北京时间），其 DLI 配置指向本仓库；WorldMerge.java 创建于01:28:36，WorldMergePlan.java 创建于01:31:59，WorldEditSessions 的三方修改为01:31:59。启动参数未发现 javaagent/hotswap。EditorMod.onInitialize 在启动时调用 WorldEditor.initialize，后者静态初始化 WorldEditSessions。磁盘源码/Gradle构建不会热替换该 JVM 已加载的类；当前活着的 runClient 不能当作新编译逻辑验收。证据在 running-client.json、client-runtime-flags.json、client-launch-config-path.txt、source-times.json；未 attach/dump 用户 JVM，也未重启、终止或操控它。
 
-完整真实路由探针以 reply sink 替代网络发包，其他 WorldEditor/WorldEditSessions/WorldMergePlan/真实实体加载写入完全相同；覆盖等tick、马名称/属性/Tags、真实乘客年龄/繁殖/下蛋计时、连续提交（ACK前旧版本、ACK后新版本）、限流后旧版本诊断与新版本成功。原始收据见 logs/world-merge2/captured-server.json，通过后另存 world-revision-samples.json。用户真实客户端及真实网络 ACK 时序仍待用户正常退出旧实例、重新 runClient 后验收。
+完整真实路由探针以 reply sink 替代网络发包，其他 WorldEditor/WorldEditSessions/WorldMergePlan/真实实体加载写入完全相同；覆盖等tick、马名称/属性/Tags、真实乘客年龄/繁殖/下蛋计时、连续提交（ACK前旧版本、ACK后新版本）、限流后旧版本诊断与新版本成功。原始收据见 logs/world-merge2/captured-server.json，通过后另存 docs/archive/world-revision-samples.json。用户真实客户端及真实网络 ACK 时序仍待用户正常退出旧实例、重新 runClient 后验收。

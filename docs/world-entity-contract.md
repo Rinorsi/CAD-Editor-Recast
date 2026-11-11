@@ -4,6 +4,23 @@
 
 ## 消息和视图
 
+### 2026-11-10 动态值覆盖、速度与移动目标
+
+- 在线世界编辑使用 WorldMerge.applyEdits：主动修改的 Age、PickupDelay、效果时长及其他可写字段采用用户值；未修改路径保留现场值，不冻结实体或世界 tick。身份、页面版本、权限和原版加载保留校验继续生效。旧版下文中同路径动态冲突的描述以本段为准。
+- 非玩家实体允许修改真实保存字段 Motion（三个 double）。属性页复用公共数字控件；MC 26.1.2 / 26.2 / 26.3 的 Entity.load 均使用 Vec3.CODEC，任意一轴绝对值大于 10 时该轴归零，因此表单显示每轴 −10..10 格/刻，原始 SNBT 仍经过实际 loader/字段保留校验。原版 load 设置 needsSync，沿用 /data modify entity 的加载路径。摩擦、轨道和后续 tick 仍会自然改变速度。
+- 服务端 open 记录非玩家实体的 openingPosition，保存后仍保留最初位置。apply/undo 先认证连接、目标 UUID、token 和 revision，再解析目标。实体仍在交互范围内时保留当前位置；跑出范围时，以当前包围盒平移到 openingPosition 后执行原生交互距离检查，同时检查当前位置与返回位置的区块、边界和区域权限。
+- 所有正常 NBT 保护与副本校验完成后，才由服务端把可信 openingPosition 注入最终计划的 Pos；客户端不能借此任意传送或修改 UUID。预览/写入/回执仍在现有事务中，失败回滚到真实写前位置；成功拉回另记 entity_return（player/target/from/to）日志。玩家不走此返回逻辑；移除、卸载或离开维度的目标不加载、不复活。
+- 掉落物预览读取完整 Item 栈或当前 normalized 草稿，使用原生物品模型/图标与共享 typed 组件转换；不创建无内容的临时掉落物模型。修改物品及组件后就地更新。
+- 本次未执行行为测试或实机；源码、构建结果见 DEV-NOTES-0.99.6.md，不沿用历史探针结果。
+
+### 效果时长与自然倒计时
+
+实体自身及玩家 `cad_player` 的 `active_effects` 合并按唯一效果 ID 匹配。主动修改的时长或其他可写字段采用用户值；未改动的时长沿用现场值，删除效果不会仅因倒计时而被拒绝。SNBT 包装和玩家 JSON 使用同一规则；物品、方块或任意嵌套对象中的同名字段不借用实体效果倒计时推断。
+
+删除最后一个效果时，界面提交的是缺少整个 `active_effects` 键的文档。后端保留这种缺席语义，不补造空列表；在线编辑按主动删除整个字段处理。列表仍存在时按稳定 ID 合并，保留未修改的其他效果。显式 `null`、错误类型不当作删除。
+
+在线编辑不再要求区分自然倒计时、时长刷新或其他来源的同字段变化：实际改变的字段以草稿为准。离线玩家继续使用严格合并及原有的自然倒计时特例。权限、目标身份、原版 Codec 和保存后字段保留门禁保持生效。
+
 普通修改沿用 apply，增加 entity 区段，只发送改变的字段。页面保留 slot/requestId；宿主补 op/revision。网络请求须完整 canonical slot/token/revision。不要把只读 views 整个写回。
 
     {op:'apply',requestId:'pose-1',slot:canonicalSlot,revision:openedRevision,
@@ -227,9 +244,10 @@ remove从当前树查UUID，只解除骑乘，不删除实体；eject解除直�
 
 |字段|26.1.2依据与处理|
 |---|---|
-|Pos/Motion/Rotation|Entity.saveWithoutId 与移动/tick；取当前值，草稿相对打开时的主动修改仍protected_field|
+|Pos/Rotation|Entity.saveWithoutId 与移动/tick；取当前值，原始草稿主动修改仍 protected_field；可信会话原位返回另见上文|
+|Motion|Entity.saveWithoutId / load 的 Vec3；未改取当前，显式编辑或撤销采用用户值，原版单轴绝对值 >10 归零|
 |Air/Fire/OnGround/fall_distance/PortalCooldown|Entity保存与baseTick/移动；取当前值。兼容旧FallDistance拼写，不宣称它是26.1.2实际保存名|
-|HurtTime/DeathTime/HurtByTimestamp|LivingEntity保存、伤害/死亡tick；取当前值；Health仅双方修改且不同才冲突|
+|HurtTime/DeathTime/HurtByTimestamp|LivingEntity保存、伤害/死亡tick；取当前值；在线编辑主动修改 Health 时采用用户值|
 |Brain（含memories）|LivingEntity Brain.Packed.CODEC与Brain tick；完整取当前值，禁止过时草稿改写|
 |FallFlying/current_impulse_context_reset_grace_time/current_explosion_impact_pos/last_hurt_by_player/last_hurt_by_player_memory_time/last_hurt_by_mob|Entity/LivingEntity移动、受击记忆保存；取当前值|
 |Age/ForcedAge|AgeableMob保存、aiStep朝零计数；Age哈希只保留baby/adult符号。未显式改Age时取当前，baby切换及其undo仍可写；ForcedAge取当前|
@@ -239,7 +257,7 @@ remove从当前树查UUID，只解除骑乘，不删除实体；eject解除直�
 
 证据：logs/world-entity/bytecode.log、zombie-effects-bytecode.log、text-display-bytecode.log，均为实际26.1.2 javap -p -c。不是凭旧版本猜全量字段。Health、装备、交易uses/demand、属性、变种、自定义数据和未知模组timer均参与三方合并；用户未改就保留current。
 
-先校验会话基线revision，再以打开副本生成mine并检查只读字段，最后逐路径合并current并经真实loader校验；undo也不回退运动/Brain。实体走出当前交互距离仍out_of_reach，不因Pos忽略而绕过保护。
+先校验会话基线revision，再以打开副本生成mine并检查只读字段，最后逐路径合并current并经真实loader校验；未改的运动/Brain 不回退。非玩家实体走出当前交互距离时可按可信原位锚点返回，仍检查原位距离、两端区块及区域；骑乘独立操作不放宽当前距离，玩家不走返回路径。
 
 ## 验证与边界
 

@@ -1,5 +1,7 @@
 plugins { id 'multiloader-loader' }
 apply plugin: 'net.fabricmc.fabric-loom'
+tasks.named('processIncludeJars') { inputs.property('orielEmbedded', orielEmbedded) }
+tasks.named('jar') { inputs.property('orielEmbedded', orielEmbedded) }
 def daily = rootProject.file('../Oriel-UI-Workspace/daily/' + java.time.LocalDate.now())
 def clientRun = new File(daily, project.name == '26.1' ? 'run/editor-mod-client' : "run/editor-fabric-${minecraft_version}-client")
 repositories {
@@ -10,6 +12,7 @@ repositories {
     }
 }
 dependencies {
+    if (orielEmbedded) include("dev.oriel:oriel-fabric-${minecraft_version}:${oriel_version}") { transitive = false }
     minecraft "com.mojang:minecraft:${minecraft_version}"
     implementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
     implementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
@@ -38,7 +41,7 @@ loom {
 
 // Keep the exact release jar in the standalone Editor run directory too.
 tasks.register('prepareEditorClient', Copy) {
-    from(rootProject.file("libs/oriel-fabric-${minecraft_version}-${oriel_version}.jar"))
+    from(configurations.orielArtifact)
     into(new File(clientRun, 'mods'))
 }
 tasks.named('runClient') { dependsOn('prepareEditorClient') }

@@ -44,20 +44,16 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: ${{ vars.ORIEL_REPOSITORY || 'Rinorsi/Oriel-UI' }}
-          ref: ${{ vars.ORIEL_REF || '92542786d57ddcadabbca6cfecde863969fd51f5' }}
+          ref: ${{ vars.ORIEL_REF || '49d0410a7a5dae7003b9972e24d7c3349e35fe5b' }}
           token: ${{ secrets.ORIEL_READ_TOKEN || github.token }}
           path: Oriel-UI
           persist-credentials: false
-      - name: Build Oriel dependency jars
+      - name: Build and publish slim Oriel dependency to local Maven
         working-directory: Oriel-UI
         shell: bash
         run: |
           chmod +x gradlew
-          ./gradlew :fabric:${{ matrix.mc }}:jar :neoforge:${{ matrix.mc }}:jar -Poriel_release --console=plain --stacktrace
-          mkdir -p ../Editor/libs
-          for loader in fabric neoforge; do
-            find "$loader/versions/${{ matrix.mc }}/build/libs" -maxdepth 1 -name 'oriel-*.jar' ! -name '*-sources.jar' ! -name '*-javadoc.jar' ! -name '*-dev.jar' -exec cp {} ../Editor/libs/ \;
-          done
+          ./gradlew :fabric:${{ matrix.mc }}:publishToMavenLocal :neoforge:${{ matrix.mc }}:publishToMavenLocal -Poriel_slim --console=plain --stacktrace
       - name: Matrix build and check including codecVerification
         working-directory: Editor
         shell: bash

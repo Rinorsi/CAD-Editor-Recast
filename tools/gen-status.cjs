@@ -1,4 +1,4 @@
-// 生成 docs/STATUS.md 的组件表。用法：node tools/gen-status.cjs   （每次完成一项后重跑）
+// 生成仅本地保留的 docs/archive/STATUS.md。用法：node tools/gen-status.cjs
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const root = path.join(__dirname, '..'), U = path.join(root, 'common/src/main/resources/assets/cadeditor/ui/js/');
 const ctx = {}; vm.createContext(ctx);
@@ -18,7 +18,7 @@ const rows = E.comps.map(c => {
 const nd = E.comps.filter(c => dedicated.has(c.id)).length;
 const out = `# 物品工坊 · 产品清单（自动生成，别手改）
 
-更新：${new Date().toISOString().slice(0, 10)} · 重新生成：\`node tools/gen-status.cjs\` · 手写数据→官方来源的落地情况见 [STATUS-data.md](STATUS-data.md)，审计基线见 [audit-registry.md](audit-registry.md)
+更新：${new Date().toISOString().slice(0, 10)} · 重新生成：\`node tools/gen-status.cjs\` · 手写数据→官方来源的落地情况见 [STATUS-data.md](STATUS-data.md)，审计基线仅本地保留于 docs/audit-registry.md；当前发布门槛见 [COVERAGE.md](../COVERAGE.md)。
 
 ## 总览
 
@@ -36,5 +36,7 @@ const out = `# 物品工坊 · 产品清单（自动生成，别手改）
 |---|---|---|---|---|---|---|---|
 ${rows.join('\n')}
 `;
-fs.writeFileSync(path.join(root, 'docs/STATUS.md'), out);
+const archive = path.join(root, 'docs/archive');
+fs.mkdirSync(archive, { recursive: true });
+fs.writeFileSync(path.join(archive, 'STATUS.md'), out);
 console.log('rows', rows.length, 'dedicated', nd);

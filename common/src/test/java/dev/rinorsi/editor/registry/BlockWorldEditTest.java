@@ -20,6 +20,7 @@ public final class BlockWorldEditTest {
         run(EntitySchemaTest.access(),Path.of("logs/block-edit"));
     }
     public static void run(RegistryAccess access,Path output) throws Exception {
+        typedViews(access);
         vaultViews(access);
         sculkViews(access);
         structureViews(access);
@@ -312,6 +313,36 @@ public final class BlockWorldEditTest {
             for(String fields:List.of("'config.activation_range':100","'config.activation_range':null","'config.activation_range':'1'","'config.activation_range':1e400","'config.loot_table':'bad id'","'config.key_item':{id:'minecraft:__missing__',count:1}"))reject("invalid_nbt",()->BlockViews.apply(be,before,JsonParser.parseString("{vault:{"+fields+"}}").getAsJsonObject(),access));
             for(String fields:List.of("'server_data.rewarded_players':[]","'server_data.rewarded_players':null","config:{}","shared_data:{}"))reject("invalid_request",()->BlockViews.apply(be,before,JsonParser.parseString("{vault:{"+fields+"}}").getAsJsonObject(),access));
         }
+    }
+    private static void typedViews(RegistryAccess access) {
+        var hive = new BeehiveBlockEntity(BlockPos.ZERO, Blocks.BEEHIVE.defaultBlockState());
+        var before = WorldNbt.parse("{bees:[{entity_data:{id:\"minecraft:bee\",Health:20.0f,NoAI:1b,custom:{s:2s,long:9007199254740993L,ints:[I;1,2],longs:[L;9007199254740993L]}},ticks_in_hive:40,min_ticks_in_hive:600}]}");
+        var views = new JsonObject(); BlockViews.add(views, hive, access, before);
+        check(views.getAsJsonObject("beehive").getAsJsonObject("schema").getAsJsonObject("fields").getAsJsonObject("bees").get("wire_snbt").getAsBoolean(), "beehive advertises typed transport");
+        var edits = new JsonObject(); edits.add("beehive", views.getAsJsonObject("beehive").getAsJsonObject("value").deepCopy());
+        var wanted = before.copy(); var bee = (CompoundTag)((ListTag)wanted.get("bees")).get(0); bee.putInt("ticks_in_hive", 41);
+        var typed = new JsonObject(); var group = new JsonObject(); group.addProperty("bees", wanted.get("bees").toString()); typed.add("beehive", group);
+        var after = BlockViews.apply(hive, before, edits, typed, access);
+        check(after.get("bees").equals(wanted.get("bees")), "changing bee timer preserves ALL raw entity NBT types and large long");
+        check(((CompoundTag)((ListTag)before.get("bees")).get(0)).getInt("ticks_in_hive").orElseThrow()==40, "detached validation does not mutate source");
+        var extra = typed.deepCopy(); extra.getAsJsonObject("beehive").addProperty("unknown", "1b");
+        reject("invalid_request", () -> BlockViews.apply(hive, before, edits, extra, access));
+        reject("invalid_request", () -> BlockViews.apply(hive, before, new JsonObject(), typed, access));
+        var bad = typed.deepCopy(); bad.getAsJsonObject("beehive").addProperty("bees", "{not_a_list:1}");
+        reject("invalid_nbt", () -> BlockViews.apply(hive, before, edits, bad, access));
+        var book = WorldNbt.parse("{Book:{id:\"minecraft:writable_book\",count:1,components:{\"minecraft:custom_data\":{b:1b,s:2s,l:9007199254740993L,a:[I;1,2]}}},Page:0}");
+        var lectern = new LecternBlockEntity(BlockPos.ZERO, Blocks.LECTERN.defaultBlockState());
+        var bookEdits = JsonParser.parseString("{lectern:{Book:{id:'minecraft:writable_book',count:1}}}").getAsJsonObject();
+        var bookTyped = new JsonObject(); var bookGroup = new JsonObject(); bookGroup.addProperty("Book", book.get("Book").toString()); bookTyped.add("lectern", bookGroup);
+        var bookAfter = BlockViews.apply(lectern, book, bookEdits, bookTyped, access);
+        check(book.get("Book").equals(bookAfter.get("Book")), "nested ItemStack custom data uses NbtOps end to end");
+        var invalidPage = new JsonObject(); var invalidGroup = new JsonObject(); invalidGroup.addProperty("Page", "1"); invalidPage.add("lectern", invalidGroup);
+        reject("invalid_request", () -> BlockViews.apply(lectern, book, JsonParser.parseString("{lectern:{Page:1}}").getAsJsonObject(), invalidPage, access));
+        var gateway = new TheEndGatewayBlockEntity(BlockPos.ZERO, Blocks.END_GATEWAY.defaultBlockState());
+        var gatewayBefore = gateway.saveWithFullMetadata(access);
+        var gatewayEdit = JsonParser.parseString("{end_gateway:{Age:1}}").getAsJsonObject();
+        var gatewayTyped = new JsonObject(); var age = new JsonObject(); age.addProperty("Age", "9007199254740993L"); gatewayTyped.add("end_gateway", age);
+        check(BlockViews.apply(gateway, gatewayBefore, gatewayEdit, gatewayTyped, access).getLong("Age").orElseThrow()==9007199254740993L, "long field is read from typed source, not rounded JSON");
     }
     @SuppressWarnings({"rawtypes","unchecked"}) private static String propertyName(net.minecraft.world.level.block.state.properties.Property property,Object value){return property.getName((Comparable)value);}
     private static void timer(CompoundTag tag,String key,int value) {

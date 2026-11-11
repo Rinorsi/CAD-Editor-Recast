@@ -51,6 +51,12 @@ world.views.GROUP 返回 {value,snbt,schema}。value 为真实 Codec JSON，snbt
 
 Book、RecordItem、书架 Items 内容确实变化时，从副本自动更新 has_book / has_record / slot_*_occupied；单独状态编辑不强行覆盖用户值。Book、RecordItem、头颅组件、nameable.CustomName、信标效果、end_gateway.exit_portal 及 vault 的 config.key_item 可 null，其他可写字段不允许 null。空旗帜图案/默认陶罐装饰按原版稀疏保存省略。
 
+唱片机已有唱片时，编辑其组件属于替换槽内物品。可放入检查使用同一原版工厂的空槽副本，
+避免把“槽位已有唱片，不能再插入”误当作禁止编辑；仍执行实时可播放组件与堆叠数量限制。
+容器增量编辑在验证副本上通过原版 NBT 加载器设置唱片，不调用会播放音乐的游戏 setter，
+不临时清空真实槽位。JukeboxReplacementTest 覆盖完整 SNBT 和 container 两条准备路径，
+包括精确 long／类型化数组、非唱片和超量拒绝；实机结果需另行验收。
+
 蜡封标牌改文字须同一笔最终结果 is_waxed:false，否则 sign_waxed；完整 SNBT 同样受限。修改后含可执行命令的文本要求 ServerPlayer.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)，与创造/生存无关。命令方块、结构方块、拼图方块依据原版 GameMasterBlock 标记要求同一权限；有权限+生存允许，无权限+创造拒绝。其他权限/距离/区域保护守卫不变。
 
 end_gateway / structure_block / jigsaw 已提供下述专用视图，不返回 unsupported；传送/结构生成副作用仍未运行验收。
@@ -121,7 +127,7 @@ edits 示例：
 
 下表为内部数据指纹和动态合并语义；网络revision为冻结的不透明会话版本，详见 [world-revision-contract.md](world-revision-contract.md)。不因当前计时变化重新计算会话版本。
 
-下表保留专门动态语义及 revision 规范化，但不是可编辑性的白名单。全部路径（含未知模组 BE）采用 [world-merge-contract.md](world-merge-contract.md) 的 base/mine/current 三方规则；Items、文本、命令、配方等只有双方改同一路径且不同才冲突。
+下表保留专门动态语义及 revision 规范化，但不是可编辑性的白名单。全部路径（含未知模组 BE）采用 [world-merge-contract.md](world-merge-contract.md) 的 base/mine/current 规则；在线目标主动修改的字段采用用户值，未改字段保留现场值。
 
 |BE保存id|volatile路径|26.1.2真实类证据|
 |---|---|---|
@@ -136,7 +142,7 @@ edits 示例：
 
 证据为 logs/block-edit/bytecode-*.txt，由已解析的目标 MC jar 执行 javap -p -c 捕获。派生采用任务允许的真实类保存绑定与 ticking 字段路径，没有声称已在 ticking ServerLevel 间隔N tick采样。试炼刷怪笼与未知计时字段由通用三方规则保留，无需加入白名单。
 
-校验会话基线后，在 opened 副本上生成 mine，再与 current 逐路径合并并由原版加载器校验。未改的计时、物品烧成/搬走、蜂离巢及未知模组字段保留 current；双方改同一路径才冲突。可唯一识别的列表按 Slot/id/UUID 等稳定键合并，否则整列表比较。详细回执与 undo 规则见 world-merge-contract.md。更换唱片仍执行原有播放时间语义。
+校验会话基线后，在 opened 副本上生成 mine，再与 current 逐路径合并并由原版加载器校验。未改的计时、物品烧成/搬走、蜂离巢及未知模组字段保留 current；主动修改的计时等字段直接覆盖，不因递增、递减或冷却重置误拒绝。可唯一识别的列表按 Slot/id/UUID 等稳定键合并，否则作为整列表处理。详细回执与 undo 规则见 world-merge-contract.md。更换唱片仍执行原有播放时间语义。
 
 ## 支持与验收
 
@@ -152,7 +158,7 @@ edits 示例：
 
 WorldEditTest 原420项保持通过，并调用 BlockWorldEditTest 扩展，覆盖属性遍历、BE保真、模式副本、规范化修改、非法颜色/行数、蜡封规则、动态三方合并、状态冲突、token及共用权限/距离/保护守卫。守卫单测不是 ServerPlayer 集成验收。
 
-复现：tools/world-edit/verify-block.ps1 -ClasspathJson <runtime-classpath.json>；编译目录与完整输出在 logs/block-edit。真实完整工厂/Codec捕获见 [world-block-samples.json](world-block-samples.json)，不是手写默认表。真实客户端请求、远程服、多玩家保护、Level.setBlock邻居传播及持续tick：**real-client run pending**。
+复现：tools/world-edit/verify-block.ps1 -ClasspathJson <runtime-classpath.json>；编译目录与完整输出在 logs/block-edit。真实完整工厂/Codec捕获见 历史采集回执（仅本地归档：`docs/archive/world-block-samples.json`，不随仓库分发），不是手写默认表。真实客户端请求、远程服、多玩家保护、Level.setBlock邻居传播及持续tick：**real-client run pending**。
 
 ## conduit：潮涌核心（只读）
 

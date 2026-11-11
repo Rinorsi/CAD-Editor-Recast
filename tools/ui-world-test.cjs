@@ -32,6 +32,7 @@ const c=vm.createContext({document:doc,window:{innerWidth:760,innerHeight:560},c
 const dir=path.resolve(__dirname,'../common/src/main/resources/assets/cadeditor/ui/js');
 for(const f of ['data','core','labels','pinyin-data','search','forms','kit','kit2','nbt','code','xlist','slots','reg','hostsearch','picker','cards1','cards2','cards3','cards5','world','rules','spawn','eschema','toastkit','screens','worldedit','worldview','worldentity','worldplayer','worldplayerx','vault'])vm.runInContext(fs.readFileSync(path.join(dir,f+'.js'),'utf8'),c);
 c.uiIcon=()=>new Element('i');c.itemIcon=()=>new Element('i');c.uiClick=()=>{};c.snd=()=>{};c.toast=()=>{};
+c.window.EDITOR_PREVIEW=true; // Legacy offline form examples explicitly use preview defaults.
 let saved,disabled=0,writes=0;
 c.autoPut=(cid,value)=>{saved=JSON.parse(JSON.stringify(value));writes++;};
 c.Ctx.disable=()=>disabled++;
@@ -97,64 +98,86 @@ console.log('PASS world UI: rule add/change/cancel, unknown data preservation, l
   assert.equal(kind('white_banner', { banner_patterns: [] }, { block_item: true }), 'banner');
   assert.equal(kind('music_disc_cat', { jukebox_playable: {} }, {}), 'disc');
   assert.equal(kind('stone', {}, { block_item: true }), 'generic');
-  // 容器格数 / 收纳袋容量：有真实数据就用，没有才退回内置表
-  c.Reg.meta = {}; c.Reg.imeta['minecraft:chest'] = { id: 'minecraft:chest', container_size: 54 };
+  // 真实宿主缺容量时保留未知；只有明确预览才用内置样例。
+  c.Reg.meta = {}; c.window.EDITOR_PREVIEW=false; c.Reg.imeta['minecraft:chest'] = { id: 'minecraft:chest', container_size: 54 };
   assert.equal(c.slotCountFor('minecraft:chest'), 54);
-  c.Reg.imeta['minecraft:barrel'] = false; assert.equal(c.slotCountFor('barrel'), 27, '未知元信息退回内置表');
-  c.Reg.meta = null;
+  c.Reg.imeta['minecraft:barrel'] = false;
+  c.window.EDITOR_PREVIEW=false;assert.equal(c.slotCountFor('barrel'),null,'真实宿主未提供容量时不能猜成27格');
+  c.window.EDITOR_PREVIEW=true;assert.equal(c.slotCountFor('barrel'),27,'只有离线预览使用样例容量');
+  c.Reg.meta = null; c.window.EDITOR_PREVIEW=true;
   assert.equal(c.slotCountFor('hopper'), 5, '离线退回内置表');
 }
-console.log('PASS item kind from facts, container size, bundle capacity fallbacks.');
+console.log('PASS item kind from facts, live container size and explicit preview capacity.');
+// Unknown real-host capacity must keep existing numbered slots reachable, with manual editing.
+{
+  const t = require('./lib/ui-harness.cjs').create(), u = t.c;
+  u.Reg.meta = {}; u.Reg.imeta['custom:box'] = false;
+  u.Store.open({key:'unknown-container',id:'custom:box',comps:{container:[{slot:17,item:{id:'custom:gem',count:3}}]}},true);
+  let slotOptions, popup;
+  const number = u.kNumber;
+  u.kNumber = function(value, options) { if(options.min===0&&options.max===255&&options.noSlider) slotOptions=options; return number(value, options); };
+  u.kStackPop = function(anchor, view, options) { popup={view,options}; };
+  const card = u.CARDS.container();
+  assert.equal(u.slotCountFor('custom:box'),null);
+  assert.ok(card.el.querySelectorAll('.slot').length >= 18,'已有17号格仍然可见');
+  assert.ok(slotOptions,'未知容量保留手动格号输入'); slotOptions.onChange(17);
+  const edit=card.el.querySelectorAll('.k-btn').find(x=>x.textContent==='编辑指定格子');assert.ok(edit);edit.fire('click');
+  assert.equal(popup.view.id,'custom:gem');assert.equal(popup.view.count,3);
+  popup.options.onCount(7);
+  assert.equal(u.Store.doc().comps.container[0].slot,17);assert.equal(u.Store.doc().comps.container[0].item.count,7);
+  assert.equal(u.Store.doc().comps.container[0].item.id,'custom:gem');
+}
+console.log('PASS unknown container preserves visible numbered contents and manual editing.');
 
 // 主手装备槽组、玩家基础属性：用游戏数据，没有时才退回默认
 {
-  c.Reg.meta = null;
+  c.Reg.meta = null; c.window.EDITOR_PREVIEW=true;
   assert.deepEqual(Array.from(c.meleeSlots()), ['mainhand', 'hand'], '离线退回内置');
   assert.equal(c.Reg.baseAttr('minecraft:player', 'attack_damage', 1), 1);
-  c.Reg.meta = {};
+  c.Reg.meta = {}; c.window.EDITOR_PREVIEW=false;
   c.Reg.kinds.equipment_slot_groups = { done: true, entries: [{ id: 'any', slots: ['mainhand', 'offhand'] }, { id: 'mainhand', slots: ['mainhand'] }, { id: 'hand', slots: ['mainhand', 'offhand'] }, { id: 'legs', slots: ['legs'] }, { id: 'armor', slots: ['feet', 'legs', 'chest', 'head', 'body'] }] };
   assert.deepEqual(Array.from(c.meleeSlots()), ['mainhand', 'hand'], '含主手的组，不含 any');
   c.Reg.ebase['minecraft:player'] = { 'minecraft:attack_damage': 2, 'minecraft:attack_speed': 3.5 };
   assert.equal(c.Reg.baseAttr('player', 'attack_damage', 1), 2);
   assert.equal(c.Reg.baseAttr('minecraft:player', 'minecraft:attack_speed', 4), 3.5);
   assert.equal(c.Reg.baseAttr('minecraft:player', 'minecraft:luck', 9), 9, '缺属性用调用方给的默认，不当 0');
-  c.Reg.meta = null;
+  c.Reg.meta = null; c.window.EDITOR_PREVIEW=true;
 }
 console.log('PASS melee slot groups and player base attributes.');
 
 // 枚举字段：候选以游戏为准，没到才用内置；校验接受游戏列表里的值
 {
-  c.Reg.meta = null;
+  c.Reg.meta = null; c.window.EDITOR_PREVIEW=true;
   assert.equal(c.liveEnumOptions('fox/variant', ''), null, '离线没有游戏列表');
-  c.Reg.meta = {};
+  c.Reg.meta = {}; c.window.EDITOR_PREVIEW=false;
   c.Reg.kinds['enum:fox_variant'] = { done: true, entries: [{ id: 'red', name: 'Red' }, { id: 'snow', name: 'Snow' }, { id: 'ice', name: 'Ice' }] };
   const o = Array.from(c.liveEnumOptions('fox/variant', '')).map(x => x.v);
   assert.deepEqual(o, ['red', 'snow', 'ice'], '游戏新增的值出现在候选里');
   assert.equal(c.liveEnumHas('fox/variant', '', 'ice'), true);
   assert.equal(c.liveEnumHas('fox/variant', '', 'lava'), false);
   assert.equal(c.liveEnumOptions('fox/variant', '.sub'), null, '只对组件本身生效，子路径不套用');
-  c.Reg.meta = null;
+  c.Reg.meta = null; c.window.EDITOR_PREVIEW=true;
 }
 console.log('PASS live enum options.');
 
 // 远程服务器上拿不到完整列表：空列表要说明原因，并保留手动输入
 {
-  c.Reg.meta = {};
+  c.Reg.meta = {}; c.window.EDITOR_PREVIEW=false;
   c.Reg.kinds = {};
   c.Reg.ingest('registry.minecraft:loot_table', { generation: 1, offset: 0, total: 0, entries: [], done: true, availability: 'unavailable', reason: '远程服务器不向客户端同步战利品表' });
   assert.equal(c.Reg.unavailable('loot_table'), '远程服务器不向客户端同步战利品表');
   assert.equal(c.Reg.unavailable('recipe'), null);
   assert.ok(/远程服务器不向客户端同步战利品表.*直接输入/.test(c.emptyReason('', 0, 'loot_table')), '空列表说明原因并指向手动输入');
   assert.ok(/没有匹配/.test(c.emptyReason('abc', 0, 'loot_table')), '有搜索词时仍是没有匹配');
-  c.Reg.meta = null; c.Reg.kinds = {};
+  c.Reg.meta = null; c.window.EDITOR_PREVIEW=true; c.Reg.kinds = {};
 }
 console.log('PASS unavailable registry hint.');
 
 // 文本颜色来自 enum:text_color；标签快捷项只保留游戏里存在的
 {
-  c.Reg.meta = null;
+  c.Reg.meta = null; c.window.EDITOR_PREVIEW=true;
   assert.equal(Array.from(c.mcColors()).length, 16, '离线用内置 16 色');
-  c.Reg.meta = {}; c.Reg.kinds = {};
+  c.Reg.meta = {}; c.window.EDITOR_PREVIEW=false; c.Reg.kinds = {};
   c.Reg.kinds['enum:text_color'] = { done: true, entries: [{ id: 'black', name: 'Black', rgb: 0 }, { id: 'gold', name: 'Gold', rgb: 0xFFAA00 }, { id: 'lime', name: 'Lime', rgb: 0x32CD32 }] };
   const cols = Array.from(c.mcColors(), x => Array.from(x));
   assert.deepEqual(cols.map(x => x[0]), ['black', 'gold', 'lime']);
@@ -163,20 +186,20 @@ console.log('PASS unavailable registry hint.');
   c.Reg.kinds['tags:damage_type'] = { done: true, entries: [{ id: 'minecraft:is_fire', name: 'is_fire', count: 3 }] };
   const q = [{ v: '' , label: 'x' }, { v: '#minecraft:is_fire', label: 'f' }, { v: '#minecraft:is_gone', label: 'g' }, { v: 'minecraft:cobweb', label: 'w' }];
   assert.deepEqual(Array.from(c.keepKnownTags(q, 'damage_type'), x => x.label), ['x', 'f', 'w'], '不存在的标签被去掉，单个条目与空项保留');
-  c.Reg.meta = null; c.Reg.kinds = {};
+  c.Reg.meta = null; c.window.EDITOR_PREVIEW=true; c.Reg.kinds = {};
   assert.equal(c.keepKnownTags(q, 'damage_type').length, 4, '离线原样保留');
 }
 console.log('PASS live text colors and known-tag quick items.');
 
 // 资源 ID 类注册表：请求名不加 minecraft: 前缀，文件名作显示名
 {
-  c.Reg.meta = {}; c.Reg.kinds = {};
+  c.Reg.meta = {}; c.window.EDITOR_PREVIEW=false; c.Reg.kinds = {};
   assert.equal(c.Reg.isDirect('item_model'), true); assert.equal(c.Reg.isDirect('profile_cape'), true); assert.equal(c.Reg.isDirect('loot_table'), false);
   c.Reg.kinds['item_model'] = { done: true, entries: [{ id: 'mymod:fancy_sword', name: 'mymod:fancy_sword', resource: 'mymod:items/fancy_sword.json' }] };
   const o = c.Reg.options('item_model'); assert.equal(o.length, 1); assert.equal(o[0].v, 'mymod:fancy_sword');
   assert.equal(c.refName('profile_texture', { v: 'minecraft:entity/player/slim/alex', label: 'minecraft:entity/player/slim/alex' }), 'Alex');
   assert.equal(c.refName('camera_overlay', { v: 'minecraft:misc/pumpkinblur', label: 'minecraft:misc/pumpkinblur' }), 'Pumpkinblur');
-  c.Reg.meta = null; c.Reg.kinds = {};
+  c.Reg.meta = null; c.window.EDITOR_PREVIEW=true; c.Reg.kinds = {};
 }
 console.log('PASS resource-id registries.');
 
@@ -189,7 +212,7 @@ console.log('PASS resource-id registries.');
   c.Ctx.setSmart = (cid, v) => { comps[cid] = JSON.parse(JSON.stringify(v)); writes.push([cid, comps[cid]]); };
   c.Ctx.disable = cid => { delete comps[cid]; writes.push([cid, null]); };
   c.Ctx.reset = cid => { delete comps[cid]; writes.push([cid, 'reset']); };
-  c.Reg.meta = {}; c.Reg.kinds = {};
+  c.Reg.meta = {}; c.window.EDITOR_PREVIEW=false; c.Reg.kinds = {};
   c.Reg.imeta['minecraft:spawner'] = { id: 'minecraft:spawner', block_item: true, block_entity_type: 'minecraft:mob_spawner' };
   c.Reg.imeta['minecraft:trial_spawner'] = { id: 'minecraft:trial_spawner', block_item: true, block_entity_type: 'minecraft:trial_spawner' };
   c.Reg.imeta['minecraft:pig_spawn_egg'] = { id: 'minecraft:pig_spawn_egg', spawn_egg_entity: 'minecraft:pig' };
@@ -232,7 +255,7 @@ console.log('PASS resource-id registries.');
   const hs = Array.from(c.heroStats(doc, 'spawn'), s => s.label + '=' + s.value);
   assert.ok(hs.includes('生命值=10') && hs.includes('移动速度=0.25'), '基础属性来自 entity_info，显示在左栏属性里：' + hs);
   assert.ok(!egg.body.textContent.includes('基础属性'), '右边不再重复基础属性');
-  c.Reg.meta = null; c.Reg.kinds = {}; c.Reg.imeta = {}; c.Reg.einfo = {};
+  c.Reg.meta = null; c.window.EDITOR_PREVIEW=true; c.Reg.kinds = {}; c.Reg.imeta = {}; c.Reg.einfo = {};
 }
 console.log('PASS spawn egg / spawner / trial spawner cards.');
 
@@ -259,7 +282,7 @@ console.log('PASS search box: search only on Enter / button, clear resets.');
   const sent = []; let timers = [];
   c.oriel.send = (k, v) => { sent.push([k, v]); return true; };
   c.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return timers.length; }; c.clearTimeout = () => {};
-  c.Reg.meta = {}; c.Reg.kinds = {};
+  c.Reg.meta = {}; c.window.EDITOR_PREVIEW=false; c.Reg.kinds = {};
   assert.equal(c.Reg.hostKind('item'), 'items'); assert.equal(c.Reg.hostKind('loot_table'), 'minecraft:loot_table'); assert.equal(c.Reg.hostKind('item_model'), 'item_model');
   const got = [];
   assert.equal(c.HostSearch.query({ view: 'picker', kind: 'items', query: 'zsj', limit: 80 }, r => got.push(r)), true);
@@ -284,7 +307,7 @@ console.log('PASS search box: search only on Enter / button, clear resets.');
   timers[timers.length - 1].fn();
   assert.equal(got[2].fallback, true); assert.equal(c.HostSearch.supported, false);
   assert.equal(c.HostSearch.query({ view: 'picker', kind: 'items', query: 'a' }, () => {}), false, '已判定老宿主就不再发');
-  c.HostSearch.supported = null; c.Reg.meta = null; c.Reg.kinds = {};
+  c.HostSearch.supported = null; c.Reg.meta = null; c.window.EDITOR_PREVIEW=true; c.Reg.kinds = {};
 }
 console.log('PASS host search client: request supersede, ready:false wait, error/timeout fallback.');
 
@@ -292,7 +315,7 @@ console.log('PASS host search client: request supersede, ready:false wait, error
 {
   const sent = []; c.oriel.send = (k, v) => { sent.push([k, v]); return true; };
   c.setTimeout = (fn) => 1; c.clearTimeout = () => {};
-  c.Reg.meta = {}; c.Reg.kinds = {}; c.HostSearch.supported = null; c.HostSearch.views = {};
+  c.Reg.meta = {}; c.window.EDITOR_PREVIEW=false; c.Reg.kinds = {}; c.HostSearch.supported = null; c.HostSearch.views = {};
   c.Reg.ingest('registry.entity_types', { generation: 1, offset: 0, total: 3, done: true, entries: [{ id: 'minecraft:zombie', name: '僵尸' }, { id: 'minecraft:skeleton', name: '骷髅' }, { id: 'minecraft:pig', name: '猪' }] });
   c.openRegPick({ reg: 'entity_type', title: '选择生物', onPick() {} });
   const modal = doc.body.querySelector('.addwin') || doc.body.querySelectorAll('.k-modal')[0] || overlays;
@@ -311,7 +334,7 @@ console.log('PASS host search client: request supersede, ready:false wait, error
   c.Reg.ingest('search.result', { requestId: s2[1].requestId, ready: false, error: 'UNKNOWN_KIND' });
   const rows2 = overlays.querySelectorAll('.addrow');
   assert.ok(rows2.length >= 1 && rows2.some(r => r.textContent.includes('猪')), '回退到本地搜索');
-  c.Reg.meta = null; c.Reg.kinds = {}; c.HostSearch.supported = null;
+  c.Reg.meta = null; c.window.EDITOR_PREVIEW=true; c.Reg.kinds = {}; c.HostSearch.supported = null;
 }
 console.log('PASS picker uses host search with local fallback.');
 
@@ -320,7 +343,7 @@ console.log('PASS picker uses host search with local fallback.');
   const sent = []; c.oriel.send = (k, v) => { sent.push([k, v]); return true; };
   let timers = []; c.setTimeout = (fn, ms) => { timers.push(fn); return timers.length; }; c.clearTimeout = () => {};
   const runTimers = () => { const t = timers; timers = []; t.forEach(f => f()); };
-  c.Reg.meta = null; c.Reg.kinds = {}; c.Reg.lazy = {}; c.Reg.rows = {}; c.Reg.lookAsked = {}; c.Reg.lookPending = {}; c.Reg.lookBusy = false; c.HostSearch.supported = null; c.HostSearch.views = {};
+  c.Reg.meta = null; c.window.EDITOR_PREVIEW=true; c.Reg.kinds = {}; c.Reg.lazy = {}; c.Reg.rows = {}; c.Reg.lookAsked = {}; c.Reg.lookPending = {}; c.Reg.lookBusy = false; c.HostSearch.supported = null; c.HostSearch.views = {};
   overlays.textContent = '';
   // 1) 页面启动先声明 lazy-catalog-v1，且是第一条 registry 消息
   c.Reg.attach();
@@ -353,7 +376,7 @@ console.log('PASS picker uses host search with local fallback.');
   // 5) 宿主没回应：给出原因，不是空白
   c.Reg.ingest('search.result', { requestId: s2[1].requestId, ready: false, error: 'UNAVAILABLE' });
   assert.ok(overlays.textContent.includes('UNAVAILABLE'));
-  c.Reg.meta = null; c.Reg.lazy = {}; c.Reg.rows = {}; c.HostSearch.supported = null; c.HostSearch.views = {};
+  c.Reg.meta = null; c.window.EDITOR_PREVIEW=true; c.Reg.lazy = {}; c.Reg.rows = {}; c.HostSearch.supported = null; c.HostSearch.views = {};
 }
 console.log('PASS lazy catalog: handshake, on-demand lookup, host-driven picker.');
 
@@ -361,7 +384,7 @@ console.log('PASS lazy catalog: handshake, on-demand lookup, host-driven picker.
 {
   const sent = []; c.oriel.send = (k, v) => { sent.push([k, v]); return true; };
   let timers = []; c.setTimeout = (fn) => { timers.push(fn); return timers.length; }; c.clearTimeout = () => {};
-  c.Reg.meta = {}; c.HostTip.supported = null; c.HostTip.views = {}; c.HostTip.last = {};
+  c.Reg.meta = {}; c.window.EDITOR_PREVIEW=false; c.HostTip.supported = null; c.HostTip.views = {}; c.HostTip.last = {};
   const d = c.makeDoc({ id: 'minecraft:diamond_sword', comps: { custom_name: '测试' } });
   const wrap = c.buildTooltip(d, false);
   const req = sent.filter(x => x[0] === 'tooltip').pop();
@@ -378,7 +401,7 @@ console.log('PASS lazy catalog: handshake, on-demand lookup, host-driven picker.
   // 没回应（老宿主）→ 近似版，之后不再发
   c.HostTip.supported = null; const n0 = sent.length; const w3 = c.buildTooltip(d, false, 'item-preview'); timers[timers.length - 1]();
   assert.equal(c.HostTip.supported, false); const n1 = sent.length; c.buildTooltip(d, false, 'item-preview'); assert.equal(sent.length, n1, '判定老宿主后不再发请求');
-  c.Reg.meta = null; c.HostTip.supported = null; c.HostTip.views = {}; c.HostTip.last = {};
+  c.Reg.meta = null; c.window.EDITOR_PREVIEW=true; c.HostTip.supported = null; c.HostTip.views = {}; c.HostTip.last = {};
 }
 console.log('PASS tooltip preview: host lines, fallback.');
 
@@ -426,7 +449,7 @@ console.log('PASS world edit: container slots, typed SNBT apply, rejected keeps 
   const ex = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../docs/entity-schema-examples-26.1.2.json'), 'utf8'));
   const one = k => { const e = ex[k]; return e.entries ? e.entries[0] : e; };
   const sent = []; c.oriel.send = (k, v) => { sent.push([k, v]); return true; };
-  c.Reg.meta = {}; c.Reg.kinds = {}; c.Reg.eschema = {}; c.Reg.esAsk = {};
+  c.Reg.meta = {}; c.window.EDITOR_PREVIEW=false; c.Reg.kinds = {}; c.Reg.eschema = {}; c.Reg.esAsk = {};
   // 请求：没到之前是 null，只发一次；回来后可用；未知实体 = false；工厂不可用带原因
   assert.equal(c.Reg.entitySchema('cat'), null);
   c.Reg.entitySchema('minecraft:cat');
@@ -438,6 +461,14 @@ console.log('PASS world edit: container slots, typed SNBT apply, rejected keeps 
   c.Reg.ingest('registry.entity_schema', { name: 'entity_schema', id: 'mod:broken', entries: [], error: '工厂不可用', done: true });
   assert.equal(c.Reg.entitySchema('mod:broken').available, false);
   ['sheep', 'zombie', 'armor_stand'].forEach(k => c.Reg.ingest('registry.entity_schema', { name: 'entity_schema', id: 'minecraft:' + k, entries: [one(k)], done: true }));
+  // Host mode must supply its actual dye enum too; entity schema alone is not a global palette.
+  // IDs and stored numeric values come from captured runtime collar options.
+  // Localized names/RGB are fixture presentation, never a production enum fallback.
+  const collar = one('cat').variants.find(v => v.nbt.path[0] === 'CollarColor');
+  const orangeOption = collar.options.find(v => v.label === 'orange');
+  assert.ok(orangeOption, 'captured game schema supplies orange and its actual stored value');
+  c.Reg.ingest('registry.enum:dye_color', { generation: 'fixture-dyes', entries: collar.options.map(v => ({ id: v.label, name: c.EDATA.L.color[v.label] || v.label, rgb: c.DYE_RGB[v.label] })), done: true });
+  assert.equal(c.dyeList().length, 16, '实时染料枚举到达后保留全部16个色块');
 
   c.realPickFrom = c.pickFrom;
   let data = {}; const panel = type => c.esPanel({ type, get: () => data, set: o => { data = JSON.parse(JSON.stringify(o)); } });
@@ -448,7 +479,7 @@ console.log('PASS world edit: container slots, typed SNBT apply, rejected keeps 
   const gear = (el, slot) => el.querySelectorAll('.es-slot').find(x => (x.getAttribute('data-tip') || '').indexOf(slot + '：') === 0);
   assert.ok(gear(p, '主手') && gear(p, '头部'), '装备是格子');
   row(p, '没有 AI').querySelector('.k-toggle').fire('click');
-  assert.equal(data.NoAI, 1);
+  assert.equal(data.NoAI, true);
   row(p, '没有 AI').querySelector('.k-toggle').fire('click');
   assert.equal(data.NoAI, undefined, '关回默认就不写');
   row(p, '幼年').querySelector('.k-toggle').fire('click');
@@ -458,11 +489,18 @@ console.log('PASS world edit: container slots, typed SNBT apply, rejected keeps 
   assert.equal(data.variant, 'minecraft:red');
   assert.ok(pickedOpt.manual && pickedOpt.manual.parse('spotted') === 'minecraft:spotted', '搜索框兼做手动输入，短 ID 补 minecraft:');
   assert.throws(() => pickedOpt.manual.parse('Bad ID'));
-  // 项圈颜色：16 种染料 → 色块；点橙色写回游戏给的数值 1
+  // 项圈颜色：实时染料 → 色块；定位依赖ID，显示名可由游戏本地化。
   assert.ok(!row(p, '项圈颜色').querySelector('.k-sel'), '颜色不用下拉');
   row(p, '项圈颜色').querySelector('.k-btn').fire('click');
-  overlays.querySelectorAll('.ed-dye').find(x => /^orange /.test(x.getAttribute('data-tip'))).fire('click');
-  assert.equal(data.CollarColor, 1);
+  const swatches = overlays.querySelectorAll('.ed-dye');
+  assert.equal(swatches.length,16,'实时染料到达后仍显示全部16个可点击色块');
+  const dyes = Array.from(c.dyeList());
+  const orangeMeta = dyes.find(d => d.v === orangeOption.label);
+  assert.ok(orangeMeta, 'live dye metadata contains the captured collar color ID');
+  assert.deepEqual(swatches.map(x => x.getAttribute('data-tip')).sort(), dyes.map(d => d.label + ' (' + d.v + ')').sort(), 'every live color retains its localized label and stable ID');
+  const orange = swatches.find(x => x.getAttribute('data-tip') === orangeMeta.label + ' (' + orangeMeta.v + ')');
+  assert.ok(orange,'按实际颜色ID及元数据定位橙色，不依赖英文显示名'); orange.fire('click');
+  assert.equal(data.CollarColor, orangeOption.value, 'write back the numeric value captured from the game schema');
   // 名字：文本组件，清空就删掉
   const nameIn = row(p, '名字').querySelector('input'); nameIn.value = '小黑'; nameIn.fire('input');
   assert.equal(data.CustomName, '小黑', 'plain text must use the vanilla canonical string form');
@@ -496,9 +534,9 @@ console.log('PASS world edit: container slots, typed SNBT apply, rejected keeps 
   sz.value = '5'; sz.fire('input'); sz.fire('change'); assert.equal(data.Size, 4);
   // 离线 / 读不到：说明原因，不画假选项
   { const sendBak = c.oriel.send;
-    c.Reg.meta = null; c.oriel.send = undefined; p = panel('minecraft:cat'); assert.ok(/没有连接游戏/.test(p.textContent), '没有宿主才说没连接');
+    c.Reg.meta = null; c.window.EDITOR_PREVIEW=true; c.oriel.send = undefined; p = panel('minecraft:cat'); assert.ok(/没有连接游戏/.test(p.textContent), '没有宿主才说没连接');
     c.oriel.send = sendBak; c.Reg.esAt = {}; p = panel('minecraft:cat'); assert.ok(/正在向游戏读取/.test(p.textContent) && !/没有连接游戏/.test(p.textContent), '有宿主但注册表还没到：算正在读取，不说没连接');
-    c.Reg.meta = {}; }
+    c.Reg.meta = {}; c.window.EDITOR_PREVIEW=false; }
   p = panel('mod:broken'); assert.ok(/工厂不可用/.test(p.textContent));
 
   // 刷怪蛋页：上面控件管的字段不在「其他数据」里重复，原始字段改不了它们
@@ -514,7 +552,7 @@ console.log('PASS world edit: container slots, typed SNBT apply, rejected keeps 
   assert.ok(/猫|Cat/.test(c.CARDS.spawnEgg().body.textContent), '生成的生物：名字和更换按钮');
   assert.ok(c.CARDS.eggGear().body.querySelector('.es-geargrid'), '装备页是格子');
   row(eggF.body, '静音').querySelector('.k-toggle').fire('click');
-  assert.deepEqual(comps.entity_data, { id: 'minecraft:cat', NoAI: 1, Tag: 'keep', Silent: 1 }, '开关写入并保留其他字段');
+  assert.deepEqual(comps.entity_data, { id: 'minecraft:cat', NoAI: 1, Tag: 'keep', Silent: true }, '开关写入布尔值并保留其他字段');
 
   // 世界实体页：「属性」页改开关，写回的 SNBT 保留原有类型（Health 仍是 float，UUID 仍是 int 数组）
   for (const id of ['win', 'topbar', 'screen', 'footer']) { if (!root.querySelector('#' + id)) { const e = doc.createElement('div'); e.id = id; root.appendChild(e); } }
@@ -528,12 +566,12 @@ console.log('PASS world edit: container slots, typed SNBT apply, rejected keeps 
   row(scr, '没有 AI').querySelector('.k-toggle').fire('click');
   assert.ok(c.weDirty());
   const txt = c.nbtPrint(c.nbtParse(c.WE.text), false);
-  assert.ok(txt.includes('NoAI:1') && txt.includes('Health:10.0f') && txt.includes('UUID:[I;1,2,3,4]') && txt.includes('Pos:[1.0d,64.0d,2.0d]'), txt);
+  assert.ok(txt.includes('NoAI:true') && txt.includes('Health:10.0f') && txt.includes('UUID:[I;1,2,3,4]') && txt.includes('Pos:[1.0d,64.0d,2.0d]'), txt);
   // 先在「数据」页改文本，再切到「属性」页：文本里的改动不丢
   c.weOpen(w); c.WE.text = c.WE.text.replace('Health: 10.0f', 'Health: 3.0f'); c.WE.obj = null; c.WE.tab = 'entity'; c.weRender();
   row(root.querySelector('#screen'), '静音').querySelector('.k-toggle').fire('click');
   assert.ok(c.nbtPrint(c.nbtParse(c.WE.text), false).includes('Health:3.0f'), '数据页的改动保留');
-  c.WE.w = null; c.Reg.meta = null; c.Reg.kinds = {}; c.Reg.eschema = {}; c.Reg.imeta = {}; c.Reg.einfo = {};
+  c.WE.w = null; c.Reg.meta = null; c.window.EDITOR_PREVIEW=true; c.Reg.kinds = {}; c.Reg.eschema = {}; c.Reg.imeta = {}; c.Reg.einfo = {};
 }
   // 弹出选择：搜索框固定在顶上（列表自己滚动）；回车时没有完全匹配就按手动值写入，完全匹配就选那一项
   {
@@ -555,18 +593,18 @@ console.log('PASS entity schema: request/cache, variants with mask merge, flags,
 // 刷怪蛋 3D 预览的 <entity> 属性：真实实体组件 + 幼年 + 装备，来自 entity_data 与 schema
 {
   const ex = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../docs/entity-schema-examples-26.1.2.json'), 'utf8'));
-  c.Reg.meta = {}; c.Reg.eschema = { 'minecraft:cat': ex.cat.entries ? ex.cat.entries[0] : ex.cat };
+  c.Reg.meta = {}; c.window.EDITOR_PREVIEW=false; c.Reg.eschema = { 'minecraft:cat': ex.cat.entries ? ex.cat.entries[0] : ex.cat };
   const a = c.esPreviewAttrs('minecraft:cat', { variant: 'minecraft:red', CollarColor: 1, Age: -24000, equipment: { head: { id: 'minecraft:diamond_helmet', count: 1 } } });
   assert.equal(a.baby, ''); assert.equal(a.head, 'minecraft:diamond_helmet');
   assert.ok(a.components.includes('"minecraft:cat/variant":"minecraft:red"') && a.components.includes('"minecraft:cat/collar":"orange"'), a.components);
   assert.deepEqual(Object.keys(c.esPreviewAttrs('minecraft:cat', {})), [], '没设置就不带属性');
-  c.Reg.meta = null; c.Reg.eschema = {};
+  c.Reg.meta = null; c.window.EDITOR_PREVIEW=true; c.Reg.eschema = {};
 }
 console.log('PASS spawn egg 3D preview attributes.');
 
 // 刷怪蛋 3D 生物：同一只生物重画沿用元素；滚轮缩放、右键拖动移动；换生物回到默认
 {
-  c.Reg.meta = {}; c.UI.entView = null;
+  c.Reg.meta = {}; c.window.EDITOR_PREVIEW=false; c.UI.entView = null;
   let el = c.heroEntity('minecraft:cat', { Age: -24000 }, null);
   assert.equal(el.getAttribute('baby'), '');
   el.events.wheel.forEach(fn => fn({ deltaY: -24, preventDefault() {}, stopPropagation() {} }));
@@ -579,20 +617,20 @@ console.log('PASS spawn egg 3D preview attributes.');
   assert.ok(c.UI.entView.s > 1, '缩放在重画后保留');
   const dog = c.heroEntity('minecraft:wolf', {}, el);
   assert.notEqual(dog, el); assert.equal(c.UI.entView.s, 1, '换生物回到默认视角');
-  c.Reg.meta = null; c.UI.entView = null;
+  c.Reg.meta = null; c.window.EDITOR_PREVIEW=true; c.UI.entView = null;
 }
 console.log('PASS spawn egg 3D viewer: reuse, wheel zoom, pan start, reset on type change.');
 
 // 生物的图：来自 item_meta.spawn_egg_entity 的刷怪蛋（含模组），没有蛋用爪印
 {
   const sent = []; c.oriel.send = (k, v) => { sent.push([k, v]); return true; };
-  c.Reg.meta = {}; c.Reg.imeta = {}; c.Reg.eggMap = null; c.Reg.eggAsk = false;
+  c.Reg.meta = {}; c.window.EDITOR_PREVIEW=false; c.Reg.imeta = {}; c.Reg.eggMap = null; c.Reg.eggAsk = false;
   assert.equal(c.Reg.eggFor('minecraft:pig'), null, '数据没到前没有');
   assert.ok(sent.some(x => x[0] === 'registry' && x[1].name === 'item_meta'), '只请求一次全表');
   c.Reg.eggFor('minecraft:cow'); assert.equal(sent.filter(x => x[0] === 'registry' && x[1].name === 'item_meta').length, 1);
   c.Reg.ingest('registry.item_meta', { generation: 1, offset: 0, total: 2, done: true, entries: [{ id: 'minecraft:pig_spawn_egg', spawn_egg_entity: 'minecraft:pig' }, { id: 'mymod:wolf_egg', spawn_egg_entity: 'mymod:wolf' }, { id: 'minecraft:stick' }] });
   assert.equal(c.Reg.eggFor('minecraft:pig'), 'minecraft:pig_spawn_egg'); assert.equal(c.Reg.eggFor('mymod:wolf'), 'mymod:wolf_egg'); assert.equal(c.Reg.eggFor('minecraft:arrow'), null);
-  c.Reg.meta = null; c.Reg.imeta = {}; c.Reg.eggMap = null;
+  c.Reg.meta = null; c.window.EDITOR_PREVIEW=true; c.Reg.imeta = {}; c.Reg.eggMap = null;
 }
 console.log('PASS entity icons from spawn eggs.');
 
@@ -602,7 +640,7 @@ console.log('PASS entity icons from spawn eggs.');
   let timers = []; c.setTimeout = (fn) => { timers.push(fn); return timers.length; }; c.clearTimeout = () => {};
   const last = op => sent.filter(x => x[0] === 'vault' && x[1].op === op).pop()[1];
   const reply = (req, extra) => c.Reg.ingest('vault.result', Object.assign({ version: 1, requestId: req.requestId, op: req.op, ok: true }, extra));
-  c.Reg.meta = {};
+  c.Reg.meta = {}; c.window.EDITOR_PREVIEW=false;
   // 保存小栈：一条消息；重复回执
   let got; c.Vault.save({ id: 'minecraft:stick', count: 1, comps: {}, removed: {} }, { name: '棍', tags: ['a'], note: '' }, r => got = r);
   const s1 = last('save'); assert.equal(s1.name, '棍'); assert.equal(s1.note, undefined, '空字段不发'); reply(s1, { entry: { id: 'x', name: '棍' }, duplicate: true, persisted: false });
@@ -625,7 +663,8 @@ console.log('PASS entity icons from spawn eggs.');
   // 嵌套转换：comps → components（完整 ID），removed → !ID，带类型的值登记
   const nested = c.vaultNested({ id: 'minecraft:stick', count: 2, comps: { custom_data: { n: 5 }, enchantments: { sharpness: 3 } }, removed: { lore: {} }, component_snbt: { custom_data: '{n:5L}' } });
   assert.equal(nested.count, 2); assert.equal(nested.components['minecraft:custom_data'].n, 5); assert.ok(nested.components['!minecraft:lore']);
-  assert.equal(c.nbtMerge({ n: 5 }, null), '{n:5L}', '带类型的值被登记，提交时按 long 输出'); c.nbtSeenClear();
+  assert.equal(c.nbtMerge(nested.components['minecraft:custom_data'], null), '{n:5L}', '嵌套物品自己的 long 类型保留');
+  assert.equal(c.nbtMerge({ n: 5 }, null), '{n:5}', '不得污染另一个同值对象'); c.nbtSeenClear();
   // 窗口：列表显示条目，行里有“给我”
   overlays.textContent = ''; for (const id of ['win', 'topbar', 'screen', 'footer']) if (!root.querySelector('#' + id)) { const e = doc.createElement('div'); e.id = id; root.appendChild(e); }
   c.Store.docs = c.Store.docs || [];
@@ -633,7 +672,7 @@ console.log('PASS entity icons from spawn eggs.');
   const lr = last('list'); reply(lr, { entries: [{ id: 'e1', name: '火焰剑', tags: ['武器'], note: '', item: { id: 'minecraft:diamond_sword', count: 1 }, summary: { enchantCount: 2, hasCustomName: true } }], total: 1, offset: 0, nextOffset: 1, done: true, persisted: true });
   assert.ok(overlays.textContent.includes('火焰剑') && overlays.textContent.includes('附魔 2'), '列表显示名称与摘要');
   const btns = overlays.querySelectorAll('.k-btn').map(b => b.textContent); assert.ok(btns.includes('给我') && btns.includes('导入…') && btns.includes('导出全部'));
-  c.Reg.meta = null; c.Vault.wait = {};
+  c.Reg.meta = null; c.window.EDITOR_PREVIEW=true; c.Vault.wait = {};
 }
 console.log('PASS vault: protocol, upload, export fallback, nested conversion, window.');
 
@@ -822,7 +861,12 @@ console.log('PASS world entity: pose, frame, display, trades, riding.');
 // 长时间使用：反复开关物品 / 世界页 / 搜索 / 注册表推送后，各处缓存不会无限涨
 {
   const size = o => Object.keys(o || {}).length;
-  const probe = () => ({ seen: c.NBT_SEEN_N, state: size(c.Valid.state), hv: size(c.Valid.hv), hvWait: size(c.Valid.hvWait), waiting: size(c.Valid.waiting), vaultWait: size(c.Vault.wait), uiopen: size(c.UIOpen),
+  // Metadata is now owned by nodes in a WeakMap: no global JSON-value cache
+  // to count or clear. Keep a typed value alive across the soak and check that
+  // unrelated Documents cannot replace its types or evict its long precision.
+  assert.equal(vm.runInContext('NBT_META instanceof WeakMap', c), true);
+  const kept = c.parseSnbtUser('{short:2s,longs:[L;9007199254740993L]}');
+  const probe = () => ({ state: size(c.Valid.state), hv: size(c.Valid.hv), hvWait: size(c.Valid.hvWait), waiting: size(c.Valid.waiting), vaultWait: size(c.Vault.wait), uiopen: size(c.UIOpen),
     docs: c.Store.docs.length, hist: c.Store.docs.reduce((n, d) => n + d.hist.length, 0), ents: size(c.Reg.eschema), defs: size(c.Reg.defs), kinds: size(c.Reg.kinds), comps: c.EDATA.comps.length });
   const sent = []; c.oriel.send = (k, v) => { sent.push(k); return true; };
   const once = round => {
@@ -843,6 +887,7 @@ console.log('PASS world entity: pose, frame, display, trades, riding.');
   const warm = probe();
   for (let r = 20; r < 420; r++) once(r);
   const after = probe();
+  assert.equal(c.nbtMerge(kept, null), '{short:2s,longs:[L;9007199254740993L]}');
   c.WE.w = null; c.Store.docs.length = 0;
   for (const k of Object.keys(warm)) assert.ok(after[k] <= warm[k] + 3, '不应随使用时间增长：' + k + ' ' + warm[k] + ' → ' + after[k]);
 }

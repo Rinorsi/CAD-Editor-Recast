@@ -109,4 +109,25 @@ const body = () => c.h('div');
   assert.equal(qa(r, '.k-toggle').length + qa(r, 'input').length + qa(r, '.k-btn').length, 0, '只读视图没有任何可点控件'); assert.ok(/100/.test(r.textContent));
   const m = {}; c.evMsg(m); assert.equal(m.entity, undefined, '只读视图不会进提交');
 }
-console.log('PASS entity views: tabs, dropped item, falling block state, enderman, cloud, arrow, owner and read-only relations, horse / chested, vehicle container, minecart, read-only boat and conversion.');
+// Vault passengers must retain the original NBT types, including values that cannot round-trip through JS Number.
+{
+  const snbt = '{id:"minecraft:slime",Invulnerable:0b,NoAI:1b,Health:4.0f,Air:300s,Long:9223372036854775807L,attributes:[{id:"minecraft:max_health",base:4.0d}],Bytes:[B;1b,-1b],Ints:[I;1,2],Longs:[L;9007199254740993L]}';
+  const payload = c.vaultEntityPayload(snbt), parsed = c.nbtParse(snbt);
+  delete parsed.map.id; parsed.keys = parsed.keys.filter(k => k !== 'id');
+  assert.equal(payload.type, 'minecraft:slime');
+  assert.equal(payload.snbt, c.nbtPrint(parsed, false), 'only root id is removed; every type and exact token is retained');
+  assert(payload.snbt.includes('9223372036854775807L'));
+  assert(payload.snbt.includes('9007199254740993L'));
+  assert.throws(() => c.vaultEntityPayload('{Health:4f}'), /类型 ID/);
+  let header, sent; const oldHeader = c.esEntityHeader, oldSend = c.evRideSend, oldRedraw = c.weRedrawBody;
+  c.esEntityHeader = o => { header = o; return c.h('div'); };
+  c.evRideSend = r => { sent = r; }; c.weRedrawBody = () => {};
+  open({ riding: { passengers: [] } }); c.WE.rideType = ''; c.WE.rideData = '';
+  c.evRidingTab(body()); header.onEntityNbt(snbt);
+  const b = body(); c.evRidingTab(b);
+  qa(b, '.k-btn').find(e => e.textContent === '加上去').fire('click');
+  assert.equal(sent.type, 'minecraft:slime'); assert.equal(sent.entity_data, payload.snbt);
+  header.onPick('minecraft:chicken'); assert.equal(c.WE.rideData, '', 'changing species clears incompatible previous initial data');
+  c.esEntityHeader = oldHeader; c.evRideSend = oldSend; c.weRedrawBody = oldRedraw;
+}
+console.log('PASS entity views: view controls and typed Vault passenger UI transport.');

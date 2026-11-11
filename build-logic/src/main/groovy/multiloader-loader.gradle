@@ -6,7 +6,15 @@ configurations {
 dependencies {
     commonJava(project(path: ":common:${project.name}", configuration: 'commonJava'))
     commonResources(project(path: ":common:${project.name}", configuration: 'commonResources'))
-    implementation files(rootProject.file("libs/oriel-${project.parent.name}-${minecraft_version}-${oriel_version}.jar"))
+    implementation("dev.oriel:oriel-${project.parent.name}-${minecraft_version}:${oriel_version}") { transitive = false }
 }
-tasks.named('compileJava', JavaCompile) { source(configurations.commonJava) }
+configurations { orielArtifact { canBeResolved = true; canBeConsumed = false; transitive = false } }
+dependencies { orielArtifact("dev.oriel:oriel-${project.parent.name}-${minecraft_version}:${oriel_version}") }
+tasks.named('compileJava', JavaCompile) {
+    source(configurations.commonJava)
+    // Shared Stonecutter sources are compiled into each loader, outside its sourceSet.
+    // Incremental javac can drop unchanged shared classes after another target generates them.
+    // Compile this small combined tree together so cross-target builds have complete symbols.
+    options.incremental = false
+}
 processResources { from(configurations.commonResources) }

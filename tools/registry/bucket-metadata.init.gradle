@@ -1,0 +1,26 @@
+// Opt-in real registry verification on the normal per-loader mapped runtime. No game starts.
+gradle.projectsEvaluated {
+    gradle.rootProject.allprojects { p ->
+        if ((p.parent?.name in ['fabric', 'neoforge']) && (p.name in ['26.1', '26.2', '26.3'])) {
+            p.tasks.register('bucketMetadataTest', JavaExec) {
+                dependsOn p.tasks.named('codecVerificationClasses')
+                // Follow the established factory tests, including NeoForge's vanilla
+                // NeoForm-first standalone runtime (patched classes require FML).
+                classpath = p.tasks.named('worldEditTest', JavaExec).get().classpath
+                mainClass = 'dev.rinorsi.editor.registry.BucketItemMetadataTest'
+                workingDir = gradle.rootProject.projectDir
+                jvmArgs '-Djava.awt.headless=true'
+            }
+            p.tasks.register('bucketConsumerTest', JavaExec) {
+                dependsOn p.tasks.named('codecVerificationClasses')
+                classpath = p.tasks.named('worldEditTest', JavaExec).get().classpath
+                mainClass = 'dev.rinorsi.editor.registry.BucketItemConsumerTest'
+                def report = p.layout.buildDirectory.file('reports/bucket-consumer.json').get().asFile
+                args report.absolutePath
+                jvmArgs '-Djava.awt.headless=true'
+                doFirst { report.parentFile.mkdirs() }
+                workingDir = gradle.rootProject.projectDir
+            }
+        }
+    }
+}

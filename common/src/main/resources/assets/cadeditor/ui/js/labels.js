@@ -30,7 +30,9 @@ Labels.slotIcon = { mainhand: 'sword', offhand: 'shield', hand: 'sword', head: '
 /* PIECE_ID */
 Labels.armorPiece = { head: 'helmet', chest: 'chestplate', legs: 'leggings', feet: 'boots' };
 /* RARITY */
-Labels.rarity = [{ v: 'common', label: '普通', title: '白色名称' }, { v: 'uncommon', label: '优秀', title: '黄色名称' }, { v: 'rare', label: '稀有', title: '青色名称' }, { v: 'epic', label: '史诗', title: '粉紫色名称' }];
+/* Vanilla 26.1–26.3 has no rarity.* language keys. Use Wiki terminology as
+   the explicit fallback, while allowing real runtime/resource-pack translations. */
+Labels.rarity = [{ v: 'common', label: '常见', title: '白色名称' }, { v: 'uncommon', label: '少见', title: '黄色名称' }, { v: 'rare', label: '稀有', title: '青色名称' }, { v: 'epic', label: '史诗', title: '粉紫色名称' }];
 /* OPS */
 Labels.opShort = [{ v: 'add_value', label: '加值', title: 'add_value：直接加上数值' }, { v: 'add_multiplied_base', label: '基础乘', title: 'add_multiplied_base：按基础值的比例相加' }, { v: 'add_multiplied_total', label: '总乘', title: 'add_multiplied_total：在最终值上乘算' }];
 /* OPMODES */
@@ -48,7 +50,7 @@ Labels.entFlag = { CustomName: ['名字', '头顶显示的名字'], CustomNameVi
   Invulnerable: ['无敌', '不受伤害（创造模式玩家除外）'], NoGravity: ['无重力', '不会下落'], Glowing: ['发光轮廓', '隔着方块也能看到轮廓'],
   PersistenceRequired: ['不会消失', '玩家走远也不会自然消失'], ShowArms: ['显示手臂', '手臂可以拿东西'], LeftHanded: ['左撇子', '主手和副手对调'], CanPickUpLoot: ['会捡东西', '会拾取地上的物品和装备'] };
 /* WE_PROP */
-Labels.blockProp = { facing: '朝向', half: '上下半', type: '类型', waterlogged: '含水', open: '打开', powered: '通电', lit: '点亮', rotation: '旋转', shape: '形状', axis: '轴向', hinge: '门轴', face: '附着面',
+Labels.blockProp = { facing: '朝向', half: '上下半', type: '类型', waterlogged: '含水', open: '打开', powered: '激活', lit: '点亮', rotation: '旋转', shape: '形状', axis: '轴向', hinge: '门轴', face: '附着面',
   age: '生长阶段', level: '等级', persistent: '不会消失', distance: '距离', bites: '被吃的口数', delay: '延迟', locked: '锁定', mode: '模式', power: '红石强度', snowy: '积雪', hanging: '悬挂', honey_level: '蜂蜜等级',
   conditional: '有条件', attached: '已连接', berries: '有浆果', bottom: '有底', candles: '蜡烛数', charges: '充能', disarmed: '已解除', east: '东侧', west: '西侧', north: '北侧', south: '南侧', up: '上侧', down: '下侧',
   drag: '拖拽', eye: '有末影之眼', enabled: '启用', extended: '伸出', falling: '下落', has_book: '有书', has_record: '有唱片', inverted: '反转', instrument: '乐器', note: '音高', occupied: '有人睡', orientation: '朝向',

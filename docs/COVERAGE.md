@@ -210,8 +210,23 @@ component_schema来源只说明独立JVM核验的宿主Codec结构；full不代�
 
     node tools/audit-backend-status.cjs
 
-输出为被git忽略的docs/STATUS-data.md、docs/STATUS-generic.md；源码哈希证据为logs/backend-b/ui-source-audit.json。脚本不覆盖本清单，也不会自动勾选。对照data.js的107个唯一ID及实际持久组件全集，逐行更新形态/来源；新增或移除组件须说明版本/范围，不能靠改变统计分母消除缺口。
+输出为被git忽略的docs/archive/STATUS-data.md、docs/archive/STATUS-generic.md；源码哈希证据为logs/backend-b/ui-source-audit.json。脚本不覆盖本清单，也不会自动勾选。对照data.js的107个唯一ID及实际持久组件全集，逐行更新形态/来源；新增或移除组件须说明版本/范围，不能靠改变统计分母消除缺口。
 
 按“是否已验收”列统计：完成勾选为完成，未勾选且标“未完成”为已知缺口，标“未核实”为证据不足；两类未勾选均阻塞1.0。来源列的部分/否/未核实单独复核，不算已验收。勾选后在同一格追加三选一结论、验收人及证据链接。相关实现变化后须重新核实，不能沿用失效证据。
 
 行为操作见 [TESTING](TESTING.md)，数据依据见 [registry-contract](registry-contract.md)。
+
+## 历史计划归档后的待核对事项
+
+2026-11-10 将旧计划、阶段报告与历史回执移入仅本地保留的 `docs/archive/`，该目录不随 Git 仓库分发。下面保留旧计划中尚需核对的事项；这是迁移记录，不表示当前实现仍有同样缺口，也不修改本清单的验收勾选。确认时以当前源码、对应版本产物和新回执为准。
+
+- 功能生效测试：核对旧 quick 档 15 条失败的后续结果，保留失败原因及耗时；数据往返通过不能代替玩法生效。入口与边界见 [live-effects.md](live-effects.md)。
+- 107 个组件逐项签收，以及通用表单是否够用，继续按本清单和 [COVERAGE-signoff.md](COVERAGE-signoff.md) 执行，不沿用旧计划中的组件数量分组。
+- 人工观感：字号、亮色主题剩余页面、禁用按钮对比度、搜索占位文字、实体图标、弹窗位置、声音及中文输入法，归入 [人工观感清单](acceptance/CHECKLIST-for-user.md)。
+- 旧保险库合并：先核对脚本对生物、方块和玩家预设类别的兼容，再备份并确认相关文件未被游戏写入；本次归档不执行数据合并。
+- 模组通用适配：核对真实模组注册组件、方块实体和实体的结构化表单、未知字段及类型保真；测试夹具通过不代替整合包实测。见 [generic-schema-contract.md](generic-schema-contract.md)。
+- 玩家扩展、方块与玩家保险库预设、多版本六目标及分发流程：旧计划已包含后续完成项，分别按 [玩家扩展协议](player-extended-contract.md)、[保险库协议](vault-contract.md)、[多版本说明](MULTIVERSION.md) 和 [发版清单](RELEASE.md) 核对，避免重复派工。
+- 公共组件与 CSS 重复规则的剩余整理：核对 [公共组件规范](ui-shared-components.md)；旧计划已取消的控件替换和 MCP 注册任务不重新列为待办。
+- 内存观察：保留短时采样和长时间使用的验证范围差异，按 [发版清单](RELEASE.md) 记录峰值与增长，不能以缓存条目测试代替实机内存观察。
+
+范围记录：地图像素与标记预览按旧决策不做；记分板队伍可写和开发命令 `testkit` 改弹窗不因归档自动纳入本轮开发。历史原文留在本地归档，不能当作当前任务指令。

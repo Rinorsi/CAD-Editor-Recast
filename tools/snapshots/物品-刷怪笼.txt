@@ -1,4 +1,4 @@
-# 页签 spawner
+# 页签 item-stack
 ## topbar
 div
 ## screen
@@ -15,8 +15,8 @@ div
     div.ed-stage
       div.plate
       item.k-ico [style="height:48px;width:48px"]
-    div.ed-name
-      span [style="color:#FFFFFF;"] "刷怪笼"
+    div.ed-name.k-mctext
+      span [style="color:#FFFFFF;font-weight:normal;font-style:normal;"] "刷怪笼"
     div.ed-tags
       span.k-tag "刷怪笼"
       span.dim.k-tag "普通"
@@ -41,18 +41,139 @@ div
     div.k-scrollbox.tip [style="maxHeight:290px"]
       div.k-tipwrap
         div.ed-tip
-          div.tl
-            span [style="color:#FFFFFF;"] "刷怪笼"
+          div.k-mctext.tl
+            span [style="color:#FFFFFF;font-weight:normal;font-style:normal;"] "刷怪笼"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabs
-      div.ed-tab.m-ripple.on [title="刷怪设置（Ctrl+1）"]
+    div.dense.ed-tabs
+      div.ed-tab.m-ripple.on [title="物品栈（Ctrl+1）"]
+        img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
+        span "物品栈"
+      div.ed-tab.m-ripple [title="刷怪设置（Ctrl+2）"]
         img.o-ico [src="oriel:textures/icons/paw.png" style="height:16px;width:16px"]
         span "刷怪设置"
-      div.ed-tab.m-ripple [title="外观（Ctrl+2）"]
+      div.ed-tab.m-ripple [title="外观（Ctrl+3）"]
         img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
         span "外观"
-      div.ed-tab.m-ripple [title="堆叠与耐久（Ctrl+3）"]
+      div.ed-tab.m-ripple [title="堆叠与耐久（Ctrl+4）"]
+        img.o-ico [src="oriel:textures/icons/layers.png" style="height:16px;width:16px"]
+        span "堆叠与耐久"
+      div.ed-tab.m-ripple.more [title="更多分页：功能、攻击与防御、放置与数据……"]
+        img.o-ico [src="oriel:textures/icons/plus.png" style="height:16px;width:16px"]
+        span "更多"
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+    div.code-tools.ed-tools
+      div.ed-code-modes.k-seg
+        div.k-segi.on
+          "命令"
+        div.k-segi
+          "SNBT"
+        div.k-segi
+          "JSON"
+    div.ed-body
+      div.pad
+        div.k-fld.wide
+          div.lb
+            span.lt "怎么交给玩家"
+          div.k-seg
+            div.k-segi
+              "给予物品"
+            div.k-segi.on
+              "替换主手"
+            div.k-segi
+              "替换副手"
+            div.k-segi
+              "替换快捷栏全部"
+            div.k-segi
+              "替换头部"
+        div.k-fld.wide
+          div.lb
+            span.lt "在哪里运行"
+          div.k-seg
+            div.k-segi.on
+              "聊天框"
+            div.k-segi
+              "命令方块"
+            div.k-segi
+              "控制台 / 函数"
+        div.k-fld
+          div.lb
+            span.lt "目标选择器"
+          input.k-input [placeholder="@s / @p / 玩家名" type="text" value="@s"]
+        div.ed-hint "命令方块、函数、控制台没有执行者，不能写 @s；命令方块用 @p，控制台和函数填你的玩家名。"
+        textarea.ed-out [value="/item replace entity @s weapon.mainhand with minecraft:spawner"]
+        div.ed-sbar
+          span.k-sub "62 字符"
+          div.grow
+          div.k-btn
+            img.o-ico [src="oriel:textures/icons/copy.png" style="height:16px;width:16px"]
+            span "复制"
+          div.k-btn.pri
+            img.o-ico [src="oriel:textures/icons/play.png" style="height:16px;width:16px"]
+            span "应用到游戏"
+## footer
+div
+## overlays
+div
+
+# 页签 spawner
+## topbar
+div
+## screen
+div
+  aside.ed-hero
+    div.ed-stagehead
+      span.fold-arrow
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      span "预览"
+      div.grow
+      div.ed-view.k-seg [title="物品预览：2D 图标 / 3D 模型（会记住你的选择）"]
+        div.k-segi.on "2D"
+        div.k-segi "3D"
+    div.ed-stage
+      div.plate
+      item.k-ico [style="height:48px;width:48px"]
+    div.ed-name.k-mctext
+      span [style="color:#FFFFFF;font-weight:normal;font-style:normal;"] "刷怪笼"
+    div.ed-tags
+      span.k-tag "刷怪笼"
+      span.dim.k-tag "普通"
+    div.ed-stagehead
+      span.fold-arrow
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      span "属性"
+      div.grow
+    div.ed-stats
+      div.k-stat
+        span.sl "最大堆叠"
+        b "64"
+    div.ed-tiphead
+      span.fold-arrow
+        img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+      span "提示框预览"
+      div.grow
+      div.k-mini.m-ripple [title="调试信息（F3+H）：显示物品 ID 和耐久"]
+        img.o-ico [src="oriel:textures/icons/bug.png" style="height:8px;width:8px"]
+      div.k-mini.m-ripple [title="放大查看（近似预览，游戏内以原版绘制为准）"]
+        img.o-ico [src="oriel:textures/icons/maximize.png" style="height:8px;width:8px"]
+    div.k-scrollbox.tip [style="maxHeight:290px"]
+      div.k-tipwrap
+        div.ed-tip
+          div.k-mctext.tl
+            span [style="color:#FFFFFF;font-weight:normal;font-style:normal;"] "刷怪笼"
+  div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
+  section.ed-right
+    div.dense.ed-tabs
+      div.ed-tab.m-ripple [title="物品栈（Ctrl+1）"]
+        img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
+        span "物品栈"
+      div.ed-tab.m-ripple.on [title="刷怪设置（Ctrl+2）"]
+        img.o-ico [src="oriel:textures/icons/paw.png" style="height:16px;width:16px"]
+        span "刷怪设置"
+      div.ed-tab.m-ripple [title="外观（Ctrl+3）"]
+        img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
+        span "外观"
+      div.ed-tab.m-ripple [title="堆叠与耐久（Ctrl+4）"]
         img.o-ico [src="oriel:textures/icons/layers.png" style="height:16px;width:16px"]
         span "堆叠与耐久"
       div.ed-tab.m-ripple.more [title="更多分页：功能、攻击与防御、放置与数据……"]
@@ -260,8 +381,8 @@ div
     div.ed-stage
       div.plate
       item.k-ico [style="height:48px;width:48px"]
-    div.ed-name
-      span [style="color:#FFFFFF;"] "刷怪笼"
+    div.ed-name.k-mctext
+      span [style="color:#FFFFFF;font-weight:normal;font-style:normal;"] "刷怪笼"
     div.ed-tags
       span.k-tag "刷怪笼"
       span.dim.k-tag "普通"
@@ -286,18 +407,21 @@ div
     div.k-scrollbox.tip [style="maxHeight:290px"]
       div.k-tipwrap
         div.ed-tip
-          div.tl
-            span [style="color:#FFFFFF;"] "刷怪笼"
+          div.k-mctext.tl
+            span [style="color:#FFFFFF;font-weight:normal;font-style:normal;"] "刷怪笼"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabs
-      div.ed-tab.m-ripple [title="刷怪设置（Ctrl+1）"]
+    div.dense.ed-tabs
+      div.ed-tab.m-ripple [title="物品栈（Ctrl+1）"]
+        img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
+        span "物品栈"
+      div.ed-tab.m-ripple [title="刷怪设置（Ctrl+2）"]
         img.o-ico [src="oriel:textures/icons/paw.png" style="height:16px;width:16px"]
         span "刷怪设置"
-      div.ed-tab.m-ripple.on [title="外观（Ctrl+2）"]
+      div.ed-tab.m-ripple.on [title="外观（Ctrl+3）"]
         img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
         span "外观"
-      div.ed-tab.m-ripple [title="堆叠与耐久（Ctrl+3）"]
+      div.ed-tab.m-ripple [title="堆叠与耐久（Ctrl+4）"]
         img.o-ico [src="oriel:textures/icons/layers.png" style="height:16px;width:16px"]
         span "堆叠与耐久"
       div.ed-tab.m-ripple.more [title="更多分页：功能、攻击与防御、放置与数据……"]
@@ -332,7 +456,7 @@ div
               img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
           div.k-cbody.x-sliding [style="height:300px;opacity:1"]
             div.k-rich.open
-              div.k-rprev
+              div.k-mctext.k-rprev
                 span.k-ph "刷怪笼（默认名称）"
               div.k-redit [style="display:flex"]
                 div.k-rruns
@@ -377,7 +501,7 @@ div
           div.k-div
       div.k-sech "稀有度与显示"
       div.k-list
-        div.k-card [data-card="rarity"]
+        div.bare.head-select-card.k-card [data-card="rarity"]
           div.k-chead.m-spot
             div.k-cico
               img.o-ico [src="oriel:textures/icons/star.png" style="height:16px;width:16px"]
@@ -392,22 +516,13 @@ div
             span.k-swph
             div.k-chev [title="折叠 / 展开"]
               img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
-          div.k-cbody.x-sliding [style="height:300px;opacity:1"]
-            div.k-tiles.pill
-              div.k-tile.m-ripple.on [title="白色" style="--tone:#ffffff"]
-                div.tl [style="color:#ffffff"] "普通"
-                div.ts "白色"
-              div.k-tile.m-ripple [title="黄色" style="--tone:#ffff55"]
-                div.tl [style="color:#ffff55"] "优秀"
-                div.ts "黄色"
-              div.k-tile.m-ripple [title="青色" style="--tone:#55ffff"]
-                div.tl [style="color:#55ffff"] "稀有"
-                div.ts "青色"
-              div.k-tile.m-ripple [title="粉紫色" style="--tone:#ff55ff"]
-                div.tl [style="color:#ff55ff"] "史诗"
-                div.ts "粉紫色"
+            div.card-head-select
+              div.k-btn.k-sel.m-ripple
+                span "普通"
+                img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+          div.k-cbody
           div.k-div
-        div.k-card [data-card="glint"]
+        div.bare.head-select-card.k-card [data-card="glint"]
           div.k-chead.m-spot
             div.k-cico
               img.o-ico [src="oriel:textures/icons/sparkle.png" style="height:16px;width:16px"]
@@ -422,23 +537,11 @@ div
             span.k-swph
             div.k-chev [title="折叠 / 展开"]
               img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
-          div.k-cbody.x-sliding [style="height:300px;opacity:1"]
-            div.k-tiles.pill
-              div.k-tile.m-ripple.on [title="有附魔才发光"]
-                div.ti
-                  img.o-ico [src="oriel:textures/icons/refresh.png" style="height:16px;width:16px"]
-                div.tl "自动"
-                div.ts "有附魔才发光"
-              div.k-tile.m-ripple [title="没附魔也闪"]
-                div.ti
-                  img.o-ico [src="oriel:textures/icons/sparkle.png" style="height:16px;width:16px"]
-                div.tl "总是发光"
-                div.ts "没附魔也闪"
-              div.k-tile.m-ripple [title="有附魔也不闪"]
-                div.ti
-                  img.o-ico [src="oriel:textures/icons/eye_off.png" style="height:16px;width:16px"]
-                div.tl "不发光"
-                div.ts "有附魔也不闪"
+            div.card-head-select
+              div.k-btn.k-sel.m-ripple
+                span "自动"
+                img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
+          div.k-cbody
           div.k-div
         div.k-card [data-card="tooltip"]
           div.k-chead.m-spot
@@ -519,8 +622,8 @@ div
     div.ed-stage
       div.plate
       item.k-ico [style="height:48px;width:48px"]
-    div.ed-name
-      span [style="color:#FFFFFF;"] "刷怪笼"
+    div.ed-name.k-mctext
+      span [style="color:#FFFFFF;font-weight:normal;font-style:normal;"] "刷怪笼"
     div.ed-tags
       span.k-tag "刷怪笼"
       span.dim.k-tag "普通"
@@ -545,18 +648,21 @@ div
     div.k-scrollbox.tip [style="maxHeight:290px"]
       div.k-tipwrap
         div.ed-tip
-          div.tl
-            span [style="color:#FFFFFF;"] "刷怪笼"
+          div.k-mctext.tl
+            span [style="color:#FFFFFF;font-weight:normal;font-style:normal;"] "刷怪笼"
   div.ed-split [title="拖动调整左栏宽度（双击恢复）"]
   section.ed-right
-    div.ed-tabs
-      div.ed-tab.m-ripple [title="刷怪设置（Ctrl+1）"]
+    div.dense.ed-tabs
+      div.ed-tab.m-ripple [title="物品栈（Ctrl+1）"]
+        img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
+        span "物品栈"
+      div.ed-tab.m-ripple [title="刷怪设置（Ctrl+2）"]
         img.o-ico [src="oriel:textures/icons/paw.png" style="height:16px;width:16px"]
         span "刷怪设置"
-      div.ed-tab.m-ripple [title="外观（Ctrl+2）"]
+      div.ed-tab.m-ripple [title="外观（Ctrl+3）"]
         img.o-ico [src="oriel:textures/icons/palette.png" style="height:16px;width:16px"]
         span "外观"
-      div.ed-tab.m-ripple.on [title="堆叠与耐久（Ctrl+3）"]
+      div.ed-tab.m-ripple.on [title="堆叠与耐久（Ctrl+4）"]
         img.o-ico [src="oriel:textures/icons/layers.png" style="height:16px;width:16px"]
         span "堆叠与耐久"
       div.ed-tab.m-ripple.more [title="更多分页：功能、攻击与防御、放置与数据……"]
@@ -753,8 +859,8 @@ div
               div.k-presets
                 div.k-preset "1 不可堆叠"
                 div.k-preset "16"
-                div.k-preset "64 标准"
-                div.k-preset "99 上限"
+                div.k-preset "64"
+                div.k-preset "99"
           div.k-div
 ## footer
 div

@@ -17,6 +17,10 @@ public final class PlayerWorldEditTest {
         PlayerWorldEdit.requirePermission(LevelBasedPermissionSet.GAMEMASTER);checks++;
         reject(()->PlayerWorldEdit.requireOnline(false),"player_offline");PlayerWorldEdit.requireOnline(true);checks++;
         var schema=PlayerWorldEdit.entitySchema();check(schema.get("available").getAsBoolean(),"player schema without EntityType factory");check(schema.getAsJsonArray("attributes").size()>0,"real Player attributes");
+        var playerSchema=PlayerWorldEdit.schema();var bounds=playerSchema.getAsJsonObject("bounds");
+        check(bounds.getAsJsonObject("experience.XpLevel").get("max").getAsInt()==Integer.MAX_VALUE,"XP level exposes native command int maximum");
+        check(bounds.getAsJsonObject("experience.XpP").get("max").getAsFloat()==Math.nextDown(1f),"XP progress remains a finite native fraction");
+        check(playerSchema.get("xpLevelCostOverflowAbove").getAsInt()==238609311,"native XP cost overflow is disclosed separately from storage range");
         var base=WorldNbt.parse("{id:'minecraft:player',UUID:'test',Pos:[0d,64d,0d]}");
         var values=JsonParser.parseString("{Health:20,experience:{XpLevel:2,XpP:0.1,XpTotal:20},active_effects:[{id:'minecraft:speed',duration:100,amplifier:0}]} ").getAsJsonObject();
         base=PlayerWorldEdit.with(base,values);var live=base.copy();var current=values.deepCopy();current.getAsJsonObject("experience").addProperty("XpP",0.2);current.getAsJsonArray("active_effects").get(0).getAsJsonObject().addProperty("duration",90);live=PlayerWorldEdit.with(live,current);live.put("Pos",WorldNbt.parse("{p:[2d,64d,0d]}").get("p"));

@@ -4,7 +4,7 @@ div.addwin.k-modal.pickwin
     b "选择生物"
     span.k-sub
     div.grow
-    span.k-tag "游戏实时注册表"
+    span.k-tag "浏览器样例预览"
     div.k-mini "×"
   div.addbody
     div.addcats
@@ -19,7 +19,7 @@ div.addwin.k-modal.pickwin
     div.addmain
       div.addtop
         div.k-sbox
-          input.k-input [placeholder="搜索名称或 ID；也可直接输入 模组id:名字" type="text"]
+          input.k-input [title="搜索名称或 ID；也可直接输入 模组id:名字" placeholder="搜索名称或 ID" type="text"]
           div.k-btn.k-sbtn [title="搜索（也可以按回车）"]
             img.o-ico [src="oriel:textures/icons/search.png" style="height:16px;width:16px"]
             span "搜索"
@@ -27,6 +27,9 @@ div.addwin.k-modal.pickwin
         div.k-empty "正在向游戏读取…"
   div.k-mf
     span.k-sub "点一条选中"
+    div.k-btn [title="此字段只保存实体类型 ID，不导入属性、装备或其他生物数据"]
+      img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
+      span "从保险库选择类型"
     div.grow
     div.k-btn
       span "取消"

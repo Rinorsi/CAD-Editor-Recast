@@ -36,5 +36,5 @@ public final class NeoForgePlatform implements Platform {
     public void onCommands(Consumer<CommandDispatcher<CommandSourceStack>> c) { NeoForge.EVENT_BUS.addListener((RegisterCommandsEvent e) -> c.accept(e.getDispatcher())); }
     public void receive(BiConsumer<ServerPlayer, EditorPackets.Request> c) { receiver = c; }
     void receiveRequest(ServerPlayer player, EditorPackets.Request p) { receiver.accept(player, p); }
-    public void send(ServerPlayer p, EditorPackets.Reply reply) { PacketDistributor.sendToPlayer(p, reply); }
+    public void send(ServerPlayer p, EditorPackets.Reply reply) { for(String frame:dev.rinorsi.editor.EditorWire.frames(reply.json()))PacketDistributor.sendToPlayer(p, new EditorPackets.Reply(frame)); }
 }

@@ -12,7 +12,7 @@
     "bilibili": "https://b23.tv/hjUvs0c",
     "afdian": "https://afdian.com/a/Rinorsi"
   },
-  "description": "CAD Editor (Recast): visual item component and data editor for Minecraft, built on Oriel UI.",
+  "description": "CAD Editor (Recast): visual item component and data editor for Minecraft. UI powered by Oriel UI, by 云诺羲Rinorsi (https://github.com/Rinorsi/Oriel-UI).",
   "environment": "*",
   "entrypoints": {
     "main": [
@@ -23,12 +23,13 @@
     ]
   },
   "accessWidener": "cadeditor.accesswidener",
+  "mixins": ["cadeditor.client.mixins.json"],
   "depends": {
     "fabricloader": ">=0.19.5",
     "fabric-api": "*",
     "minecraft": "${fabric_minecraft_version}",
     "java": ">=25",
-    "oriel": ">=0.11.0 <0.12.0"
+    "oriel": ">=0.15.0 <0.16.0"
   },
   "custom": {
     "modrinth": {

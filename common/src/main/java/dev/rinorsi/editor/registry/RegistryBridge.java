@@ -15,7 +15,18 @@ import net.minecraft.resources.Identifier;
 
 /** Read-only, local-page bridge. No additional page capabilities are granted. */
 public final class RegistryBridge {
-    private record Batch(String key, java.util.Iterator<String> pages) {}
+    private record Batch(String key, java.util.Iterator<String> pages, EntityScope scope) {
+        Batch(String key, java.util.Iterator<String> pages) { this(key, pages, null); }
+    }
+    /** Entity counters identify responses, not the world that supplied their facts. Client-thread only. */
+    private record EntityScope(State state, Object document, Object level, Object locale, long reload, String worldGeneration) {
+        boolean current(DocumentDriver driver) {
+            var mc = Minecraft.getInstance();
+            return mc.isSameThread() && DOCUMENTS.get(driver) == state && driver.document() == document
+                    && mc.level == level && world == level && net.minecraft.locale.Language.getInstance() == locale
+                    && RELOAD.get() == reload && warmup != null && worldGeneration.equals(warmup.generation());
+        }
+    }
     private static final class State {
         Object document; boolean pending; String generation;
         final dev.rinorsi.editor.registry.search.LazyCatalog features=new dev.rinorsi.editor.registry.search.LazyCatalog();
@@ -55,7 +66,12 @@ public final class RegistryBridge {
         ComponentValidationChannel.attach(driver);
         ComponentSchemaChannel.attach(driver);
         GenericSchemaChannel.attach(driver);
-        driver.onMessage("registry", value -> request(driver, value));
+        driver.onMessage("registry", value -> {
+            Object document = driver.document();
+            Minecraft.getInstance().execute(() -> {
+                if (DOCUMENTS.containsKey(driver) && driver.document() == document) request(driver, value);
+            });
+        });
         driver.onClose(() -> DOCUMENTS.remove(driver));
     }
     /** Register hooks only. No Minecraft/world/registry access during client initialization. */
@@ -64,7 +80,7 @@ public final class RegistryBridge {
         ticking = true;
         RegistrySupplement.initialize();
         // Class loading / JSON codecs are primed on an auxiliary thread, with no game state access.
-        java.util.concurrent.CompletableFuture.runAsync(RegistryWarmup::prime);
+        java.util.concurrent.CompletableFuture.runAsync(RegistryWarmup::prime).exceptionally(error -> { dev.rinorsi.editor.EditorDiagnostics.failure("registry.prime", "startup", error); return null; });
         ClientPlatform.get().onTagsReload(RELOAD::incrementAndGet);
         ClientPlatform.get().onResourcesReload(RELOAD::incrementAndGet);
         ClientPlatform.get().onTick(client -> {
@@ -123,6 +139,7 @@ public final class RegistryBridge {
                         if (remaining <= 0 || (count > 0 && remaining < estimatedPageNs)) break;
                         var queue = state.interactive.isEmpty() ? state.pages : state.interactive;
                         var batch = queue.entrySet().iterator().next();
+                        if (batch.getValue().scope != null && !batch.getValue().scope.current(d)) { queue.remove(batch.getKey()); continue; }
                         if (!batch.getValue().pages.hasNext()) { queue.remove(batch.getKey()); continue; }
                         if (System.nanoTime() - pushStart >= PUSH_BUDGET_NS) break;
                         long pageStart = System.nanoTime();
@@ -167,6 +184,7 @@ public final class RegistryBridge {
         meta.addProperty("locale", Minecraft.getInstance().getLanguageManager().getSelected());
         meta.addProperty("generated_at", java.time.Instant.now().toString());
         meta.addProperty("generation", generation);
+        meta.addProperty("entity_world_scope", true);
         JsonArray mods = new JsonArray();
         Platform.get().modIds().stream().sorted().forEach(mods::add);
         meta.add("mods", mods); JsonObject counts = new JsonObject(); meta.add("counts", counts);
@@ -217,6 +235,10 @@ public final class RegistryBridge {
         queuePages(driver, key, json, context, true);
     }
     private static void queuePages(DocumentDriver driver, String key, java.util.List<String> json, JsonObject context, boolean priority) {
+        queuePages(driver, key, json, context, priority, null);
+    }
+    private static void queuePages(DocumentDriver driver, String key, java.util.List<String> json, JsonObject context, boolean priority, EntityScope scope) {
+        if (scope != null && !scope.current(driver)) return;
         State state = DOCUMENTS.get(driver); if (state == null) return;
         // Coalesce identical requests, never two different relation/item/tag ids sharing a response key.
         String requestKey = key + "|" + context;
@@ -226,7 +248,27 @@ public final class RegistryBridge {
         if (priority && queue.containsKey(requestKey)) return;
         queue.remove(requestKey);
         if (queue.size() >= 64) queue.remove(queue.keySet().iterator().next());
-        queue.put(requestKey, promoted == null ? new Batch(key, json.iterator()) : promoted);
+        queue.put(requestKey, promoted == null ? new Batch(key, json.iterator(), scope) : promoted);
+    }
+    private static void entityRequest(DocumentDriver driver, JsonObject request, String raw) {
+        var mc = Minecraft.getInstance();
+        if (!mc.isSameThread()) throw new IllegalStateException("实体注册表只能在客户端线程读取");
+        State state = DOCUMENTS.get(driver);
+        if (state == null || driver.document() == null || mc.level == null || world != mc.level || warmup == null
+                || observedReload != RELOAD.get() || language != net.minecraft.locale.Language.getInstance()) return;
+        EntityScope scope = new EntityScope(state, driver.document(), mc.level, language, RELOAD.get(), warmup.generation());
+        entityRequest(driver, request.deepCopy(), raw, scope);
+    }
+    private static void entityRequest(DocumentDriver driver, JsonObject request, String raw, EntityScope scope) {
+        if (!scope.current(driver)) return; // A changed world/document is cancellation, not a failure.
+        if (scope.state.document != scope.document || scope.state.pending || !scope.worldGeneration.equals(scope.state.generation)) {
+            // Establish this document's current meta before any on-demand entity pages.
+            if (scope.state.waiting.size() < 64) scope.state.waiting.add(() -> entityRequest(driver, request, raw, scope));
+            return;
+        }
+        EntityRegistryChannel.request(request, raw, scope.worldGeneration, () -> scope.current(driver), (pages, context) -> {
+            if (scope.current(driver)) queuePages(driver, "registry." + raw, pages, context, true, scope);
+        });
     }
     private static void request(DocumentDriver driver, JsonElement value) {
         if (driver.serverSession() || value == null || !value.isJsonObject() || value.toString().length() > 8192) return;
@@ -265,7 +307,7 @@ public final class RegistryBridge {
             return;
         }
         if (EntityRegistryChannel.supports(raw) && (Minecraft.getInstance().level == null || !snapshot().containsRegistry(Identifier.tryParse(raw)))) {
-            EntityRegistryChannel.request(request, raw, (pages, context) -> queuePages(driver, "registry." + raw, pages, context));
+            entityRequest(driver, request, raw);
             return;
         }
         if (raw.equals("item_meta") || raw.equals("item_meta_one")) {
@@ -385,6 +427,7 @@ public final class RegistryBridge {
                     JsonObject envelope = context.deepCopy(); value.context().entrySet().forEach(e -> envelope.add(e.getKey(), e.getValue()));
                     return RegistryPages.split(raw, generation, value.entries(), envelope).stream().map(Object::toString).toList();
                 })).exceptionally(error -> {
+                    dev.rinorsi.editor.EditorDiagnostics.failure("registry.supplement", raw + " generation=" + generation, error);
                     JsonObject page = RegistryPages.split(raw, generation, new JsonArray(), context).getFirst();
                     page.addProperty("error", String.valueOf(error.getMessage())); return java.util.List.of(page.toString());
                 }));
@@ -427,10 +470,12 @@ public final class RegistryBridge {
                 if(!raw.equals("item_model_hints")&&SearchChannel.currentGeneration(generation))EXTRA_COUNTS.put(raw,rows.size());
                 for (var page : RegistryPages.split(raw, generation, rows, context)) pages.add(page.toString());
             } catch (RuntimeException error) {
+                dev.rinorsi.editor.EditorDiagnostics.failure("registry.resources", raw + " generation=" + generation, error);
                 JsonObject page = RegistryPages.split(raw, generation, new JsonArray(), context).getFirst(); page.addProperty("error", error.getMessage()); pages.add(page.toString());
             }
             return java.util.List.copyOf(pages);
         }).exceptionally(error -> {
+            dev.rinorsi.editor.EditorDiagnostics.warning("registry.resource_task", raw + " generation=" + generation, error);
             JsonObject page = RegistryPages.split(raw, generation, new JsonArray(), context).getFirst(); page.addProperty("error", "资源索引队列繁忙，请稍后重试"); return java.util.List.of(page.toString());
         }));
         Object document = driver.document();

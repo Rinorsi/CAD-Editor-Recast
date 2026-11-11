@@ -146,7 +146,7 @@ public final class EntityWorldEdit {
         if(nbt.contains("Passengers"))prepared.put("Passengers",nbt.get("Passengers").copy());
         // Only explicitly changed fields are required to survive vanilla loading. Pose/default/
         // transformation canonicalization is intentional and handled by the real codecs above.
-        for(String key:nbt.keySet())if(!Objects.equals(input.get(key),nbt.get(key))&&!Set.of("Pose","start_interpolation").contains(key)&&!(key.equals("transformation")&&sameTransformation(nbt.get(key),prepared.get(key)))&&!Objects.equals(nbt.get(key),prepared.get(key)))
+        for(String key:nbt.keySet())if(!Objects.equals(input.get(key),nbt.get(key))&&!Set.of("Pose","start_interpolation").contains(key)&&!(key.equals("transformation")&&sameTransformation(nbt.get(key),prepared.get(key)))&&!WorldNbt.editedFieldRetained(key,nbt.get(key),prepared.get(key)))
             EditorSessions.fail("invalid_nbt","原版加载器未保留实体字段："+key);
         if(nbt.contains("start_interpolation")){require(interpolationDelay(copy)==nbt.getInt("start_interpolation").orElseThrow(),"插值触发值未被保留");prepared.put("start_interpolation",nbt.get("start_interpolation").copy());}
         WorldNbt.protect(input,prepared,true);return prepared;

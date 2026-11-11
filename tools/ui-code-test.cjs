@@ -1,6 +1,7 @@
-// SNBT 代码视图：词法高亮、按括号折叠、格式化 / 压缩、出错位置、编辑 ↔ 高亮切换。
+// 单个原生彩色多行模型：无第二视图、精确诊断、局部字号与输入连续性。
 const assert = require('node:assert/strict');
 const H = require('./lib/ui-harness.cjs');
+H.Element.prototype.setTextHighlights=function(source,ranges,numbers) { assert.equal(source,this.value); this.highlight={source,ranges,numbers}; return true; };
 const t = H.create(), c = t.c;
 c.snd = () => {}; c.Reg.meta = {};
 let toasts = []; c.toast = (m) => toasts.push(m);
@@ -36,38 +37,71 @@ const SAMPLE = '{id:"minecraft:diamond_sword",count:1,components:{"minecraft:dam
   for (const s of ['1b', '2s', '3L', '4.5f', '[I;1,2]']) assert.ok(compact.includes(s), '保留 ' + s);
   assert.equal(c.kcFormat(compact, true), compact, '压缩幂等');
 }
-// ---- 组件：高亮视图有行号和彩色，点击进入编辑，输入时回调带检查结果
+// ---- 组件：可编辑项默认就是同一个原生 textarea；输入不重建节点、不自动格式化
 {
   const got = []; const code = c.kCode({ value: c.kcFormat(SAMPLE, false), onInput: (tx, err) => got.push([tx, err]) });
-  assert.ok(qa(code.el, '.kc-r').length > 5, '每行一个元素'); assert.ok(cls(code.el, 'key').includes('count')); assert.ok(cls(code.el, 'sid').length >= 1);
-  assert.equal(qa(code.el, '.kc-fd.on').length >= 2, true, '有可折叠的行');
-  qa(code.el, '.kc-fd.on')[0].fire('click'); assert.ok(/行/.test(code.el.textContent) && qa(code.el, '.kc-r').length < 4, '折叠后只剩开头一行');
-  qa(code.el, '.kc-fd.on')[0].fire('click'); assert.ok(qa(code.el, '.kc-r').length > 5, '再点展开');
-  // 点一行：这一行就地变成输入框，其余行仍是彩色
-  qa(code.el, '.kc-r')[1].fire('click'); const li = qa(code.el, '.kc-li')[0]; assert.ok(li, '点一行就地编辑'); assert.ok(qa(code.el, '.kc-key').length > 3, '其余行仍然彩色');
-  li.value = '  id: "minecraft:stone",'; li.fire('blur');
-  assert.ok(code.get().indexOf('"minecraft:stone"') > 0, '失焦提交这一行'); assert.equal(got[got.length - 1][1], null, '回调带检查结果（有效）');
-  // Enter 新起一行并沿用缩进；回车后新行进入编辑
-  qa(code.el, '.kc-r')[0].fire('click'); const l0 = qa(code.el, '.kc-li')[0]; l0.fire('keydown', { key: 'Enter' });
-  assert.equal(code.get().split(String.fromCharCode(10))[1], '  ', '{ 之后新行多缩进两格'); assert.ok(qa(code.el, '.kc-li')[0], '新行自动进入编辑');
-  // 切到整段模式：普通文本框，输入时回调带检查结果
-  code.focus(); const ta = qa(code.el, 'textarea')[0]; assert.ok(ta.style.display !== 'none', '整段模式');
-  ta.value = '{a:'; ta.fire('input'); assert.equal(got[got.length - 1][0], '{a:'); assert.ok(got[got.length - 1][1], '回调里有检查结果');
-  assert.equal(code.get(), '{a:');
+  const ta = qa(code.el, 'textarea')[0];
+  assert.ok(ta && ta.style.display !== 'none', '默认显示原生多行文本框');
+  assert.equal(qa(code.el, '.kc-view').length, 0, '不创建第二块只读高亮预览');
+  assert.equal(qa(code.el, '.kc-li').length, 0, '不再创建逐行 input');
+  const pasted = SAMPLE + ' '.repeat(40);
+  ta.value = pasted; ta.fire('input');
+  assert.equal(code.get(), pasted, '输入立即保存在完整文本中');
+  assert.equal(ta.highlight.source,pasted); assert(ta.highlight.ranges.some(r=>pasted.slice(r.start,r.end)==='count')); assert.equal(ta.highlight.numbers,true);
+  assert.strictEqual(qa(code.el, 'textarea')[0], ta, '输入后保留同一个 textarea 节点');
+  assert.equal(got[got.length - 1][0], pasted);
+  const pending = t.timers[t.timers.length - 1]; if (pending) pending.fn();
+  assert.equal(ta.value, pasted, '长单行粘贴也不会自动格式化或改写 value');
+  let prevented = false;
+  for (const key of ['a', 'c', 'x', 'v', 'z', 'y', 'ArrowLeft', 'ArrowDown', 'Home', 'End']) {
+    prevented = false; ta.fire('keydown', { key, ctrlKey: /^[acxvzy]$/.test(key), shiftKey: key === 'ArrowDown', preventDefault() { prevented = true; } });
+    assert.equal(prevented, false, key + ' 保留给 Oriel 原生文本模型处理');
+  }
+  // 只有显式的 Ctrl+Enter 是页面自己的“应用”快捷键。
+  let applied = 0; const withApply = c.kCode({ value: SAMPLE, onApply: () => applied++ }); const applyTa = qa(withApply.el, 'textarea')[0];
+  prevented = false; applyTa.fire('keydown', { key: 'Enter', ctrlKey: true, preventDefault() { prevented = true; } });
+  assert.equal(applied, 1); assert.equal(prevented, true);
+
+  const pretty = c.kcFormat(SAMPLE, false); code.set(pretty, true);
+  ta.selectionStart=3;ta.selectionEnd=12;ta.scrollTop=23;
+  qa(code.el,'.k-btn').find(b=>b.textContent==='A+').fire('click');
+  assert.strictEqual(qa(code.el,'textarea')[0],ta);
+  assert.equal(ta.selectionStart,3);assert.equal(ta.selectionEnd,12);assert.equal(ta.scrollTop,23);
+  assert.equal(ta.value,pretty);assert.equal(ta.style.fontSize,'13px');
+  assert.equal(qa(code.el,'.kc-view').length,0);assert.equal(qa(code.el,'.kc-r').length,0);
+  assert(!qa(code.el,'.k-btn').some(b=>/预览|折叠|编辑模式|高亮模式/.test(b.textContent)));
 }
 // ---- 一键格式化把非法内容拦住并提示
 {
   const code = c.kCode({ value: '{a:' }); toasts = [];
-  qa(code.el, '.k-btn').filter(b => b.textContent.indexOf('格式化') >= 0)[0].fire('click'); assert.ok(toasts.some(x => /无法处理/.test(x))); assert.equal(code.get(), '{a:', '内容原样保留');
+  qa(code.el, '.k-btn').find(b => b.getAttribute('data-code-action') === 'format').fire('click'); assert.ok(toasts.some(x => /无法处理/.test(x))); assert.equal(code.get(), '{a:', '内容原样保留');
 }
 // ---- 只读：没有编辑 / 格式化按钮，点行不进入编辑
 {
   const code = c.kCode({ value: SAMPLE, readonly: true });
-  assert.equal(qa(code.el, '.k-btn').filter(b => /格式化|压缩/.test(b.textContent)).length, 0);
+  assert.equal(qa(code.el, '.k-btn').filter(b => /^(format|compact)$/.test(b.getAttribute('data-code-action'))).length, 0);
 }
-// ---- 很长的内容分块显示
+// ---- 长文本也始终是同一个完整原生输入模型，不分行、不截断。
 {
   const big = '[' + Array.from({ length: 1000 }, (_, i) => i).join(',\n') + ']'; const code = c.kCode({ value: big });
-  assert.ok(qa(code.el, '.kc-r').length <= 400, '首屏最多 400 行'); assert.ok(/还有 \d+ 行/.test(code.el.textContent));
+  assert.equal(qa(code.el,'textarea').length,1);assert.equal(qa(code.el,'textarea')[0].value,big);
+  assert.equal(qa(code.el,'.kc-r').length,0);assert.equal(qa(code.el,'input').length,0);
 }
-console.log('PASS code view: tokens, folding, check positions, format/compact round trip, edit toggle, chunked view.');
+// Missing, rejected and throwing native APIs must fail visibly.
+{
+ const original=H.Element.prototype.setTextHighlights;
+ for(const replacement of [undefined,function(){return false;},function(){throw Error('bad ARGB');}]) {
+  H.Element.prototype.setTextHighlights=replacement;const code=c.kCode({value:SAMPLE});
+  assert.equal(code.el.getAttribute('data-highlight'),'failed');assert.match(code.el.textContent,/高亮不可用/);
+ }
+ H.Element.prototype.setTextHighlights=original;
+}
+// Invalid syntax retains lexical colors and navigates to the actual parser offset.
+{
+ const code=c.kCode({value:'{\n  a: 1,\n  b: ]\n}'}),ta=qa(code.el,'textarea')[0];
+ ta.setSelectionRange=(a,b)=>{ta.selectionStart=a;ta.selectionEnd=b;};
+ assert.equal(code.check().line,3);assert(ta.highlight.ranges.some(r=>r.color===c.KC_COLORS.key));
+ qa(code.el,'.kc-st')[0].fire('click');assert.equal(ta.selectionStart,code.check().pos);
+ assert.equal(t.doc.activeElement,ta);assert(!ta.classList.contains('bad'));
+}
+console.log('PASS native single multiline highlight API/failure, input/shortcut/selection/font continuity, long text, format/types, exact error navigation and readonly JSON');

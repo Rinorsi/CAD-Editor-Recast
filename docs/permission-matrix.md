@@ -1,6 +1,6 @@
-# 权限审计（26.1.2 / 2026-11-08）
+# 权限审计（2026-11-09）
 
-服务端权威权限为 ServerPlayer.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)，每笔写入重新检查。管理员不受创造、生存、冒险、旁观影响；非管理员保留既有创造写回，其它模式拒绝。旧配置 permissionLevel / creativeOnly 继续读取兼容旧文件，但不再覆盖该规则。
+完整 Editor 服务端通道的权威权限为 ServerPlayer.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)，每笔写入重新检查。管理员不受创造、生存、冒险、旁观影响；非管理员保留既有创造写回，其它模式拒绝。旧配置 permissionLevel / creativeOnly 继续读取兼容旧文件，但不再覆盖该规则。服务端未安装时，下列受限原版命令路径由服务器逐笔授权；本机保险库管理不要求 OP。
 
 | 功能 | 旧条件 | 新条件 | 文件:方法（行号供定位） |
 |---|---|---|---|
@@ -8,12 +8,13 @@
 | I / /cade 打开物品 | 玩家/世界存在，目标非空；没有创造门槛 | 不变；真正写入时检查权限 | client/EditorClient.java:open；EditorMod.java:handle(open)/target |
 | 主手/快捷栏/背包apply | 创造背包总是commit→原版创造包，其它受旧policy限制 | gamemaster所有模式服务端baseline/slot检查后setItem并同步；无权限创造保留旧commit | EditorMod.java:103 handle；client/EditorClient.java:apply/receive |
 | 容器物品apply | 旧policy + menuId/距离/mayPickup/mayPlace/容量 | gamemaster不要求创造；独立槽位/访问安全检查仍保留 | EditorMod.java:target/handle |
-| 非创造、无服务端模组 | 本地拒绝，仅创造可写 | not_connected，明确“服务器没有安装物品工坊，生存模式不能写回”；冒险/旁观同样不可用 | client/EditorClient.java:206 apply |
+| 非创造、无服务端模组 | 本地拒绝，仅创造可写 | 仅自己的普通背包0..35走服务器授权的execute条件+item replace，主手固定打开槽；命令树缺项立即command_unavailable，装备、副手和容器槽需服务端；真实同步才saved、未知不重发。原版本人/其他OP反馈与日志保留，普通非OP不广播；见[命令边界](client-only-hotbar.md) | client/EditorClient.java:apply/tick；client/HotbarCommandCodec、HotbarCommandSession、ClientInventoryCommands；registry/VaultChannel |
 | 创造、无服务端模组 | 原物品比较后发ServerboundSetCreativeModeSlotPacket | 保留，不能当作生存/OP通用写回接口 | client/EditorClient.java:216 apply |
 | 旧创造两阶段确认 | confirm/commit要求仍创造且baseline/slot吻合 | 只属于无管理员权限的旧创造路径；管理员直接saved无需此分支 | EditorMod.java:86 handle(confirm)；client/EditorClient.java:255 receive(commit) |
 | saved后客户端同步 | 创造收到确认后setItem，非创造靠原版同步 | 保留；服务端追加明确背包槽包，生存不靠本地预测 | client/EditorClient.java:277 receive；EditorMod.java:handle |
 | 保险库give：创造 | 发创造包但不更新客户端，造成服务端有、创造界面仍为空 | 始终客户端创造路径：空槽检查→原版包→更新自己客户端背包，立刻可见；无论有无OP | registry/VaultChannel.java:give；vault/InventoryWrites.java:givePath |
-| 保险库give：非创造 | 全部NOT_ALLOWED | 有模组并实时gamemaster→服务端严格Codec解码→空槽插入→完整同步；无权限permission_denied | registry/VaultChannel.java:give/receive；vault/VaultGiveServer.java:give |
+| 保险库give：非创造 | 全部NOT_ALLOWED | 有模组并实时gamemaster→服务端严格Codec解码→空槽插入→完整同步；无模组时复用自己的普通背包命令路径，仅选空槽，服务器再次检查空槽，真实同步才确认。无权限或无空槽明确拒绝，不自动重发 | registry/VaultChannel.java:give/receive；vault/VaultGiveServer.java:give；client/ClientInventoryCommands |
+| 自身玩家：无服务端模组 | 无命令适配 | 第一批 49143 已实测游戏模式与经验等级：真实查询权限及对应命令树均可用才开放，每次单项；先查基线、只发一次修改命令，200ms间隔只读回查至原8秒期限。第二批本级整数点数、同维度位置/旋转、单属性base已整合并构建为5D15产物，Fabric26.1.2自身命令26项必测已同哈希分轮覆盖，未沿用第一批LAN通过结论。已支持但无权限的字段说明缺命令/query权限；Health等完整后台字段继续说明需服务端 | client/SelfPlayerCommands；client/WorldEditorClient；[字段合同](self-player-command-contract.md) |
 | give重复点击/重放 | 只有空槽保留，无请求幂等 | 同条目等待时拒绝并行；page ID回放本机回执；服务端内部ID只成功写一次，复用不同载荷拒绝；超时不自动重发 | registry/VaultChannel.java:reply/tick；vault/GiveReceipts.java:execute |
 | 保险库save/update/delete/restore | save需世界严格校验；其它本机存储不要求OP/创造 | 不变；restore恢复库条目，不是往背包发放 | registry/VaultChannel.java:reply；vault/VaultStore.java:execute |
 | 物品页面撤销/草稿 | 页面生成旧栈重新apply，无独立绕过路径 | 仍沿用相同权限、baseline、槽位、频率校验 | client/EditorClient.java:apply；EditorSessions.java:apply/requireBaseline |
@@ -25,7 +26,7 @@
 
 服务端物品请求及give每玩家20次/秒，最多32767字符并校验JSON深度。原版创造包仍由原版服务器校验创造资格。拒绝不会偷偷改用另一写法。
 
-证据：logs/permission/PermissionTest.log为纯JVM真实Codec/脱离客户端的容器；logs/permission/captured-server.json为隔离专用服务端、真实ServerLevel/ServerPlayer（脱离实际网络登录，RecordingListener记录发包）。它们不等于客户端画面验收。用户游戏运行中，没有触碰其进程或鼠标键盘；创造界面可见性、真实客户端收到完整同步未实机验证。
+历史权限证据：logs/permission/PermissionTest.log为纯JVM真实Codec/脱离客户端的容器；logs/permission/captured-server.json为隔离专用服务端、真实ServerLevel/ServerPlayer（脱离实际网络登录，RecordingListener记录发包）。它们不等于客户端画面验收。2026-11-09 第一批 49143 的六目标完整check及23项纯客户端联机通过范围见[命令边界](client-only-hotbar.md)。第二批5D15产物六目标jar及UI门禁通过，新哈希库存/Vault真实LAN 11/11通过；六目标完整check已通过，159个JavaExec检查实际重新执行；自身命令26项必测已分轮覆盖；单人完整后端混合保存、双端保存及真实撤权已通过。天然缺base样本与精确200ms重载不计LAN，详见第二批合同。
 
 ## P4-6 保险库模板
 

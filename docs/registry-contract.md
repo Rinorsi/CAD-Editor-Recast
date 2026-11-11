@@ -1,5 +1,32 @@
 # 实时注册表合同 v1
 
+## 实体大响应的有界无损分片
+
+各加载器、各版本的正常 Gradle `check` 包含 `registryPagesTest`、`entityScopeTest`、`registryFragmentsTest` 和 `entitySchemaTransportTest`。最后一项运行真实生产 schema 生成路径，并将线协议事实写入目标构建目录的 `reports/entity-schema-transport.json`；三版报告可传给 `node tools/ui-registry-fragments-test.cjs <三个报告路径>`，检查页面完整组装及字段消费。以上独立 JVM/页面测试不能代替游戏中的真实回包验证。
+
+实体查询的普通回复仍使用 v1 分页，完整信封上限仍为 **24000 UTF-16 字符**。某一个条目不能装入普通页时，EntityRegistryChannel 将整笔逻辑回复（不是删除字段后的 schema，也不是逐条各自提交）编码为 JSON 文本，再发送 v2 分片。适用 entity_info（含 :ID）、entity_schema（含 :ID）、entity_base_attributes、equipment_slot_groups、spawner_info；其它通道仍用原 v1，超大条目显式报错，不静默扩展协议或访问权限。
+
+请求可带 1–80 字符 requestId，新页面逐请求生成 Document 本地唯一值，宿主逐页回显。id/name/requestId、独立 generation 与 worldGeneration 始终保留。entity-schema-N 是 schema 缓存代次，entity-N 是实体查询计数；两者均不是世界 epoch，不得替代 worldGeneration。执行、回包排队和真正投递前继续检查宿主原有 Document/世界/语言/资源重载守卫。页面收到带 requestId 的回复时必须匹配本 Document 的在途 name/id/world；新 Document 根数据重放的旧包不能创建在途请求。没有 requestId 的旧 v1 仍兼容旧宿主，此兼容分支不提供现代请求关联保证。
+
+v2 信封在原 name/id/requestId/generation/worldGeneration/offset/total/done 等上下文之外增加：
+
+| 字段 | 含义 |
+|---|---|
+| version / encoding | 2 / registry-json-fragments-v1 |
+| transferId | 每次响应唯一标识，与 schema generation 独立 |
+| responseChars | 完整逻辑 v1 JSON 文本的 UTF-16 长度 |
+| checksum | UTF-16 code unit 上的 FNV-1a 32 位、小写8位十六进制；用于检错，不是认证 |
+| fragmentIndex / fragmentCount | 从0开始的序号 / 总片数 |
+| fragmentOffset | 本片在完整文本中的 UTF-16 offset |
+| payload | JSON字符串分片；合法代理对不跨片 |
+| entries | 空数组；v2 帧必须先由传输层拦截，不能直接交给表或 schema consumer |
+
+每片按包含转义后的真实 JSON 信封计数，仍不超过24000字符。上限：完整回复2097152字符、16384行、256片、累计线路信封4194304字符。超限报错误页和 registry.entity 日志，不截断。宿主现有64批排队上限不变，最坏线路队列上界为64×4194304字符（不含 JVM 对象开销）。
+
+页面最多64个实体在途请求，其中同时组装最多8批，预留完整文本总量不超过4194304字符；分片数组和 header 也按数量/页长有界。完成时短暂存在拼接文本与解析对象；这些复制仍受上述完整文本/行数边界约束，预留量不是进程堆字节承诺。每请求固定30秒截止，重复分片不会续期。相同重复片幂等，乱序合法；冲突重复、批次/上下文冲突、偏移断档、缺片超时、长度/数量/校验失败均终止该请求，释放缓存并记录 registry.fragments（仅关联和原因，不记录完整 payload）。不存在无限增长的完成批次表：请求完成即移除，迟到包因无在途 requestId 被丢弃。世界/资源 epoch 改变主动清理请求和组装，不记内部失败；同 epoch 的 meta 刷新不会取消合法在途传输。
+
+只有全部片到齐、连续 offset、总长与校验、内外信封及条目数量全部一致后，才一次交给现有 ingestES/ingestEI 等 consumer。未知 schema 字段、SNBT typed 字符串不经白名单重建。失败沿用空 entries+error，entitySchema 得到 available:false/error，而非未完成的半个 schema；调用界面应显示该错误，不能仍称“正在读取”。只收到部分包或完全无回复也会到期。新页面向旧宿主请求时，无 requestId 的 v1 终页也会结束相应请求，避免成功后被超时覆盖。
+
 ## 2026-11-09：按需客户端翻译
 
 本地页面发送 oriel.send('registry',{name:'translate',keys:['advancements.story.root.title'],requestId:'optional-id'})，回复顶层字面键 registry.translate。每页为既有 version/generation/name/offset/total/entries/done 信封，加 map:{翻译键:当前语言译文}；entries 同时保留 {id:翻译键,name:译文}，map 只覆盖本页，按 generation 累积至 done。total 是实际有译文的去重键数量，缺键不占 total。不支持服务端页面，不自动推送字典。
@@ -280,6 +307,30 @@ RegistryBridge.initialize()幂等，只注册tick、客户端标签/资源重载
 - bundle_capacity用官方BundleContents.Mutable插入规则饱和取得Fraction（当前原版1/1），不是写死64个物品；reference_item/count是该次运行从实际可收纳物品中选择的容量测量样本，非白名单。source="minecraft:bundle_contents"明确这是官方组件规则，不保证另行覆写交互的模组拥有相同自定义容量。每个物品真实重量仍有原版特殊规则，不能仅用count/max_stack_size代替全部逻辑。
 - 后端未改前端静态ikind或SLOT_COUNT；前端须使用item_defaults+item_meta替换，缺失元信息明确未知。
 
+### 生物桶元信息
+
+item_meta / item_meta_one 条目可带 `mob_bucket:true`、`bucket_entity`、`bucket_fields_verified`、
+`bucket_fields:[{key,type}]`、`bucket_components:[完整组件ID]`、`bucket_semantics` 与 `bucket_metadata_error`。
+可选 `bucket_age_key` 是该物种桶加载的真实年龄键，仅用于桶预览，不将未支持的完整实体字段画成已生效。
+bucket_entity 读取实际 MobBucketItem 唯一的非静态 EntityType 字段（26.x 无公共 getter，反射失败明确诊断），
+不由物品 ID 推断，不实例化或生成实体。字段 type 为 boolean/float/int/long，不提供虚构 default。
+只对已核对加载语义的原版实现提供结构化字段；自定义子类或未确认实体仅提供关系和原文回退。
+26.1.2 桶默认加载不读取 PersistenceRequired，26.2/26.3 才提供；其余按各物种 loadFromBucketTag 的实际读取子集。
+美西螈和蝌蚪三版均提供 Age、AgeLocked，HuntingCooldown 仅美西螈；26.2/26.3 的 SulfurCube 提供小写 age、age_locked。
+Health 范围来源标记为 `bucket_health_range_source:entity_schema.health`，从当前世界实体 schema 的 health 标志读取 min/max，不维护物种生命表。
+硫磺方块额外带 `bucket_health_dynamic:true` 和 `bucket_health_size_ratio`：后者来自该版 SulfurCube.MAX_SIZE/MIN_SIZE。
+经原版逐物种验证，其 setCubeMobHealth 随体型线性变化；schema 工厂规范化为 MIN_SIZE，控件据此计算放出上限，并提示小体型上限以及 ageBoundaryReached 可能在通用桶 Health 加载后重设生命。该范围不能保证任意 Health 原值放出后仍不变。
+表单范围验证不钳制或重写已导入原值，缺少范围时不猜值；浏览和未设置均不制造 NBT。
+外观由真正的 DataComponents 注册键返回，使用现有组件 Codec 表单和动态枚举，不把实体全量 schema 用作桶保存合同。
+`tools/registry/bucket-metadata-test.ps1 -ClasspathJson <runtime.json> -EvidenceDir <独立目录> [-MinecraftJar <对应版本jar>]`
+独立编译生产 helper，用实际注册表测试映射、字段和组件，保留 javap 加载语义证据，不启动游戏。
+也可在正常版本转换后通过 `-I tools/registry/bucket-metadata.init.gradle :<loader>:<version>:bucketMetadataTest`
+运行注册表契约；`:<loader>:<version>:bucketConsumerTest` 则逐物种创建独立实体、执行真实桶 loader/getter/save，覆盖 boolean 两值、年龄、long、Health 负值/合法值/超限和硫磺方块年龄/体型变化。使用 worldEditTest 的原版优先类路径，不启动 FML 或游戏，报告写入该目标 build/reports/bucket-consumer.json。
+将三版报告路径传给 `node tools/bucket-consumer-ui-test.cjs <26.1.2.json> <26.2.json> <26.3.json>`，验证这些实际宿主事实到生产桶控件、预览、typed 草稿、撤销和缺省/非法输入的接线。旧 PowerShell 元数据脚本只输出字节码摘录，不再将多个物种的方法拼接后声称某个物种读取了字段。
+
+特殊浮点属性另有消费边界：三版 attribute_modifiers 的 amount Double Codec 均可保留 NaN/±Infinity，但原版 RangedAttribute 的攻击伤害消费结果分别为 0/2048/0；不能把 Codec 保真称为无限伤害。这与桶 Health 的实际钳制是不同路径。
+执行同一测试（loader 为 fabric/neoforge，version 为 26.1/26.2/26.3）；这是显式门禁，不自动注册进默认 check。
+
 ## B3/B4/B15 验证回执
 
 `tools/backend-data/run.ps1 -ClasspathJson <已导出的runtime-classpath.json> -TestWorld <独立测试世界目录>` 使用Java25已解析依赖/最新access-widened Minecraft jar编译当前全部Java，再启动独立 `.backend-b/run` 客户端；仅测试探针的窗口创建前设置hidden/unfocused、移出屏幕并禁止抓鼠标，主音量0，无系统输入，不触碰用户运行目录。探针不进入发行jar。
@@ -291,7 +342,7 @@ RegistryBridge.initialize()幂等，只注册tick、客户端标签/资源重载
 
 ## 草稿持久化（v1扩展）
 
-初始读取仍为oriel.data.prefs.drafts，形状是{[槽位语义键+物品id]:草稿JSON字符串}；键由前端确定，是不解释执行的opaque字符串，1–1024 UTF-8字节、不得含控制字符。草稿须为严格JSON文本、嵌套≤128层；单条原始文本≤200KiB（204800 UTF-8字节），最多8条，整个drafts map序列化后≤1MiB（1048576 UTF-8字节，含键/JSON转义）。
+初始读取仍为oriel.data.prefs.drafts，形状是{[槽位语义键+物品id]:草稿JSON字符串}；键由前端确定，是不解释执行的opaque字符串，1–1024 UTF-8字节、不得含控制字符。草稿须为严格JSON文本、嵌套≤128层；单条原始文本≤8MiB（8388608 UTF-8字节），最多8条，整个drafts map序列化后≤64MiB（67108864 UTF-8字节，含键/JSON转义）。
 
 沿用config/cadeditor-ui.json、500ms合并、同目录临时文件原子替换、失败保留待写值并重试、关闭/退出flush。put和单件get触碰LRU；插入第9条或超过总字节预算时逐出最久未使用条目；LRU由map键插入顺序落盘，重启保留。读取整个map不触碰所有条目。大草稿需要分块，因为页面消息仍≤8192字符。
 
@@ -301,8 +352,9 @@ RegistryBridge.initialize()幂等，只注册tick、客户端标签/资源重载
 - {op:"get",key}：drafts.result.value为该草稿原始JSON字符串，不存在为null；同时触碰LRU。
 - {op:"put",key,value:JSON字符串}：小草稿保存；原子更新单条，其他草稿保留，超单条限制拒绝且保留原值。
 - {op:"clear",key}：删除单条，不存在也成功。
-- 大草稿：先{op:"begin",key,upload:"前端唯一token",length:完整字符串UTF-16长度}，再按序{op:"chunk",upload,offset:本块起始UTF-16偏移,value:本块字符串,done:是否最后一块}；每个最终JSON消息本身≤8192字符（建议逐块用JSON.stringify检查并≤7000），每秒≤20条并等回执，最后一块done=true。只有完整长度、UTF-8预算及JSON校验均通过后才更新草稿；中途不会覆盖已有草稿。每页只保留一个上传，begin替换旧上传，30秒超时；upload≤128字符。缺块/乱序/错token/超限/无效JSON均拒绝并丢弃本次临时上传。
-- 兼容现有prefs通道：oriel.send("prefs",{key:"drafts",value:完整map})可整体替换，使用相同校验，但超8条/1MiB直接拒绝而不做逐出；仍受8192字符消息限制。推荐单条drafts通道，避免并发覆盖整表。
+- 增量草稿：`{op:"patch",key,writer,seq,baseSeq,changes:[{at,remove,insert}]}`。`baseSeq` 必须对应当前页面已收到 accepted 的完整 put、最后一个 chunk 或 patch；宿主还须核对该键当前完整字符串与此基准完全相同。最多32段，按原字符串 UTF-16 偏移升序、不重叠；完整消息建议≤7000字符，硬上限仍8192。宿主合并后重新校验完整JSON和8MiB UTF-8预算，只在全部通过时原子替换并 accepted；不回传整个 prefs map。拒绝时前端废弃基准、以更高seq回退完整 put/分块。丢失回执不得将发送值当作已确认基准，关闭导出始终提供完整快照。磁盘仍为合并500ms后的完整偏好文件原子替换，不是追加差异日志。
+- 大草稿：先{op:"begin",key,upload:"前端唯一token",length:完整字符串UTF-16长度}，再按序{op:"chunk",upload,offset:本块起始UTF-16偏移,value:本块字符串,done:是否最后一块}；每个最终JSON消息本身≤8192字符（建议逐块用JSON.stringify检查并≤7000），每秒≤20条并等回执，最后一块done=true。只有完整长度、UTF-8预算及JSON校验均通过后才更新草稿；中途不会覆盖已有草稿。每页只保留一个上传，begin替换旧上传，30秒没有进展才超时；upload≤128字符。缺块/乱序/错token/超限/无效JSON均拒绝并丢弃本次临时上传。
+- 兼容现有prefs通道：oriel.send("prefs",{key:"drafts",value:完整map})可整体替换，使用相同校验，但超8条/64MiB直接拒绝而不做逐出；仍受8192字符消息限制。推荐单条drafts通道，避免并发覆盖整表。
 
 来源为客户端当前世界 RegistryAccess，回退 BuiltInRegistries。名称使用当前语言；缺翻译保留 id。只读，不使用静态 data.js。
 
@@ -356,3 +408,10 @@ exclusive/supported/primary集合超过64成员或数组序列化超过4000字�
 component_validate为新增只读消息，输入与validate_component相同，顶层component_validate.result在旧回执基础上增加errors:[{path,code,message}]和path_precision；旧validate_component保持不变。路径来自失败子树的真实Codec再解码；无法定位就返回根$。不会用字段树替代最终保存校验。
 
 本地客户端registry access派生，不访问远端文件；当前没有unavailable回执，availability:complete只表示推导完成，字段仍可能unknown。服务器独有/未同步信息不构成已核实。缓存按世界与generation失效。
+
+
+## 2026-11-10 大 SNBT 容量补充
+
+物品单组件与世界目标的 SNBT 原文上限为 1,048,576 UTF-16 字符，覆盖 1 MiB UTF-8 原文；原有深度、权限、Codec 与并发约束继续执行。普通编辑消息超过 24000 字符或 30000 UTF-8 字节时，EditorWire 在原通道发送 gzip-parts-v1 信封，包含 editorEncoding/transfer(UUID)/index/count/data(base64)，每片最多 24000 字符、最多 1024 片、30 秒绝对期限。按连接有序重组，完整且展开不超过 16 MiB 后才交给原处理器；中间片不执行操作。客户端与服务端须同时更新。EditorPackets 的原生单包上限仍为 32767 字符；世界旧 worldEncoding 信封仍兼容，展开上限为 8 MiB。错误、超时或保存后快照返回失败时保留原来的“结果未知、需重读”语义，不把网络失败当成未发生写入。
+
+前端快照类型信息支持 numberType 的同类型数字列表与省略默认整数元数据；旧完整 AST 形状继续读取。只有能精确重建原文的数字被压缩，非标准数字原文、负零、特殊浮点与精确 long 保留。撤销与草稿使用同一份类型快照。大于 32768 字符的组件推迟实时 schema 校验到应用，由原生 Codec 决定，不表示已通过游戏验证。

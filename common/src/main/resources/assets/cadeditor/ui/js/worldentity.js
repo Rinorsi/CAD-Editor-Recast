@@ -15,8 +15,12 @@ function evFields(g) {
   return s ? (s.fields || s) : {};
 }
 function evGet(g, k) { return weDraftGet(WE.ent, g, k, evVal(g)); }
-function evSet(g, k, v) { weDraftSet(WE.ent, g, k, v, evVal(g)); }
-function evDirty() { return !!WE.w && (Object.keys(WE.ent).length > 0 || (typeof wpSlotsDirty === 'function' && wpSlotsDirty() > 0) || WE.offers !== null && JSON.stringify(WE.offers) !== JSON.stringify(evOffersOrig())); }
+function evSet(g, k, v, part) {
+  if (g === 'player' && typeof wpCommandTrack === 'function') wpCommandTrack(k, v, part);
+  weDraftSet(WE.ent, g, k, v, evVal(g));
+  if (g === 'dropped_item' && k === 'Item') weHeroLive();
+}
+function evDirty() { return !!WE.w && (Object.keys(WE.ent).length > 0 || (typeof wpCommandIntentDirty === 'function' && wpCommandIntentDirty()) || (typeof wpSlotsDirty === 'function' && wpSlotsDirty() > 0) || WE.offers !== null && JSON.stringify(WE.offers) !== JSON.stringify(evOffersOrig())); }
 function evOffersOrig() { var t = evGroup('trades'); return t && t.offers ? t.offers : []; }
 function evMsg(msg) {
   var out = {}, any = false;
@@ -37,6 +41,7 @@ function evStack(cur, onSet, o) {
   function norm(st) { var s = clone(st); delete s.slot; delete s.label; return s; }
   activate(btn, function () { pickItem(btn, function (id) { onSet({ id: fullId(id), count: 1, comps: {}, removed: {} }); kPopClose(); }, { onStack: function (st) { onSet(norm(st)); kPopClose(); } }); });
   var kids = [btn];
+  if (has) kids.push(kBtn('编辑物品', function () { openNestedItem(cur, { title: '编辑物品', valid: nestedDraftGuard(), commit: function (st) { onSet(norm(st)); }, render: weRedrawBody }); }, { icon: 'edit' }));
   if (has && o.clear !== false) kids.push(kBtn('清空', function () { onSet(o.empty); }, { icon: 'trash' }));
   return h('div', { class: 'k-row' }, kids);
 }
@@ -208,13 +213,13 @@ var EV_SIMPLE_TAB = {
   chested: function (body) {
     var g = 'chested', own = evGroup(g) || {}, cap = typeof own.capacity === 'number' ? own.capacity : 0, on = evGet(g, 'ChestedHorse');
     body.appendChild(evBool('背着箱子', on, '去掉箱子会丢掉里面的东西', function (v) { evSet(g, 'ChestedHorse', v); if (!v) evSet(g, 'Items', []); weRender(); }));
-    if (on && cap > 0) { body.appendChild(weDndHint()); body.appendChild(evSlotList(g, 'Items', cap)); }
+    if (on && cap > 0) { body.appendChild(evSlotList(g, 'Items', cap)); }
     else if (on) body.appendChild(kHint('这个箱子暂时没有格子（羊驼的格数跟力量有关）。'));
   },
   vehicle_container: function (body) {
     var g = 'vehicle_container', own = evGroup(g) || {};
     if (own.unresolved_loot) { body.appendChild(kHint('里面还有没展开的战利品，先在游戏里打开一次再来改。')); return; }
-    body.appendChild(weDndHint()); body.appendChild(evSlotList(g, 'slots', own.size || 0));
+    body.appendChild(evSlotList(g, 'slots', own.size || 0));
   },
   minecart_display: function (body) {
     var g = 'minecart_display', off = evGet(g, 'DisplayOffset');
@@ -321,42 +326,82 @@ function evRelationTab(body) {
 
 /* ---------- 村民 / 流浪商人交易（只有服务端能改） ---------- */
 function evOffers() { if (WE.offers === null) WE.offers = clone(evOffersOrig()); return WE.offers; }
+function evTradePreview(offer) {
+  function stack(st) {
+    if (!st || !st.id) return h('span', { class: 'k-sub', text: '未选择' });
+    var icon = stackUiIcon(st, 20);
+    if (icon.tagName && icon.tagName.toLowerCase() === 'item') icon.setAttribute('count', '1');
+    return h('div', { class: 'trade-summary-stack' }, [icon, stackUiName(st), h('span', { class: 'trade-count', text: '× ' + (st.count || 1) })]);
+  }
+  return h('div', { class: 'trade-summary' }, [
+    h('div', { class: 'trade-summary-side' }, [h('span', { class: 'k-sub', text: '你支付' }), stack(offer.buy), offer.buyB ? h('span', { class: 'k-sub', text: '+' }) : null, offer.buyB ? stack(offer.buyB) : null]),
+    h('span', { class: 'trade-arrow', text: '→' }),
+    h('div', { class: 'trade-summary-side' }, [h('span', { class: 'k-sub', text: '你获得' }), stack(offer.sell)])]);
+}
+function openTradeDraft(offer, index) {
+  var owner = WE.w, offers = WE.offers, priceOpen = false;
+  var host = h('div', { class: 'trade-edit-body' });
+  function valid() { return WE.w === owner && WE.offers === offers && offers.indexOf(offer) >= 0; }
+  function mark() { if (!valid()) { toast('交易目标已更新，请返回后重新打开', 'warn'); return false; } weMarkDirty(); return true; }
+  function stackEditor(key, optional) {
+    var cur = offer[key], has = cur && cur.id;
+    function put(st) {
+      if (!valid()) { toast('交易目标已更新，请返回后重新打开', 'warn'); return; }
+      if (!st) delete offer[key];
+      else { var next = clone(st); delete next.slot; delete next.label; if (cur && next.id !== cur.id) delete next.cost_predicate_snbt; offer[key] = next; }
+      mark();
+    }
+    var label = key === 'sell' ? '你获得' : optional ? '额外支付' : '你支付';
+    if (!has && optional) { var addCost = kBtn('添加第二种费用', function () { choose(addCost); }, { icon: 'plus', cls: 'trade-add-cost' }); return addCost; }
+    var pick = kItemBtn(has ? cur : null, null);
+    function choose(anchor) { pickItem(anchor, function (id) { put({ id: fullId(id), count: (cur && cur.count) || 1, comps: {}, removed: {} }); paint(); }, { onStack: function (st) { put(st); paint(); } }); }
+    activate(pick, function () { choose(pick); });
+    var controls = [];
+    if (has) {
+      var qty = kNumber(cur.count || 1, { min: 1, noSlider: true, step: 1, onChange: function (v) { if (valid()) { cur.count = v; var icon = pick.querySelector('item'); if (icon) icon.setAttribute('count', String(v)); mark(); } } });
+      var field = qty.el.querySelector('input'); if (field) field.setAttribute('aria-label', label + '数量');
+      controls.push(h('span', { class: 'k-sub', text: key === 'sell' ? '数量' : '基础数量', title: key === 'sell' ? '获得的数量' : '实际成交价还受价格调整和玩家声望影响' }), qty.el, kBtn('编辑', function () {
+        if (!valid()) { mark(); return; }
+        var parentValid = nestedDraftGuard();
+        openNestedItem(cur, { title: '交易 · ' + label, valid: function (session) { return valid() && parentValid(session); }, commit: put, render: paint });
+      }, { icon: 'edit', title: '编辑此物品的名称、组件和 NBT' }));
+      if (optional) controls.push(kDelete(function () { put(null); paint(); }, '移除第二种费用'));
+    }
+    return h('div', { class: 'trade-item-editor' }, [optional ? h('span', { class: 'k-sub', text: '+ 额外支付' }) : null, pick, h('div', { class: 'trade-item-controls' }, controls)]);
+  }
+  function num(label, key, options) {
+    options = options || {};
+    var n = kNumber(typeof offer[key] === 'number' ? offer[key] : 0, { min: options.min, step: options.step || 1, dec: options.dec, noSlider: true, onChange: function (v) { if (valid()) { offer[key] = v; mark(); } } });
+    return xField(null, label, n.el);
+  }
+  function paint() {
+    clear(host);
+    var pay = h('div', { class: 'trade-edit-side' }, [h('div', { class: 'trade-side-title', text: '你支付' }), stackEditor('buy', false), stackEditor('buyB', true)]);
+    var gain = h('div', { class: 'trade-edit-side' }, [h('div', { class: 'trade-side-title', text: '你获得' }), stackEditor('sell', false)]);
+    host.appendChild(h('div', { class: 'trade-edit-flow' }, [pay, h('div', { class: 'trade-arrow', text: '→' }), gain]));
+    host.appendChild(h('div', { class: 'trade-settings' }, [num('已用次数', 'uses', { min: 0 }), num('次数上限', 'maxUses', { min: 0 }), num('村民经验', 'xp', { min: 0 }),
+      xField(null, '玩家获得经验', kToggle(offer.rewardExp !== false, function (on) { if (valid()) { offer.rewardExp = on; mark(); } }).el)]));
+    host.appendChild(xRow({ icon: uiIcon('coins', 14), title: '价格调整', sub: '需求、折扣与价格倍率', chevron: true, open: priceOpen, onHead: function () { priceOpen = !priceOpen; paint(); }, body: function () {
+      return [num('价格倍率', 'priceMultiplier', { step: 0.01, dec: 3 }), num('需求值', 'demand'), num('特殊价格调整', 'specialPrice')];
+    } }));
+  }
+  paint();
+  var modal = openModal(modalShell('交易 ' + (index + 1), '修改保存在父页面草稿', [host], [h('div', { class: 'grow' }), kBtn('完成', closeModal, { cls: 'pri' })], 'trade-editor'), true);
+  modal.onEditorClose = function () { if (valid() && !NestedItem) weRedrawBody(); };
+}
 function evTradeTab(body) {
   var t = evGroup('trades');
   if (!t || t.available === false) { body.appendChild(xEmpty((t && t.reason) || '交易只能在有服务器时修改（单人游戏的内置服务器也行）。')); return; }
   var list = evOffers();
   body.appendChild(xSec('coins', '交易', list.length + ' 条'));
   function mark() { weMarkDirty(); }
-  function stackLine(o, key, label, optional) {
-    var cur = o[key];
-    var has = cur && cur.id;
-    var btn = kItemBtn(has ? cur : null, null, optional ? '不需要第二件' : undefined);
-    function put(st) { if (st === null) delete o[key]; else { if (cur && cur.cost_predicate_snbt !== undefined && st.id !== cur.id) delete st.cost_predicate_snbt; o[key] = st; } mark(); weRender(); }
-    activate(btn, function () { pickItem(btn, function (id) { var prev = o[key] || {}; put({ id: fullId(id), count: prev.count || 1, comps: {}, removed: {} }); kPopClose(); }, { onStack: function (st) { var s2 = clone(st); delete s2.slot; delete s2.label; put(s2); kPopClose(); } }); });
-    var kids = [btn];
-    if (has) {
-      var cnt = kNumber(cur.count || 1, { min: 1, max: 99, noSlider: true, step: 1, onChange: function (v) { cur.count = v; mark(); } });
-      kids.push(cnt.el);
-      if (optional) kids.push(kBtn('去掉', function () { delete o[key]; mark(); weRender(); }, { icon: 'trash' }));
-    }
-    return xField(null, label, h('div', { class: 'k-row' }, kids));
-  }
   list.forEach(function (o, i) {
-    var k = 'we:offer:' + i, nm = function (s) { return s && s.id ? nameOfItem(s.id) + (s.count > 1 ? '×' + s.count : '') : '—'; };
-    var title = nm(o.buy) + (o.buyB ? ' + ' + nm(o.buyB) : '') + ' → ' + nm(o.sell);
-    body.appendChild(xRow({ icon: o.sell && o.sell.id ? itemIcon(shortId(o.sell.id), 22) : false, title: title, sub: '已交易 ' + (o.uses || 0) + ' / ' + (o.maxUses || 0) + ' 次', chevron: true, open: !!UIOpen[k],
-      onHead: function () { UIOpen[k] = !UIOpen[k]; weRender(); },
-      body: function () {
-        function num(label, key, op) { var n = kNumber(typeof o[key] === 'number' ? o[key] : 0, { min: op && op.min, step: op && op.step || 1, dec: op && op.dec, noSlider: true, onChange: function (v) { o[key] = v; mark(); } }); return xField(null, label, n.el); }
-        return [stackLine(o, 'buy', '收', false), stackLine(o, 'buyB', '再收', true), stackLine(o, 'sell', '卖', false),
-          num('已交易', 'uses', { min: 0 }), num('最多交易', 'maxUses', { min: 0 }), num('给村民的经验', 'xp', { min: 0 }),
-          xField(null, '交易后给玩家经验', kToggle(o.rewardExp !== false, function (on) { o.rewardExp = on; mark(); }).el),
-          num('价格浮动', 'priceMultiplier', { step: 0.01, dec: 3 }), num('需求加价', 'demand'), num('特殊价格', 'specialPrice'),
-          h('div', { class: 'x2f' }, [h('div', { class: 'grow' }), kBtn('删除这条交易', function () { list.splice(i, 1); mark(); weRender(); }, { cls: 'dng', icon: 'trash' })])];
-      } }));
+    var row = xRow({ icon: false, title: '', sub: '已用 ' + (o.uses || 0) + ' / ' + (o.maxUses || 0) + ' 次', right: kBtn('编辑', function () { openTradeDraft(o, i); }, { icon: 'edit' }),
+      onDelete: function () { list.splice(i, 1); mark(); weRender(); }, onHead: function () { openTradeDraft(o, i); } });
+    row.classList.add('trade-list-row'); row.querySelector('.z').appendChild(evTradePreview(o)); body.appendChild(row);
   });
-  if (list.length < 256) body.appendChild(xAdd('添加一条交易', function () { list.push({ buy: { id: 'minecraft:emerald', count: 1, comps: {}, removed: {} }, sell: { id: 'minecraft:bread', count: 1, comps: {}, removed: {} }, uses: 0, maxUses: 12, rewardExp: true, xp: 1, priceMultiplier: 0.05, demand: 0, specialPrice: 0 }); UIOpen['we:offer:' + (list.length - 1)] = true; mark(); weRender(); }));
-  body.appendChild(kHint('玩家正开着交易界面时游戏会拒绝修改。列表是整个替换：删掉的交易就真的没有了；清空后这个村民不会再自己刷新交易。'));
+  if (list.length < 256) body.appendChild(xAdd('添加一条交易', function () { var offer = { buy: { id: 'minecraft:emerald', count: 1, comps: {}, removed: {} }, sell: { id: 'minecraft:bread', count: 1, comps: {}, removed: {} }, uses: 0, maxUses: 12, rewardExp: true, xp: 1, priceMultiplier: 0.05, demand: 0, specialPrice: 0 }; list.push(offer); mark(); weRender(); openTradeDraft(offer, list.length - 1); }));
+  body.appendChild(kHint('关闭游戏交易界面后，再应用修改。'));
 }
 
 /* ---------- 乘客 / 骑乘：每一步都是单独的 apply.riding，立刻提交 ---------- */
@@ -384,7 +429,7 @@ function evRidingTab(body) {
   if (!ps.length) body.appendChild(xEmpty('没有乘客。'));
   ps.forEach(function (p) { node(p, 0); });
   var type = WE.rideType || 'minecraft:chicken', data = WE.rideData || '';
-  addBox.appendChild(esEntityHeader({ id: type, onPick: function (id) { WE.rideType = id; weRedrawBody(); }, onEntityNbt: function (snbt) { var o = vaultEntityObj(snbt); WE.rideType = o.id || WE.rideType; delete o.id; WE.rideData = toSnbt(o, null, false); weRedrawBody(); } }));
+  addBox.appendChild(esEntityHeader({ id: type, snbtText: function () { var e = vaultEntityObj(WE.rideData || '{}'); e.id = WE.rideType || type; return nbtMerge(e, null); }, onPick: function (id) { if (WE.rideType !== id) WE.rideData = ''; WE.rideType = id; weRedrawBody(); }, onEntityNbt: function (snbt) { try { var payload = vaultEntityPayload(snbt); WE.rideType = payload.type; WE.rideData = payload.snbt; weRedrawBody(); } catch (e) { toast(e.message || '生物数据无法读取', 'error'); } } }));
   var inp = kInput(data, function () {}, { placeholder: '可选的数据，比如 {CustomName:"小鸡"}', onCommit: function (t) { WE.rideData = t; } }); inp.classList.add('we-in');
   addBox.appendChild(xRow({ icon: false, title: '初始数据', sub: 'SNBT，可以不填', right: inp }));
   addBox.appendChild(h('div', { class: 'k-row' }, [kBtn('加上去', function () {

@@ -1,0 +1,25 @@
+const assert=require('node:assert/strict'),H=require('./lib/ui-harness.cjs');
+const t=H.create(),c=t.c;c.snd=()=>{};c.toast=()=>{};c.window.EDITOR_PREVIEW=true;c.Reg.meta={};
+c.document.documentElement.setAttribute('data-motion','reduced');
+c.Store.open({id:'minecraft:stick',count:1,comps:{tool:{rules:[{blocks:'minecraft:stone',speed:2,correct_for_drops:false,extra:'preserve'},{blocks:['minecraft:dirt','minecraft:grass_block'],speed:3}],damage_per_block:2}},removed:{}},true);
+const card=c.CARDS.tool();t.root.appendChild(card.el);
+const value=()=>JSON.parse(JSON.stringify(c.Ctx.get('tool'))),initial=value();
+let picker,menu;c.openTagPicker=o=>picker=o;c.pickFrom=(anchor,options,cb)=>{menu={options,cb};};
+const open=()=>card.el.querySelector('.k-add').fire('click');
+const choose=v=>{picker.controls.querySelector('.k-sel').fire('click');menu.cb(menu.options.find(x=>x.v===v));};
+const confirm=ids=>{assert(picker.validateConfirm());picker.onConfirm(ids);};
+assert.equal(card.el.querySelectorAll('.tool-rule-check').length,0);assert(!card.el.textContent.includes('批量修改'));
+open();assert(picker.multi);assert.equal(picker.tagsReg,'block');assert.deepEqual(Object.keys(picker.selected).sort(),['minecraft:dirt','minecraft:grass_block','minecraft:stone']);
+confirm(Object.keys(picker.selected));assert.deepEqual(value(),initial,'no-op preserves speeds/group/unknown fields');
+open();picker.controls.querySelector('input').value='12.125';picker.controls.querySelector('input').fire('input');choose('no');
+const before=c.Store.doc().hi;confirm(['minecraft:stone','minecraft:dirt','#example:ore','example:block','example:block']);
+assert.equal(value().rules.length,4);assert.deepEqual(value().rules[1].blocks,['minecraft:dirt']);assert.equal(value().rules[0].extra,'preserve');
+assert(value().rules.every(x=>x.speed===12.125&&x.correct_for_drops===false));assert.equal(value().damage_per_block,2);assert.equal(c.Store.doc().hi,before+1);
+assert(card.el.textContent.includes('12.125'));
+c.Store.undo();card.update();assert.deepEqual(value(),initial);c.Store.redo();card.update();assert.equal(value().rules.length,4);
+open();const keep=value();for(const bad of ['Infinity','NaN','-1','not a number']){picker.controls.querySelector('input').value=bad;assert.equal(picker.validateConfirm(),false);assert.deepEqual(value(),keep);}
+open();picker.controls.querySelector('input').value='0';picker.controls.querySelector('input').fire('input');choose('inherit');confirm(Object.keys(picker.selected));
+assert(value().rules.every(x=>x.speed===0&&!('correct_for_drops' in x)));
+open();confirm([]);assert.deepEqual(value().rules,[],'deselect all removes all rules');c.Store.undo();card.update();
+open();const stale=picker;let changed=value();changed.rules.reverse();c.Ctx.setSmart('tool',changed);assert.equal(stale.validateConfirm(),false);assert.deepEqual(value(),changed);
+console.log('PASS tool selection dialog: preselection, no external bulk controls, no-op fidelity, mixed tags/IDs, one-step add/remove/settings, zero/precision, invalid rejection, undo/redo, stale-source guard');

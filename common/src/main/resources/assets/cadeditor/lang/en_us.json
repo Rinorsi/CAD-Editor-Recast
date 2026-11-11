@@ -1,4 +1,5 @@
 {
+  "key.category.cadeditor.editor": "CAD Editor",
   "key.cadeditor.edit": "Edit target (Shift: held item or self)",
   "key.cadeditor.vault": "Open Vault"
 }

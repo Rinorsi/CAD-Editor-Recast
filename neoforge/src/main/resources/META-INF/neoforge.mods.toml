@@ -11,6 +11,8 @@ authors="云诺羲Rinorsi"
 displayURL="https://github.com/Rinorsi/CAD-Editor-Recast"
 credits="界面使用优易库 Oriel UI（作者：云诺羲Rinorsi）；https://github.com/Rinorsi/Oriel-UI；作者 B站：https://b23.tv/hjUvs0c；爱发电：https://afdian.com/a/Rinorsi"
 description="Visual item, block and entity editor built on Oriel UI."
+[[mixins]]
+config="cadeditor.client.mixins.json"
 [[dependencies.cadeditor]]
 modId="neoforge"
 type="required"
@@ -26,7 +28,7 @@ side="BOTH"
 [[dependencies.cadeditor]]
 modId="oriel"
 type="required"
-versionRange="[0.11.0,0.12.0)"
+versionRange="[0.15.0,0.16.0)"
 ordering="AFTER"
 side="BOTH"
 

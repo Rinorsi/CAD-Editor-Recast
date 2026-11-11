@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {writeFileSync} from 'node:fs';
+import {join} from 'node:path';
+import {client} from './live-rpc.mjs';
+const out=process.argv[2],capture=process.argv[3]||'last-effect-removal-regression.json',c=client(out),uuid='00000001-0000-0002-0000-000300000004';
+const state=await c.js('({base:WE.w.snbt,slot:WE.w.slot,revision:WE.w.revision,mine:WE.text,dirty:weDirty(),received:effectsAudit.received,sent:effectsAudit.sent.filter(function(x){return x.channel==="apply";})})');
+const host=(await c.request('entityFields',{uuid})).entityFields;
+writeFileSync(join(out,capture),JSON.stringify({state,host,diagnosis:capture==='last-effect-removal-regression.json'?'UI removes last active_effects key entirely; rebaseEffectList returns early for missing mine list, so natural duration change still conflicts on entire active_effects key.':'Captured previous fixture draft before explicit discard; source failure retained.'},null,2));
+if(capture==='last-effect-removal-regression.json')assert.equal(state.received.at(-1).code,'target_changed');assert.equal(state.dirty,true);
+await c.request('close');await c.request('openEntity',{entityId:host.entityId});await c.until('typeof WE!=="undefined"&&!!WE.w');await c.until('!!document.getElementById("modal")');
+await c.js('(function(){var e=Array.prototype.slice.call(document.querySelectorAll("#modal .k-btn")).filter(function(e){return e.textContent.trim()==="丢弃此草稿";})[0];e.id="discard-recorded";e.scrollIntoView({block:"center"});window.discardDown=false;e.addEventListener("mousedown",function(){window.discardDown=true;});return true;})()');
+await c.delay(100);await c.request('pagePointer',{selector:'#discard-recorded'});assert.equal(await c.js('window.discardDown'),true);assert.equal(await c.js('weDirty()'),false);console.log('PASS captured original host rejection and explicitly discarded only recorded fixture draft');

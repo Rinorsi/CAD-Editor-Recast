@@ -20,9 +20,12 @@ public final class EditorPrefsTest {
             check(store.read().isEmpty(), "missing file");
             for (String[] item : new String[][] {
                     {"heroView", "\"2d\"", "\"3d\""}, {"windowMax", "true", "false"},
+                    {"windowMode", "\"remember\"", "\"maximized\"", "\"windowed\""},
                     {"uiSound", "true", "false"}, {"stageOpen", "true", "false"}, {"statsOpen", "true", "false"},
                     {"debug", "true", "false"},
-                    {"heroWidth", "100", "320"}, {"winW", "320", "1600"}, {"winH", "200", "1000"}}) {
+                    {"heroWidth", "0", "100", "320"}, {"winW", "0", "320", "1600"},
+                    {"winH", "0", "200", "1000"}, {"uiScale", "0", "1", "2", "3", "4"},
+                    {"codeFontSize", "8", "12", "20"}}) {
                 for (int i = 1; i < item.length; i++) {
                     send(store, item[0], item[i]);
                     check(store.read().get(item[0]).equals(JsonParser.parseString(item[i])), "valid boundary " + item[0]);
@@ -33,22 +36,27 @@ public final class EditorPrefsTest {
             store.accept(JsonParser.parseString("[]"));
             store.accept(JsonParser.parseString("{\"key\":true,\"value\":1}"));
             store.accept(JsonParser.parseString("{\"key\":\"winW\"}"));
-            for (String key : new String[]{"heroView", "windowMax", "uiSound", "stageOpen", "statsOpen", "debug", "heroWidth", "winW", "winH", "unknown"})
-                for (String bad : new String[]{"null", "{}", "[]", "\"true\"", "\"320\"", "\"4d\"", "0", "-1", "320.5", "999999999999999999999999"})
+            for (String key : new String[]{"heroView", "windowMode", "windowMax", "uiSound", "stageOpen", "statsOpen", "debug", "uiScaleAuto", "heroWidth", "winW", "winH", "uiScale", "unknown"})
+                for (String bad : new String[]{"null", "{}", "[]", "\"true\"", "\"320\"", "\"4d\"", "-1", "320.5", "999999999999999999999999"})
                     send(store, key, bad);
-            send(store, "heroView", "true");
+            send(store, "heroView", "true"); send(store, "heroView", "0");
             send(store, "windowMax", "1");
-            for (String key : new String[]{"uiSound", "stageOpen", "statsOpen", "debug"}) send(store, key, "1");
-            for (String key : new String[]{"heroWidth", "winW", "winH"}) send(store, key, "true");
+            for (String key : new String[]{"uiSound", "stageOpen", "statsOpen", "debug", "uiScaleAuto"}) { send(store, key, "1"); send(store, key, "0"); }
+            for (String key : new String[]{"heroWidth", "winW", "winH", "uiScale"}) send(store, key, "true");
             send(store, "heroWidth", "99"); send(store, "heroWidth", "321");
             send(store, "winW", "319"); send(store, "winW", "1601");
             send(store, "winH", "199"); send(store, "winH", "1001");
+            send(store, "uiScale", "-1"); send(store, "uiScale", "5"); send(store, "uiScale", "100");
+            send(store, "uiScale", "2.5"); send(store, "uiScaleAuto", "true");
+            for (String bad : new String[]{"0", "7", "21", "12.5", "\"12\"", "true", "null", "{}", "[]", "1e100"})
+                send(store, "codeFontSize", bad);
             check(store.read().equals(valid), "invalid messages ignored without coercion");
             check(!Files.exists(path), "accept never writes immediately");
             now.set(499_999_999L); store.tick();
             check(!Files.exists(path), "500ms debounce not elapsed");
             now.set(500_000_000L); store.tick();
             check(new EditorPrefs.Store(path, now::get).read().equals(valid), "merged values persisted and read back");
+            check(new EditorPrefs.Store(path, now::get).read().get("codeFontSize").getAsInt() == 20, "code font persists independently of uiScale");
 
             send(store, "heroWidth", "101");
             now.set(800_000_000L); send(store, "heroWidth", "102");
@@ -72,6 +80,18 @@ public final class EditorPrefsTest {
             check(new EditorPrefs.Store(path, now::get).read().get("debug").getAsBoolean(), "restart reads debug true");
             Files.writeString(path, "{\"debug\":\"true\"}");
             check(new EditorPrefs.Store(path, now::get).read().isEmpty(), "restart rejects nonboolean debug");
+            Files.writeString(path, "{\"uiScale\":3,\"winW\":0,\"winH\":0,\"heroWidth\":0}");
+            check(new EditorPrefs.Store(path, now::get).read().equals(JsonParser.parseString(Files.readString(path))), "scale and explicit responsive-default markers survive restart");
+            for (String mode : new String[]{"remember", "maximized", "windowed"}) {
+                store = new EditorPrefs.Store(path, now::get);
+                send(store, "windowMode", "\"" + mode + "\""); store.flush();
+                check(new EditorPrefs.Store(path, now::get).read().get("windowMode").getAsString().equals(mode), "restart reads window mode " + mode);
+            }
+            for (String badSize : new String[]{"0", "7", "21", "12.5", "\"12\"", "true"}) {
+                Files.writeString(path, "{\"codeFontSize\":" + badSize + ",\"uiScale\":3}");
+                var reloaded = new EditorPrefs.Store(path, now::get).read();
+                check(!reloaded.has("codeFontSize") && reloaded.get("uiScale").getAsInt() == 3, "invalid code font does not affect uiScale");
+            }
             for (String badFile : new String[]{"[]", "null", "broken JSON"}) {
                 Files.writeString(path, badFile);
                 check(new EditorPrefs.Store(path, now::get).read().isEmpty(), "invalid disk JSON is harmless");
@@ -89,8 +109,11 @@ public final class EditorPrefsTest {
             check(Files.isRegularFile(blocked.resolve("cadeditor-ui.json")), "failed write retried after delay");
             draftTests(root);
             asyncTests(root);
+            EditorScalePrefsTest.run();
             dev.rinorsi.editor.registry.DraftUtf8CounterTest.main(new String[0]);
+            dev.rinorsi.editor.registry.DraftWriteOrderTest.main(new String[0]);
             EditorUiLogTest.run();
+            EditorPageTraceTest.run();
             System.out.println("PASS EditorPrefs: " + checks + " checks (whitelist, debounce, close flush, atomic read/write, retry)");
         } finally {
             try (var files = Files.walk(root)) {

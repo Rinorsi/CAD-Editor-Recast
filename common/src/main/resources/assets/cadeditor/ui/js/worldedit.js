@@ -5,21 +5,40 @@
 /* ---------- SNBT 打印（保留类型）：把 nbtParse 的节点打印成紧凑 / 缩进文本 ---------- */
 
 var WE = { w: null, text: '', slots: {}, pending: null, tab: '', seq: 0, obj: null, timer: null, err: '' };
-function weActive() { return !!WE.w; }
-function weBase() { try { return nbtPrint(nbtParse(WE.w.snbt), false); } catch (e) { return WE.w.snbt; } }
-function weDirtyText() { if (!WE.w) return false; try { return nbtPrint(nbtParse(WE.text), false) !== weBase(); } catch (e) { return true; } }
+function weActive() { return !!WE.w && !(typeof NestedItem !== 'undefined' && NestedItem); }
+var WorldTextCache = {baseSource:null, base:null, source:null, normalized:null, error:false};
+function weBase() {
+  if (WorldTextCache.baseSource !== WE.w.snbt) {
+    WorldTextCache.baseSource = WE.w.snbt;
+    try { WorldTextCache.base = nbtPrint(nbtParse(WE.w.snbt), false); } catch (e) { WorldTextCache.base = WE.w.snbt; }
+  }
+  return WorldTextCache.base;
+}
+function weDirtyText() {
+  if (!WE.w) return false;
+  if (WorldTextCache.source !== WE.text) {
+    WorldTextCache.source = WE.text; WorldTextCache.error = false;
+    try { WorldTextCache.normalized = nbtPrint(nbtParse(WE.text), false); } catch (e) { WorldTextCache.error = true; }
+  }
+  return WorldTextCache.error || WorldTextCache.normalized !== weBase();
+}
 function weDirty() { return (typeof pxDirtyCount === 'function' && pxDirtyCount() > 0) || weDirtyText() || Object.keys(WE.slots).length > 0 || (typeof weViewsDirty === 'function' && weViewsDirty()) || (typeof evDirty === 'function' && evDirty()); }
 function weName() {
   var w = WE.w;
   if (w.player) return (w.player.name || '玩家') + (w.player.self ? '（你）' : '');
-  if (w.kind === 'block') { var bid = shortId(w.block || w.type); return nameOfItem(bid) || Reg.nameOf2('block', w.block || w.type) || humanId(bid); }
+  if (w.kind === 'block') { var bid = shortId(w.block || w.type); return Reg.nameOf2('block', w.block || w.type) || nameOfItem(bid) || humanId(bid); }
   return entityName(w.type);
 }
 
-function weOpen(world) {
-  WE.w = world; WE.text = nbtPrint(nbtParse(world.snbt), true); WE.slots = {}; WE.err = ''; WE.obj = null; if (typeof weResetEdits === 'function') weResetEdits(); if (typeof weEntReset === 'function') weEntReset(); if (typeof wpReset === 'function') wpReset(); if (typeof pxReset === 'function') pxReset();
+function weOpen(world, saved) {
+  flushPendingCode();
+  if (!saved && WE.w && typeof WorldDrafts !== 'undefined') WorldDrafts.flush();
+  var vaultApply = world.vault_apply; if (vaultApply) delete world.vault_apply;
+  WE.w = world; WE.text = nbtPrint(nbtParse(world.snbt), true); WE.slots = {}; WE.err = ''; WE.obj = null; WE.draftConflict = null; WE.draftUnknown = false; if (typeof weResetEdits === 'function') weResetEdits(); if (typeof weEntReset === 'function') weEntReset(); if (typeof wpReset === 'function') wpReset(); if (typeof pxReset === 'function') pxReset();
   var tabs = weTabs(); if (!tabs.some(function (t) { return t.id === WE.tab; })) WE.tab = tabs[0].id;
   weRender();
+  if (vaultApply && world.player && world.player.self && !world.player.preset) vwSections(vaultApply);
+  if (typeof WorldDrafts !== 'undefined') WorldDrafts.opened(!!saved);
 }
 function weTabs() {
   var w = WE.w, t = [], noBE = w.kind === 'block' && w.has_block_entity === false;
@@ -55,6 +74,7 @@ function weTabs() {
   return t;
 }
 function weRender() {
+  flushPendingCode();
   var w = WE.w; if (!w) return;
   drawWorldTop(); drawWorldScreen(); drawWorldFoot();
 }
@@ -72,19 +92,30 @@ function drawWorldTop() {
   var th = h('div', { class: 'k-ibtn', title: '设置' }, [uiIcon('sliders', 14)]); activate(th, openSettings);
   bar.appendChild(vb); bar.appendChild(th);
   var n = weDirty(), cnt = weChangeCount();
-  bar.appendChild(edApplyBtn({ dirty: n, count: cnt, tip: '写入游戏', tipOff: '还没有修改', onClick: weApply }));
+  var restricted = (typeof wpCommandProblems === 'function' && wpCommandProblems().length > 0) || (typeof weViewProblems === 'function' && weViewProblems().length > 0);
+  var copyInventory = w.player && !w.player.self && !w.player.preset && WE.tab === 'pinv';
+  if (copyInventory) bar.appendChild(edApplyBtn({ label: '套用此玩家的背包', icon: 'download', dirty: !VW_COPY_PENDING && !WE.pending, tip: '把这位玩家的背包套用到自己身上；覆盖前检查备份并确认', tipOff: '正在处理，请等待回执', onClick: vwPlayerBackpackToSelf }));
+  if (!copyInventory || n) bar.appendChild(edApplyBtn({ dirty: n && !restricted, count: cnt, tip: '写入游戏', tipOff: restricted ? '含受限草稿，请先查看下方修改提示' : '还没有修改', onClick: weApply }));
   bar.appendChild(edMaxBtn());
   bar.appendChild(edCloseBtn('关闭', closeEditor));
 }
 /* 改了任何草稿之后：顶栏的「应用修改」计数和撤销、底栏的「有未应用的修改」一起刷新 */
-function weMarkDirty() { drawWorldTop(); drawWorldFoot(); }
+function weMarkDirty() { drawWorldTop(); drawWorldFoot(); if (typeof WorldDrafts !== 'undefined') WorldDrafts.touch(); }
 function drawWorldFoot() {
   var f = clear($('footer')), w = WE.w, s = w.slot || {};
+  var errors = []; if (WE.err) errors.push(WE.err);
+  if (typeof weViewProblems === 'function') errors = errors.concat(weViewProblems());
+  if (typeof wpCommandNote === 'function' && wpCommandNote()) errors.push(wpCommandNote());
+  f.classList.toggle('has-problem', errors.length > 0);
   f.appendChild(edFootChg(weDirty(), '有未应用的修改', '没有未应用的修改'));
   if (typeof pxDirtyCount === 'function' && pxDirtyCount() > 0) { var dis = h('span', { class: 'it link', text: '放弃玩家页的修改', title: '放弃位置 / 重生点 / 配方 / 成就 / 统计里还没应用的修改' }); activate(dis, function () { pxDiscard(); }); f.appendChild(dis); }
-  if (WE.err) f.appendChild(h('span', { class: 'it bad' }, [uiIcon('close', 12), WE.err]));
+  if (WE.draftConflict) f.appendChild(kBtn('查看恢复内容', function () { WorldDrafts.compare(); }, { icon: 'clock' }));
   f.appendChild(h('div', { class: 'grow' }));
   f.appendChild(h('span', { class: 'it', title: '这个目标在世界里的位置', text: weWhere() }));
+  errors.forEach(function (message) {
+    var line = h('span', { class: 'it bad pcl foot-problem', title: '点击查看完整错误' }, [uiIcon('close', 12), h('span', { class: 'message', text: message })]);
+    activate(line, function () { openProblems(line, [{level:'error',cid:null,path:'',msg:message}]); }); f.appendChild(line);
+  });
 }
 function drawWorldScreen() {
   var host = clear($('screen')), w = WE.w;
@@ -106,6 +137,12 @@ function drawWorldScreen() {
 }
 function weTabBody(body) {
   ES_WAIT = false; WE.toolsExtra = null;   // 本页要放进工具行的控件，由标签页的画法填
+  if (typeof wpCommandCaps === 'function' && wpCommandCaps()) {
+    body.appendChild(kHint(wpCommandNote()));
+    if (['pender', 'prec', 'padv', 'pstats', 'poff'].indexOf(WE.tab) >= 0) {
+      body.appendChild(xEmpty(WE.tab === 'pattr' ? '客户端无法完整读取永久属性修饰符和隐藏效果链；此页当前需要服务端 Editor，不能用不完整数据覆盖。' : '此页当前尚未提供命令编辑和权威读取，需要服务端 Editor；未请求服务端数据。')); weTools(); return;
+    }
+  }
   if (typeof weDndReset === 'function') weDndReset();
   if (WE.tab === 'pinv') wpInventoryTab(body);
   else if (WE.tab === 'pender') wpEnderTab(body);
@@ -114,7 +151,7 @@ function weTabBody(body) {
   else if (WE.tab === 'pattr') wpAttrTab(body);
   else if (WE.tab === 'gents') EV_SIMPLE_TAB.generic(body);
   else if (WE.tab === 'gview') WEV.generic(body, 'generic');
-  else if (WE.tab === 'ppos') pxPosition(body);
+  else if (WE.tab === 'ppos') { if (typeof wpCommandCaps === 'function' && wpCommandCaps()) wpCommandPosition(body); else pxPosition(body); }
   else if (WE.tab === 'prec') pxRecipes(body);
   else if (WE.tab === 'padv') pxAdvancements(body);
   else if (WE.tab === 'pstats') pxStats(body);
@@ -149,7 +186,7 @@ function weTools() {
   t.appendChild(all);
 }
 /* 只重画右边的标签页内容（拖动 / 放下物品后用），保留滚动位置，不动左栏和顶栏 */
-function weRedrawBody() { var body = $('edbody'); if (!body) return; var top = body.scrollTop; clear(body); weTabBody(body); body.scrollTop = top; weMarkDirty(); }
+function weRedrawBody() { flushPendingCode(); var body = $('edbody'); if (!body) return; var top = body.scrollTop; clear(body); weTabBody(body); body.scrollTop = top; weMarkDirty(); }
 
 /* ---------- 容器：格子 + 点开改物品 / 数量 / 清空；只发改过的格子，没改的格子宿主保留原样 ---------- */
 function weSlotStack(i) {
@@ -161,7 +198,7 @@ function weContainerTab(body) {
   var c = WE.w.container, n = c.size, cols = n <= 5 ? n : n <= 9 ? 3 : 9;
   if (c.unresolved_loot) { body.appendChild(xEmpty('这个容器里的战利品还没有生成（第一次打开时才会生成）。请先在游戏里打开一次，再回来编辑。')); return; }
   body.appendChild(xSec('chest', '里面的物品', n + ' 格' + (c.double ? '，两个箱子合起来' : '')));
-  body.appendChild(weDndHint());
+
   var ix = []; for (var i = 0; i < n; i++) ix.push(i);
   body.appendChild(kSlotGrid({ tight: true, indices: ix, cols: cols, stackOf: weSlotStack, titleOf: function (i) { return '格子 ' + (i + 1); },
     set: function (i, st) { if (st.empty && weOrigEmpty(i)) delete WE.slots[i]; else WE.slots[i] = st; weMarkDirty(); } }));
@@ -193,18 +230,24 @@ function weEntityTab(body) {
     onApplyVault: function (snbt) {
       var o = vaultEntityObj(snbt), cur = weObj();
       if (o.id && Reg.full(o.id) !== Reg.full(WE.w.type)) { toast('类型不同：这是 ' + entityName(o.id) + '，这里是 ' + weName() + '。放置好的生物不能换类型。', 'warn'); return; }
-      Object.keys(o).forEach(function (k) { if (k !== 'id') cur[k] = o[k]; });
+      Object.keys(o).forEach(function (k) { if (k !== 'id') nbtPut(cur, k, nbtTake(o, k)); });
       WE.obj = cur; wePut(); weRedrawBody();
     } }));
   body.appendChild(esPanel({ type: WE.w.type, get: function () { return WE.obj; }, set: function (o) { WE.obj = o; wePut(); } }));
-  body.appendChild(kHint('位置、UUID 等其余字段在「数据」页用 SNBT 编辑。'));
+  var motion = weObj().Motion;
+  if (Array.isArray(motion) && motion.length === 3) {
+    body.appendChild(xSec('wind', '速度', '每轴 −10～10 格/刻'));
+    body.appendChild(kVector(motion, { min: -10, max: 10, step: 0.1, dec: 3, preservePrecision: true, onChange: function (i, v) {
+      var obj = weObj(), next = nbtClone(obj.Motion); nbtSetTyped(next, i, v, 'd'); nbtPut(obj, 'Motion', next); wePut();
+    } }).el);
+  }
 }
 
 /* ---------- 数据：完整 SNBT（带类型），改完点应用 ---------- */
 function weDataTab(body) {
   if (weTabs().length === 1) body.appendChild(kHint('这个' + (WE.w.kind === 'block' ? '方块' : '实体') + '没有可视化的设置，可以在下面直接改带类型的数据（SNBT）。'));
   body.appendChild(xSec('code', '完整数据', '带类型的 SNBT'));
-  var code = kCode({ value: WE.text, height: 360, validate: function (t) { nbtParse(t); }, onInput: function (t) {
+  var code = kCode({ value: WE.text, height: 360, validate: function (t) { nbtParse(t); }, onText: function (t) { WE.text = t; WE.obj = null; }, onInput: function (t) {
     WE.text = t; WE.err = ''; WE.obj = null; weMarkDirty();
   } });
   body.appendChild(code.el);
@@ -213,7 +256,10 @@ function weDataTab(body) {
 
 /* ---------- 应用 / 撤销 / 回执 ---------- */
 function weApply() {
+  flushPendingCode();
+  if (typeof weViewProblems === 'function' && weViewProblems().length) { drawWorldFoot(); return; }
   if (WE.pending) { toast('上一笔修改还没有回执', 'info', 'we-wait'); return; }
+  if (typeof wpCommandProblems === 'function' && wpCommandProblems().length) { toast(wpCommandNote(), 'warn', 'self-capabilities'); return; }
   if (Date.now() - (WE.lastSendAt || 0) < 650) return;   // 服务器 500ms 限流：连点不重复提交
   var pxv = typeof pxDirtyViews === 'function' ? pxDirtyViews() : [];
   if (pxv.length) {   // 玩家页的位置 / 重生点 / 配方 / 成就 / 统计各走自己的协议，先应用这些
@@ -229,6 +275,7 @@ function weApply() {
   if (cs.length) msg.container = { slots: cs };
   if (typeof weViewsMsg === 'function') weViewsMsg(msg);
   if (typeof evMsg === 'function') evMsg(msg);
+  if (typeof wpCommandMessage === 'function') wpCommandMessage(msg);
   if (!msg.snbt && !msg.container && !msg.entity && !msg.views && !msg.block_state && !msg.block_type) { toast('还没有修改', 'info'); return; }
   weSend('apply', msg, '已提交给游戏，等待回执…');
 }
@@ -236,36 +283,75 @@ function weUndo() {
   if (WE.pending) return;
   weSend('undo', { requestId: 'w-' + Date.now() + '-' + (++WE.seq), slot: clone(WE.w.slot) }, '正在撤销…');
 }
-function weSend(op, msg, note) {
+function weSend(op, msg, note, draftSnapshot) {
   var sent = (typeof oriel !== 'undefined' && oriel.send) ? oriel.send(op, msg) : false;
   if (!sent) { toast('宿主没有接受提交（未连接或限流）；修改已保留', 'error'); return; }
   WE.lastSendAt = Date.now(); WE.pending = msg.requestId; WE.lastMsg = { op: op, msg: msg, note: note }; toast(note, 'info', 'we-pending');
+  if (typeof WorldDrafts !== 'undefined') { WorldDrafts.beforeSend(msg.requestId, draftSnapshot); WE.lastMsg.draftSnapshot = WorldDrafts.flight; }
+  if (typeof wpCommandBegin === 'function') wpCommandBegin(msg.requestId);
   clearTimeout(WE.timer);
-  WE.timer = setTimeout(function () { if (WE.pending === msg.requestId) { WE.pending = null; toast('10 秒没有收到回执，结果未知；请关闭后重新打开核对', 'error'); } }, 12000);
+  WE.timer = setTimeout(function () { if (WE.pending === msg.requestId) { if (typeof wpCommandFinishEdits === 'function') wpCommandFinishEdits(msg.requestId); WE.pending = null; WE.draftUnknown = true; if (typeof WorldDrafts !== 'undefined') WorldDrafts.flush(); toast('10 秒没有收到回执，结果未知；请关闭后重新打开核对', 'error'); } }, 12000);
 }
 var WE_CODE = { target_changed: '你改的内容和游戏在你编辑期间的改动撞在了同一个字段上，没有覆盖。没动过的字段（计时、进度、位置……）不会造成冲突；请重新打开，在最新数据上再改一次。', session_lost: '编辑会话已失效，请关闭后重新打开。', not_allowed: '没有权限。', out_of_reach: '离得太远了，走近一点。', chunk_unloaded: '所在区块没有加载。', protected_area: '这里受保护，不能修改。', invalid_nbt: '数据没有通过游戏的校验。', slot_invalid: '这个格子放不下这个物品。', unsupported_target: '这个目标暂时不能这样编辑。', rate_limited: '操作太快了，稍等一下。', payload_too_large: '数据太大。' };
 function weResult(r) {
   if (!r || r.requestId !== WE.pending) return;
+  if (typeof wpCommandFinishEdits === 'function') wpCommandFinishEdits(r.requestId, r.status === 'saved');
   clearTimeout(WE.timer); WE.pending = null; toastDismiss('we-pending');
   if (r.status !== 'saved') {
+    if (r.code === 'request_timeout' || r.status === 'unknown') WE.draftUnknown = true;
     /* 提交太快被限流：不让用户一直点，按服务器给的等待时间自动重发一次（最多 2 次） */
-    if (r.code === 'rate_limited' && WE.lastMsg && (WE.lastMsg.tries || 0) < 2) {
+    if (!(typeof wpCommandCaps === 'function' && wpCommandCaps()) && r.code === 'rate_limited' && WE.lastMsg && (WE.lastMsg.tries || 0) < 2) {
       var lm = WE.lastMsg, wait = Math.max(300, Math.min(2000, +r.retryAfterMs || 700)); lm.tries = (lm.tries || 0) + 1;
-      setTimeout(function () { if (WE.pending || !weActive()) return; var m2 = clone(lm.msg); m2.requestId = 'w-' + Date.now() + '-' + (++WE.seq); lm.msg = m2; weSend(lm.op, m2, lm.note); WE.lastMsg.tries = lm.tries; }, wait);
+      setTimeout(function () { if (WE.pending || !weActive()) return; var m2 = clone(lm.msg); m2.requestId = 'w-' + Date.now() + '-' + (++WE.seq); lm.msg = m2; weSend(lm.op, m2, lm.note, lm.draftSnapshot); WE.lastMsg.tries = lm.tries; }, wait);
       return;
     }
-    var hint = WE_CODE[r.code]; WE.err = r.reason || r.code || '失败';
+    var hint = r.code === 'invalid_nbt' && r.reason ? r.reason : WE_CODE[r.code]; WE.err = r.reason || r.code || '失败';
+    if (typeof WorldDrafts !== 'undefined') WorldDrafts.flush();
     /* 服务器会说明是哪种“变了”：页面数据太旧 / 目标换了 / 会话失效 / 字段真的撞了（conflicts） */
     if (r.code === 'target_changed' && !(Array.isArray(r.conflicts) && r.conflicts.length)) hint = r.stale === 'identity' ? '目标已经不是你打开时的那个了（被替换、换了类型或换了实体）。请重新打开。' : r.stale === 'client_revision' ? '你的页面数据已经过期（上一次保存的回执还没到，或目标已被别处改过）。请关闭后重新打开再改。' : r.stale === 'session' ? '编辑会话已经失效。请关闭后重新打开。' : hint;
     var cf = Array.isArray(r.conflicts) && r.conflicts.length ? String.fromCharCode(10) + '冲突的字段：' + r.conflicts.slice(0, 6).map(function (c) { return (c.path || []).join('.'); }).join('；') + (r.conflicts.length > 6 ? ' 等 ' + r.conflicts.length + ' 处' : '') : '';
-    toast((hint || r.reason || r.code || '修改没有成功') + cf, 'error', 'we-error'); drawWorldFoot(); return;
+    WE.err = (hint || r.reason || r.code || '修改没有成功') + cf;
+    toast(WE.err, 'error', 'we-error'); drawWorldFoot(); return;
   }
   WE.lastMsg = null; toast('游戏已确认修改', 'ok', 'we-ok');
+  if (typeof WorldDrafts !== 'undefined') WorldDrafts.flush();
 }
 function weSaved(world) {
   if (!world) return;
+  var wasSaving = !!(WE.pending && WE.w && WE.w.slot && world.slot && WE.w.slot.token === world.slot.token);
+  var worldLater = typeof WorldDrafts !== 'undefined' ? WorldDrafts.beforeSaved(world) : null;
+  var keepDraft = null, keepSlots = null, laterEdits = null;
+  if (typeof wpCommandCaps === 'function' && wpCommandCaps() && world.capabilities && world.capabilities.backend === 'vanilla_self' && WE.w.slot && world.slot && WE.w.slot.token === world.slot.token && WE.pending) {
+    keepDraft = clone(WE.ent); keepSlots = clone(WE.pslots);
+    if (typeof wpCommandPendingEdits === 'function') laterEdits = wpCommandPendingEdits();
+    if (typeof wpCommandPatch === 'function') keepDraft.player = wpCommandPatch();
+    var submitted = WE.lastMsg && WE.lastMsg.msg && WE.lastMsg.msg.entity && WE.lastMsg.msg.entity.player || {};
+    Object.keys((keepDraft || {}).player || {}).forEach(function (k) {
+      if ((k === 'experience' || k === 'commandPosition') && submitted[k]) {
+        Object.keys(keepDraft.player[k]).forEach(function (part) { if (weNorm(keepDraft.player[k][part]) === weNorm(submitted[k][part])) delete keepDraft.player[k][part]; });
+        if (!Object.keys(keepDraft.player[k]).length) delete keepDraft.player[k];
+      } else if (k === 'attributes' && submitted[k]) {
+        keepDraft.player[k] = keepDraft.player[k].filter(function (row) { return !submitted[k].some(function (sent) { return weNorm(row) === weNorm(sent); }); });
+        if (!keepDraft.player[k].length) delete keepDraft.player[k];
+      } else if (Object.prototype.hasOwnProperty.call(submitted, k) && weNorm(keepDraft.player[k]) === weNorm(submitted[k])) delete keepDraft.player[k];
+    });
+    if (keepDraft.player && !Object.keys(keepDraft.player).length) delete keepDraft.player;
+  }
   var keepTab = WE.tab;
-  weOpen(world); WE.tab = weTabs().some(function (t) { return t.id === keepTab; }) ? keepTab : weTabs()[0].id; weRender();
+  weOpen(world, wasSaving);
+  if (keepDraft) {
+    var fresh = evVal('player');
+    Object.keys(keepDraft.player || {}).forEach(function (k) {
+      if (k === 'experience' || k === 'commandPosition') { var merged = clone(fresh[k] || {}); Object.keys(keepDraft.player[k]).forEach(function (part) { merged[part] = keepDraft.player[k][part]; }); keepDraft.player[k] = merged; }
+      else if (k === 'attributes') { var rows = clone(fresh.attributes || []); keepDraft.player[k].forEach(function (row) { var at = rows.findIndex(function (old) { return old.id === row.id; }); if (at < 0) rows.push(row); else rows[at] = row; }); keepDraft.player[k] = rows; }
+      if (weNorm(keepDraft.player[k]) === weNorm(fresh[k])) delete keepDraft.player[k];
+    });
+    if (keepDraft.player && !Object.keys(keepDraft.player).length) delete keepDraft.player;
+    WE.ent = keepDraft; WE.pslots = keepSlots;
+    if (typeof wpCommandRestoreEdits === 'function') wpCommandRestoreEdits(laterEdits, true);
+  }
+  if (wasSaving && typeof WorldDrafts !== 'undefined') WorldDrafts.afterSaved(worldLater);
+  WE.tab = weTabs().some(function (t) { return t.id === keepTab; }) ? keepTab : weTabs()[0].id; weRender();
 }
 /* 注册表整体就绪（registry.meta）时，如果当前页是占位的「正在读取」，重画一次让它去发请求 */
 Reg.on(function () { if (weActive() && ES_WAIT && Reg.live() && !$('modal')) { try { weRedrawBody(); } catch (e) {} } });
@@ -284,7 +370,26 @@ function weChangeCount() {
   var n = (weDirtyText() ? 1 : 0) + Object.keys(WE.slots).length + (typeof wpSlotsDirty === 'function' ? wpSlotsDirty() : 0) + (typeof pxDirtyCount === 'function' ? pxDirtyCount() : 0);
   if (typeof weViewsDirty === 'function') n += Object.keys(WE.views).length + Object.keys(WE.bstate).length + (WE.btype && WE.btype !== WE.w.block ? 1 : 0);
   if (typeof evDirty === 'function' && evDirty()) n += Object.keys(WE.ent).length + (WE.offers !== null ? 1 : 0);
+  if (!Object.keys(WE.ent || {}).length && typeof wpCommandIntentDirty === 'function' && wpCommandIntentDirty()) n++;
   return n;
+}
+function weBlockPreviewState() {
+  var props = [];
+  weStateSchema().forEach(function (p) { var value = weStateCur(p); if (value !== undefined) props.push(p.name + '=' + String(value)); });
+  return fullId(WE.btype || WE.w.block || WE.w.type) + (props.length ? '[' + props.join(',') + ']' : '');
+}
+function weDroppedStack() {
+  if (!WE.w || WE.w.kind !== 'entity' || fullId(WE.w.type) !== 'minecraft:item') return null;
+  if (WE.ent && WE.ent.dropped_item && Object.prototype.hasOwnProperty.call(WE.ent.dropped_item, 'Item')) return WE.ent.dropped_item.Item;
+  return weObj().Item || evVal('dropped_item').Item || null;
+}
+function weDroppedComponents(st) {
+  var d = stackUiDoc(st), item = vaultNested({ id: d.id, count: d.count, comps: d.comps, removed: d.removed, component_snbt: nbtComponentTexts(d) });
+  return nbtMerge(item.components || {}, null);
+}
+function weDroppedPreview(st, view) {
+  var el = view === '3d' ? h('model', { class: 'k-ico k-model', item: fullId(st.id), components: weDroppedComponents(st), rotatable: true }) : stackUiIcon(st, 48);
+  el.classList.add('we-dropped-preview'); return el;
 }
 function weHero() {
   var hero = $('hero'); if (!hero || !WE.w) return;
@@ -292,21 +397,30 @@ function weHero() {
   var can3d = typeof ED_MC === 'undefined', view = can3d && UI.heroView === '3d' ? '3d' : '2d';
   var bid = isBlock ? shortId(w.block || w.type) : '';
   var isPlayer = !!w.player, psrc = isPlayer ? (w.player.self ? { player: true } : (w.slot && /^[0-9]+$/.test(String(w.slot.id)) ? { id: w.slot.id } : null)) : null;
-  var vis, entView = !isBlock && view === '3d' && (!isPlayer || !!psrc);
-  if (isBlock) vis = view === '3d' ? h('model', { class: 'k-ico k-model', item: fullId(bid), rotatable: true }) : itemIcon(bid, 48);
+  var dropped = weDroppedStack();
+  var vis, entView = !isBlock && !dropped && view === '3d' && (!isPlayer || !!psrc);
+  if (isBlock) {
+    var itemId = bid === 'player_wall_head' ? 'player_head' : bid;
+    // Blocks such as crops have no corresponding item. Use the real state model,
+    // retaining item rendering for existing special block-entity item renderers.
+    if (w.has_block_entity === false) vis = h('model', { class: 'k-ico k-model we-block-preview', block: weBlockPreviewState(), rotatable: view === '3d' ? true : null });
+    else vis = view === '3d' ? h('model', { class: 'k-ico k-model', item: fullId(itemId), rotatable: true }) : itemIcon(itemId, 48);
+    if (bid === 'player_head' || bid === 'player_wall_head') { vis.classList.add('we-head-preview'); vis.setAttribute('components', weHeadComponents()); }
+  }
   else if (isPlayer) vis = entView ? heroEntity(w.type, {}, oldEnt, psrc) : itemIcon('player_head', 48);
+  else if (dropped) vis = weDroppedPreview(dropped, view);
   else vis = entView ? heroEntity(w.type, weObj(), oldEnt) : entityIcon(w.type, 48);
   var open = UI.stageOpen !== false;
   hero.appendChild(edStageHead({ open: open, view: view, can3d: can3d, showView: !isPlayer || !!psrc, entView: entView, redraw: weHero,
-    segTitle: isBlock ? '方块预览：2D 图标 / 3D 模型（会记住你的选择）' : '2D 显示图标 / 3D 显示生物（会记住你的选择）' }));
+    segTitle: isBlock || dropped ? '2D 图标 / 3D 模型' : '2D 图标 / 3D 生物' }));
   if (open) hero.appendChild(h('div', { class: 'ed-stage' + (entView ? ' ent' : '') }, [h('div', { class: 'plate' }), vis]));
   hero.appendChild(h('div', { class: 'ed-name' + (weName().length > 6 ? ' sm' : ''), text: weName() }));
   hero.appendChild(h('div', { class: 'ed-tags' }, [h('span', { class: 'k-tag', text: isBlock ? '方块' : isPlayer ? '玩家' : '实体' }), h('span', { class: 'k-tag dim', text: shortId(w.type) })]));
   var snd = !isBlock && !isPlayer && typeof mobSoundRow === 'function' ? mobSoundRow(w.type) : null; if (snd) hero.appendChild(snd);
   var vwa = typeof vwActions === 'function' ? vwActions() : null; if (vwa) hero.appendChild(vwa);
   var stats = h('div', { class: 'ed-stats' });
-  function stat(l, v) { stats.appendChild(h('div', { class: 'k-stat' }, [h('span', { class: 'sl', text: l }), h('b', { text: String(v) })])); }
-  if (isBlock) weStateSchema().forEach(function (p) { stat(wePropName(p.name), wePropVal(weStateCur(p))); });
+  function stat(l, v, property) { stats.appendChild(h('div', { class: 'k-stat', 'data-block-prop':property }, [h('span', { class: 'sl', text: l }), h('b', { text: String(v) })])); }
+  if (isBlock) weStateSchema().forEach(function (p) { stat(wePropName(p.name), wePropVal(weStateCur(p)), p.name); });
   else if (isPlayer) { var pv = evVal('player'); if (typeof pv.Health === 'number') stat('生命', fmtNum(pv.Health)); if (pv.food && typeof pv.food.foodLevel === 'number') stat('饥饿', pv.food.foodLevel); if (pv.experience) stat('等级', pv.experience.XpLevel); if (pv.playerGameType) stat('模式', WP_MODE[pv.playerGameType] || pv.playerGameType); }
   else if (w.nbt && typeof w.nbt.Health === 'number') stat('生命', fmtNum(w.nbt.Health));
   var sOpen = UI.statsOpen !== false;
@@ -317,4 +431,28 @@ function weHero() {
   hero.scrollTop = scrollTop;
 }
 /* 编辑实体后 3D 预览跟着变（体型、幼年、装备） */
-function weHeroLive() { var hero = $('hero'), el = hero && hero.querySelector('.k-ent'); if (el && WE.w && !WE.w.player) { try { heroEntity(WE.w.type, weObj(), el); } catch (e) {} } }
+function weHeadComponents(profile) {
+  if (!arguments.length) profile = weVal('skull', 'minecraft:profile');
+  var comps = {}; if (profile !== undefined && profile !== null) nbtPut(comps, 'minecraft:profile', profile);
+  return nbtMerge(comps, null);
+}
+function weHeroLive(profile) {
+  var hero = $('hero'); if (!hero || !WE.w) return;
+  var dropped = hero.querySelector('.we-dropped-preview');
+  if (dropped) {
+    var st = weDroppedStack(); if (!st) return;
+    if (dropped.tagName.toLowerCase() === 'model') { dropped.setAttribute('item', fullId(st.id)); dropped.setAttribute('components', weDroppedComponents(st)); }
+    else dropped.parentNode.replaceChild(weDroppedPreview(st, '2d'), dropped);
+    return;
+  }
+  var block = hero.querySelector('.we-block-preview');
+  if (block) {
+    block.setAttribute('block', weBlockPreviewState());
+    Array.prototype.forEach.call(hero.querySelectorAll('[data-block-prop]'), function (row) { var key = row.getAttribute('data-block-prop'); weStateSchema().some(function (p) { if (p.name !== key) return false; row.querySelector('b').textContent = String(wePropVal(weStateCur(p))); return true; }); });
+    return;
+  }
+  var head = hero.querySelector('.we-head-preview');
+  if (head) { head.setAttribute('components', arguments.length ? weHeadComponents(profile) : weHeadComponents()); return; }
+  var el = hero.querySelector('.k-ent');
+  if (el && !WE.w.player) { try { heroEntity(WE.w.type, weObj(), el); } catch (e) { if (typeof EditorDiag !== 'undefined') EditorDiag.error('preview.entity.update', e); } }
+}

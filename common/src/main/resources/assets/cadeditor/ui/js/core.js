@@ -2,11 +2,11 @@
    纯数据逻辑，不碰 DOM；所有页面脚本共用全局（无模块）。 */
 
 /* ---------- 小工具 ---------- */
-function clone(v) { return v === undefined ? undefined : JSON.parse(JSON.stringify(v)); }
-function deepEq(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
+function clone(v) { return typeof nbtClone === 'function' ? nbtClone(v) : (v === undefined ? undefined : JSON.parse(JSON.stringify(v))); }
+function deepEq(a, b) { return JSON.stringify(a) === JSON.stringify(b) && (!(typeof nbtMerge === 'function' && a !== undefined && b !== undefined) || nbtMerge(a, null) === nbtMerge(b, null)); }
 function shortId(id) { return String(id).replace(/^minecraft:/, ''); }
 function fullId(id) { return id.indexOf(':') < 0 ? 'minecraft:' + id : id; }
-function isObj(v) { return v !== null && typeof v === 'object' && !Array.isArray(v); }
+function isObj(v) { return v !== null && typeof v === 'object' && !Array.isArray(v) && !(typeof nbtMeta === 'function' && nbtMeta(v) && nbtMeta(v).scalar); }
 function roman(n) {
   if (n <= 0 || n > 3999) return String(n);
   var m = [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']], s = '';
@@ -16,11 +16,17 @@ function roman(n) {
 function humanId(id) {
   return shortId(id).split('_').map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join(' ');
 }
-function fmtNum(n) { return Math.abs(n - Math.round(n)) < 1e-9 ? String(Math.round(n)) : String(+n.toFixed(4)); }
+function fmtNum(n) {
+  n = typeof nbtNumberValue === 'function' ? nbtNumberValue(n) : Number(n);
+  if (!isFinite(n)) return isNaN(n) ? 'NaN' : n < 0 ? '-Infinity' : '+Infinity';
+  return Math.abs(n - Math.round(n)) < 1e-9 ? String(Math.round(n)) : String(+n.toFixed(4));
+}
+/* Display only. SNBT, commands and stored numeric tokens keep their original spelling. */
+function numLabel(n) { n = nbtNumberValue(n); return isNaN(n) ? 'NaN' : n === Infinity ? '∞' : n === -Infinity ? '−∞' : fmtNum(n); }
 
 /* ---------- 索引 ---------- */
 /* 物品是否存在：实时注册表优先（含模组），没有宿主时用内置清单 */
-function knownItem(id) { return !!ITEMSET[shortId(id)] || (typeof Reg !== 'undefined' && Reg.hasItem(id)); }
+function knownItem(id) { return typeof Reg !== 'undefined' && !Reg.preview() ? Reg.entryState('item', id) === true : !!ITEMSET[shortId(id)]; }
 var CIDX = {}, ENIDX = {}, ATIDX = {}, EFIDX = {}, ITEMSET = {};
 EDATA.comps.forEach(function (c) { CIDX[c.id] = c; });
 EDATA.enchants.forEach(function (e) { ENIDX[e.id] = e; });
@@ -47,7 +53,7 @@ function registerLiveComps(entries) {
 /* ---------- SNBT 序列化 ---------- */
 function snbtStr(s) {
   var q = (s.indexOf('"') >= 0 && s.indexOf("'") < 0) ? "'" : '"';
-  var out = s.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/\t/g, '\\t');
+  var out = s.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/\t/g, '\\t').replace(/\r/g, '\\r');
   if (q === '"') out = out.replace(/"/g, '\\"'); else out = out.replace(/'/g, "\\'");
   return q + out + q;
 }
@@ -67,7 +73,7 @@ function pickAlt(sc, v) {
       if (!!a[i].tag === wantTag) return a[i];
       continue;
     }
-    if (typeof v === 'number' && (t === 'int' || t === 'num')) return a[i];
+    if ((typeof v === 'number' || typeof nbtMeta === 'function' && nbtMeta(v) && nbtMeta(v).scalar) && (t === 'int' || t === 'num')) return a[i];
     if (typeof v === 'boolean' && t === 'bool') return a[i];
     if (Array.isArray(v) && t === 'arr') return a[i];
     if (isObj(v) && (t === 'obj' || t === 'map' || t === 'dunion' || t === 'unit' || t === 'text')) return a[i];
@@ -75,6 +81,7 @@ function pickAlt(sc, v) {
   return a[0];
 }
 function toSnbt(v, sc, pretty, ind) {
+  if (typeof nbtMeta === 'function' && nbtMeta(v)) return nbtPrint(nbtParse(nbtMerge(v, null)), !!pretty);
   ind = ind || 0;
   var pad = pretty ? new Array(ind + 1).join('  ') : '';
   var pad1 = pretty ? new Array(ind + 2).join('  ') : '';
@@ -170,15 +177,11 @@ function SnbtReader(text) {
   return self;
 }
 function parseSnbt(text) {
-  var r = SnbtReader(text), v = r.value();
-  if (!r.end()) r.fail('末尾有多余内容');
-  return v;
+  return nbtToJson(nbtParse(text));
 }
 /* 用户在输入框里手输的 SNBT：除了解析成 JSON，还记下带类型的节点，提交时按他写的类型输出（见 nbt.js nbtNote） */
 function parseSnbtUser(text) {
-  var v = parseSnbt(text);
-  try { if (typeof nbtNote === 'function') nbtNote(text); } catch (e) {}
-  return v;
+  return parseSnbt(text);
 }
 /* 解析 "[/give @s |/item replace … with ]minecraft:xxx[组件…] [数量]"，返回 {id,count,comps,removed} */
 function parseStackString(text) {
@@ -191,18 +194,25 @@ function parseStackString(text) {
   var idm = /^[a-z0-9_.\-]+(?::[a-z0-9_.\-\/]+)?/.exec(t.substring(idStart));
   if (!idm) r.fail('找不到物品 ID');
   for (var k = 0; k < idm[0].length; k++) r.next();
-  var out = { id: fullId(idm[0]), count: 1, comps: {}, removed: {} };
+  var out = { id: fullId(idm[0]), count: 1, comps: {}, removed: {}, snbt: {} };
+  function componentKey() {
+    var key = r.key();
+    if (r.peek() === ':') { r.next(); key += ':' + r.bare(); }
+    return shortId(key);
+  }
   r.ws();
   if (r.peek() === '[') {
     r.next(); r.ws();
     if (r.peek() === ']') r.next();
     else for (;;) {
       r.ws();
-      if (r.peek() === '!') { r.next(); out.removed[shortId(r.key())] = 1; }
+      if (r.peek() === '!') { r.next(); nbtOwn(out.removed, componentKey(), 1); }
       else {
-        var key = r.key(); r.ws();
+        var key = componentKey(); r.ws();
         if (r.next() !== '=') { r.fail('组件名后面需要 ='); }
-        out.comps[shortId(key)] = r.value();
+        var start = r.pos(); r.value();
+        var raw = t.substring(start, r.pos());
+        nbtOwn(out.snbt, key, raw); nbtOwn(out.comps, key, parseSnbt(raw));
       }
       r.ws();
       var c = r.next();
@@ -218,57 +228,168 @@ function parseStackString(text) {
 }
 
 /* ---------- 文档与状态仓库 ---------- */
-function snapOf(d) { return JSON.stringify({ id: d.id, count: d.count, comps: d.comps, removed: d.removed }); }
-function protoOf(id) { var live = typeof Reg !== 'undefined' ? Reg.defaultsOf(fullId(id)) : null; if (live) return live; var i = EDATA.ipt[shortId(id)]; return i === undefined ? {} : EDATA.pt[i]; }
+function snapOf(d) { return nbtSnapshot(d); }
+// Only Store mutations advance the serial; host replacements also change the references.
+var DOC_CACHE = new WeakMap(), BASE_CACHE = new WeakMap();
+function docCache(d) {
+  var c = DOC_CACHE.get(d);
+  if (!c || c.serial !== d.changeSerial || c.id !== d.id || c.count !== d.count || c.comps !== d.comps || c.removed !== d.removed || c.snbt !== d.snbt) {
+    c = { serial:d.changeSerial, id:d.id, count:d.count, comps:d.comps, removed:d.removed, snbt:d.snbt, texts:Object.create(null), types:Object.create(null), checks:Object.create(null) }; DOC_CACHE.set(d, c);
+  }
+  return c;
+}
+function baseOf(d) {
+  var c = BASE_CACHE.get(d);
+  if (!c || c.text !== d.base) { c = { text:d.base, value:nbtReadSnapshot(d.base) }; BASE_CACHE.set(d, c); }
+  return c.value; // Read-only; callers writing a baseline must clone it first.
+}
+var ComponentReads = null;
+function componentRead(cid) { if (ComponentReads) ComponentReads[cid] = true; }
+function effectiveSource(d, cid) { componentRead(cid); return d.removed[cid] ? null : d.comps[cid] !== undefined ? d.comps : protoOf(d.id); }
+function effectiveGet(d, cid) {
+  var source = effectiveSource(d, cid); if (!source) return undefined;
+  var value = nbtTake(source, cid), meta = nbtMeta(value);
+  // Keep the existing form API: ordinary scalar fields are primitive numbers.
+  return meta && meta.scalar && !nbtSpecialNode(meta.scalar) && Math.abs(meta.scalar.v) <= 9007199254740991 ? meta.scalar.v : value;
+}
+// Read-only projection for labels, validation and previews; never clone unrelated components.
+function effectiveView(d) {
+  componentRead('*');
+  var out = {}, p = protoOf(d.id);
+  Object.keys(p).forEach(function (k) { nbtOwn(out, k, p[k]); });
+  Object.keys(d.comps).forEach(function (k) { nbtOwn(out, k, d.comps[k]); });
+  Object.keys(d.removed).forEach(function (k) { delete out[k]; });
+  return out;
+}
+function protoOf(id) { var live = typeof Reg !== 'undefined' ? Reg.defaultsOf(fullId(id)) : null; if (live) return live; if (typeof Reg !== 'undefined' && !Reg.preview()) return {}; var i = EDATA.ipt[shortId(id)]; return i === undefined ? {} : EDATA.pt[i]; }
 function intentOf(d, cid) {
+  componentRead(cid);
   if (d.removed[cid]) return 'remove';
   if (d.comps[cid] !== undefined) return 'set';
   return 'inherit';
 }
 function effectiveComps(d) {
   var out = clone(protoOf(d.id)) || {}, k;
-  for (k in d.comps) out[k] = d.comps[k];
+  for (k in d.comps) nbtPut(out, k, nbtTake(d.comps, k));
   for (k in d.removed) delete out[k];
   return out;
 }
 function makeDoc(spec) {
   var d = { key: spec.key, id: spec.id, count: spec.count || 1, comps: clone(spec.comps || {}), removed: clone(spec.removed || {}), label: spec.label || '', src: spec.src || null, snbt: clone(spec.snbt || {}) };
+  d.comps = nbtHydrate(d.comps, d.snbt);
   d.base = snapOf(d);
+  if (typeof spec.nativeBaseline === 'string') d.nativeBaseline = spec.nativeBaseline;
   d.hist = [{ label: '打开', snap: d.base, t: 0 }];
   d.hi = 0;
   return d;
 }
-var HIST_CHARS = 3000000;   // 撤销历史快照总字符数上限（约 3 MB 文本）
+// Lossless UTF-16 splices: compare blocks in native string code, not one JS step per byte.
+function textDelta(before, after) {
+  var at = 0, end = 0, limit = Math.min(before.length, after.length), block = 4096, lo, hi, mid;
+  while (at + block <= limit && before.substring(at, at + block) === after.substring(at, at + block)) at += block;
+  lo = 0; hi = Math.min(block, limit - at);
+  while (lo < hi) { mid = Math.ceil((lo + hi) / 2); if (before.substring(at, at + mid) === after.substring(at, at + mid)) lo = mid; else hi = mid - 1; }
+  at += lo;
+  if (at > 0 && at < before.length && /[\uD800-\uDBFF]/.test(before.charAt(at - 1))) at--;
+  limit = Math.min(before.length - at, after.length - at);
+  while (end + block <= limit && before.substring(before.length - end - block, before.length - end) === after.substring(after.length - end - block, after.length - end)) end += block;
+  lo = 0; hi = Math.min(block, limit - end);
+  while (lo < hi) { mid = Math.ceil((lo + hi) / 2); if (before.substring(before.length - end - mid, before.length - end) === after.substring(after.length - end - mid, after.length - end)) lo = mid; else hi = mid - 1; }
+  end += lo;
+  if (end > 0 && /[\uDC00-\uDFFF]/.test(before.charAt(before.length - end))) end--;
+  return { at:at, remove:before.length - at - end, insert:after.substring(at, after.length - end) };
+}
+function textPatch(before, delta) { return before.substring(0, delta.at) + delta.insert + before.substring(delta.at + delta.remove); }
+// A timestamp and a component may change far apart. Keep unchanged islands between them.
+function textDeltas(before, after) {
+  var out = [];
+  function split(a, b, offset, depth) {
+    if (a === b) return; var delta = textDelta(a, b);
+    if (depth < 5 && delta.remove > 2048 && delta.insert.length > 2048) {
+      var start = delta.at + Math.floor(delta.remove / 2), size = 512;
+      if (/[\uDC00-\uDFFF]/.test(a.charAt(start))) start++;
+      if (/[\uD800-\uDBFF]/.test(a.charAt(start + size - 1))) size--;
+      var anchor = a.substring(start, start + size), match = b.indexOf(anchor, delta.at);
+      if (anchor.length === size && match >= 0 && match + size <= delta.at + delta.insert.length) {
+        split(a.substring(0, start), b.substring(0, match), offset, depth + 1);
+        split(a.substring(start + size), b.substring(match + size), offset + start + size, depth + 1); return;
+      }
+    }
+    delta.at += offset; out.push(delta);
+  }
+  split(before, after, 0, 0); return out; // Ascending offsets into before.
+}
+function textPatchAll(before, deltas) { for (var i = deltas.length - 1; i >= 0; i--) before = textPatch(before, deltas[i]); return before; }
+var HIST_CACHE = new WeakMap();
+function historySnapshot(d, index) {
+  var cache = HIST_CACHE.get(d), pos = -1, text;
+  if (cache && d.hist[cache.index] === cache.entry) { pos = cache.index; text = cache.text; }
+  if (pos > index) {
+    while (pos > index && d.hist[pos].changes) {
+      d.hist[pos].changes.forEach(function (delta) { text = text.substring(0, delta.at) + delta.deleted + text.substring(delta.at + delta.insert.length); }); pos--;
+    }
+  }
+  if (pos < 0 || pos > index) {
+    pos = index; while (pos > 0 && typeof d.hist[pos].snap !== 'string') pos--;
+    text = d.hist[pos].snap;
+    if (typeof text !== 'string') throw new Error('撤销历史缺少起始快照');
+  }
+  while (pos < index) { var entry = d.hist[++pos]; text = typeof entry.snap === 'string' ? entry.snap : textPatchAll(text, entry.changes); }
+  HIST_CACHE.set(d, { index:index, entry:d.hist[index], text:text }); return text;
+}
+function historyEntry(before, after, label, key, t) {
+  var changes = textDeltas(before, after), size = 0;
+  changes.forEach(function (delta) { delta.deleted = before.substring(delta.at, delta.at + delta.remove); size += delta.insert.length + delta.deleted.length + 96; });
+  return size < after.length ? { label:label, key:key, t:t, changes:changes } : { label:label, key:key, t:t, snap:after };
+}
+function historySize(entry) { return entry.snap !== undefined ? entry.snap.length : entry.changes.reduce(function (sum, delta) { return sum + delta.insert.length + delta.deleted.length + 96; }, 0); }
+var HIST_CHARS = 3000000;   // Anchor plus differences; always retain at least one undo step.
 var Store = (function () {
   var docs = [], cur = 0, subs = [], clock = 0;
   function now() { return ++clock * 400; } // 虚拟时钟：脚本环境里 performance.now 在一次入口内不前进
   function emit(ev) { for (var i = 0; i < subs.length; i++) subs[i](ev); }
   function doc() { return docs[cur]; }
-  function histPush(d, label, key) {
+  function histPush(d, label, key, cids) {
+    var previousCache = DOC_CACHE.get(d);
+    d.changeSerial = (d.changeSerial || 0) + 1;
+    var cache = docCache(d);
+    // Same containers plus explicit changed IDs: untouched components keep text/type/check caches.
+    // Replaced host snapshots and unknown batch edits always take the full invalidation path.
+    if (cids && previousCache && previousCache.comps === d.comps && previousCache.removed === d.removed && previousCache.snbt === d.snbt && previousCache.id === d.id) {
+      ['texts', 'types', 'checks'].forEach(function (field) { Object.keys(previousCache[field]).forEach(function (cid) { if (cids.indexOf(cid) < 0) cache[field][cid] = previousCache[field][cid]; }); });
+    }
     var s = snapOf(d), top = d.hist[d.hi], t = now();
-    if (top && top.snap === s) return false;
+    var previous = top ? historySnapshot(d, d.hi) : s;
+    if (top && previous === s) return false;
     if (key && top && top.key === key && d.hi === d.hist.length - 1 && t - top.t < 2400 && d.hi > 0) {
-      top.snap = s; top.t = t; top.label = label;
+      d.hist[d.hi] = historyEntry(historySnapshot(d, d.hi - 1), s, label, key, t);
     } else {
       d.hist.length = d.hi + 1;
-      d.hist.push({ label: label, snap: s, t: t, key: key || null });
+      d.hist.push(historyEntry(previous, s, label, key || null, t));
       d.hi = d.hist.length - 1;
-      if (d.hist.length > 200) { d.hist.shift(); d.hi--; }
-      /* 每一步是整个物品的快照：物品很大（装满东西的潜影盒、带大量 NBT）时，200 步会占很多内存，所以再按体积限制，至少留 20 步 */
-      var total = 0, i;
-      for (i = 0; i < d.hist.length; i++) total += d.hist[i].snap.length;
-      while (total > HIST_CHARS && d.hist.length > 20 && d.hi > 0) { total -= d.hist[0].snap.length; d.hist.shift(); d.hi--; }
     }
+    HIST_CACHE.set(d, {index:d.hi, entry:d.hist[d.hi], text:s});
+    var total = 0, i; for (i = 0; i < d.hist.length; i++) total += historySize(d.hist[i]);
+    while ((d.hist.length > 200 || total > HIST_CHARS) && d.hist.length > 2 && d.hi > 0) {
+      var second = d.hist[1], anchor = typeof second.snap === 'string' ? second.snap : textPatchAll(d.hist[0].snap, second.changes);
+      total -= historySize(d.hist[0]) + historySize(second);
+      d.hist[1] = {label:second.label, key:second.key, t:second.t, snap:anchor}; total += anchor.length;
+      d.hist.shift(); d.hi--; HIST_CACHE.delete(d);
+    }
+    HIST_CACHE.set(d, {index:d.hi, entry:d.hist[d.hi], text:s});
     return true;
   }
-  function push(label, key, structural, cid) {
-    if (histPush(doc(), label, key)) emit({ type: 'edit', structural: !!structural, cid: cid || null });
+  function push(label, key, structural, cid, cids) {
+    cids = cids || (cid ? [cid] : null);
+    if (histPush(doc(), label, key, cids)) emit({ type: 'edit', structural: !!structural, cid: cid || null, cids:cids });
   }
   function restore(i) {
+    if (typeof flushPendingCode === 'function') flushPendingCode();
     var d = doc();
     if (i < 0 || i >= d.hist.length) return;
-    var o = JSON.parse(d.hist[i].snap);
+    var o = nbtReadSnapshot(historySnapshot(d, i));
     d.id = o.id; d.count = o.count; d.comps = o.comps; d.removed = o.removed; d.hi = i;
+    d.changeSerial = (d.changeSerial || 0) + 1;
     emit({ type: 'restore', structural: true });
   }
   return {
@@ -276,9 +397,10 @@ var Store = (function () {
     doc: doc,
     index: function () { return cur; },
     subscribe: function (f) { subs.push(f); },
-    open: function (spec, makeCurrent) { docs.push(makeDoc(spec)); if (makeCurrent) cur = docs.length - 1; emit({ type: 'docs', structural: true }); },
-    select: function (i) { if (i >= 0 && i < docs.length) { cur = i; emit({ type: 'docs', structural: true }); } },
+    open: function (spec, makeCurrent) { if (typeof flushPendingCode === 'function') flushPendingCode(); docs.push(makeDoc(spec)); if (makeCurrent) cur = docs.length - 1; emit({ type: 'docs', structural: true }); },
+    select: function (i) { if (typeof flushPendingCode === 'function') flushPendingCode(); if (i >= 0 && i < docs.length) { cur = i; emit({ type: 'docs', structural: true }); } },
     close: function (i) {
+      if (typeof flushPendingCode === 'function') flushPendingCode();
       if (docs.length < 2) return;
       docs.splice(i, 1);
       if (cur >= docs.length) cur = docs.length - 1; else if (i < cur) cur--;
@@ -286,7 +408,7 @@ var Store = (function () {
     },
     set: function (cid, value, o) {
       o = o || {};
-      var d = doc(); d.comps[cid] = value; delete d.removed[cid];
+      var d = doc(); nbtPut(d.comps, cid, value); delete d.removed[cid];
       push(o.label || ('修改 ' + (CIDX[cid] ? CIDX[cid].name : cid)), o.key, o.structural, cid);
     },
     inherit: function (cid, o) {
@@ -299,7 +421,12 @@ var Store = (function () {
       var d = doc(); delete d.comps[cid]; d.removed[cid] = 1;
       push(o.label || ('移除 ' + (CIDX[cid] ? CIDX[cid].name : cid)), o.key || null, o.structural === undefined ? true : o.structural, cid);
     },
-    setCount: function (n) { var d = doc(); d.count = n; push('数量 ' + n, 'count', false, null); },
+    setCount: function (n) { var d = doc(); d.count = n; push('数量 ' + n, 'count', false, '#count'); },
+    setLinked: function (values, label) {
+      var d = doc(), comps = clone(d.comps), removed = clone(d.removed);
+      Object.keys(values).forEach(function (cid) { nbtPut(comps, cid, values[cid]); delete removed[cid]; });
+      d.comps = comps; d.removed = removed; push(label || '联动修改', null, false, null, Object.keys(values));
+    },
     setItem: function (id) { var d = doc(); d.id = id; push('更换物品 ' + shortId(id), null, true, null); },
     replace: function (comps, removed, label) {
       var d = doc(); d.comps = clone(comps); d.removed = clone(removed || {});
@@ -311,56 +438,111 @@ var Store = (function () {
       docs.forEach(function (d, i) {
         if (d === src || (to !== 'all' && to !== i)) return;
         if (src.removed[cid]) { delete d.comps[cid]; d.removed[cid] = 1; }
-        else if (src.comps[cid] !== undefined) { d.comps[cid] = clone(src.comps[cid]); delete d.removed[cid]; }
+        else if (src.comps[cid] !== undefined) { nbtPut(d.comps, cid, parseSnbt(nbtComponentText(src, cid))); delete d.removed[cid]; }
         else { delete d.comps[cid]; delete d.removed[cid]; }
-        if (histPush(d, label || ('复制组件 ' + cid), null)) n++;
+        if (histPush(d, label || ('复制组件 ' + cid), null, [cid])) n++;
       });
       emit({ type: 'docs', structural: true });
       return n;
     },
-    undo: function () { var d = doc(); if (d.hi > 0) restore(d.hi - 1); },
-    redo: function () { var d = doc(); if (d.hi < d.hist.length - 1) restore(d.hi + 1); },
+    undo: function () { if (typeof flushPendingCode === 'function') flushPendingCode(); var d = doc(); if (d.hi > 0) restore(d.hi - 1); },
+    redo: function () { if (typeof flushPendingCode === 'function') flushPendingCode(); var d = doc(); if (d.hi < d.hist.length - 1) restore(d.hi + 1); },
     jump: restore,
     canUndo: function () { return doc().hi > 0; },
     canRedo: function () { var d = doc(); return d.hi < d.hist.length - 1; },
     markSaved: function () { var d = doc(); d.base = snapOf(d); emit({ type: 'saved', structural: false }); },
-    revertAll: function () { var d = doc(), o = JSON.parse(d.base); d.id = o.id; d.count = o.count; d.comps = o.comps; d.removed = o.removed; push('还原全部修改', null, true, null); },
+    revertAll: function () { var d = doc(), o = nbtReadSnapshot(d.base); d.id = o.id; d.count = o.count; d.comps = o.comps; d.removed = o.removed; push('还原全部修改', null, true, null); },
   };
 })();
+
+/* 联动只使用当前游戏提供的属性范围和实际修饰符，不删除装备/效果修饰符。 */
+function linkedAttributeValue(def, row, base) {
+  if (!def || !isFinite(def.min) || !isFinite(def.max)) throw new Error('尚未取得游戏属性范围，不能自动提高上限');
+  var mods = (row.modifiers || []).concat(def.transientModifiers || []), seen = {}, add = [], scale = [], total = [];
+  mods.forEach(function (m) {
+    var amount = nbtNumberValue(m.amount);
+    if (!isFinite(amount) || seen[m.id]) throw new Error('属性修饰符无法可靠计算，请先在属性页检查');
+    seen[m.id] = true;
+    if (m.operation === 'add_value') add.push(amount);
+    else if (m.operation === 'add_multiplied_base') scale.push(amount);
+    else if (m.operation === 'add_multiplied_total') total.push(amount);
+    else throw new Error('不认识此属性修饰符的运算方式，未修改上限');
+  });
+  var b = base; add.forEach(function (v) { b += v; });
+  var value = b; scale.forEach(function (v) { value += b * v; }); total.forEach(function (v) { value *= 1 + v; });
+  if (!isFinite(value)) throw new Error('属性运算结果不是有限数，未修改上限');
+  return Math.max(def.min, Math.min(def.max, value));
+}
+function linkedAttributePlan(def, row, requested) {
+  if (!row || !isFinite(row.base) || !isFinite(requested) || requested < 0) throw new Error('属性或当前值无效，未修改上限');
+  var before = linkedAttributeValue(def, row, row.base), target = Math.max(requested, Math.fround(requested));
+  if (target <= before) return { base: row.base, before: before, effective: before, changed: false };
+  if (row.base > def.max || linkedAttributeValue(def, row, def.max) < target) throw new Error('保留现有修饰符时无法达到此值；游戏属性上限为 ' + fmtNum(def.max));
+  var lo = Math.max(def.min, row.base), hi = def.max;
+  for (var i = 0; i < 80; i++) { var mid = lo + (hi - lo) / 2; if (mid === lo || mid === hi) break; if (linkedAttributeValue(def, row, mid) >= target) hi = mid; else lo = mid; }
+  return { base: hi, before: before, effective: linkedAttributeValue(def, row, hi), changed: true };
+}
 
 /* ---------- 差异 ---------- */
 function stateOf(o, cid) {
   if (o.removed[cid]) return { k: 'remove' };
-  if (o.comps[cid] !== undefined) return { k: 'set', v: o.comps[cid] };
+  if (o.comps[cid] !== undefined) return { k: 'set', v: nbtTake(o.comps, cid) };
   return { k: 'inherit' };
 }
 function diffDoc(d) {
-  var b = JSON.parse(d.base), out = [], seen = {}, ids = [];
+  var cache = docCache(d);
+  if (cache.diff && cache.diffBase === d.base) return cache.diff;
+  var b = baseOf(d), out = [], seen = {}, ids = [];
   [b.comps, b.removed, d.comps, d.removed].forEach(function (m) { for (var k in m) if (!seen[k]) { seen[k] = 1; ids.push(k); } });
   ids.sort();
   ids.forEach(function (cid) {
+    var bk = intentOf(b, cid), dk = intentOf(d, cid);
+    if (bk === dk && (bk !== 'set' || nbtComponentText(b, cid) === nbtComponentText(d, cid))) return;
     var x = stateOf(b, cid), y = stateOf(d, cid);
     if (x.k === y.k && deepEq(x.v, y.v)) return;
     out.push({ cid: cid, before: x, after: y });
   });
   if (b.id !== d.id) out.unshift({ cid: '#item', before: { k: 'set', v: b.id }, after: { k: 'set', v: d.id } });
   if (b.count !== d.count) out.unshift({ cid: '#count', before: { k: 'set', v: b.count }, after: { k: 'set', v: d.count } });
-  return out;
+  cache.diffBase = d.base; cache.diff = out; return out;
 }
 function revertComp(d, cid) {
-  var b = JSON.parse(d.base);
+  var b = nbtReadSnapshot(d.base);
   delete d.comps[cid]; delete d.removed[cid];
   if (b.removed[cid]) d.removed[cid] = 1;
-  else if (b.comps[cid] !== undefined) d.comps[cid] = clone(b.comps[cid]);
+  else if (b.comps[cid] !== undefined) nbtPut(d.comps, cid, nbtTake(b.comps, cid));
 }
 
 /* ---------- 命令 ---------- */
+// Inspect the final typed data, not text occurrences inside names, strings or keys.
+// Vanilla SNBT cannot express these numbers; the editor's typed parser can.
+function commandNumberIssue(d) {
+  function find(n, path) {
+    if (n.k === 'num' && !isFinite(nbtSpecialValue(n))) return { path:path, value:nbtSpecialValue(n) };
+    var hit, i;
+    if (n.k === 'obj') {
+      for (i = 0; i < n.keys.length; i++) { hit = find(n.map[n.keys[i]], path ? path + '.' + n.keys[i] : n.keys[i]); if (hit) return hit; }
+    } else if (n.k === 'list' || n.k === 'arr') {
+      for (i = 0; i < n.items.length; i++) { hit = find(n.items[i], path + '[' + i + ']'); if (hit) return hit; }
+    }
+    return null;
+  }
+  var ids = Object.keys(d.comps).sort();
+  for (var i = 0; i < ids.length; i++) {
+    var cid = ids[i], text = nbtComponentText(d, cid);
+    // Avoid another full parse of ordinary/large components on the command page.
+    if (text.indexOf('NaN') < 0 && text.indexOf('Infinity') < 0) continue;
+    var hit = find(nbtParse(text), '');
+    if (hit) return { level:'warn', cid:cid, path:hit.path, msg:'原版指令不支持 ∞ / NaN，请通过编辑器修改。' };
+  }
+  return null;
+}
 function stackString(d) {
   var parts = [], k;
   var ids = Object.keys(d.comps).sort();
   ids.forEach(function (cid) {
     var c = CIDX[cid];
-    parts.push(cid + '=' + toSnbt(d.comps[cid], c ? c.schema : null, false));
+    parts.push(cid + '=' + nbtComponentText(d, cid));
   });
   Object.keys(d.removed).sort().forEach(function (cid) { parts.push('!' + cid); });
   return fullId(d.id) + (parts.length ? '[' + parts.join(',') + ']' : '');
@@ -406,12 +588,18 @@ function liveRangeTokens(path) {
 function applyLiveRanges(entries) {
   (entries || []).forEach(function (e) {
     if (!e || !e.id || !Array.isArray(e.ranges_for_ui)) return;
-    var c = CIDX[shortId(e.id)]; if (!c || c.live || !c.schema) return;
+    var c = CIDX[shortId(e.id)]; if (!c || !c.schema) return;
     e.ranges_for_ui.forEach(function (r) {
       var nodes = []; liveRangeNodes(c.schema, liveRangeTokens(r.path), 0, nodes);
       nodes.forEach(function (n) {
         if (typeof r.min === 'number') { n.min = r.min; if (r.min_exclusive) n.minEx = true; else delete n.minEx; }
+        else { delete n.min; delete n.minEx; }
         if (typeof r.max === 'number') { if (r.max < 3e38) n.max = r.max; else delete n.max; }
+        else delete n.max;
+        n.nbtType = r.number_type === 'float' ? 'f' : r.number_type === 'double' ? 'd' : null;
+        n.allowNaN = r.allow_nan === true;
+        n.allowPositiveInfinity = r.allow_positive_infinity === true;
+        n.allowNegativeInfinity = r.allow_negative_infinity === true;
         n.live = true;
       });
     });
@@ -426,21 +614,28 @@ function validateValue(sc, v, path, out, cid) {
   if (!sc) return;
   switch (sc.t) {
     case 'int': case 'num':
-      if (typeof v !== 'number' || isNaN(v)) { add('error', '需要数字'); break; }
-      if (sc.t === 'int' && !Number.isInteger(v)) add('error', '需要整数');
-      if (sc.min !== undefined && v < sc.min) add('error', '不能小于 ' + sc.min);
-      else if (sc.minEx && v <= sc.min) add('error', '必须大于 ' + sc.min);
-      if (sc.max !== undefined && v > sc.max) add('error', '不能大于 ' + sc.max);
+      if (typeof v !== 'number' && !(typeof nbtMeta === 'function' && nbtMeta(v) && nbtMeta(v).scalar)) { add('error', '需要数字'); break; }
+      var numeric = typeof v === 'number' ? v : typeof nbtMeta === 'function' && nbtMeta(v) && nbtMeta(v).scalar ? nbtNumberValue(v) : NaN;
+      if (!isFinite(numeric) && sc.t === 'num' && !sc.live && typeof Reg !== 'undefined' && !Reg.preview()) {
+        var status = Reg.numericStatus(cid);
+        add(status.error ? 'warn' : 'info', status.error ? '字段校验信息读取失败：' + status.error : status.pending ? '正在读取游戏字段校验信息，暂不判断此特殊值是否受支持' : '游戏未提供此字段的数值结构；保留原值，应用时由游戏校验');
+        break;
+      }
+      if (isNaN(numeric) && !(sc.t === 'num' && sc.allowNaN)) { add('error', '需要数字'); break; }
+      if (numeric === Infinity && !sc.allowPositiveInfinity) { add('error', '这个字段不接受 +Infinity'); break; }
+      if (numeric === -Infinity && !sc.allowNegativeInfinity) { add('error', '这个字段不接受 -Infinity'); break; }
+      if (sc.t === 'int' && !Number.isInteger(numeric)) add('error', '需要整数');
+      if (!isFinite(numeric)) break; /* Actual Codec probes decide special values; finite UI bounds do not override them. */
+      if (sc.min !== undefined && numeric < sc.min) add('error', '不能小于 ' + sc.min);
+      else if (sc.minEx && numeric <= sc.min) add('error', '必须大于 ' + sc.min);
+      if (sc.max !== undefined && numeric > sc.max) add('error', '不能大于 ' + sc.max);
       break;
     case 'str':
       if (typeof v !== 'string') { add('error', '需要文本'); break; }
       if (sc.en && sc.en.indexOf(v) < 0 && !(typeof liveEnumHas === 'function' && liveEnumHas(cid, path, v))) add('error', '不是有效选项：' + v);
       /* 注册表引用不能是空的：空串到游戏里会变成“minecraft:”，整件物品被拒绝 */
       if (sc.reg && (v === '' || v === 'minecraft:' || v === '#')) { add('error', '还没有选择（这一项不能留空）'); break; }
-      if (sc.reg === 'item' && !sc.tag && !knownItem(v)) add('warn', '未知物品：' + v);
-      if (sc.reg === 'enchantment' && !ENIDX[shortId(v)]) add('warn', '未知附魔：' + v);
-      if (sc.reg === 'attribute' && !ATIDX[shortId(v)]) add('warn', '未知属性：' + v);
-      if (sc.reg === 'mob_effect' && !EFIDX[shortId(v)]) add('warn', '未知状态效果：' + v);
+      if (sc.reg && !sc.tag && typeof Reg !== 'undefined' && !Reg.preview() && Reg.entryState(sc.reg, v) === false) add('warn', '实时注册表没有此 ID：' + v + '（保留手动输入，由游戏校验）');
       break;
     case 'obj':
       if (!isObj(v)) { add('error', '需要对象'); break; }
@@ -461,35 +656,42 @@ function validateValue(sc, v, path, out, cid) {
       break;
     case 'dunion':
       if (!isObj(v)) { add('error', '需要对象'); break; }
-      if (!sc.br[v[sc.disc]]) add('error', '未知类型 ' + v[sc.disc]); else validateValue(sc.br[v[sc.disc]], v, path, out, cid);
+      if (!sc.br[v[sc.disc]]) {
+        if (typeof Reg === 'undefined' || Reg.preview()) add('error', '未知类型 ' + v[sc.disc]);
+        else if (!Reg.variantOptions(sc).some(function (e) { return e.v === v[sc.disc]; })) add('warn', '类型元信息尚未确认：' + v[sc.disc] + '（保留手动输入，由游戏校验）');
+      } else validateValue(sc.br[v[sc.disc]], v, path, out, cid);
       break;
     default: break;
   }
 }
 function validateDoc(d) {
-  var out = [], eff = effectiveComps(d);
-  if (!knownItem(d.id)) out.push({ level: /^minecraft:|^[^:]+$/.test(d.id) ? 'error' : 'warn', cid: null, path: '', msg: '游戏当前注册表里没有物品 ' + d.id + (/^minecraft:|^[^:]+$/.test(d.id) ? '' : '（可能是模组还没加载，仍按原 ID 写入）') });
+  var out = [], eff = effectiveView(d);
+  if (!knownItem(d.id) && (typeof Reg === 'undefined' || Reg.preview() || Reg.entryState('item', d.id) === false)) out.push({ level: 'warn', cid: null, path: '', msg: '游戏当前注册表里没有物品 ' + d.id + '（保留原 ID，由游戏校验）' });
   Object.keys(d.comps).forEach(function (cid) {
     var c = CIDX[cid];
-    if (!c) { out.push({ level: 'warn', cid: cid, path: '', msg: '26.1.2 不存在的组件：' + cid }); return; }
-    validateValue(c.schema, d.comps[cid], '', out, cid);
+    if (!c) { out.push({ level: 'warn', cid: cid, path: '', msg: '编辑器暂无此组件的表单：' + cid + '（保留原值，由游戏校验）' }); return; }
+    if (nbtComponentText(d, cid).length > 32768) { out.push({ level:'info', cid:cid, path:'', msg:'内容较大，应用时由游戏校验' }); return; }
+    var checks = docCache(d).checks, saved = checks[cid];
+    if (!saved || saved.schema !== c.schema) { var problems = []; validateValue(c.schema, d.comps[cid], '', problems, cid); saved = checks[cid] = {schema:c.schema, problems:problems}; }
+    saved.problems.forEach(function (problem) { out.push(problem); });
   });
   if (typeof Valid !== 'undefined') Valid.problems(d, out);   // 游戏对自由 NBT 组件的校验结果
+  if (typeof stackPreviewProblems === 'function') stackPreviewProblems(d, out);
   /* 跨组件规则 */
   var maxd = eff.max_damage, dmg = eff.damage;
   if (typeof dmg === 'number' && typeof maxd === 'number' && dmg >= maxd) out.push({ level: 'warn', cid: 'damage', path: '', msg: '已损耗耐久不小于最大耐久，物品会立刻损坏' });
-  var maxs = typeof eff.max_stack_size === 'number' ? eff.max_stack_size : 64;
-  if (d.count > maxs) out.push({ level: 'error', cid: '#count', path: '', msg: '数量 ' + d.count + ' 超过最大堆叠 ' + maxs });
+  var maxs = typeof eff.max_stack_size === 'number' ? eff.max_stack_size : null;
+  if (maxs !== null && d.count > maxs) out.push({ level: 'error', cid: '#count', path: '', msg: '数量 ' + d.count + ' 超过最大堆叠 ' + maxs });
   if (typeof maxd === 'number' && maxd > 0 && maxs > 1) out.push({ level: 'warn', cid: 'max_damage', path: '', msg: '可损坏物品的最大堆叠应为 1' });
   ['enchantments', 'stored_enchantments'].forEach(function (cid) {
     var m = eff[cid]; if (!isObj(m)) return;
-    var ids = Object.keys(m).map(shortId);
+    var ids = Object.keys(m).map(Reg.full);
     ids.forEach(function (id) {
-      var e = ENIDX[id]; if (!e) return;
-      var lv = m[Object.keys(m).filter(function (k) { return shortId(k) === id; })[0]];
-      if (lv > e.max) out.push({ level: 'info', cid: cid, path: id, msg: e.name + ' ' + lv + ' 级超过自然上限 ' + e.max + '（命令可写，但不是自然获得）' });
-      e.excl.forEach(function (x) { if (ids.indexOf(x) > ids.indexOf(id)) out.push({ level: 'warn', cid: cid, path: id, msg: e.name + ' 与 ' + (ENIDX[x] ? ENIDX[x].name : x) + ' 互斥（原版附魔台/铁砧不会同时出现）' }); });
-      if (cid === 'enchantments' && e.items.length && e.items.indexOf(shortId(d.id)) < 0) out.push({ level: 'info', cid: cid, path: id, msg: e.name + ' 通常不适用于 ' + shortId(d.id) + '（仍可写入，效果取决于附魔本身）' });
+      var e = Reg.enchant(id); if (!e) return;
+      var lv = m[Object.keys(m).filter(function (k) { return Reg.full(k) === id; })[0]];
+      if (e.max !== null && lv > e.max) out.push({ level: 'info', cid: cid, path: id, msg: e.name + ' ' + lv + ' 级超过自然上限 ' + e.max + '（命令可写，但不是自然获得）' });
+      ids.forEach(function (x) { if (ids.indexOf(x) > ids.indexOf(id) && Reg.enchantConflict(e, x) === true) out.push({ level: 'warn', cid: cid, path: id, msg: e.name + ' 与 ' + (Reg.nameOf('enchantments', x) || x) + ' 互斥（原版附魔台/铁砧不会同时出现）' }); });
+      if (cid === 'enchantments' && Reg.enchantFits(e, d.id) === false) out.push({ level: 'info', cid: cid, path: id, msg: e.name + ' 通常不适用于 ' + shortId(d.id) + '（仍可写入，效果取决于附魔本身）' });
     });
   });
   return out;

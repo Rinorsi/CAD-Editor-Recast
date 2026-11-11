@@ -1,0 +1,1 @@
+{"schemaVersion":1,"id":"client_only_lan_instrumentation","version":"1.0.0","environment":"client","entrypoints":{"client":["dev.rinorsi.editor.clientonly.LanProbe"]},"mixins":["lan-window.mixins.json","lan-mouse.mixins.json"],"depends":{"fabricloader":">=0.19.5","fabric-api":"*","minecraft":"26.1.2"}}

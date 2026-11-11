@@ -37,6 +37,7 @@ public final class ItemMetadata {
         out.addProperty("weapon", comps.has(DataComponents.WEAPON) || comps.has(DataComponents.KINETIC_WEAPON) || comps.has(DataComponents.PIERCING_WEAPON));
         out.addProperty("food", comps.has(DataComponents.FOOD));
         out.addProperty("consumable", comps.has(DataComponents.CONSUMABLE));
+        out.addProperty("jukebox_playable", comps.has(DataComponents.JUKEBOX_PLAYABLE));
         out.addProperty("ranged_weapon", item instanceof net.minecraft.world.item.ProjectileWeaponItem);
         var equip = comps.get(DataComponents.EQUIPPABLE);
         if (equip != null) out.addProperty("equipment_slot", equip.slot().getSerializedName());
@@ -48,6 +49,7 @@ public final class ItemMetadata {
             var type = SpawnEggItem.getType(new ItemStack(item));
             if (type != null) out.addProperty("spawn_egg_entity", BuiltInRegistries.ENTITY_TYPE.getKey(type).toString());
         }
+        BucketItemMetadata.append(item, out);
         if (item instanceof BlockItem blockItem) {
             var block = blockItem.getBlock();
             out.addProperty("block", BuiltInRegistries.BLOCK.getKey(block).toString());

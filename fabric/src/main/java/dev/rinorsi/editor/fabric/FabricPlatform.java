@@ -28,5 +28,5 @@ public final class FabricPlatform implements Platform {
     public void onDisconnect(Consumer<ServerPlayer> c) { ServerPlayConnectionEvents.DISCONNECT.register((h, s) -> c.accept(h.player)); }
     public void onCommands(Consumer<CommandDispatcher<CommandSourceStack>> c) { CommandRegistrationCallback.EVENT.register((d, r, e) -> c.accept(d)); }
     public void receive(BiConsumer<ServerPlayer, EditorPackets.Request> c) { ServerPlayNetworking.registerGlobalReceiver(EditorPackets.Request.TYPE, (p, ctx) -> ctx.server().execute(() -> c.accept(ctx.player(), p))); }
-    public void send(ServerPlayer p, EditorPackets.Reply reply) { ServerPlayNetworking.send(p, reply); }
+    public void send(ServerPlayer p, EditorPackets.Reply reply) { for(String frame:dev.rinorsi.editor.EditorWire.frames(reply.json()))ServerPlayNetworking.send(p, new EditorPackets.Reply(frame)); }
 }

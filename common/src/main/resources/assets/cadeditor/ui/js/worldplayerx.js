@@ -1,6 +1,6 @@
 /* 玩家扩展（P4-1）：位置 / 重生点 / 配方 / 成就 / 统计 / 离线玩家。
    协议见 docs/player-extended-contract.md。它是独立于 entity.player 的会话：每个视图单独读、单独应用，
-   不进顶栏「应用修改」的草稿；服务端 saved 之后才清本地草稿，拒绝或超时保留。
+   草稿计入顶栏「应用修改」；服务端 saved 之后才清本地草稿，拒绝或超时保留。
    列表页（配方 / 成就 / 统计）的搜索框、重新读取、应用按钮放在顶部的工具行里（WE.toolsExtra），滚动时一直在。 */
 var PX = { seq: 0, views: {}, pending: {}, off: { uuid: '' }, arch: { exp: {}, open: {} } };
 
@@ -189,10 +189,10 @@ function pxPosition(body) {
   var st = pxGate(body, 'position', '位置'); if (!st) return;
   var d = st.draft || (st.draft = clone(st.value));
   body.appendChild(xSec('compass', '位置', '点顶栏「应用修改」即传送'));
-  function num(key, title, o) { body.appendChild(xNum({ title: title, value: d[key], min: o.min, max: o.max, step: o.step || 1, dec: o.dec === undefined ? 2 : o.dec, noSlider: true, onChange: function (v) { d[key] = v; } })); }
+  function num(key, title, o) { body.appendChild(xNum({ title: title, value: d[key], min: o.min, max: o.max, step: o.step || 1, dec: o.dec === undefined ? 2 : o.dec, noSlider: true, onChange: function (v) { d[key] = v; weMarkDirty(); } })); }
   var dims = pxDims(st);
-  if (dims.length) body.appendChild(xSelect({ title: '维度', options: dims, value: d.dimension, onChange: function (v) { d.dimension = v; }, width: 200 }));
-  body.appendChild(xText({ title: '维度 ID', value: d.dimension, cls: 'we-in', onCommit: function (v) { d.dimension = v.trim(); weRedrawBody(); } }));
+  if (dims.length) body.appendChild(xSelect({ title: '维度', options: dims, value: d.dimension, onChange: function (v) { d.dimension = v; weMarkDirty(); }, width: 200 }));
+  body.appendChild(xText({ title: '维度 ID', value: d.dimension, cls: 'we-in', onCommit: function (v) { d.dimension = v.trim(); weMarkDirty(); weRedrawBody(); } }));
   num('x', 'X', {}); num('y', 'Y', {}); num('z', 'Z', {}); num('yaw', '水平朝向', { min: -360, max: 360, dec: 1 }); num('pitch', '俯仰', { min: -90, max: 90, dec: 1 });
   pxRespawn(body);
 }
@@ -205,15 +205,15 @@ function pxRespawn(body) {
     var pos = pxState('position').value;
     body.appendChild(h('div', { class: 'world-actions' }, [kBtn('设为当前位置', function () {
       var p = pos || { dimension: 'minecraft:overworld', x: 0, y: 64, z: 0, yaw: 0 };
-      st.draft = { dimension: p.dimension, x: Math.floor(p.x), y: Math.floor(p.y), z: Math.floor(p.z), yaw: p.yaw || 0, forced: false }; weRedrawBody();
+      st.draft = { dimension: p.dimension, x: Math.floor(p.x), y: Math.floor(p.y), z: Math.floor(p.z), yaw: p.yaw || 0, forced: false }; weMarkDirty(); weRedrawBody();
     }, { icon: 'plus' })]));
     return;
   }
   var dims = pxDims(st);
-  if (dims.length) body.appendChild(xSelect({ title: '维度', options: dims, value: d.dimension, onChange: function (v) { d.dimension = v; }, width: 200 }));
-  ['x', 'y', 'z'].forEach(function (k) { body.appendChild(xNum({ title: k.toUpperCase(), value: d[k], step: 1, dec: 0, round: true, noSlider: true, onChange: function (v) { d[k] = Math.round(v); } })); });
-  body.appendChild(xNum({ title: '朝向', value: d.yaw, min: -360, max: 360, step: 1, dec: 1, noSlider: true, onChange: function (v) { d.yaw = v; } }));
-  body.appendChild(xToggle({ title: '强制重生在这里', sub: '关闭时，游戏会先检查床或重生锚还在不在', value: !!d.forced, onChange: function (on) { d.forced = on; } }));
+  if (dims.length) body.appendChild(xSelect({ title: '维度', options: dims, value: d.dimension, onChange: function (v) { d.dimension = v; weMarkDirty(); }, width: 200 }));
+  ['x', 'y', 'z'].forEach(function (k) { body.appendChild(xNum({ title: k.toUpperCase(), value: d[k], step: 1, dec: 0, round: true, noSlider: true, onChange: function (v) { d[k] = Math.round(v); weMarkDirty(); } })); });
+  body.appendChild(xNum({ title: '朝向', value: d.yaw, min: -360, max: 360, step: 1, dec: 1, noSlider: true, onChange: function (v) { d.yaw = v; weMarkDirty(); } }));
+  body.appendChild(xToggle({ title: '强制重生在这里', sub: '关闭时，游戏会先检查床或重生锚还在不在', value: !!d.forced, onChange: function (on) { d.forced = on; weMarkDirty(); } }));
   body.appendChild(h('div', { class: 'world-actions' }, [kBtn('清除重生点', function () { pxApply('respawn', null); }, { icon: 'trash' })]));
 }
 

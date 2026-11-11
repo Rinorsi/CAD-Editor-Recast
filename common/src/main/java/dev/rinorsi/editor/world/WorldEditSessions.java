@@ -4,14 +4,17 @@ import com.google.gson.JsonObject;
 import dev.rinorsi.editor.EditorSessions;
 import java.util.*;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.phys.Vec3;
 
 /** Connection-scoped world sessions; authoritative revision required on every mutation. */
 public final class WorldEditSessions {
     public static final class State {
         public final JsonObject slot;
+        public final Vec3 openingPosition;
         public CompoundTag baseline, undo;
         public String revision;
-        State(JsonObject slot, CompoundTag baseline) { this.slot = slot.deepCopy(); setBaseline(baseline); }
+        State(JsonObject slot, CompoundTag baseline) { this(slot,baseline,null); }
+        State(JsonObject slot, CompoundTag baseline, Vec3 openingPosition) { this.slot = slot.deepCopy(); this.openingPosition=openingPosition; setBaseline(baseline); }
         private void setBaseline(CompoundTag after){baseline=after.copy();revision=UUID.randomUUID().toString().replace("-","")+UUID.randomUUID().toString().replace("-","");}
         public CompoundTag preimage() {
             if (undo == null) EditorSessions.fail("undo_unavailable", "此会话没有可撤销的修改");
@@ -25,14 +28,22 @@ public final class WorldEditSessions {
     public WorldEditSessions(){this(System::nanoTime);}
     public WorldEditSessions(java.util.function.LongSupplier clock){this.clock=clock;}
     public State open(UUID player, JsonObject slot, CompoundTag current) {
-        var state = new State(slot, current); states.put(player, state); return state;
+        return open(player,slot,current,null);
+    }
+    public State open(UUID player, JsonObject slot, CompoundTag current, Vec3 openingPosition) {
+        var state = new State(slot, current, openingPosition); states.put(player, state); return state;
     }
     public State require(UUID player, JsonObject slot, String revision, CompoundTag current) {
+        var state=require(player,slot,revision);
+        WorldMerge.requireIdentity(state.baseline,current);
+        return state;
+    }
+    /** Authenticate before granting a moved entity the original interaction anchor. */
+    public State require(UUID player, JsonObject slot, String revision) {
         var state = states.get(player);
         if (state == null || !sameTarget(state.slot, slot) || !Objects.equals(state.slot.get("token"), slot.get("token")))
             throw new EditorSessions.Failure("session_lost", "世界编辑会话已关闭或被替换；请重新打开，草稿已保留");
         if(!Objects.equals(revision,state.revision))throw new WorldEditError("target_changed","页面数据版本太旧；请重新打开并比较草稿", "client_revision",null);
-        WorldMerge.requireIdentity(state.baseline,current);
         return state;
     }
     public void requireDoubleChestPresent(UUID player,JsonObject slot,net.minecraft.world.level.Level level) {

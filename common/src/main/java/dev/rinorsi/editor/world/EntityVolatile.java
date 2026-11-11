@@ -32,15 +32,14 @@ public final class EntityVolatile {
         if(current.contains("cad_player"))return PlayerWorldEdit.rebase(baseline,requested,current,undo);
         if (!undo) {
             WorldNbt.protect(baseline,requested,true);
-            for (String key : CURRENT) if (!Objects.equals(baseline.get(key),requested.get(key)))
+            for (String key : CURRENT) if (!key.equals("Motion") && !Objects.equals(baseline.get(key),requested.get(key)))
                 EditorSessions.fail("protected_field","运行时动态字段只读："+key);
         }
         var result = requested.copy();
-        for (String key : CURRENT) copy(current,result,key);
+        for (String key : CURRENT) if (!key.equals("Motion") || Objects.equals(baseline.get(key),requested.get(key))) copy(current,result,key);
         // Relationships are edited only through the riding operation, never through NBT.
         copy(current,result,"Passengers");
-        boolean sameAgeStage=requested.get("Age") instanceof NumericTag a&&current.get("Age") instanceof NumericTag b&&(a.intValue()<0)==(b.intValue()<0);
-        if ((undo&&sameAgeStage) || (!undo&&Objects.equals(baseline.get("Age"),requested.get("Age")))) copy(current,result,"Age");
+        if (Objects.equals(baseline.get("Age"),requested.get("Age"))) copy(current,result,"Age");
         if(!undo&&Objects.equals(baseline.get("attributes"),requested.get("attributes")))copy(current,result,"attributes");
         if(result.get("active_effects") instanceof ListTag edits && baseline.get("active_effects") instanceof ListTag base && current.get("active_effects") instanceof ListTag live)
             for(int i=0;i<edits.size();i++)if(edits.get(i) instanceof CompoundTag edit)
@@ -62,6 +61,6 @@ public final class EntityVolatile {
             var attribute=net.minecraft.core.registries.BuiltInRegistries.ATTRIBUTE.get(key).orElse(null);
             return attribute!=null&&supplier.hasAttribute(attribute)&&Double.compare(base.doubleValue(),supplier.getBaseValue(attribute))==0&&(!row.contains("modifiers")||row.get("modifiers") instanceof ListTag modifiers&&modifiers.isEmpty());});
     }
-    private static void mergeEffect(CompoundTag edit,CompoundTag base,CompoundTag live,boolean undo){if(undo||Objects.equals(edit.get("duration"),base.get("duration")))copy(live,edit,"duration");if(edit.get("hidden_effect") instanceof CompoundTag e&&base.get("hidden_effect") instanceof CompoundTag b&&live.get("hidden_effect") instanceof CompoundTag l)mergeEffect(e,b,l,undo);}
+    private static void mergeEffect(CompoundTag edit,CompoundTag base,CompoundTag live,boolean undo){if(Objects.equals(edit.get("duration"),base.get("duration")))copy(live,edit,"duration");if(edit.get("hidden_effect") instanceof CompoundTag e&&base.get("hidden_effect") instanceof CompoundTag b&&live.get("hidden_effect") instanceof CompoundTag l)mergeEffect(e,b,l,undo);}
     private static void copy(CompoundTag from, CompoundTag to, String key) { if(from.contains(key))to.put(key,from.get(key).copy());else to.remove(key); }
 }

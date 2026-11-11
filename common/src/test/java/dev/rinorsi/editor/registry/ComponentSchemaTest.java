@@ -27,7 +27,7 @@ public final class ComponentSchemaTest {
     private static int checks;
     public static void main(String[] args) throws Exception {
         var access = bootstrap(); var entries = new JsonArray();
-        check(ComponentSchema.VERSION == 2, "schema v2 shape contract");
+        check(ComponentSchema.VERSION == 3, "schema v3 typed numeric and non-finite capability contract");
         var persistent = ComponentSchema.persistentIds();
         for (String id : persistent) {
             var derived = ComponentSchema.derive(id, access); entries.add(derived.entry());
@@ -35,6 +35,7 @@ public final class ComponentSchemaTest {
             check(derived.entry().has("label_key") && derived.entry().has("default_from_prototypes"), "label and prototype summary " + id);
             check(derived.entry().has("editable") && derived.entry().get("validator_route").getAsString().equals("component_validate"), "editability and validation route " + id);
             check(derived.entry().has("ranges_for_ui"), "numeric field export " + id);
+            numericShapeContract(derived, access);
             check(derived.entry().has("coverage"), "coverage " + id);
             check(derived.entry().getAsJsonArray("fields").size() == 1, "root " + id);
             check(derived.entry().toString().length() < 23000, "row budget " + id);
@@ -149,7 +150,10 @@ public final class ComponentSchemaTest {
             rangesDocument.addProperty("source", "live persistent Codec derivation; snapshot is not used in production");
             rangesDocument.addProperty("null_meaning", "no proven numeric bound or no universal codec default; not zero");
             Files.writeString(rangesPath, new GsonBuilder().serializeNulls().setPrettyPrinting().disableHtmlEscaping().create().toJson(rangesDocument) + System.lineSeparator());
-        } else check(rangesDocument.get("ranges_for_ui").equals(JsonParser.parseString(ranges.toString())), "UI numeric ranges artifact drift");
+        } else {
+            check(rangesDocument.get("schema_version").getAsInt() == 3, "UI numeric ranges artifact uses schema v3");
+            check(rangesDocument.get("ranges_for_ui").equals(JsonParser.parseString(ranges.toString())), "UI numeric ranges artifact drift");
+        }
         modComponents(access);
         System.out.println("PASS ComponentSchemaTest " + checks + " checks; " + persistent.size() + " live component schemas, real defaults/ranges/path diagnostics and snapshot drift");
     }
@@ -272,6 +276,41 @@ public final class ComponentSchemaTest {
         throw new AssertionError("No schema sample generator for " + node.json);
     }
     private record ModValue(int strength) {}
+    /** Every exported numeric row must retain its node type, bounds/defaults and
+     * the three independently probed NBT Codec permissions. A version bump alone
+     * must never make this test pass with old v2-shaped range rows. */
+    private static void numericShapeContract(ComponentSchema.Derived derived, RegistryAccess access) {
+        check(derived.entry().get("schema_version").getAsInt() == 3, "entry schema v3 " + derived.id());
+        var nodes = new ArrayList<ComponentSchema.Node>(); numericNodes(derived.root(), nodes);
+        var rows = derived.entry().getAsJsonArray("ranges_for_ui");
+        check(rows.size() == nodes.size(), "all numeric nodes exported " + derived.id());
+        var ops = access.createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE);
+        for (int i = 0; i < nodes.size(); i++) {
+            var node = nodes.get(i); var row = rows.get(i).getAsJsonObject();
+            String kind = node.json.get("type").getAsString(), label = derived.id() + " " + node.json.get("path");
+            check(row.get("path").equals(node.json.get("path")) && row.get("number_type").getAsString().equals(kind), "numeric path and native type " + label);
+            for (String key : List.of("min", "max", "default"))
+                check(row.has(key) && row.get(key).equals(node.json.has(key) ? node.json.get(key) : JsonNull.INSTANCE), "numeric nullable " + key + " " + label);
+            for (String key : List.of("min_exclusive", "allow_nan", "allow_positive_infinity", "allow_negative_infinity"))
+                check(row.has(key) == node.json.has(key) && (!row.has(key) || row.get(key).equals(node.json.get(key))), "numeric flag export " + key + " " + label);
+            boolean floating = kind.equals("float") || kind.equals("double");
+            String[] flags = {"allow_nan", "allow_positive_infinity", "allow_negative_infinity"};
+            double[] values = {Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY};
+            for (int j = 0; j < flags.length; j++) {
+                if (!floating) { check(!row.has(flags[j]), "integer has no special float permission " + label); continue; }
+                var flag = row.get(flags[j]);
+                check(flag != null && flag.isJsonPrimitive() && flag.getAsJsonPrimitive().isBoolean(), "explicit boolean capability " + flags[j] + " " + label);
+                net.minecraft.nbt.Tag input = kind.equals("float") ? net.minecraft.nbt.FloatTag.valueOf((float)values[j]) : net.minecraft.nbt.DoubleTag.valueOf(values[j]);
+                check(flag.getAsBoolean() == node.codec.parse(ops, input).isSuccess(), "capability matches actual NBT Codec " + flags[j] + " " + label);
+            }
+        }
+    }
+    private static void numericNodes(ComponentSchema.Node node, List<ComponentSchema.Node> out) {
+        if (node.json.has("type") && List.of("int", "long", "float", "double").contains(node.json.get("type").getAsString())) out.add(node);
+        node.fields.values().forEach(child -> numericNodes(child, out));
+        if (node.element != null) numericNodes(node.element, out);
+        node.alternatives.forEach(child -> numericNodes(child, out));
+    }
     private static void modComponents(RegistryAccess access) throws Exception {
         var codec = com.mojang.serialization.codecs.RecordCodecBuilder.<ModValue>create(i -> i.group(
                 com.mojang.serialization.Codec.intRange(2, 9).optionalFieldOf("strength", 4).forGetter(ModValue::strength)).apply(i, ModValue::new));
@@ -281,6 +320,20 @@ public final class ComponentSchemaTest {
             public <T> com.mojang.serialization.DataResult<T> encode(Integer value, com.mojang.serialization.DynamicOps<T> ops, T prefix) { return com.mojang.serialization.Codec.INT.encode(value, ops, prefix); }
         };
         var opaque = net.minecraft.core.component.DataComponentType.<Integer>builder().persistent(opaqueCodec).build();
+        var specialFloat = net.minecraft.core.component.DataComponentType.<Float>builder().persistent(com.mojang.serialization.Codec.FLOAT).build();
+        var finiteFloatCodec = com.mojang.serialization.Codec.FLOAT.validate(value -> Float.isFinite(value)
+                ? com.mojang.serialization.DataResult.success(value)
+                : com.mojang.serialization.DataResult.error(() -> "finite float required"));
+        var finiteFloat = net.minecraft.core.component.DataComponentType.<Float>builder().persistent(finiteFloatCodec).build();
+        var specialDouble = net.minecraft.core.component.DataComponentType.<Double>builder().persistent(com.mojang.serialization.Codec.DOUBLE).build();
+        var finiteDoubleCodec = com.mojang.serialization.Codec.DOUBLE.validate(value -> Double.isFinite(value)
+                ? com.mojang.serialization.DataResult.success(value)
+                : com.mojang.serialization.DataResult.error(() -> "finite double required"));
+        var finiteDouble = net.minecraft.core.component.DataComponentType.<Double>builder().persistent(finiteDoubleCodec).build();
+        var positiveInfinityCodec = com.mojang.serialization.Codec.DOUBLE.validate(value -> Double.isFinite(value) || value == Double.POSITIVE_INFINITY
+                ? com.mojang.serialization.DataResult.success(value)
+                : com.mojang.serialization.DataResult.error(() -> "only finite or positive infinity accepted"));
+        var positiveInfinity = net.minecraft.core.component.DataComponentType.<Double>builder().persistent(positiveInfinityCodec).build();
         // Test JVM only: bootstrap freezes built-ins before tests run. Restore that flag immediately.
         var registry = BuiltInRegistries.DATA_COMPONENT_TYPE;
         var frozen = net.minecraft.core.MappedRegistry.class.getDeclaredField("frozen"); frozen.setAccessible(true);
@@ -288,11 +341,21 @@ public final class ComponentSchemaTest {
         try {
             net.minecraft.core.Registry.register(registry, net.minecraft.resources.Identifier.parse("schema_test:strength"), structured);
             net.minecraft.core.Registry.register(registry, net.minecraft.resources.Identifier.parse("schema_test:opaque"), opaque);
+            net.minecraft.core.Registry.register(registry, net.minecraft.resources.Identifier.parse("schema_test:special_float"), specialFloat);
+            net.minecraft.core.Registry.register(registry, net.minecraft.resources.Identifier.parse("schema_test:finite_float"), finiteFloat);
+            net.minecraft.core.Registry.register(registry, net.minecraft.resources.Identifier.parse("schema_test:special_double"), specialDouble);
+            net.minecraft.core.Registry.register(registry, net.minecraft.resources.Identifier.parse("schema_test:finite_double"), finiteDouble);
+            net.minecraft.core.Registry.register(registry, net.minecraft.resources.Identifier.parse("schema_test:positive_infinity_double"), positiveInfinity);
             var bind = net.minecraft.core.Holder.Reference.class.getDeclaredMethod("bindValue", Object.class); bind.setAccessible(true);
             bind.invoke(registry.get(net.minecraft.resources.Identifier.parse("schema_test:strength")).orElseThrow(), structured);
             bind.invoke(registry.get(net.minecraft.resources.Identifier.parse("schema_test:opaque")).orElseThrow(), opaque);
+            bind.invoke(registry.get(net.minecraft.resources.Identifier.parse("schema_test:special_float")).orElseThrow(), specialFloat);
+            bind.invoke(registry.get(net.minecraft.resources.Identifier.parse("schema_test:finite_float")).orElseThrow(), finiteFloat);
+            bind.invoke(registry.get(net.minecraft.resources.Identifier.parse("schema_test:special_double")).orElseThrow(), specialDouble);
+            bind.invoke(registry.get(net.minecraft.resources.Identifier.parse("schema_test:finite_double")).orElseThrow(), finiteDouble);
+            bind.invoke(registry.get(net.minecraft.resources.Identifier.parse("schema_test:positive_infinity_double")).orElseThrow(), positiveInfinity);
         } finally { frozen.setBoolean(registry, original); }
-        check(ComponentSchema.persistentIds().containsAll(List.of("schema_test:strength", "schema_test:opaque")), "bulk enumerator includes registered mod components");
+        check(ComponentSchema.persistentIds().containsAll(List.of("schema_test:strength", "schema_test:opaque", "schema_test:special_float", "schema_test:finite_float")), "bulk enumerator includes registered mod components");
         var derived = ComponentSchema.derive("schema_test:strength", access);
         check(derived.entry().get("source").getAsString().equals("mod:schema_test"), "mod namespace source");
         check(derived.entry().get("editable").getAsString().equals("structured"), "mod record structured editing");
@@ -305,7 +368,42 @@ public final class ComponentSchemaTest {
         check(ComponentSchemaValidation.validate(request, access).get("ok").getAsBoolean(), "opaque mod SNBT uses actual codec validation");
         request.addProperty("component", "schema_test:strength"); request.remove("snbt"); request.add("value", JsonParser.parseString("{\"strength\":10}"));
         check(!ComponentSchemaValidation.validate(request, access).get("ok").getAsBoolean(), "mod out-of-range value rejected by actual codec");
-        var receipt = new JsonObject(); receipt.add("structured", derived.entry()); receipt.add("opaque", fallback.entry());
+        var special = ComponentSchema.derive("schema_test:special_float", access);
+        var specialRange = special.entry().getAsJsonArray("ranges_for_ui").get(0).getAsJsonObject();
+        check(specialRange.get("number_type").getAsString().equals("float")
+                && specialRange.get("allow_nan").getAsBoolean()
+                && specialRange.get("allow_positive_infinity").getAsBoolean()
+                && specialRange.get("allow_negative_infinity").getAsBoolean(), "primitive FLOAT exports actual non-finite support");
+        var finite = ComponentSchema.derive("schema_test:finite_float", access);
+        var finiteRange = finite.entry().getAsJsonArray("ranges_for_ui").get(0).getAsJsonObject();
+        check(!finiteRange.get("allow_nan").getAsBoolean()
+                && !finiteRange.get("allow_positive_infinity").getAsBoolean()
+                && !finiteRange.get("allow_negative_infinity").getAsBoolean(), "validated FLOAT keeps all non-finite inputs closed");
+        var specialRequest = new JsonObject(); specialRequest.addProperty("component", "schema_test:special_float"); specialRequest.addProperty("snbt", "+Infinityf");
+        check(ComponentSchemaValidation.validate(specialRequest, access).get("ok").getAsBoolean(), "allowed special FLOAT validates through typed SNBT extension");
+        specialRequest.addProperty("component", "schema_test:finite_float");
+        check(!ComponentSchemaValidation.validate(specialRequest, access).get("ok").getAsBoolean(), "finite-only FLOAT still rejected by its real codec");
+        for (String id : List.of("strength", "special_float", "finite_float", "special_double", "finite_double", "positive_infinity_double"))
+            numericShapeContract(ComponentSchema.derive("schema_test:" + id, access), access);
+        var positiveDouble = ComponentSchema.derive("schema_test:positive_infinity_double", access);
+        var positiveRange = positiveDouble.entry().getAsJsonArray("ranges_for_ui").get(0).getAsJsonObject();
+        check(positiveRange.get("number_type").getAsString().equals("double") && !positiveRange.get("allow_nan").getAsBoolean()
+                && positiveRange.get("allow_positive_infinity").getAsBoolean() && !positiveRange.get("allow_negative_infinity").getAsBoolean(), "DOUBLE capabilities are independent, not a blanket non-finite switch");
+        for (String id : List.of("special_float", "finite_float", "special_double", "finite_double", "positive_infinity_double")) {
+            String component = "schema_test:" + id; boolean isFloat = id.endsWith("float");
+            var codecForInput = ComponentValidation.type(component).codec();
+            for (String token : List.of("NaN", "+Infinity", "-Infinity")) {
+                String text = token + (isFloat ? "f" : "d");
+                var typedInput = ComponentValidation.parseSnbt(text);
+                boolean accepted = codecForInput.parse(access.createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE), typedInput).isSuccess();
+                specialRequest.addProperty("component", component); specialRequest.addProperty("snbt", text);
+                var reply = ComponentSchemaValidation.validate(specialRequest, access);
+                check(reply.get("ok").getAsBoolean() == accepted, "typed validation matches exact Codec " + component + " " + text);
+                if (accepted) check(reply.get("json").isJsonNull() && reply.get("snbt").isJsonPrimitive(), "allowed scalar uses strict JSON projection plus exact SNBT");
+                new GsonBuilder().serializeNulls().create().toJson(reply);
+            }
+        }
+        var receipt = new JsonObject(); receipt.add("structured", derived.entry()); receipt.add("opaque", fallback.entry()); receipt.add("special_float", special.entry()); receipt.add("finite_float", finite.entry());
         Files.createDirectories(Path.of("logs/backend-g"));
         Files.writeString(Path.of("logs/backend-g/schema-mod-evidence.json"), new GsonBuilder().serializeNulls().setPrettyPrinting().serializeNulls().create().toJson(receipt));
     }

@@ -3,11 +3,16 @@
 **/build/
 .idea/
 *.iml
+__pycache__/
+*.py[cod]
+*.class
 
 # 本地运行、日志与一次性产物（可随时删除）
 /run/
 /logs/
 /daily/
+/dist/
+/reports/
 /.backend-b/
 /.world-edit/
 /.world-entity/
@@ -24,6 +29,7 @@ fabric/versions/*/run/
 
 # 依赖的 Oriel 发布包：不提交二进制，放到 libs/ 即可（见 README）
 /libs/*.jar
+/libs/oriel-maven/
 
 # 由 tools/extract-mc-icons.mjs 从本机 Minecraft 资源抽取（Mojang 资源，只在本机预览用）
 /dev/browser/mc/
@@ -31,4 +37,6 @@ fabric/versions/*/run/
 # 脚本生成的状态报告（长期副本在工作区 planning/）
 /docs/STATUS*.md
 /docs/audit-registry.md
+# 历史计划、排查报告与采集回执：仅在本机保留，不提交
+/docs/archive/
 /.block-edit/

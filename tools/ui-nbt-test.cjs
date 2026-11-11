@@ -22,9 +22,10 @@ assert.equal(run('var v = parseSnbt(SRC); v.b = 6; v.c = 8; v.d = 3; v.e = 4; v.
 assert.equal(run('var v2 = parseSnbt(SRC); v2.a = true; v2.j = [1, 0, 1]; nbtMerge(v2, nbtParse(SRC))').slice(0, 30), '{a:1b,b:5s,c:7L,d:2.5f,e:3.0d,');
 assert.ok(run('var v3 = parseSnbt(SRC); v3.j = [1, 0, 1]; nbtMerge(v3, nbtParse(SRC))').includes('j:[B;1b,0b,1b]'), '类型化数组改长度仍是 [B;');
 
-// 3) 超出 2^53 的 long：页面里已经丢精度，但没改就用原文
+// 3) 宿主旧 JSON 缺少类型时用原文；显式输入的类型不能被旧参照覆盖
 const BIG = '{x:9007199254740993L}'; ctx.BIG = BIG;
-assert.equal(run('nbtMerge(parseSnbt("{x:9007199254740992}"), nbtParse(BIG))'), BIG);
+assert.equal(run('nbtMerge({x:9007199254740992}, nbtParse(BIG))'), BIG);
+assert.equal(run('nbtMerge(parseSnbt("{x:9007199254740992L}"), nbtParse(BIG))'), '{x:9007199254740992L}', '相邻 long 的显式修改不能被相等的 double 投影盖掉');
 
 // 4) 解析的边角：引号键、转义、尾逗号、单引号字符串、布尔
 assert.equal(run('nbtMerge({ "a b": "q\\"t", ok: true }, null)'), `{"a b":'q"t',ok:true}`);
@@ -34,7 +35,7 @@ assert.throws(() => run('nbtParse("{a:1")'), /SNBT/);
 assert.throws(() => run('nbtParse("{a 1}")'), /冒号/);
 
 // 5) 什么算“有 JSON 表达不了的类型”
-assert.equal(run('nbtHasTyped("{a:1b,b:2}")'), false, '只有 byte 布尔不算');
+assert.equal(run('nbtHasTyped("{a:1b,b:2}")'), true, '任意 NBT byte 不能一律当作 JSON 布尔');
 assert.equal(run('nbtHasTyped("{a:5s}")'), true);
 assert.equal(run('nbtHasTyped("{a:7L}")'), true);
 assert.equal(run('nbtHasTyped("{a:[I;1,2]}")'), true);
@@ -88,8 +89,9 @@ run('nbtSeenClear(); var u = parseSnbtUser("{x:2s,newByte:1b}")');
 assert.equal(run('nbtMerge(u, nbtParse(REFB))'), '{x:2s,newByte:1b}', 'short 不被旧 byte 盖掉，新 byte 不变 int');
 run('nbtSeenClear()');
 assert.equal(run('nbtMerge({ x: 2, newByte: 1 }, nbtParse(REFB))'), '{x:2b,newByte:1}', '没手输过时仍按旧类型 / 普通写法');
-run('nbtSeenClear(); parseSnbtUser("{big:9007199254740993L}")');
-assert.equal(run('nbtMerge({ big: 9007199254740992 }, null)'), '{big:9007199254740993L}', '手输的超大 long 保留原文');
+run('nbtSeenClear(); var ownedBig = parseSnbtUser("{big:9007199254740993L}")');
+assert.equal(run('nbtMerge(ownedBig, null)'), '{big:9007199254740993L}', '手输的超大 long 保留原文');
+assert.equal(run('nbtMerge({ big: 9007199254740992 }, null)'), '{big:9007199254740992}', '另一个同值对象不能借用其原文');
 run('nbtSeenClear()');
 
 // 7) 非 NBT_RAW 组件里的 float / double 局部编辑后仍走 SNBT
@@ -118,3 +120,37 @@ console.log('PASS nbt: typed SNBT merge, apply formats, game validation routing.
   ctx.Reg.meta = null;
 }
 console.log('PASS nbt: per-field host validation.');
+
+// Non-finite Float/Double values are a typed SNBT extension, never ordinary JSON.
+ctx.SPECIAL = '{nan:NaNf,pos:+Infinityf,neg:-Infinityd,quoted:"NaNf",bare:Infinity}';
+ctx.SPECIAL_CANON = '{nan:NaNf,pos:+Infinityf,neg:-Infinityd,quoted:"NaNf",bare:"Infinity"}';
+assert.equal(run('nbtMerge(parseSnbtUser(SPECIAL), null)'), ctx.SPECIAL_CANON, 'explicit f/d special tokens preserve spelling and type');
+assert.equal(run('nbtParse("NaNf").t'), 'f');
+assert.equal(run('nbtParse("Infinityd").t'), 'd');
+ctx.QUOTED_SPECIAL = '"NaNf"';
+assert.equal(run('nbtParse(QUOTED_SPECIAL).k'), 'str', 'quoted token stays a string');
+assert.equal(run('nbtParse("Infinity").k'), 'str', 'unsuffixed token stays a string');
+assert.throws(() => run('nbtMerge(NaN, null)'), /f 或 d/, 'untyped special number is rejected');
+run(`var specialDoc = makeDoc({ key: 'special', id: 'minecraft:stone', comps: { custom_data: parseSnbtUser(SPECIAL) }, removed: {}, snbt: {} });`);
+assert.equal(run('nbtApplyFormats(specialDoc, true).formats.custom_data'), 'snbt');
+assert.equal(run('nbtApplyFormats(specialDoc, true).comps.custom_data'), ctx.SPECIAL_CANON);
+ctx.SPECIAL_SNAP = run('nbtSnapshot(specialDoc)');
+assert.match(ctx.SPECIAL_SNAP, /null/, 'JSON snapshot uses null projection instead of invalid JSON numbers');
+assert.equal(run('nbtComponentText(nbtReadSnapshot(SPECIAL_SNAP), "custom_data")'), ctx.SPECIAL_CANON, 'snapshot restores special values from typed metadata');
+assert.equal(run('nbtComponentText({ comps: nbtHydrate({ custom_data: { value: null } }, { custom_data: "{value:-Infinityd}" }), snbt: {} }, "custom_data")'), '{value:-Infinityd}', 'wire null projection hydrates from component SNBT');
+assert.equal(run('nbtComponentText({ comps: nbtHydrate({ special_component: null }, { special_component: "NaNf" }), snbt: {} }, "special_component")'), 'NaNf', 'root typed component null projection hydrates too');
+assert.equal(run('nbtComponentText({ comps: nbtHydrate({ custom_data: { values: [null, 3, null] } }, { custom_data: "{values:[NaNf,3f,Infinityf]}" }), snbt: {} }, "custom_data")'), '{values:[NaNf,3f,Infinityf]}', 'list null projections retain positions and finite neighbor');
+run('var specialOut = []; validateValue({t:"num",nbtType:"f",allowNaN:true}, nbtSpecialScalar(NaN,"f"), "", specialOut, "x")');
+assert.equal(run('specialOut.length'), 0, 'schema-approved NaN passes local validation');
+run('specialOut = []; validateValue({t:"num",nbtType:"f",min:0,max:3.4028235e38,allowPositiveInfinity:true}, nbtSpecialScalar(Infinity,"f"), "", specialOut, "x")');
+assert.equal(run('specialOut.length'), 0, 'actual Codec Infinity permission takes precedence over finite UI bounds');
+run('specialOut = []; validateValue({t:"num",allowNaN:true}, "invalid", "", specialOut, "x")');
+assert.equal(run('specialOut.length'), 1, 'NaN permission does not admit arbitrary strings');
+run('var blockedOut = []; validateValue({t:"int"}, nbtSpecialScalar(Infinity,"d"), "", blockedOut, "x")');
+assert.ok(run('blockedOut.length') > 0, 'integer fields remain finite/integer-only');
+run('var oldCidx = CIDX; CIDX = { special_component: { schema: { t: "num" } } }; applyLiveRanges([{id:"minecraft:special_component",ranges_for_ui:[{path:"$",number_type:"double",min:null,max:null,allow_nan:true,allow_positive_infinity:true,allow_negative_infinity:false}]}]); var specialSchema = CIDX.special_component.schema; CIDX = oldCidx;');
+assert.equal(run('specialSchema.nbtType'), 'd');
+assert.equal(run('specialSchema.allowNaN'), true);
+assert.equal(run('specialSchema.allowPositiveInfinity'), true);
+assert.equal(run('specialSchema.allowNegativeInfinity'), false);
+console.log('PASS nbt: explicit NaN/Infinity typed input, snapshot/hydrate, format routing and schema gates.');

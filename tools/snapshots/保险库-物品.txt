@@ -54,7 +54,7 @@ div
                       span.dim.k-tag "武器"
                       span.vt-note "备注"
                   div.x-rt
-                    div.k-btn [title="放进背包的空位（创造模式直接写进你的背包；生存需要 OP 权限）"]
+                    div.k-btn [title="放进背包空位（非创造模式需要服务器授予原版命令权限；可能通知本人和其他 OP）"]
                       img.o-ico [src="oriel:textures/icons/download.png" style="height:16px;width:16px"]
                       span "给我"
                   span.closed.fold-arrow

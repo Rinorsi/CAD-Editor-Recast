@@ -122,10 +122,10 @@ function esFlagList(s, o) {
   var list = h('div', { class: 'x-list' }), edit = esEditor(o);
   (s.flags || []).filter(function (f) { return f.common; }).sort(function (a, b) {
     var i = ES_FLAG_ORDER.indexOf(a.key), j = ES_FLAG_ORDER.indexOf(b.key); return (i < 0 ? 99 : i) - (j < 0 ? 99 : j);
-  }).forEach(function (f) { var r = esFlagRow(f, o, edit); if (r) list.appendChild(r); });
+  }).forEach(function (f) { var r = esFlagRow(f, o, edit, s); if (r) list.appendChild(r); });
   return list;
 }
-function esFlagRow(f, o, edit) {
+function esFlagRow(f, o, edit, schema) {
   var nm = ES_FLAG[f.key] || [f.key, ''], k = f.key, val = isObj(o.get()) ? o.get()[k] : undefined;
   if (f.id === 'baby' && f.type === 'int' && typeof f.babyAge === 'number') {
     /* 幼年：写游戏给的 babyAge / adultAge，不写探测样本 */
@@ -135,14 +135,23 @@ function esFlagRow(f, o, edit) {
   if (f.type === 'byte-bool') {
     var on = typeof val === 'number' ? val !== 0 : typeof val === 'boolean' ? val : !!f.default;
     return xToggle({ title: nm[0], sub: nm[1], tip: k, value: on, onChange: function (x) {
-      edit(function (obj) { if (x === !!f.default && !f.present_by_default) delete obj[k]; else obj[k] = x ? 1 : 0; }, true);
+      edit(function (obj) { if (x === !!f.default && !f.present_by_default) delete obj[k]; else obj[k] = !!x; }, true);
     } });
   }
   if (f.type === 'float' || f.type === 'int') {
     var def = typeof f.default === 'number' ? f.default : 0, cur = typeof val === 'number' ? val : def;
     var opts = { title: nm[0], sub: nm[1] || (typeof val === 'number' ? '' : '默认 ' + fmtNum(def)), tip: k, value: cur, min: typeof f.min === 'number' ? f.min : undefined, step: f.type === 'int' ? 1 : 0.5, dec: f.type === 'int' ? 0 : 2,
-      onChange: function (x) { edit(function (obj) { obj[k] = x; }); } };
-    if (k === 'Health' && typeof f.max === 'number') { opts.warnMax = f.max; opts.warnWhy = '默认上限是 ' + fmtNum(f.max) + '；改过体型或属性的生物，游戏会按实际上限校验'; }
+      onChange: function (x) { edit(function (obj) { nbtSetTyped(obj, k, x, f.type === 'float' ? 'f' : 'i'); }); } };
+    var linkId = k === 'Health' ? 'minecraft:max_health' : k === 'AbsorptionAmount' ? 'minecraft:max_absorption' : null;
+    var attr = linkId && schema && (schema.attributes || []).filter(function (a) { return a.id === linkId; })[0];
+    if (attr) {
+      var linkStart; try { var initial = o.get(), initialRow = (initial.attributes || []).filter(function (a) { return Reg.full(a.id) === linkId; })[0] || {}; linkStart = linkedAttributeValue(attr, initialRow, esAttrBase(initial, attr)); } catch (ignored) {}
+      function plan(v) { var data = o.get(), row = (data.attributes || []).filter(function (a) { return a.id === linkId; })[0] || { base: attr.base }; return linkedAttributePlan(attr, Object.assign({}, row, { base: esAttrBase(data, attr) }), v); }
+      opts.max = attr.max; opts.preservePrecision = true;
+      opts.subOf = function () { try { var data = o.get(), row = (data.attributes || []).filter(function (a) { return Reg.full(a.id) === linkId; })[0] || {}, cap = linkedAttributeValue(attr, row, esAttrBase(data, attr)); return (linkStart !== undefined && cap !== linkStart ? '上限：' + fmtNum(linkStart) + ' → ' + fmtNum(cap) + '（应用后同步）' : '当前上限：' + fmtNum(cap)) + ' · 游戏上限：' + fmtNum(attr.max); } catch (e) { return '上限暂不可计算：' + e.message; } }; delete opts.sub;
+      opts.validate = function (v) { try { plan(v); return ''; } catch (e) { return e.message; } };
+      opts.onChange = function (v) { var p = plan(v); edit(function (obj) { if (p.changed) esAttrSet(obj, attr, p.base); nbtSetTyped(obj, k, v, f.type === 'float' ? 'f' : 'i'); }); };
+    } else if (k === 'Health' && typeof f.max === 'number') { opts.warnMax = f.max; opts.warnText = '超过默认上限 · 说明'; opts.warnDetail = '该类生物的默认最大生命值为 ' + fmtNum(f.max) + '。体型、变体可能改变实际上限；游戏未提供可联动的最大生命属性，不会伪造上限字段。'; }
     return xNum(opts);
   }
   if (f.type === 'component' || f.type === 'string') {
@@ -178,19 +187,20 @@ function esGearGrid(s, o, type) {
       edit(function (obj) {
         var cur = esGet(obj, q.nbtPath);
         esSet(obj, q.nbtPath, isObj(cur) && cur.id === fullId(id) ? cur : { id: fullId(id), count: 1 });
-        if (q.requires) Object.keys(q.requires).forEach(function (k) { obj[k] = q.requires[k]; });
+        if (q.requires) Object.keys(q.requires).forEach(function (k) { var f = (s.flags || []).filter(function (f) { return f.key === k; })[0]; if (f && f.type === 'byte-bool') nbtSetTyped(obj, k, q.requires[k], 'b'); else obj[k] = q.requires[k]; });
       }, true);
     }, { onStack: function (st) {
       kPopClose();
       edit(function (obj) {
         esSet(obj, q.nbtPath, vaultNested(st));
-        if (q.requires) Object.keys(q.requires).forEach(function (k) { obj[k] = q.requires[k]; });
+        if (q.requires) Object.keys(q.requires).forEach(function (k) { var f = (s.flags || []).filter(function (f) { return f.key === k; })[0]; if (f && f.type === 'byte-bool') nbtSetTyped(obj, k, q.requires[k], 'b'); else obj[k] = q.requires[k]; });
       }, true);
     } });
   }
   function menu(q, cell, st) {
     var box = h('div', { class: 'k-pickbox es-gearpop' });
-    box.appendChild(h('div', { class: 'es-gearhd' }, [itemIcon(st.id, 22), h('div', { class: 'tx' }, [h('b', { text: nameOfItem(st.id) }), h('span', { class: 'k-sub', text: st.id })])]));
+    box.appendChild(h('div', { class: 'es-gearhd' }, [stackUiIcon(st, 22), h('div', { class: 'tx' }, [stackUiName(st), h('span', { class: 'k-sub', text: st.id })]),
+      kBtn('编辑物品', function () { kPopClose(); editNestedStack(st, '生物装备 · ' + (ES_SLOT[q.slot] || [q.slot])[0], function (next) { edit(function (obj) { esSet(obj, q.nbtPath, next); }, true); }, o.redraw); }, { icon: 'edit', title: '打开完整物品编辑页，保存后带回此装备槽' })]));
     if (q.dropChancePath) {
       var dc = esGet(o.get(), q.dropChancePath), d0 = typeof q.dropChance === 'number' ? q.dropChance : 0;
       box.appendChild(fieldRow('掉落概率', numField5(typeof dc === 'number' ? dc : d0, d0, { min: 0, max: 1, step: 0.05, dec: 3 }, function (x) { edit(function (obj) { esSet(obj, q.dropChancePath, x); }); })));
@@ -199,7 +209,6 @@ function esGearGrid(s, o, type) {
       kBtn('更换', function () { choose(q, cell); }, { icon: 'refresh' }),
       kBtn('清空', function () { kPopClose(); edit(function (obj) { esDel(obj, q.nbtPath); if (q.dropChancePath) esDel(obj, q.dropChancePath); }, true); }, { cls: 'dng', icon: 'trash' })
     ]));
-    box.appendChild(kHint('附魔等物品组件在「其他数据」的 ' + q.nbtPath[0] + ' 里改'));
     kPopover(cell, box, { width: 300, maxHeight: 260 });
   }
   return esGearLayout({
@@ -216,9 +225,12 @@ function esGearLayout(cfg) {
   function cellOf(slot) {
     if (!cfg.has(slot)) return null;
     var meta = ES_SLOT[slot] || [humanId(slot), 'shield'], st = cfg.stackOf(slot);
-    var cell = h('div', { class: 'slot s34 es-slot' + (st ? ' on' : '') }, [st ? itemIcon(st.id, 26) : uiIcon(meta[1], 16, 'es-ghost')]);
-    if (st && (st.count || 1) > 1) cell.appendChild(h('span', { class: 'cnt', text: String(st.count) }));
-    setTip(cell, meta[0] + '：' + (st ? nameOfItem(st.id) : (cfg.emptyHint ? cfg.emptyHint(slot) : '空')));
+    var icon = st ? stackUiIcon(st, 26) : uiIcon(meta[1], 16, 'es-ghost');
+    var cell = h('div', { class: 'slot s34 es-slot' + (st ? ' on' : '') }, [icon]);
+    var native = st && icon.tagName && icon.tagName.toLowerCase() === 'item';
+    if (native) { icon.style.width = '100%'; icon.style.height = '100%'; }
+    if (st && !native && (st.count || 1) > 1) cell.appendChild(h('span', { class: 'cnt', text: String(st.count) }));
+    if (!native) setTip(cell, meta[0] + '：' + (st ? nameOfItem(st.id) : (cfg.emptyHint ? cfg.emptyHint(slot) : '空')));
     var open = function () { if (st) cfg.onFilled(slot, cell, st); else cfg.onEmpty(slot, cell); };
     if (cfg.bind) cfg.bind(slot, cell, open); else cell.addEventListener('click', open);
     return h('div', { class: 'es-gear' }, [cell, h('span', { class: 'es-gearl', text: meta[0] })]);
@@ -315,10 +327,14 @@ function esAttrSet(obj, a, v) {
   for (i = 0; i < arr.length; i++) if (isObj(arr[i]) && Reg.full(arr[i].id) === a.id) at = i;
   if (v === a.base) {
     if (at >= 0) { var e = clone(arr[at]); delete e.base; if (Object.keys(e).length <= 1) arr.splice(at, 1); else arr[at] = e; }   // 只剩 id 就整项删掉
-  } else if (at >= 0) { var e2 = clone(arr[at]); e2.base = v; arr[at] = e2; } else arr.push({ id: a.id, base: v });
+  } else if (at >= 0) { var e2 = clone(arr[at]); nbtSetTyped(e2, 'base', v, 'd'); arr[at] = e2; } else { var added = { id: a.id }; nbtSetTyped(added, 'base', v, 'd'); arr.push(added); }
   if (arr.length) obj.attributes = arr; else delete obj.attributes;
-  /* 最大生命降到比当前生命还低，游戏会拒绝：顺手把生命压到上限 */
-  if (a.id === 'minecraft:max_health' && typeof obj.Health === 'number' && obj.Health > v) obj.Health = v;
+  var field = a.id === 'minecraft:max_health' ? 'Health' : a.id === 'minecraft:max_absorption' ? 'AbsorptionAmount' : null;
+  if (field && typeof obj[field] === 'number') {
+    var row = arr.filter(function (r) { return r.id === a.id; })[0] || { base: a.base };
+    var effective = linkedAttributeValue(a, row, v);
+    if (obj[field] > effective) nbtSetTyped(obj, field, effective, 'f');
+  }
 }
 function esAttrScale(data, s) {
   var a = s && (s.attributes || []).filter(function (x) { return x.id === 'minecraft:scale'; })[0];
@@ -333,9 +349,10 @@ function esAttrList(s, o) {
   function row(a) {
     var isScale = a.id === 'minecraft:scale', nm = nameOf('attribute', a.id);
     var step = isScale ? 0.25 : (a.max - a.min > 50 ? 1 : 0.1);
-    return xNum({ title: isScale ? '体型' : nm, sub: (isScale ? '大小倍数，1 是原样；' : '') + '默认 ' + fmtNum(a.base) + ' · 范围 ' + fmtNum(a.min) + ' ~ ' + fmtNum(a.max), tip: a.id, value: esAttrBase(o.get(), a),
+    return xNum({ title: isScale ? '体型' : nm, sub: '默认 ' + fmtNum(a.base) + ' · 范围 ' + fmtNum(a.min) + ' ~ ' + fmtNum(a.max), tip: a.id + (a.id === 'minecraft:max_health' || a.id === 'minecraft:max_absorption' ? '\n降低上限时，超出的当前值会同步降低。' : ''), value: esAttrBase(o.get(), a),
       min: a.min, max: a.max, softMax: isScale ? 4 : undefined, step: step, dec: 3, noSlider: !isScale,
       presets: isScale ? [{ v: 0.5, label: '0.5' }, { v: 1, label: '1' }, { v: 2, label: '2' }, { v: 4, label: '4' }] : undefined,
+      validate: function (v) { if (a.id !== 'minecraft:max_health' && a.id !== 'minecraft:max_absorption') return ''; try { var data = o.get(), found = (data.attributes || []).filter(function (r) { return Reg.full(r.id) === a.id; })[0] || {}; linkedAttributeValue(a, found, v); return ''; } catch (e) { return e.message; } },
       onChange: function (v) { edit(function (obj) { esAttrSet(obj, a, v); }, isScale); } });
   }
   main.forEach(function (a) { list.appendChild(row(a)); });
@@ -378,13 +395,57 @@ function esEntityIcon(id, size) {
   var info = id ? Reg.entityInfo(id) : null, eggs = info && info.spawn_eggs;
   return eggs && eggs.length ? itemIcon(eggs[0], size) : uiIcon('paw', size > 20 ? 32 : 16);
 }
+/* Complete entity copy shared by selectors and Vault imports. Never applies to the game. */
+function openEntityDraft(snbt, o) {
+  o = o || {};
+  var work, mode = 'form', code = null, panel = null, schemaPending = false, mask, valid = nestedDraftGuard();
+  function read(text) {
+    var payload = vaultEntityPayload(text);
+    if (!/^(?:[a-z0-9_.-]+:)?[a-z0-9/._-]+$/.test(payload.type)) throw new Error('生物类型 ID 格式无效');
+    return vaultEntityObj(text);
+  }
+  function failed(e) { if (typeof EditorDiag !== 'undefined') EditorDiag.error('entity.draft', e); toast('生物数据无法保存：' + (e.message || e), 'error'); }
+  try { work = read(snbt); } catch (e) { failed(e); return; }
+  var body = h('div', { class: 'k-mb' }), content = h('div', {});
+  function show() {
+    clear(content);
+    if (mode === 'raw') {
+      code = kCode({ value: nbtMerge(work, null), height: 320, validate: read });
+      content.appendChild(code.el);
+    } else {
+      code = null;
+      schemaPending = !Reg.entitySchema(Reg.full(work.id));
+      panel = esPanel({ type: Reg.full(work.id), get: function () { return work; }, set: function (next) { work = clone(next); } });
+      content.appendChild(panel);
+    }
+  }
+  var tabs = kSeg([{ v: 'form', label: '属性', icon: 'sliders' }, { v: 'raw', label: 'SNBT', icon: 'code' }], mode, function (next) {
+    if (next === mode) return;
+    if (mode === 'raw') { try { work = read(code.get()); } catch (e) { tabs.set(mode); failed(e); return; } }
+    mode = next; show();
+  });
+  body.appendChild(tabs.el); body.appendChild(content); show();
+  var win = modalShell({ icon: 'paw', title: o.title || '编辑生物', sub: entityName(work.id), cls: 'wide', body: body,
+    foot: h('div', { class: 'k-mf' }, [h('div', { class: 'grow' }), kBtn('取消', closeModal), kBtn('保存并返回', function () {
+      var text;
+      try { text = mode === 'raw' ? code.get() : nbtMerge(work, null); read(text); }
+      catch (e) { failed(e); return; }
+      if (!valid() || (o.valid && !o.valid())) { toast('上一级草稿已变化，请重新打开编辑', 'warn'); return; }
+      closeModal(); o.commit(text);
+    }, { cls: 'pri', icon: 'check' })]) });
+  mask = openModal(win, true); windowify(win, 'entity-draft');
+  var off = Reg.on(function () { if ($('modal') === mask && mode === 'form' && panel && schemaPending && Reg.entitySchema(Reg.full(work.id))) { schemaPending = false; panel.redraw(); } });
+  mask.onEditorClose = function () { off(); };
+}
 function esEntityHeader(o) {
   var id = o.id ? Reg.full(o.id) : '';
   var name = id ? entityName(id) : (o.empty || '（未选择）');
   var kids = [h('div', { class: 'egg-ico' }, [o.iconFn ? o.iconFn(32) : esEntityIcon(id, 32)]), h('div', { class: 'tx' }, [h('b', { text: name }), h('span', { class: 'k-sub', text: o.sub !== undefined ? o.sub : id })])];
-  var snd = id && typeof mobSoundRow === 'function' ? mobSoundRow(id) : null; if (snd) kids.push(snd);
-  if (o.onPick) kids.push(kBtn('更换生物', function () { openRegPick({ reg: 'entity_type', current: id, title: '选择生物', onEntityNbt: o.onEntityNbt, onPick: o.onPick }); }, { icon: 'grid' }));
+  var snd = id && typeof mobSoundRow === 'function' ? mobSoundRow(id) : null;
+  if (o.onPick) kids.push(kBtn('更换生物', function () { openRegPick({ reg: 'entity_type', current: id, title: '选择生物', entityText: o.snbtText, onEntityNbt: o.onEntityNbt, onPick: o.onPick }); }, { icon: 'grid' }));
+  var editButton = id && o.snbtText && o.onEntityNbt ? kBtn('编辑生物', function () { try { openEntityDraft(o.snbtText(), { commit: o.onEntityNbt }); } catch (e) { if (typeof EditorDiag !== 'undefined') EditorDiag.error('entity.header.edit', e); toast('生物数据无法读取：' + (e.message || e), 'error'); } }, { icon: 'edit' }) : null;
   if (o.onApplyVault) kids.push(kBtn('从保险库套用', function () { openVault({ kind: 'entity', pickEntity: function (snbt) { o.onApplyVault(snbt); } }); }, { icon: 'download', title: '把保险库里同类型生物的外观、属性、装备等套上来' }));
   if (o.snbtText && id) kids.push(kBtn('存入保险库', function () { openVaultSaveEntity(o.snbtText(), name); }, { icon: 'chest', title: '把调好的整只生物存起来，之后在任何选择生物的地方取出' }));
+  if (snd || editButton || o.originHint) kids.push(h('div', { class: 'egg-actions' }, [snd, o.originHint ? h('span', { class: 'k-sub', text: o.originHint, title: o.originHint }) : null, editButton].filter(function (x) { return x; })));
   return h('div', { class: 'egg-who' }, kids);
 }

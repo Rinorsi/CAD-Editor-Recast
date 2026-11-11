@@ -43,7 +43,7 @@ final class GenericSchemaChannel {
             if(job.ids.hasNext())job.rows.add(GenericSchema.template(job.context.get("kind").getAsString(),job.ids.next(),mc.level));
             if(job.ids.hasNext()){JOBS.add(job);return;}
             job.reply.accept(RegistryPages.split("generic_schema",job.generation,job.rows,job.context).stream().map(Object::toString).toList(),job.context);
-        }catch(RuntimeException error){error(job.generation,job.context,error,job.reply);}
+        }catch(RuntimeException error){dev.rinorsi.editor.EditorDiagnostics.failure("schema.generic", "generation="+job.generation,error);error(job.generation,job.context,error,job.reply);}
     }
     private static void error(String generation,JsonObject context,RuntimeException error,BiConsumer<List<String>,JsonObject> reply){
         var page=RegistryPages.split("generic_schema",generation,new JsonArray(),context).getFirst();

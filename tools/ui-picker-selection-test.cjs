@@ -1,0 +1,31 @@
+const assert=require('node:assert/strict'),H=require('./lib/ui-harness.cjs');
+const t=H.create(),c=t.c;c.snd=()=>{};c.toast=()=>{};c.window.EDITOR_PREVIEW=true;c.Reg.meta={};
+let win,closed=false,result,menu;c.openModal=w=>{win=w;closed=false;};c.closeModal=()=>{closed=true;};c.windowify=()=>{};
+c.pickFrom=(anchor,options,cb,o)=>{menu={options,cb,o};};
+const btn=(el,txt)=>el.querySelectorAll('.k-btn').find(x=>x.textContent===txt);
+function open(){result=undefined;c.openPicker({title:'Test',entries:[{full:'minecraft:a',name:'A'},{full:'minecraft:b',name:'B'}],cats:[{id:'all',name:'全部'}],selected:['minecraft:a','example:missing'],values:{'minecraft:a':{level:9},'example:missing':{level:3}},params:[{key:'level',label:'等级',def:1,min:1,max:255,soft:true}],onConfirm:(ids,vals,meta)=>{result={ids,vals,meta};}});}
+open();assert(win.querySelectorAll('.addrow').find(x=>x.getAttribute('data-full')==='minecraft:a').classList.contains('on'));
+btn(win,'确认修改').fire('click');assert.equal(result.vals['minecraft:a'].level,9);assert.equal(result.ids.length,2);assert.deepEqual(Object.keys(result.meta.changes),[]);
+open();win.querySelectorAll('.addcat').find(x=>x.textContent.includes('已选')).fire('click');
+assert.equal(win.querySelectorAll('.addrow').length,2,'unknown selected entry is reachable');
+win.querySelectorAll('.addrow').forEach(x=>x.fire('click'));btn(win,'确认修改').fire('click');assert.equal(result.ids.length,0);assert.equal(result.meta.removed.length,2);
+open();win.querySelectorAll('.addrow')[0].fire('click');btn(win,'取消').fire('click');assert(closed);assert.equal(result,undefined,'cancel does not apply selection');
+let got;c.openPicker=o=>{got=o;};c.Reg.lazyKind=()=>null;
+c.openTagPicker({title:'Blocks',tagsReg:'block',entryReg:'block',multi:true,selected:['minecraft:a'],onConfirm(){}});assert.equal(got.selected[0],'minecraft:a');assert(got.custom.hash);
+c.Reg.lazyKind=k=>k;c.openTagPicker({title:'Blocks',tagsReg:'block',entryReg:'block',multi:true,selected:['example:missing'],onConfirm(){}});assert.equal(got.selected[0],'example:missing');
+c.openRegPick({reg:'block',multi:true,selected:['minecraft:a'],onPickMany(){}});assert.equal(got.selected[0],'minecraft:a');
+// Existing effect payload survives a no-op, including permanent duration and unknown fields.
+let effects=[{id:'minecraft:speed',duration:-1,amplifier:3,show_particles:false,extra:{keep:1}},{id:'example:unknown',duration:21,ambient:true}];
+let ep;c.openEffectPicker=o=>ep=o;
+const effectsUI=c.kEffectList(()=>c.clone(effects),a=>effects=c.clone(a));
+effectsUI.el.querySelector('.k-add').fire('click');assert(ep.present['example:unknown']);assert.equal(ep.values['minecraft:speed'].seconds,-0.05);
+const effectBefore=JSON.stringify(effects);ep.onConfirm(Object.keys(ep.present),ep.values,{changes:{}});assert.equal(JSON.stringify(effects),effectBefore);
+effectsUI.el.querySelector('.k-add').fire('click');ep.onConfirm(['minecraft:speed'],{'minecraft:speed':{level:2,seconds:7}},{changes:{'minecraft:speed':{level:true}}});assert.equal(effects.length,1);assert.equal(effects[0].amplifier,1);assert.equal(effects[0].duration,-1);assert.equal(effects[0].extra.keep,1);
+effectsUI.el.querySelector('.k-add').fire('click');ep.onConfirm([],{}, {changes:{}});assert.equal(effects.length,0);
+c.Store.open({id:'minecraft:stick',count:1,comps:{rarity:'common'},removed:{}},true);c.KLAZY=1;
+const rarity=c.CARDS.rarity(),glint=c.CARDS.glint();assert.equal(rarity.body.children.length,0);assert.equal(glint.body.children.length,0);
+assert.equal(rarity.el.querySelectorAll('.k-sel').length,1);assert.equal(glint.el.querySelectorAll('.k-sel').length,1);
+rarity.el.querySelector('.k-sel').fire('click');assert(menu.o.manual);menu.cb({v:'example:rarity',manual:true});rarity.update();assert(rarity.el.querySelector('.k-sel').textContent.includes('example:rarity'));
+glint.el.querySelector('.k-sel').fire('click');menu.cb({v:'off'});glint.update();assert.equal(c.Ctx.get('enchantment_glint_override'),false);assert(glint.el.querySelector('.k-sel').textContent.includes('不发光'));
+glint.el.querySelector('.k-sel').fire('click');menu.cb({v:'auto'});glint.update();assert.equal(c.Ctx.get('enchantment_glint_override'),undefined);
+console.log('PASS managed picker preselection/unknown entries/empty selection/cancel/parameter preservation and registry adapters; rarity/glint compact header controls/manual/live refresh');

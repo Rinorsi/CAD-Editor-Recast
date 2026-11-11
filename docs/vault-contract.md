@@ -85,7 +85,7 @@ Esc 或页面关闭通过 VaultScreen.onClose() 返回原 Screen（主菜单、�
 |mcDataVersion / modVersion|保存时的数据版本和模组版本|
 |stack|{id,count,comps,removed,component_snbt?}；输入也接受component_formats|
 
-实际捕获见 [vault-captured.json](vault-captured.json)，不是手写注册数据。文件内部附加hash仅用于实现，导出/返回行不包含hash。
+实际捕获见 历史采集回执（仅本地归档：`docs/archive/vault-captured.json`，不随仓库分发），不是手写注册数据。文件内部附加hash仅用于实现，导出/返回行不包含hash。
 
 save调用与apply相同的 StackCodec.decode + ItemStack.validateStrict，然后重新snapshot，移除上下文slot/label。组件保存typed canonical SNBT sidecar；输入接受component_formats:{组件:"snbt"}。get返回的stack可直接交给现有apply/tooltip/world-edit解码器；顶层apply仍需附宿主原有slot/baseline会话字段。
 
@@ -99,9 +99,9 @@ comps只是JSON显示投影，可能受JS Number精度限制，必须连同compo
 
 ## 操作
 
-下表省略共同请求字段。各存储操作的完整真实请求/响应见 [vault-captured.json](vault-captured.json)。该文件来自VaultTest调用实际存储实现与26.1.2原版注册表，**不是游戏客户端消息捕获**。
+下表省略共同请求字段。各存储操作的完整真实请求/响应见 历史采集回执（仅本地归档：`docs/archive/vault-captured.json`，不随仓库分发）。该文件来自VaultTest调用实际存储实现与26.1.2原版注册表，**不是游戏客户端消息捕获**。
 
-真实 Document → vault → vault.result 往返另见 [vault-client-captured.json](vault-client-captured.json)。来自独立隐藏客户端与复制测试世界，status=PASSED；包含全部操作及upload/give。messages键vault-live-0到18保留实际请求/响应。
+真实 Document → vault → vault.result 往返另见 历史采集回执（仅本地归档：`docs/archive/vault-client-captured.json`，不随仓库分发）。来自独立隐藏客户端与复制测试世界，status=PASSED；包含全部操作及upload/give。messages键vault-live-0到18保留实际请求/响应。
 
 |op|请求字段|额外成功字段|
 |---|---|---|
@@ -125,10 +125,10 @@ summary为{enchantCount,hasCustomName,containerSize}，containerSize是非空容
 
 ## 大条目上传和完整取出
 
-8Ki字符请求/24Ki字符响应与64KiB条目无法同时用一个消息满足，因此增加upload、export字符分页；**此扩展来自边界冲突**，没有放宽传输上限。
+本地请求最多 8192 字符，响应最多 8 Mi 字符，条目最多 8 MiB；大请求使用 upload，超响应预算继续使用 export 字符分页。
 
 1. 发送 {op:"upload",requestId:"u1",text:"首段"}，开始新暂存，回 {version:1,requestId,op:"upload",ok:true,token,chars,expires}。每页面一个上传，新建替换旧暂存。
-2. 发送 {op:"upload",requestId:"u2",token:"回执UUID",text:"下一段"}。单段最多6000 UTF-16单元，同时整个请求含转义仍须<=8192字符，客户端自行缩小段长；每段延长30秒。不要切开Unicode代理对。暂存最多8Mi字符，最终解析最多8MiB。
+2. 发送 {op:"upload",requestId:"u2",token:"回执UUID",text:"下一段"}。单段最多6000 UTF-16单元，同时整个请求含转义仍须<=8192字符，客户端自行缩小段长；每段延长30秒。不要切开Unicode代理对。暂存最多64Mi字符，最终解析最多64MiB。
 3. 大stack暂存为stack对象JSON本身；提交 {op:"save",requestId:"s1",uploadToken:"UUID",name:"可选名称"}。
 4. 备份暂存为{version:3,entries:[...]} JSON；提交 {op:"import",requestId:"i1",uploadToken:"UUID",offset:0,limit:32}。使用同token+nextOffset继续，提交刷新30秒期限。
 5. 大条目get遇RESPONSE_LIMIT：对单ID分页export，拼接后读取entries[0].stack，获得完整保真stack。多个条目get超限先拆批，单条仍超限再export。
@@ -143,11 +143,11 @@ upload真实捕获见vault-client-captured.json的vault-live-11、12、13（两�
 
 创造成功 {version:1,requestId,op:"give",ok:true,code:"ok",path:"creative",status:"sent",confirmed:false,inventoryIndex,creativeSlot,item:{id,count},reason}。表示客户端已显示、原版包已发送，**不等于服务端确认**。宿主弹窗说明放进背包/快捷栏第几格及待服务端处理。reason是用户中文，不用于逻辑分支。
 
-**非创造（生存/冒险/旁观）**：必须安装服务端模组，每笔从ServerPlayer.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)校验权限（OP/单人开作弊）；不要求创造，不信任客户端abilities。内部用既有EditorPackets.Request发送 {op:"vault_give",requestId:"vault-give-UUID",slot,inventoryIndex?,stack:完整typed wire栈}。不发送整个保险库、路径或文件能力。服务端自己的注册表严格解码及校验组件，原版setItem插入后inventoryMenu.sendAllDataToRemote()，有其他打开容器则一并完整同步，再明确发背包槽更新。
+**非创造（生存/冒险/旁观），服务端安装模组时**：，每笔从ServerPlayer.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)校验权限（OP/单人开作弊）；不要求创造，不信任客户端abilities。内部用既有EditorPackets.Request发送 {op:"vault_give",requestId:"vault-give-UUID",slot,inventoryIndex?,stack:完整typed wire栈}。不发送整个保险库、路径或文件能力。服务端自己的注册表严格解码及校验组件，原版setItem插入后inventoryMenu.sendAllDataToRemote()，有其他打开容器则一并完整同步，再明确发背包槽更新。
 
 非创造成功 {version:1,requestId:原页面ID,op:"give",ok:true,code:"ok",path:"server",status:"given",confirmed:true,inventoryIndex,item:{id,count},reason}。内部ID映射回页面ID，通过字面patch key vault.result回执。宿主弹窗“已放进快捷栏第N格”或“已放进背包第N格（槽位index）”。confirmed表示服务端已插入，不能把纯发送称为到账。创造模式误走内部服务端give返回creative_path_required，不偷换路径。
 
-失败仍为 {version:1,requestId,op:"give",ok:false,error,code,reason}；新增give机器码以小写code为准，error亦保留该码。原本本机错误UNAVAILABLE/INVALID_STACK/NOT_ALLOWED/INVENTORY_FULL/UNSUPPORTED_SLOT仍可见。新增码：permission_denied无gamemaster；not_connected未连服务器或服务端未安装；inventory_full区域已满；slot_changed指定槽被占；invalid_stack组件校验失败；payload_too_large内部请求超过32767字符；request_pending同条目正在等待；request_timeout十秒未收到回执、结果未知；rate_limited每玩家每秒20次或ID配额；request_id_conflict内部ID载荷改变；creative_path_required错误路径。服务端未安装时明确“服务器没有安装物品工坊，生存模式不能写回”，不回退到另一写法。
+失败仍为 {version:1,requestId,op:"give",ok:false,error,code,reason}；新增give机器码以小写code为准，error亦保留该码。原本本机错误UNAVAILABLE/INVALID_STACK/NOT_ALLOWED/INVENTORY_FULL/UNSUPPORTED_SLOT仍可见。新增码：permission_denied无gamemaster；not_connected未连服务器或服务端未安装；inventory_full区域已满；slot_changed指定槽被占；invalid_stack组件校验失败；payload_too_large内部请求超过32767字符；request_pending同条目正在等待；request_timeout十秒未收到回执、结果未知；rate_limited每玩家每秒20次或ID配额；request_id_conflict内部ID载荷改变；creative_path_required错误路径。服务端未安装时复用客户端命令引擎，以服务器下发的 execute/item 命令树预检、每笔服务器授权；仅对自己的0..35空槽执行受保护的 item replace，不使用 /give，不改库内容或元数据。Slot 为原版 ItemStackWithSlot CODEC 的 BYTE，execute unless data entity @s Inventory[{Slot:Nb}] 在服务器确认槽条目缺席后才插入。收到真实 stateId 变化及完整目标栈匹配才返回 confirmed=true/status=saved/path=command；未知保留条目、同连接锁定条目，不自动重发；页面/连接/世界/菜单失效后迟到同步不能确认。命令树缺项立即 command_unavailable；目标区域已满 inventory_full，不覆盖物品。普通非OP不接收原版管理员广播，其他OP和控制台可能收到，插件额外转发未知。页面打开时显示实际能力说明，取出回执前保持单在途，前端give等待12秒覆盖宿主10秒未知终态。
 
 **前端防重复**：发give后把该条目的“给我/取出”按钮置灰，等对应requestId回执后恢复；宿主也拦同连接同条目并行（包括重开页面），最多8笔等待。相同page requestId回放原本回执，不重新发放。超时不自动重发，并保留同条目锁直到迟到回执或断开连接，提示先核对背包。服务器按玩家+内部requestId保留本连接成功回执，同载荷重放只返回原槽，载荷改变拒绝；每连接最多4096个成功ID，超限拒绝新请求，不驱逐旧ID以免重放。页面成功回执保留至4096条或文档重建；每次服务端重放仍重新检查当前权限。
 
@@ -224,7 +224,7 @@ WRITE_FAILED在成功回执的storageError中，不表示内存修改撤回。
 
 ## 生物条目（2026-11-08，磁盘schema 2）
 
-同一vault通道同时保存物品和生物。kind为item/entity；缺省item，包括旧文件和旧导出。list的kind允许item/entity/all，缺省item；标签、分页、排序与搜索规则相同，sort:item按类型ID排序。标签计数跨两类共享。stats新增items/entities，entries是两类总数。两类合计2000项/8MiB；单条含元数据的JSON最多64KiB，实体SNBT输入本身UTF-8也不超过64KiB，嵌套最多96层。没有spawn操作。
+同一vault通道同时保存物品和生物。kind为item/entity；缺省item，包括旧文件和旧导出。list的kind允许item/entity/all，缺省item；标签、分页、排序与搜索规则相同，sort:item按类型ID排序。标签计数跨两类共享。stats新增items/entities，entries是两类总数。两类合计2000项/64MiB；单条含元数据的JSON最多8MiB，实体SNBT输入本身UTF-8也不超过8MiB，嵌套最多96层。没有spawn操作。
 
 磁盘与导出统一写version:2，读取/导入接受1、2。旧版本程序发现2应走已有SCHEMA_VERSION只读逻辑，不回退空库覆盖；使用新程序即可继续读取。未知未来版本仍只读，包括备份文件。离线 `merge-legacy.ps1` 接受schema 1/2，混合合并物品和生物，统一输出schema 2；未知未来版本仍拒绝，校验失败不改目标或备份。用 `pwsh -NoProfile -File tools/vault-persist/merge-test.ps1` 和 `pwsh -NoProfile -File tools/vault-persist/merge-entity-test.ps1` 运行临时目录回归测试，不访问用户库。
 
@@ -235,6 +235,10 @@ WRITE_FAILED在成功回执的storageError中，不表示内存修改撤回。
 ~~~
 
 list/save/update/duplicate返回的轻量条目省略snbt，不返回stack/item。get返回snbt供entity_data、SpawnData.entity和其它生物输入字段直接使用；宿主不实例化实体。已注册类型compatibility:true；未知注册ID仍可保存、导入和取出，回执compatibility:false、compatibilityUnknown:true。未知ID默认名称回退ID。主菜单也可save entity，不依赖世界组件注册表。summary按已知现代/旧NBT键提取，不改动属性/装备/效果内容。类型后缀、数组类型与数值保真；SNBT会规范化引号、空白、键顺序和无命名空间ID，并非输入文本逐字保留。
+
+实体单选目录按目标字段的能力提供保险库入口。「放置与数据 → 实体数据 → 类型 → 选择类型」可用“从保险库取生物”，替换当前 `entity_data` 草稿的完整实体数据并立即刷新本表单，保留 long、typed arrays 和未知字段；最终写入游戏仍由父页应用触发，导入可单步撤销。刷怪蛋、刷怪笼、蜂巢和乘客等已能接收完整实体数据的入口沿用同一取出流程。只保存 `entity_type` ID 的普通字段（包括允许标签的单选字段）显示“从保险库选择类型”，仅取实体类型，不导入属性、装备等数据。
+
+保险库作为子窗口打开，取消或完成后回到原选择目录；未使用条目不修改父草稿。取消后的迟到读取不再回填，目标、世界版本或父物品草稿已改变时也拒绝回填。无效 SNBT、缺少字符串类型 ID、错误条目类别和已删除条目有错误提示，不修改父数据；合法但未注册的模组类型保持原值，最终仍交当前世界的注册表及 Codec 校验。
 
 生物保存请求（name/tags/note/force可选）：
 

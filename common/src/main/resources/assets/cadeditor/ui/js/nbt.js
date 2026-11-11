@@ -6,30 +6,52 @@
 /* 从保险库放进来的嵌套物品（容器 / 束袋 / use_remainder …）：整个组件改用 SNBT 提交，才能保住里面的类型。保存成功后清空 */
 var NBT_FORCE = {};
 var NBT_RAW = { block_entity_data: 1, entity_data: 1, bucket_entity_data: 1, custom_data: 1, charged_projectiles: 1, lock: 1 };
+var NBT_SPECIAL_NUMBER = /^([+-]?)(NaN|Infinity)([fFdD])$/;
+function nbtSpecialNode(n) { return !!(n && n.k === 'num' && NBT_SPECIAL_NUMBER.test(String(n.raw || ''))); }
+function nbtSpecialValue(n) {
+  var m = NBT_SPECIAL_NUMBER.exec(String(n && n.raw || ''));
+  if (!m) return n && n.v;
+  return m[2] === 'NaN' ? NaN : m[1] === '-' ? -Infinity : Infinity;
+}
+function nbtSpecialRaw(v, type) {
+  var suffix = type === 'f' ? 'f' : 'd';
+  if (isNaN(v)) return 'NaN' + suffix;
+  return (v < 0 ? '-' : '') + 'Infinity' + suffix;
+}
+function nbtNumberValue(v) { return typeof v === 'number' ? v : nbtMeta(v) && nbtMeta(v).scalar ? nbtSpecialValue(nbtMeta(v).scalar) : Number(v); }
+function nbtSpecialScalar(v, type) {
+  if (type !== 'f' && type !== 'd') throw new Error('NaN / Infinity 只能写入游戏确认允许的 Float 或 Double 字段');
+  return nbtScalar({ k: 'num', t: type, raw: nbtSpecialRaw(v, type), v: v });
+}
 
 /* ---------- 解析：节点 { k:'num'|'str'|'bool'|'list'|'arr'|'obj' } ---------- */
 function nbtParse(text) {
   var i = 0, n = text.length, BSL = String.fromCharCode(92);
-  function fail(m) { throw new Error('SNBT 第 ' + (i + 1) + ' 个字符：' + m); }
-  function ws() { while (i < n && /\s/.test(text.charAt(i))) i++; }
+  var space = /\s*/g, word = /[A-Za-z0-9_.+\-]+/g;
+  function fail(m) { var error = new Error('SNBT 第 ' + (i + 1) + ' 个字符：' + m); error.pos = i; throw error; }
+  function ws() { space.lastIndex = i; space.exec(text); i = space.lastIndex; }
   function quoted() {
-    var q = text.charAt(i++), out = '';
-    while (i < n) {
-      var c = text.charAt(i++);
-      if (c === q) return out;
-      if (c === BSL) { var e = text.charAt(i++); out += e === 'n' ? String.fromCharCode(10) : e === 't' ? String.fromCharCode(9) : e === 'r' ? String.fromCharCode(13) : e; }
-      else out += c;
+    var q = text.charAt(i++), parts = [], start = i, scan = q === '"' ? /["\\]/g : /['\\]/g, hit;
+    scan.lastIndex = i;
+    while ((hit = scan.exec(text))) {
+      parts.push(text.substring(start, hit.index)); i = hit.index + 1;
+      if (hit[0] === q) return parts.join('');
+      if (i >= n) break;
+      var e = text.charAt(i++); parts.push(e === 'n' ? '\n' : e === 't' ? '\t' : e === 'r' ? '\r' : e);
+      start = i; scan.lastIndex = i;
     }
+    i = n;
     fail('字符串没有结束');
   }
   function bare() {
-    var s = i;
-    while (i < n && /[A-Za-z0-9_.+\-]/.test(text.charAt(i))) i++;
-    if (i === s) fail('这里需要一个值');
-    return text.substring(s, i);
+    word.lastIndex = i; var hit = word.exec(text);
+    if (!hit || hit.index !== i) fail('这里需要一个值');
+    i = word.lastIndex; return hit[0];
   }
   function classify(tok) {
     if (tok === 'true' || tok === 'false') return { k: 'bool', v: tok === 'true' };
+    var special = NBT_SPECIAL_NUMBER.exec(tok);
+    if (special) return { k: 'num', t: special[3].toLowerCase(), raw: tok, v: special[2] === 'NaN' ? NaN : special[1] === '-' ? -Infinity : Infinity };
     var m = /^([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)([bBsSlLfFdD]?)$/.exec(tok);
     if (m) {
       var t = m[2].toLowerCase();
@@ -48,7 +70,7 @@ function nbtParse(text) {
   }
   function compound() {
     i++;
-    var map = {}, keys = [];
+    var map = Object.create(null), keys = [];
     ws();
     if (text.charAt(i) === '}') { i++; return { k: 'obj', keys: keys, map: map }; }
     for (;;) {
@@ -56,7 +78,8 @@ function nbtParse(text) {
       var c = text.charAt(i), key = (c === '"' || c === "'") ? quoted() : bare();
       ws();
       if (text.charAt(i++) !== ':') fail('键后面需要冒号');
-      map[key] = value(); keys.push(key);
+      if (!Object.prototype.hasOwnProperty.call(map, key)) keys.push(key);
+      map[key] = value();
       ws();
       var d = text.charAt(i++);
       if (d === '}') break;
@@ -90,14 +113,60 @@ function nbtParse(text) {
   return node;
 }
 
-/* ---------- 用户手输的 SNBT：保住他写的类型 ----------
-   页面里输入框把 SNBT 解析成普通 JSON 再存，类型就没了（2s 变 2，1b 变 1）。parseSnbtUser 解析时把带类型的节点记在这里，
-   合并时如果某个值的 JSON 与记下的某个节点一致（而旧参照已对不上），就用用户写的那个类型。应用成功后清空。 */
-var NBT_SEEN = {}, NBT_SEEN_N = 0;
-function nbtToJson(n) {
-  if (n.k === 'num' || n.k === 'str' || n.k === 'bool') return n.v;
-  if (n.k === 'list' || n.k === 'arr') return n.items.map(nbtToJson);
-  var o = {}; n.keys.forEach(function (k) { o[k] = nbtToJson(n.map[k]); }); return o;
+/* ---------- 用户手输的 SNBT：类型跟随节点，跨文档不按值猜测 ---------- */
+/* Metadata belongs to the actual node, never a global numeric/JSON value.
+   Safe numeric children remain ordinary form values. Root numeric inputs and
+   unsafe longs are value objects, so moving them cannot bind another value's raw text. */
+var NBT_META = new WeakMap();
+function nbtMeta(v) { return v && typeof v === 'object' ? NBT_META.get(v) : null; }
+function nbtScalar(n) {
+  if (nbtSpecialNode(n)) n.v = nbtSpecialValue(n);
+  var value = new Number(n.v);
+  NBT_META.set(value, { scalar: n });
+  return value;
+}
+function nbtOwn(o, key, value) {
+  Object.defineProperty(o, key, { value: value, enumerable: true, configurable: true, writable: true });
+  return value;
+}
+function nbtToJson(n, child) {
+  if (n.k === 'num') return !child || nbtSpecialNode(n) || (n.t === 'l' && Math.abs(n.v) > 9007199254740991) ? nbtScalar(n) : n.v;
+  if (n.k === 'str' || n.k === 'bool') return n.v;
+  var o;
+  if (n.k === 'list' || n.k === 'arr') o = n.items.map(function (it) { return nbtToJson(it, true); });
+  else { o = {}; n.keys.forEach(function (k) { nbtOwn(o, k, nbtToJson(n.map[k], true)); }); }
+  NBT_META.set(o, n);
+  return o;
+}
+function nbtClone(v) {
+  if (v === null || typeof v !== 'object') return v;
+  var meta = nbtMeta(v);
+  if (meta && meta.scalar) return nbtScalar(meta.scalar);
+  var out = Array.isArray(v) ? [] : {};
+  Object.keys(v).forEach(function (k) { nbtOwn(out, k, nbtClone(v[k])); });
+  if (meta) NBT_META.set(out, meta);
+  return out;
+}
+/* Transfer a field to a different owner (default picker, clipboard, raw editor). */
+function nbtTake(owner, key) {
+  var v = owner[key], m = nbtMeta(owner), ref = m && (m.k === 'obj' ? m.map[key] : m.items && m.items[key] || (m.numberType ? { k:'num', t:m.numberType } : null));
+  if (typeof v === 'number' && ref && ref.k === 'num') return nbtScalar(nbtParse(nbtNum(v, ref)));
+  if (v && typeof v === 'object' && !nbtMeta(v) && ref) return nbtToJson(nbtParse(nbtMerge(v, ref)), true);
+  return nbtClone(v);
+}
+function nbtSetTyped(owner, key, value, type) {
+  return nbtPut(owner, key, nbtScalar(nbtParse(nbtNum(Number(value), { k: 'num', t: type, raw: '', v: NaN }))));
+}
+function nbtPut(owner, key, value) {
+  var m = nbtMeta(value), prev = nbtMeta(owner);
+  if (m && !Array.isArray(owner)) {
+    var refs = Object.create(null);
+    if (prev && prev.k === 'obj') Object.keys(prev.map).forEach(function (k) { refs[k] = prev.map[k]; });
+    refs[key] = m.scalar || nbtShape(nbtParse(nbtMerge(value, null)));
+    NBT_META.set(owner, { k: 'obj', keys: Object.keys(refs), map: refs });
+    if (m.scalar && !nbtSpecialNode(m.scalar) && Math.abs(m.scalar.v) <= 9007199254740991) value = m.scalar.v;
+  }
+  return nbtOwn(owner, key, value);
 }
 function nbtTypedNode(n) {
   if (n.k === 'num') return n.t !== 'i' && n.t !== 'd0';
@@ -107,25 +176,13 @@ function nbtTypedNode(n) {
   return false;
 }
 function nbtNote(text) {
-  var root = nbtParse(text);
-  (function walk(n) {
-    if (nbtTypedNode(n)) {
-      if (NBT_SEEN_N > 300) { NBT_SEEN = {}; NBT_SEEN_N = 0; }
-      var j = JSON.stringify(nbtToJson(n));
-      if (!NBT_SEEN[j]) NBT_SEEN_N++;
-      NBT_SEEN[j] = n;
-    }
-    if (n.k === 'list' || n.k === 'arr') n.items.forEach(walk);
-    else if (n.k === 'obj') n.keys.forEach(function (k) { walk(n.map[k]); });
-  })(root);
+  return nbtToJson(nbtParse(text));
 }
-function nbtSeenClear() { NBT_SEEN = {}; NBT_SEEN_N = 0; NBT_FORCE = {}; }
-/* 值已经被改过（与旧参照对不上）时，看用户是不是手输过一个带类型的同值节点 */
+function nbtSeenClear() { NBT_FORCE = {}; }
+/* 显式输入的节点类型优先于宿主旧基线。 */
 function nbtPickRef(v, ref) {
-  if (!NBT_SEEN_N || v === null || v === undefined || typeof v === 'string' || typeof v === 'boolean') return ref;
-  var js = JSON.stringify(v);
-  if (ref && JSON.stringify(nbtToJson(ref)) === js) return ref;
-  return NBT_SEEN[js] || ref;
+  var own = nbtMeta(v);
+  return own && !own.scalar ? own : ref;
 }
 /* 数组里同值的元素个数与参照里不一样（删了 / 加了）：按位置抄旧原文会把已删元素的数字写回来，这种值只沿用类型 */
 function nbtAmbig(v, refItems) {
@@ -138,8 +195,13 @@ function nbtTypeOnly(r) { return { k: 'num', t: r.t, raw: '', v: NaN }; }
 
 /* ---------- 合并：按 JSON 当前值输出 SNBT，类型和原文参照 ref ---------- */
 function nbtNum(v, ref) {
+  if (!isFinite(v)) {
+    var specialType = ref && (ref.t === 'f' || ref.t === 'd' || ref.t === 'd0') ? (ref.t === 'f' ? 'f' : 'd') : null;
+    if (!specialType) throw new Error('NaN / Infinity 必须带 f 或 d 后缀');
+    return nbtSpecialRaw(v, specialType);
+  }
   if (ref && ref.k === 'num') {
-    if (ref.v === v) return ref.raw;                       /* 没改：原文照抄，连超出 2^53 的整数也不丢 */
+    if ((nbtSpecialNode(ref) && Object.is(nbtSpecialValue(ref), v)) || ref.v === v) return ref.raw; /* 没改：原文照抄 */
     var t = ref.t;
     if (t === 'b' || t === 's') return String(Math.round(v)) + t;
     if (t === 'l') return String(Math.round(v)) + 'L';
@@ -150,7 +212,9 @@ function nbtNum(v, ref) {
   return String(v);
 }
 function nbtMerge(v, ref) {
-  if (v === null || v === undefined) return '""';
+  if (v === null || v === undefined) return nbtSpecialNode(ref) ? ref.raw : '""';
+  var own = nbtMeta(v);
+  if (own && own.scalar) return own.scalar.raw;
   ref = nbtPickRef(v, ref);
   if (typeof v === 'boolean') return ref && ref.k === 'num' && ref.t === 'b' ? (v ? '1b' : '0b') : String(v);
   if (typeof v === 'number') return nbtNum(v, ref && (ref.k === 'num' || ref.k === 'bool') ? (ref.k === 'num' ? ref : null) : null);
@@ -161,12 +225,12 @@ function nbtMerge(v, ref) {
       return '[' + ref.p + ';' + v.map(function (x, idx) {
         var r = ref.items[idx];
         if (!r || amb(Number(x))) r = nbtTypeOnly(r || ref.items[0] || { t: tt });
-        return nbtNum(Number(x), r);
+        return nbtMeta(x) && nbtMeta(x).scalar ? nbtMerge(x, null) : nbtNum(Number(x), r);
       }).join(',') + ']';
     }
     var lamb = ref && ref.k === 'list' ? nbtAmbig(v, ref.items) : null;
     return '[' + v.map(function (x, idx) {
-      var r = ref && ref.k === 'list' ? (ref.items[idx] || ref.items[ref.items.length - 1] || null) : null;
+      var r = ref && ref.k === 'list' ? (ref.items[idx] || ref.items[ref.items.length - 1] || (ref.numberType ? { k:'num', t:ref.numberType } : null)) : null;
       if (r && r.k === 'num' && typeof x === 'number' && lamb(x)) r = nbtTypeOnly(r);
       return nbtMerge(x, r);
     }).join(',') + ']';
@@ -175,22 +239,136 @@ function nbtMerge(v, ref) {
   return '{' + parts.join(',') + '}';
 }
 /* 参照文本里有 JSON 表达不了的类型（short / long / 类型化数组）？ */
-function nbtHasTyped(text) {
-  return /\[[BIL];/.test(text)
-    || /(?:^|[^A-Za-z0-9_."'])[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?[sSlLfFdD](?![A-Za-z0-9_])/.test(text)   /* 2s 3L 2.0f 4d；单独的 1b / 0b 多半是布尔，不算 */
-    || /(?:^|[^A-Za-z0-9_."'])[+-]?\d+\.\d*(?![A-Za-z0-9_])/.test(text);   /* 没写后缀的小数 = double，整数化后会变 int */
+function nbtHasTyped(text) { return nbtTypedNode(nbtParse(text)); }
+
+function nbtHydrate(comps, sidecar) {
+  var out = nbtClone(comps || {}), refs = Object.create(null);
+  var own = nbtMeta(out);
+  if (own && own.k === 'obj') Object.keys(own.map).forEach(function (cid) { refs[cid] = own.map[cid]; });
+  Object.keys(sidecar || {}).forEach(function (cid) {
+    if (!Object.prototype.hasOwnProperty.call(out, cid)) return;
+    refs[cid] = nbtParse(nbtMerge(nbtTake(out, cid), nbtParse(sidecar[cid])));
+    nbtOwn(out, cid, nbtToJson(refs[cid], true));
+  });
+  NBT_META.set(out, { k: 'obj', keys: Object.keys(refs), map: refs });
+  return out;
+}
+function nbtComponentText(d, cid) {
+  var cache = docCache(d);
+  if (Object.prototype.hasOwnProperty.call(cache.texts, cid)) return cache.texts[cid];
+  var ref = d.snbt && d.snbt[cid];
+  var owner = nbtMeta(d.comps), field = owner && owner.map && owner.map[cid];
+  return cache.texts[cid] = nbtMerge(d.comps[cid], field || (ref ? nbtParse(ref) : null));
+}
+function nbtComponentTexts(d) {
+  var out = {};
+  Object.keys(d.comps || {}).forEach(function (cid) { nbtOwn(out, cid, nbtComponentText(d, cid)); });
+  return out;
+}
+/* Persist only type/precision metadata, not a second copy of large string values. */
+function nbtShape(node) {
+  if (node.k === 'num') {
+    if (nbtSpecialNode(node) || Object.is(node.v, -0) || node.t === 'l' && Math.abs(node.v) > 9007199254740991) return node;
+    if (node.raw !== nbtNum(node.v, { k:'num', t:node.t })) return node;
+    return node.t === 'i' ? null : { k:'num', t:node.t };
+  }
+  if (node.k === 'str' || node.k === 'bool') return null;
+  if (node.k === 'obj') {
+    var map = Object.create(null);
+    node.keys.forEach(function (key) { var shape = nbtShape(node.map[key]); if (shape) map[key] = shape; });
+    var keys = Object.keys(map); return keys.length ? { k: 'obj', keys: keys, map: map } : null;
+  }
+  // Uniform numeric lists/typed arrays need one type, not a metadata object per number.
+  var first = node.items[0], uniform = !!first && first.k === 'num' && node.items.every(function (n) { return n.k === 'num' && n.t === first.t && !nbtSpecialNode(n) && !Object.is(n.v, -0) && !(n.t === 'l' && Math.abs(n.v) > 9007199254740991) && n.raw === nbtNum(n.v, { k:'num', t:node.k === 'arr' ? node.p === 'B' ? 'b' : node.p === 'L' ? 'l' : 'i' : n.t }); });
+  if (uniform) return node.k === 'arr' ? { k:'arr', p:node.p, items:[] } : first.t === 'i' ? null : { k:'list', numberType:first.t, items:[] };
+  var items = node.items.map(nbtShape);
+  while (items.length && !items[items.length - 1]) items.pop();
+  return node.k === 'list' && !items.length ? null : { k:node.k, p:node.p, items:items };
+}
+function nbtRestore(value, shape) {
+  if (!shape) return nbtClone(value);
+  if (shape.k === 'num' && nbtSpecialNode(shape)) return nbtScalar(shape);
+  if (shape.k === 'num' && shape.raw && Object.is(parseFloat(shape.raw), -0)) return nbtScalar(nbtParse(shape.raw));
+  if (typeof value === 'number' && shape.k === 'num') {
+    return shape.t === 'l' && Math.abs(shape.v) > 9007199254740991 ? nbtScalar(nbtParse(nbtNum(value, shape))) : value;
+  }
+  if (value === null || typeof value !== 'object') return value;
+  var out = Array.isArray(value) ? [] : {};
+  Object.keys(value).forEach(function (key) { nbtOwn(out, key, nbtRestore(value[key], shape.k === 'obj' ? shape.map[key] : shape.items && shape.items[key] || (shape.numberType ? { k:'num', t:shape.numberType } : null))); });
+  NBT_META.set(out, shape);
+  return out;
+}
+function nbtSnapshot(d) {
+  var cache = docCache(d); if (cache.snapshot !== undefined) return cache.snapshot;
+  var refs = Object.create(null);
+  Object.keys(d.comps).forEach(function (cid) {
+    if (!Object.prototype.hasOwnProperty.call(cache.types, cid)) cache.types[cid] = nbtShape(nbtParse(nbtComponentText(d, cid)));
+    refs[cid] = cache.types[cid];
+  });
+  return cache.snapshot = JSON.stringify({ id: d.id, count: d.count, comps: d.comps, removed: d.removed, nbt_types: { k: 'obj', keys: Object.keys(refs), map: refs } });
+}
+function nbtReadSnapshot(text) {
+  var data = JSON.parse(text);
+  data.comps = data.nbt_types ? nbtRestore(data.comps || {}, data.nbt_types) : nbtHydrate(data.comps, data.nbt || {});
+  return data;
+}
+/* Hot reload crosses a JSON boundary too. Keep each open document's metadata,
+   including unsaved edits, without changing its baseline or undo position. */
+function nbtExportDocState(d) {
+  var out = {};
+  Object.keys(d).forEach(function (key) { nbtOwn(out, key, d[key]); });
+  out.nbt_types = JSON.parse(nbtSnapshot(d)).nbt_types;
+  var raw = typeof ItemRawBuffers !== 'undefined' && ItemRawBuffers.get(d);
+  if (raw && (raw.invalid || raw.pending)) out.rawBuffer = {text:raw.text, base:raw.base};
+  return out;
+}
+function nbtImportDocState(state) {
+  var out = nbtClone(state);
+  out.comps = state.nbt_types ? nbtRestore(state.comps || {}, state.nbt_types) : nbtHydrate(state.comps || {}, state.snbt || {});
+  delete out.nbt_types;
+  if (state.rawBuffer && typeof state.rawBuffer.text === 'string' && typeof ItemRawBuffers !== 'undefined') ItemRawBuffers.set(out, {text:state.rawBuffer.text, base:state.rawBuffer.base, invalid:true});
+  delete out.rawBuffer;
+  return out;
+}
+/* New form-created objects may have no root metadata while a child amount is
+   already a typed Number. Inspect the current children, not just the old AST. */
+function nbtValueNeedsSnbt(value) {
+  if (typeof value === 'number') return !isFinite(value);
+  if (!value || typeof value !== 'object') return false;
+  if (nbtMeta(value)) return true;
+  return Object.keys(value).some(function (key) { return nbtValueNeedsSnbt(value[key]); });
+}
+function nbtUsesSnbt(d, cid) {
+  var value = d.comps[cid], ref = d.snbt && d.snbt[cid], owner = nbtMeta(d.comps), ownedField = owner && owner.map && owner.map[cid];
+  return !!(NBT_RAW[cid] || NBT_FORCE[cid] || nbtValueNeedsSnbt(value) || ownedField || (ref && nbtHasTyped(ref)));
+}
+function nbtNodeHasSpecial(node) {
+  if (!node) return false;
+  if (nbtSpecialNode(node)) return true;
+  if (node.scalar) return nbtNodeHasSpecial(node.scalar);
+  if (node.k === 'obj') return (node.keys || Object.keys(node.map || {})).some(function (key) { return nbtNodeHasSpecial(node.map[key]); });
+  if (node.k === 'list' || node.k === 'arr') return (node.items || []).some(nbtNodeHasSpecial);
+  return false;
+}
+function nbtNeedsTypedValidation(d, cid) {
+  var value = d.comps[cid], owner = nbtMeta(d.comps), field = owner && owner.map && owner.map[cid];
+  if (NBT_RAW[cid] || nbtNodeHasSpecial(nbtMeta(value)) || nbtNodeHasSpecial(field)) return true;
+  // Nested items and mod components can contain typed NBT too. A lossy JSON
+  // validation must never reject data that apply sends through the SNBT codec.
+  return nbtUsesSnbt(d, cid) && nbtHasTyped(nbtComponentText(d, cid));
 }
 
 /* 提交时：哪些组件改用 SNBT。没被编辑过的交给宿主按原值保留（宿主会恢复真实组件，类型原样）。 */
-function nbtApplyFormats(d) {
+function nbtApplyFormats(d, all) {
   var base = {}, out = {}, formats = {}, any = false;
-  try { base = JSON.parse(d.base).comps || {}; } catch (e) {}
+  base = baseOf(d);
   Object.keys(d.comps).forEach(function (cid) {
     var v = d.comps[cid], ref = d.snbt && d.snbt[cid];
     out[cid] = clone(v);
-    if (JSON.stringify(v) === JSON.stringify(base[cid])) return;
-    if (!(NBT_RAW[cid] || NBT_FORCE[cid] || (ref && nbtHasTyped(ref)))) return;
-    try { out[cid] = nbtMerge(v, ref ? nbtParse(ref) : null); formats[cid] = 'snbt'; any = true; } catch (e) { out[cid] = clone(v); }
+    var text = nbtComponentText(d, cid);
+    if (!all && base.comps[cid] !== undefined && text === nbtComponentText(base, cid)) return;
+    if (!nbtUsesSnbt(d, cid)) return;
+    try { out[cid] = text; formats[cid] = 'snbt'; any = true; } catch (e) { if (typeof EditorDiag !== 'undefined') EditorDiag.error('nbt.applyFormats', e); throw e; }
   });
   return { comps: out, formats: any ? formats : null };
 }
@@ -200,31 +378,32 @@ var Valid = {
   state: {}, waiting: {}, timers: {}, subs: [], seq: 0,
   host: function () { return typeof oriel !== 'undefined' && !!oriel.send && typeof Reg !== 'undefined' && Reg.live(); },
   on: function (f, alive) { this.subs.push({ f: f, alive: alive }); if (this.subs.length > 40) this.subs = this.subs.filter(function (s) { return !s.alive || s.alive(); }); },
-  fire: function () { this.subs.slice().forEach(function (s) { try { s.f(); } catch (e) {} }); },
+  fire: function () { this.subs.slice().forEach(function (s) { try { s.f(); } catch (e) { if (typeof EditorDiag !== 'undefined') EditorDiag.error('validation.subscriber', e); } }); },
   textOf: function (d, cid) {
     if (d.comps[cid] === undefined) return null;
-    var ref = d.snbt && d.snbt[cid];
-    return nbtMerge(d.comps[cid], ref ? nbtParse(ref) : null);
+    return nbtComponentText(d, cid);
   },
   edited: function (d, cid) {
-    var base = {}; try { base = JSON.parse(d.base).comps || {}; } catch (e) {}
-    return d.comps[cid] !== undefined && JSON.stringify(d.comps[cid]) !== JSON.stringify(base[cid]);
+    var base = baseOf(d);
+    return d.comps[cid] !== undefined && (base.comps[cid] === undefined || nbtComponentText(d, cid) !== nbtComponentText(base, cid));
   },
   /* 每次修改后调用：编辑过的自由 NBT 组件，停手 450ms 后向游戏校验一次 */
-  touch: function () {
+  touch: function (cids) {
     if (!this.host()) return;
     var d = Store.doc(); if (!d) return;
     var me = this;
-    this.touchHost(d);
-    Object.keys(NBT_RAW).forEach(function (cid) {
+    this.touchHost(d, cids);
+    (cids || Object.keys(d.comps).concat(Object.keys(this.state))).forEach(function (cid) {
+      if (d.comps[cid] === undefined) { clearTimeout(me.timers[cid]); delete me.state[cid]; return; }
+      if (!nbtNeedsTypedValidation(d, cid)) return;
       if (!me.edited(d, cid)) { if (me.state[cid]) { delete me.state[cid]; me.fire(); } return; }
       clearTimeout(me.timers[cid]);
-      me.timers[cid] = setTimeout(function () { me.run(cid); }, 450);
+      me.timers[cid] = setTimeout(function () { if (Store.doc() === d) me.run(cid, d); }, 450);
     });
   },
-  run: function (cid) {
-    var d = Store.doc(); if (!d) return;
-    var text; try { text = this.textOf(d, cid); } catch (e) { return; }
+  run: function (cid, d) {
+    d = d || Store.doc(); if (!d) return;
+    var text; try { text = this.textOf(d, cid); } catch (e) { if (typeof EditorDiag !== 'undefined') EditorDiag.error('validation.serialize', e); return; }
     if (text === null) return;
     var st = this.state[cid];
     if (st && st.text === text) return;
@@ -239,18 +418,24 @@ var Valid = {
   /* ---- 逐字段校验（component_validate）：被改过的普通组件，把当前值交给游戏的真实 Codec，错误带字段路径（$.nutrition）。
      自由 NBT 组件仍走上面的 validate_component（SNBT）。结果和当前值对不上（又改了）就不算数。 ---- */
   hv: {}, hvWait: {}, hvTimers: {}, hvSeq: 0,
-  touchHost: function (d) {
+  touchHost: function (d, cids) {
     var me = this;
-    Object.keys(d.comps).forEach(function (cid) {
-      if (NBT_RAW[cid]) return;
+    (cids || Object.keys(d.comps)).forEach(function (cid) {
+      if (d.comps[cid] === undefined) { clearTimeout(me.hvTimers[cid]); delete me.hv[cid]; return; }
+      if (nbtNeedsTypedValidation(d, cid)) {
+        clearTimeout(me.hvTimers[cid]); delete me.hvTimers[cid]; delete me.hv[cid];
+        Object.keys(me.hvWait).forEach(function (id) { if (me.hvWait[id].cid === cid) delete me.hvWait[id]; });
+        return;
+      }
       if (!me.edited(d, cid)) { if (me.hv[cid]) { delete me.hv[cid]; me.fire(); } return; }
       clearTimeout(me.hvTimers[cid]);
-      me.hvTimers[cid] = setTimeout(function () { me.runHost(cid, d); }, 450);
+      me.hvTimers[cid] = setTimeout(function () { if (Store.doc() === d) me.runHost(cid, d); }, 450);
     });
     Object.keys(this.hv).forEach(function (cid) { if (d.comps[cid] === undefined) { delete me.hv[cid]; me.fire(); } });
   },
   runHost: function (cid, d) {
     d = d || Store.doc(); if (!d || d.comps[cid] === undefined) return;
+    if (nbtNeedsTypedValidation(d, cid)) { delete this.hv[cid]; this.run(cid, d); return; }
     var key; try { key = JSON.stringify(d.comps[cid]); } catch (e) { return; }
     var st = this.hv[cid]; if (st && st.key === key) return;
     if (key.length > 6000) { this.hv[cid] = { key: key, note: '内容较大，应用时由游戏校验' }; this.fire(); return; }
@@ -279,7 +464,7 @@ var Valid = {
   problems: function (d, out) {
     var me = this;
     Object.keys(this.hv).forEach(function (cid) {
-      var st = me.hv[cid]; if (!st || st.ok !== false || d.comps[cid] === undefined) return;
+      var st = me.hv[cid]; if (!st || st.ok !== false || d.comps[cid] === undefined || nbtNeedsTypedValidation(d,cid)) return;
       var cur = null; try { cur = JSON.stringify(d.comps[cid]); } catch (e) {}
       if (cur !== st.key) return;
       var c = typeof CIDX !== 'undefined' ? CIDX[cid] : null;

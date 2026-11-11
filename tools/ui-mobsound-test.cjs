@@ -31,3 +31,8 @@ const qa = (el, sel) => el.querySelectorAll(sel);
   assert.equal(qa(row, '.k-snd').length, 1, '到了之后补上');
 }
 console.log('PASS mob sounds: buttons from entity_info.sounds, toggle via sound_preview, late info fills the box.');
+{
+ const head=c.esEntityHeader({id:'minecraft:pig',onPick(){},snbtText(){return '{id:"minecraft:pig"}';}});
+ assert(head.lastChild.classList.contains('ed-sounds'),'playback follows name and all actions in its own final row');
+ assert.equal(qa(head,'.k-snd').length,3);assert(head.textContent.includes('更换生物'));assert(head.textContent.includes('存入保险库'));
+}

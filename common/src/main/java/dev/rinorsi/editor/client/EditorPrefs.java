@@ -29,15 +29,22 @@ public final class EditorPrefs {
         });
         static final Store STORE = new Store(Platform.get().configDir().resolve("cadeditor-ui.json"), System::nanoTime, WRITER);
     }
-    public static JsonObject read() { return Holder.STORE.read(); }
+    public static JsonObject read() {
+        var result = Holder.STORE.read();
+        String scope = WorldDraftHost.scope();
+        if (scope != null) result.addProperty("worldDraftScope", scope);
+        return result;
+    }
     static void accept(JsonElement message) { Holder.STORE.accept(message); }
     static void tick() { Holder.STORE.tick(); }
     public static void flush() { Holder.STORE.flush(); }
     public static boolean putDraft(String key, String value) { return Holder.STORE.putDraft(key, value); }
     public static JsonElement getDraft(String key) { return Holder.STORE.getDraft(key); }
+    /** Read without changing LRU or queuing another disk write. */
+    public static String peekDraft(String key) { return Holder.STORE.peekDraft(key); }
     public static boolean clearDraft(String key) { return Holder.STORE.clearDraft(key); }
-    public static final int MAX_DRAFT_BYTES = 200 * 1024;
-    public static final int MAX_DRAFTS_BYTES = 1024 * 1024;
+    public static final int MAX_DRAFT_BYTES = 8 * 1024 * 1024;
+    public static final int MAX_DRAFTS_BYTES = 64 * 1024 * 1024;
     public static final int MAX_DRAFTS = 8;
 
     static final class Store {
@@ -88,8 +95,13 @@ public final class EditorPrefs {
             if (!validDraftKey(key) || !validDraft(value)) return false;
             JsonObject drafts = drafts();
             drafts.remove(key); drafts.addProperty(key, value);
-            while (drafts.size() > MAX_DRAFTS || bytes(drafts.toString()) > MAX_DRAFTS_BYTES)
-                drafts.remove(drafts.entrySet().iterator().next().getKey());
+            while (drafts.size() > MAX_DRAFTS || bytes(drafts.toString()) > MAX_DRAFTS_BYTES) {
+                // Never silently evict a recoverable world/entity draft to store a new one.
+                // Rejecting leaves both the prior on-disk draft and the live page untouched.
+                String oldest = drafts.keySet().stream().filter(k -> !k.startsWith("world|") && !k.equals(key)).findFirst().orElse(null);
+                if (oldest == null) return false;
+                drafts.remove(oldest);
+            }
             queueDrafts(drafts); return true;
         }
         JsonElement getDraft(String key) {
@@ -97,6 +109,14 @@ public final class EditorPrefs {
             JsonObject drafts = drafts(); JsonElement value = drafts.remove(key);
             if (value == null) return com.google.gson.JsonNull.INSTANCE;
             drafts.add(key, value); queueDrafts(drafts); return value.deepCopy();
+        }
+        String peekDraft(String key) {
+            if (!validDraftKey(key)) return null;
+            finishWrite(false); if (cached == null) cached = readDisk();
+            Pending update = pending.get("drafts");
+            JsonElement all = update == null ? cached.get("drafts") : update.value;
+            JsonElement value = all != null && all.isJsonObject() ? all.getAsJsonObject().get(key) : null;
+            return value != null && value.isJsonPrimitive() && value.getAsJsonPrimitive().isString() ? value.getAsString() : null;
         }
         boolean clearDraft(String key) {
             if (!validDraftKey(key)) return false;
@@ -129,7 +149,7 @@ public final class EditorPrefs {
         private void finishWrite(boolean wait) {
             if (writing == null || (!wait && !writing.isDone())) return;
             boolean success;
-            try { success = writing.join(); } catch (RuntimeException error) { success = false; }
+            try { success = writing.join(); } catch (RuntimeException error) { dev.rinorsi.editor.EditorDiagnostics.failure("prefs.write_task", path.getFileName().toString(), error); success = false; }
             if (success) cached = frozen;
             long retryAt = clock.getAsLong() + DELAY;
             for (var entry : inFlight.entrySet()) {
@@ -150,7 +170,7 @@ public final class EditorPrefs {
                     var value = valid(entry.getKey(), entry.getValue());
                     if (value != null) out.add(entry.getKey(), value.deepCopy());
                 });
-            } catch (IOException | RuntimeException ignored) { /* Preferences must not block editing. */ }
+            } catch (IOException | RuntimeException error) { dev.rinorsi.editor.EditorDiagnostics.warning("prefs.read", path.getFileName().toString(), error); }
             return out;
         }
 
@@ -162,7 +182,7 @@ public final class EditorPrefs {
                 Files.writeString(temp, prefs.toString(), StandardCharsets.UTF_8);
                 Files.move(temp, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
                 return true;
-            } catch (IOException ignored) { return false; }
+            } catch (IOException error) { dev.rinorsi.editor.EditorDiagnostics.failure("prefs.write", path.getFileName().toString(), error); return false; }
             finally {
                 if (temp != null) try { Files.deleteIfExists(temp); } catch (IOException ignored) {}
             }
@@ -171,24 +191,46 @@ public final class EditorPrefs {
 
     private static JsonElement valid(String key, JsonElement value) {
         if (key.equals("drafts")) return validDrafts(value);
+        if (key.equals("itemHistory")) return validItemHistory(value);
         if (value == null || !value.isJsonPrimitive()) return null;
         var primitive = value.getAsJsonPrimitive();
+        if (key.equals("windowMode"))
+            return primitive.isString() && switch (primitive.getAsString()) {
+                case "remember", "maximized", "windowed" -> true;
+                default -> false;
+            } ? value : null;
         if (key.equals("heroView"))
             return primitive.isString() && (primitive.getAsString().equals("2d") || primitive.getAsString().equals("3d")) ? value : null;
-        if (key.equals("windowMax") || key.equals("uiSound") || key.equals("stageOpen") || key.equals("statsOpen") || key.equals("debug"))
+        if (key.equals("windowMax") || key.equals("uiSound") || key.equals("uiAnimations") || key.equals("stageOpen") || key.equals("statsOpen") || key.equals("debug"))
             return primitive.isBoolean() ? value : null;
         int min, max;
         switch (key) {
             case "heroWidth" -> { min = 100; max = 320; }
+            case "advNavWidth", "advListWidth" -> { min = 40; max = 800; }
             case "winW" -> { min = 320; max = 1600; }
             case "winH" -> { min = 200; max = 1000; }
+            case "uiScale" -> { min = 0; max = 4; }
+            case "codeFontSize" -> { min = 8; max = 20; }
             default -> { return null; }
         }
         if (!primitive.isNumber()) return null;
         try {
             int number = primitive.getAsBigDecimal().intValueExact();
-            return number >= min && number <= max ? value : null;
+            // Zero is the explicit "use the responsive default" marker for saved window geometry.
+            return ((number >= min && number <= max) || (number == 0 && !key.equals("codeFontSize"))) ? value : null;
         } catch (ArithmeticException | NumberFormatException ignored) { return null; }
+    }
+    private static JsonElement validItemHistory(JsonElement value) {
+        if (value == null || !value.isJsonArray() || value.getAsJsonArray().size() > 48 || value.toString().length() > 16000) return null;
+        for (var element : value.getAsJsonArray()) {
+            if (!element.isJsonObject()) return null;
+            var entry = element.getAsJsonObject();
+            if (entry.size() != 2 || !entry.has("id") || !entry.has("snap") ||
+                !entry.get("id").isJsonPrimitive() || !entry.getAsJsonPrimitive("id").isString() ||
+                !entry.get("snap").isJsonPrimitive() || !entry.getAsJsonPrimitive("snap").isString()) return null;
+            if (net.minecraft.resources.Identifier.tryParse(entry.get("id").getAsString()) == null || !validDraft(entry.get("snap").getAsString())) return null;
+        }
+        return value;
     }
     private static JsonElement validDrafts(JsonElement value) {
         if (value == null || !value.isJsonObject()) return null;

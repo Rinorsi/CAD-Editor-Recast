@@ -93,6 +93,7 @@ public final class PlayerExtendedEditor {
             if(action.equals("apply"))LOG.info("[CAD-Editor-Player] actor={} target={} offline={} view={} before={} after={}",actor.getUUID(),uuid,offline,view,before,fingerprint);
             sink.accept(result);
         }catch(RuntimeException e){
+            if (!(e instanceof IllegalArgumentException)) dev.rinorsi.editor.EditorDiagnostics.failure("player.request", "action="+action+" view="+view+" request="+id, e);
             String code=committed || (writing && !(e instanceof EditorSessions.Failure))?"write_uncertain":e instanceof EditorSessions.Failure f?f.code:"invalid_request";
             String reason=e.getMessage()==null?"玩家编辑失败，请重新读取核对":(e instanceof EditorSessions.Failure?e.getMessage():"请求格式或玩家数据无效："+e.getMessage());
             if(code.equals("write_uncertain"))reason="原版写入或回执处理异常，操作可能已生效；请重新读取核对，不要自动重试。"+reason;

@@ -6,20 +6,24 @@
 
 - 构建输出、运行目录、日志、截图写在 `../Oriel-UI-Workspace/daily/<日期>/`（`fabric/build.gradle`、`stonecutter.gradle` 里是这个相对路径），所以仓库必须与 `Oriel-UI-Workspace` 同级。内部评估报告、阶段交接、状态审计也放在工作区的 `planning/cad-editor-recast/`，不进仓库。
 - `tools/gw.sh` 转交给 `Oriel-UI-Workspace/tools/gw.sh`，由它处理 JDK 与下载代理。作者只验证过这条路径；没有工作区时直接用 `./gradlew` 理论上可行但未验证，构建输出会写到上级目录的 `Oriel-UI-Workspace/daily/…`（Gradle 自动创建）。
-- Oriel UI 的 jar 获取：源码仓库 <https://github.com/Rinorsi/Oriel-UI>（目前私有）；维护者本机的发布包在 `Oriel-UI-Workspace/dist/oriel-0.11.0-<日期>/`，把六个对应加载器 / 游戏版本的 jar 复制到本仓库 libs/；版本矩阵、构建和 smoke 入口见 [MULTIVERSION.md](MULTIVERSION.md)。
-- 来源：CAD Editor 是作者自己的项目，本项目是它的换代重写；界面引擎 Oriel UI 基于 Vellum（MIT，Max Leiter），是外部必需依赖，声明见 `NOTICE`。
+- Oriel UI 的 jar 获取：源码仓库 <https://github.com/Rinorsi/Oriel-UI>（目前私有）；维护者本机的发布包在 `Oriel-UI-Workspace/dist/oriel-0.15.0-<日期>/`，使用对应瘦包的 Maven 工件（`-PorielRepository=<目录>` / `libs/oriel-maven/` / MavenLocal）；版本矩阵、构建和 smoke 入口见 [MULTIVERSION.md](MULTIVERSION.md)。
+- 来源：CAD Editor 是作者自己的项目，本项目是它的换代重写；界面引擎 Oriel UI 基于 Vellum（MIT，Max Leiter），正式包内嵌其瘦包，声明见 `NOTICE`。
+
+## 开发与正式发行分别配置
+
+正式包默认内嵌 Oriel 0.15.0 瘦包；`-PorielEmbedded=false` 可构建外部依赖版。开发时 Fabric 和 NeoForge 的 runClient 使用官方 `oriel.sourceRoot=<工程>/common`，只影响源码资源读取，不写入发行 jar。正式包从自己的 jar 读取页面；不分发 dev-sources.properties、源码绝对路径或测试探针。升级 Java 库需要重启客户端，页面热更新不会升级引擎。
 
 ## 发布包与运行
 
-Oriel 发布包的维护者副本在 `../Oriel-UI-Workspace/dist/oriel-0.11.0-20261108/`（各目标使用对应 jar）。依赖范围：`>=0.11.0 <0.12.0`。页面随 CAD Editor jar 打包，真实入口为 `cadeditor:ui/index.html`。
+当前编译和嵌入版本为 Maven 瘦包 `dev.oriel:oriel-<loader>-<mc>:0.15.0`，不依赖模板/演示。依赖范围：`>=0.15.0 <0.16.0`。页面随 CAD Editor jar 打包，真实入口为 `cadeditor:ui/index.html`。
 
-客户端运行目录：`../Oriel-UI-Workspace/daily/<今天>/run/editor-mod-client/`。Loom 加载 CAD Editor 开发模组，并安装同一份 Oriel 发布 jar；不要再把 CAD Editor jar 重复放进这个运行目录。普通玩家安装时 mods 里放 CAD Editor、Oriel 与 Fabric API。
+客户端运行目录：`../Oriel-UI-Workspace/daily/<今天>/run/editor-mod-client/`。Loom 加载 CAD Editor 开发模组，并安装同一份 Oriel 发布 jar；不要再把 CAD Editor jar 重复放进这个运行目录。普通玩家安装内嵌版时 mods 里只放 CAD Editor 与 Fabric API，不另装 Oriel。外部版才另装 Oriel 0.15.x。
 
-修改使用原版 `ItemStack` / `DataComponentPatch` Codec，不注册物品私有组件。创造模式写回走原版创造槽位包，服务端安装本模组时还会校验槽位和会话；非创造模式需要服务端安装并授予权限。原版数据的序列化测试通过，不等于卸载后的游戏验收通过。
+修改使用原版 `ItemStack` / `DataComponentPatch` Codec，不注册物品私有组件。创造模式写回走原版创造槽位包，服务端安装本模组时还会校验槽位和会话。未装服务端模组的非创造玩家仅可通过服务器授权的原版命令修改自己的普通背包 0..35（第1～36格），主手绑定打开时的槽位；其他目标仍需服务端模组。命令写回的反馈受众、同步确认及非 CAS 限制见 [client-only-hotbar.md](client-only-hotbar.md)。原版数据的序列化测试通过，不等于卸载后的游戏验收通过。
 
 `tools/oriel.sh`、`tools/shot.sh`、`tools/preview/shot.sh` 是需要 Oriel 源码（`../Oriel-UI`）的开发脚本，不属于“只有发布 jar”的接入路径；日常启动使用独立 Loom 入口（根目录 `启动物品工坊预览.bat`）。
 
-## 热更新：只使用 Oriel 0.11 原生 dev-sources
+## 热更新：只使用 Oriel 0.12 原生 dev-sources
 
 在游戏目录的 `config/oriel/dev-sources.properties` 写一行：
 
@@ -27,7 +31,7 @@ Oriel 发布包的维护者副本在 `../Oriel-UI-Workspace/dist/oriel-0.11.0-20
 cadeditor=<本仓库>/common/src/main/resources/assets/cadeditor
 ```
 
-值指向 `assets/cadeditor`，也可写它的父目录 `assets`。配置后重启一次游戏，手持物品按 I 或 `/cade`，真实页面始终是 `cadeditor:ui/index.html`；保存 CSS/JS 即可刷新，不需要启动器、复制页面或监视脚本。启动日志应出现 `Oriel: dev source: 'cadeditor:' pages are read from …`。这是 Oriel 0.11 的原生能力，**不要把开发机路径配置随模组分发给玩家**。
+值指向 `assets/cadeditor`，也可写它的父目录 `assets`。配置后重启一次游戏，手持物品按 I 或 `/cade`，真实页面始终是 `cadeditor:ui/index.html`；保存 CSS/JS 即可刷新，不需要启动器、复制页面或监视脚本。启动日志应出现 `Oriel: dev source: 'cadeditor:' pages are read from …`。这是 Oriel 0.12 的原生能力，**不要把开发机路径配置随模组分发给玩家**。
 
 - 缺少的源码文件回退到 jar。CSS 只更新样式，不重建 Document / 控制器；HTML、JS 和页面读取的 JSON 整页重建，控制器恢复已保存的草稿、分页、筛选和折叠状态。未写入 Store 的输入文字、光标及临时弹窗不保证恢复。
 - PNG / 封面仍取自 jar，换图须重新构建；翻译、字体、纹理用 F3+T，不能承诺热更新；Java 仍需重编，结构变化可能需要重启。
@@ -37,7 +41,7 @@ cadeditor=<本仓库>/common/src/main/resources/assets/cadeditor
 
 ## 依赖说明：页面控制器与动效
 
-Oriel 锁定 `>=0.11.0 <0.12.0`。`EditorPageController` 使用发布 jar 中的 `PageControllers`、`Shell`、`Motion`；这些 engine / kit 接口**不在下游稳定 API 承诺内**，升级 minor 版本前须重新验证。不需要额外的 engine jar 或库源码。
+Oriel 锁定 `>=0.15.0 <0.16.0`。`EditorPageController` 使用发布 jar 中的 `PageControllers`、`Shell`、`Motion`；这些 engine / kit 接口**不在下游稳定 API 承诺内**，升级 minor 版本前须重新验证。不需要额外的 engine jar 或库源码。
 
 控制器只注册正式的 `cadeditor:ui/index.html`，每份 Document 仅一次 `Shell.setup`。dev-sources 不改变 URL，因此沿用同一个控制器与真实宿主写回。
 
@@ -68,9 +72,11 @@ MCTest 让 agent 通过 MCP / 本机 WebSocket 驱动真实 Minecraft 客户端�
 仅通过 Loom `localRuntime` 加载，关闭传递依赖，不进入发布 jar 或 POM；本工程另从 `runServer` 类路径排除它。
 启动：`./gradlew :fabric:26.1:runClient`（Windows 可使用 `./gradlew.bat`）。
 默认启用，控制地址为 `127.0.0.1:25599`；`-PmcTest=false` 从开发运行类路径移除 MCTest，`-PmcTestPort=25600` 为客户端添加 `-Dmctest.port=25600`（不改变启停状态）。例如 `./gradlew :fabric:26.1:runClient -PmcTestPort=25600`。
-日常 `启动物品工坊预览.bat` / `tools/preview/start.ps1` 固定传入 `-PmcTest=false`，不开控制端口；自动化 `tools/live-test` 不传该开关，保持默认启用。
+日常 `启动物品工坊预览.bat` 双击后可选择 Fabric / NeoForge × 26.1.2、26.2、26.3 六种启动方案；只启动选中的一个目标。也可传参直启，例如 `启动物品工坊预览.bat -Loader fabric -Minecraft 26.3`。26.1 是 26.1.2 的别名，各目标沿用 Gradle 配置中的独立运行目录；这是带源码热更新的开发启动入口。`tools/preview/start.ps1 -PlanOnly -Loader neoforge -Minecraft 26.3` 只输出启动方案，不写配置或启动游戏。
+
+日常入口固定传入 `-PmcTest=false`，不开控制端口；自动化 `tools/live-test` 不传该开关，保持默认启用。
 不要把控制端口转发到外网。构建通过不代表客户端交互已验收。
 
 ## 版本与分发
 
-当前版本：<!-- editor-version -->0.99.4<!-- /editor-version -->。版本唯一来源是根目录 gradle.properties；使用 tools/bump-version.ps1 的 -DryRun 先预览同步，再正式更新。不要手改模组元数据版本模板，不重写历史验收记录中的旧版本。六目标构建、SHA256、tag 发布与可选内存采样见 [RELEASE.md](RELEASE.md)。
+当前版本：<!-- editor-version -->0.99.7<!-- /editor-version -->。版本唯一来源是根目录 gradle.properties；使用 tools/bump-version.ps1 的 -DryRun 先预览同步，再正式更新。不要手改模组元数据版本模板，不重写历史验收记录中的旧版本。六目标构建、SHA256、tag 发布与可选内存采样见 [RELEASE.md](RELEASE.md)。

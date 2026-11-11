@@ -11,6 +11,9 @@ import net.minecraft.world.item.ItemStack;
 
 /** The page exchanges component PATCHES, never a flattened default-component map. */
 public final class StackCodec {
+    // Each component accepts up to 1 Mi characters of typed SNBT. Transport
+    // and vault entries also enforce their own total UTF-8 payload limits.
+    private static final int MAX_COMPONENT_SNBT_CHARS = EditorWire.MAX_NBT_CHARS;
     private StackCodec() {}
 
     public static JsonObject snapshot(ItemStack stack, RegistryAccess registries, JsonObject slot, String label) {
@@ -21,7 +24,7 @@ public final class StackCodec {
         for (var entry : patch.entrySet()) {
             String key = entry.getKey();
             if (key.startsWith("!")) removed.addProperty(shortId(key.substring(1)), 1);
-            else comps.add(shortId(key), entry.getValue().deepCopy());
+            else comps.add(shortId(key), pageJson(entry.getValue()));
         }
         JsonObject out = new JsonObject();
         out.addProperty("id", BuiltInRegistries.ITEM.getKey(stack.getItem()).toString());
@@ -68,10 +71,13 @@ public final class StackCodec {
         ItemStack next;
         if (edit.has("component_formats") || edit.has("component_snbt")) {
             var formats = edit.has("component_formats") ? object(edit, "component_formats") : new JsonObject();
-            var nbt = (net.minecraft.nbt.CompoundTag) JsonOps.INSTANCE.convertTo(net.minecraft.nbt.NbtOps.INSTANCE, serialized);
-            var nbtPatch = nbt.getCompound("components").orElseThrow();
+            // Resolve typed fields BEFORE converting JSON. Their page projection
+            // can contain rounded longs or null for a non-finite numeric tag.
+            var nbt = new net.minecraft.nbt.CompoundTag();
+            nbt.putString("id", id); nbt.putInt("count", count);
+            var nbtPatch = new net.minecraft.nbt.CompoundTag(); nbt.put("components", nbtPatch);
             if (edit.has("component_snbt")) for (var entry : object(edit, "component_snbt").entrySet()) {
-                if (!comps.has(entry.getKey())) continue;
+                if (!comps.has(entry.getKey()) || formats.has(entry.getKey())) continue;
                 // An edited JSON value invalidates its old sidecar. Explicit format wins below.
                 var typed = sidecar(ComponentValidation.type(componentId(entry.getKey())), string(object(edit, "component_snbt"), entry.getKey()), comps.get(entry.getKey()), registries);
                 if (typed != null) nbtPatch.put(componentId(entry.getKey()), typed);
@@ -81,7 +87,12 @@ public final class StackCodec {
                 if (!entry.getValue().isJsonPrimitive() || !entry.getValue().getAsString().equals("snbt")) fail("未知组件格式：" + entry.getKey());
                 if (!comps.has(entry.getKey())) fail("格式标记没有对应组件：" + entry.getKey());
                 ComponentValidation.type(key);
-                nbtPatch.put(key, ComponentValidation.parseSnbt(string(comps, entry.getKey())));
+                nbtPatch.put(key, ComponentValidation.parseSnbt(string(comps, entry.getKey()), MAX_COMPONENT_SNBT_CHARS));
+            }
+            for (var entry : patch.entrySet()) {
+                if (nbtPatch.contains(entry.getKey())) continue;
+                if (entry.getKey().startsWith("!")) nbtPatch.put(entry.getKey(), new net.minecraft.nbt.CompoundTag());
+                else nbtPatch.put(entry.getKey(), encodeJsonComponent(ComponentValidation.type(entry.getKey()), entry.getValue(), registries));
             }
             next = ItemStack.CODEC.parse(registries.createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE), nbt).getOrThrow();
         } else next = ItemStack.CODEC.parse(registries.createSerializationContext(JsonOps.INSTANCE), serialized).getOrThrow();
@@ -122,6 +133,10 @@ public final class StackCodec {
         @SuppressWarnings("unchecked") T typed = (T) value;
         return type.codec().encodeStart(registries.createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE), typed).getOrThrow().toString();
     }
+    private static <T> net.minecraft.nbt.Tag encodeJsonComponent(net.minecraft.core.component.DataComponentType<T> type, JsonElement json, RegistryAccess registries) {
+        T value = type.codec().parse(registries.createSerializationContext(JsonOps.INSTANCE), json).getOrThrow();
+        return type.codec().encodeStart(registries.createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE), value).getOrThrow();
+    }
     private static boolean sidecarChangesOriginal(JsonObject edit, String key, net.minecraft.core.component.DataComponentType<?> type, java.util.Optional<?> original, RegistryAccess registries) {
         if (!edit.has("component_snbt") || !object(edit, "component_snbt").has(key) || !edit.getAsJsonObject("comps").has(key)) return false;
         var tag = sidecar(type, string(object(edit, "component_snbt"), key), edit.getAsJsonObject("comps").get(key), registries);
@@ -130,13 +145,27 @@ public final class StackCodec {
     private static <T> net.minecraft.nbt.Tag sidecar(net.minecraft.core.component.DataComponentType<T> type, String text, JsonElement json, RegistryAccess registries) {
         try {
             var nbt = registries.createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE);
-            var tag = net.minecraft.nbt.TagParser.create(net.minecraft.nbt.NbtOps.INSTANCE).parseFully(text);
+            var tag = ComponentValidation.parseSnbt(text, MAX_COMPONENT_SNBT_CHARS);
             T typed = type.codec().parse(nbt, tag).getOrThrow();
             // Browser JSON numbers have already passed through IEEE754. Preserve a
             // matching typed sidecar there too; exact numeric edits use explicit SNBT.
             return samePageJson(type.codec().encodeStart(registries.createSerializationContext(JsonOps.INSTANCE), typed).getOrThrow(), json)
                     ? type.codec().encodeStart(nbt, typed).getOrThrow() : null;
-        } catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) { throw new IllegalArgumentException("组件 SNBT 快照无效", e); }
+        } catch (RuntimeException e) { throw new IllegalArgumentException("组件 SNBT 快照无效", e); }
+    }
+    /** JsonOps can contain NaN/Infinity JsonPrimitives, but those are not valid JSON
+     * wire values. The exact NBT sidecar restores these null projections on read. */
+    static JsonElement pageJson(JsonElement value) {
+        if (value == null || value.isJsonNull()) return com.google.gson.JsonNull.INSTANCE;
+        if (value.isJsonPrimitive()) {
+            var primitive = value.getAsJsonPrimitive();
+            if (primitive.isNumber() && !Double.isFinite(primitive.getAsDouble())) return com.google.gson.JsonNull.INSTANCE;
+            return primitive.deepCopy();
+        }
+        if (value.isJsonArray()) {
+            var out = new com.google.gson.JsonArray(); value.getAsJsonArray().forEach(element -> out.add(pageJson(element))); return out;
+        }
+        var out = new JsonObject(); value.getAsJsonObject().entrySet().forEach(entry -> out.add(entry.getKey(), pageJson(entry.getValue()))); return out;
     }
 
     /** JsonPrimitive.equals compares Float(0.8f) as its binary double against parsed
@@ -151,6 +180,11 @@ public final class StackCodec {
     }
     private static boolean compareJson(JsonElement left, JsonElement right, boolean pageNumbers) {
         if (left == null || right == null) return left == right;
+        if (left.isJsonNull() && right.isJsonNull()) return true;
+        if (pageNumbers && (left.isJsonNull() || right.isJsonNull())) {
+            JsonElement numeric = left.isJsonNull() ? right : left;
+            return numeric.isJsonPrimitive() && numeric.getAsJsonPrimitive().isNumber() && !Double.isFinite(numeric.getAsDouble());
+        }
         if (left.isJsonObject() && right.isJsonObject()) {
             var a = left.getAsJsonObject(); var b = right.getAsJsonObject();
             if (!a.keySet().equals(b.keySet())) return false;

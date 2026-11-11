@@ -247,13 +247,13 @@ div
         div.tx
           b "Armor Stand"
           span.k-sub "armor_stand · 放置好的生物不能换类型"
-        div.ed-sounds
         div.k-btn [title="把保险库里同类型生物的外观、属性、装备等套上来"]
           img.o-ico [src="oriel:textures/icons/download.png" style="height:16px;width:16px"]
           span "从保险库套用"
         div.k-btn [title="把调好的整只生物存起来，之后在任何选择生物的地方取出"]
           img.o-ico [src="oriel:textures/icons/chest.png" style="height:16px;width:16px"]
           span "存入保险库"
+        div.ed-sounds
       div.es-panel
         div.k-list
           div.k-card.w-card [data-card="es:常用设置"]
@@ -289,7 +289,7 @@ div
                   div.k-xhead
                     div.tx [title="Health"]
                       div.z "生命值"
-                      div.s "默认 20"
+                      div.s "当前上限：20 · 游戏上限：1024"
                     div.k-num.k-xnum
                       div.k-numrow
                         div.k-stepper
@@ -385,7 +385,7 @@ div
                   div.k-xhead
                     div.tx [title="minecraft:max_health"]
                       div.z "Max Health"
-                      div.s "默认 20 · 范围 1 ~ 1024"
+                      div.s "默认 20 · 范围 1 ~ 1024；降低后若当前值超限，会同步降至实际生效上限"
                     div.k-num.k-xnum
                       div.k-numrow
                         div.k-stepper
@@ -648,10 +648,10 @@ div
                 div.tx
                   b "Chicken"
                   span.k-sub "minecraft:chicken"
-                div.ed-sounds
                 div.k-btn
                   img.o-ico [src="oriel:textures/icons/grid.png" style="height:16px;width:16px"]
                   span "更换生物"
+                div.ed-sounds
               div.k-srow.k-xrow
                 div.k-xhead
                   div.tx
@@ -752,46 +752,25 @@ div
             div.k-chev [title="折叠 / 展开"]
               img.o-ico [src="oriel:textures/icons/down.png" style="height:8px;width:8px"]
           div.k-cbody
-            div.kc
+            div.kc [style="fontSize:12px;lineHeight:14px"]
               div.kc-bar
-                div.k-seg
-                  div.k-segi.on [title="彩色显示；点哪一行就直接改哪一行"]
-                    "高亮"
-                  div.k-segi [title="整段文本编辑，适合粘贴多行或大段修改"]
-                    "整段"
-                div.k-btn [title="按层级缩进重新排版（保留所有类型后缀）"]
-                  img.o-ico [src="oriel:textures/icons/refresh.png" style="height:16px;width:16px"]
-                  span "格式化"
-                div.k-btn [title="压成一行，方便粘进命令"]
-                  img.o-ico [src="oriel:textures/icons/layers.png" style="height:16px;width:16px"]
-                  span "压缩"
-                div.k-btn
-                  img.o-ico [src="oriel:textures/icons/copy.png" style="height:16px;width:16px"]
-                  span "复制"
-                div.k-btn [title="折叠 / 展开除最外层以外的所有括号"]
-                  img.o-ico [src="oriel:textures/icons/down.png" style="height:16px;width:16px"]
-              div.kc-view [style="height:360px"]
-                div.kc-r
-                  span.kc-no "1"
-                  span.kc-fd.on "▾"
-                  span.kc-code
-                    span.kc-o0 "{"
-                div.kc-r
-                  span.kc-no "2"
-                  span.kc-fd
-                  span.kc-code
-                    span.kc-ind [style="width:14px"]
-                    span.kc-key "id"
-                    span.kc-p ":"
-                    span
-                    span.kc-sid ""minecraft:armor_stand""
-                div.kc-r
-                  span.kc-no "3"
-                  span.kc-fd
-                  span.kc-code
-                    span.kc-c0 "}"
-              textarea.ed-snbt.kc-ta [value="{\n  id: \"minecraft:armor_stand\"\n}" style="display:none;height:360px;minHeight:360px"]
-              div.k-sub.kc-st "✓ SNBT 有效 · 3 行"
+                div.kc-actions
+                  div.k-btn.kc-tool [title="格式化：按层级缩进，保留类型后缀"]
+                    img.o-ico [src="oriel:textures/icons/list.png" style="height:16px;width:16px"]
+                  div.k-btn.kc-tool [title="压缩：压成一行"]
+                    img.o-ico [src="oriel:textures/icons/layers.png" style="height:16px;width:16px"]
+                  div.k-btn.kc-tool [title="复制"]
+                    img.o-ico [src="oriel:textures/icons/copy.png" style="height:16px;width:16px"]
+                div.kc-fonts [title="仅调整 SNBT 字号，不改变全局界面比例或内容"]
+                  div.k-btn.sm [title="缩小 SNBT 字号"]
+                    span "A−"
+                  span.kc-font-label "12"
+                  div.k-btn.sm [title="放大 SNBT 字号"]
+                    span "A+"
+              div.kc-surface
+                textarea.ed-snbt.kc-ta [value="{\n  id: \"minecraft:armor_stand\"\n}" style="fontSize:12px;height:360px;lineHeight:14px;minHeight:80px"]
+                div.k-sub.kc-st "✓ SNBT 有效 · 3 行"
+              div.kc-diagnostic [style="display:none"]
             div.k-btn
               img.o-ico [src="oriel:textures/icons/undo.png" style="height:16px;width:16px"]
               span "放弃这里的修改"

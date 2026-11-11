@@ -21,6 +21,32 @@ const q = (el, sel) => el.querySelector(sel);
   assert.equal(c.xNum({ title: 'a', icon: c.uiIcon('sword', 14), value: 1, onChange() {} }).querySelectorAll('.ic').length, 1, '给了图标才画');
 }
 // ---- xToggle
+// Float/double inputs keep native precision; step sizes only guide interaction.
+{
+  const changed = [];
+  const value = 0.12345678901234566;
+  const row = c.xNum({ title: '精度', value, min: 0, max: 1, step: 0.05, dec: 3, preservePrecision: true, onChange: v => changed.push(v) });
+  const input = q(row, '.k-numin');
+  assert.equal(input.value, String(value), 'display does not truncate the stored value');
+  input.fire('change'); assert.equal(changed.pop(), value, 'unchanged typed value stays exact');
+  input.value = '0.9876543210987654'; input.fire('change');
+  assert.equal(changed.pop(), 0.9876543210987654, 'manual input is independent of step/dec');
+  input.value = 'Infinity'; input.fire('change'); assert.equal(changed.length, 0, 'player controls remain finite');
+  assert.match(q(row, '.k-numerr').textContent, /有限/);
+  const integer = c.xNum({ title: '整数', value: 4, min: 0, max: 2147483647, dec: 0, onChange() {} });
+  const integerInput = q(integer, '.k-numin'); integerInput.value = '2147483647'; integerInput.fire('change');
+  assert.equal(integer.num.get(), 2147483647, 'native max int stays exact');
+  const generic = c.wNum({t:'num'}, value, () => {}, {});
+  assert.equal(q(generic, '.ed-numin').value, String(value), 'generic numeric form also displays full precision');
+  let special;
+  const approved = c.wNum({t:'num',nbtType:'f',min:0,max:3.4028235e38,allowPositiveInfinity:true}, 1, v => special=v, {});
+  const approvedInput = q(approved, '.ed-numin'); approvedInput.value = 'Infinity'; approvedInput.fire('input');
+  assert.equal(c.nbtNumberValue(special), Infinity, 'Codec-approved special remains typed');
+  assert.equal(approved.classList.contains('bad'), false, 'finite range hint does not override Codec special permission');
+  const forbidden = c.wNum({t:'int'}, 1, () => assert.fail('integer special committed'), {});
+  const forbiddenInput = q(forbidden, '.ed-numin'); forbiddenInput.value='Infinity'; forbiddenInput.fire('input');
+  assert.equal(forbidden.classList.contains('bad'), true, 'integer fields still reject special values');
+}
 {
   let on = null; const r = c.xToggle({ title: '开关', sub: '说明', value: true, onChange: v => on = v });
   assert.ok(q(r, '.k-toggle').classList.contains('on')); assert.equal(text(q(r, '.s')), '说明');

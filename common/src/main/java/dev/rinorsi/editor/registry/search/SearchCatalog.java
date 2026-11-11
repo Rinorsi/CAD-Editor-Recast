@@ -7,6 +7,10 @@ import java.util.function.BooleanSupplier;
 
 /** Reload epochs and memory admission are independent of Minecraft and testable on a plain JVM. */
 public final class SearchCatalog implements AutoCloseable {
+    private final java.util.function.BiConsumer<String, Throwable> failures;
+    public SearchCatalog() { this((kind, error) -> {}); }
+    public SearchCatalog(java.util.function.BiConsumer<String, Throwable> failures) { this.failures = Objects.requireNonNull(failures); }
+    private void report(String kind, Throwable error) { try { failures.accept(kind, error); } catch (RuntimeException ignored) { /* Diagnostics never change search results. */ } }
     public static final long MAX_BYTES = 768L*1024*1024;
     public static final int MAX_KINDS = 64;
     public static final class Slot {
@@ -31,8 +35,8 @@ public final class SearchCatalog implements AutoCloseable {
         try{return CompletableFuture.runAsync(()->{
             try{SearchIndex index=SearchIndex.build(rows,pinyin,()->epoch.get()!=capturedEpoch,slot.progress::set);
                 synchronized(this){if(epoch.get()!=capturedEpoch)throw new CancellationException();if(bytes+index.estimatedBytes()>MAX_BYTES)throw new IllegalArgumentException("INDEX_LIMIT");bytes+=index.estimatedBytes();slot.index=index;}
-            }catch(CancellationException ignored){}catch(RuntimeException error){slot.error=error.getMessage()==null?"INDEX_FAILED":error.getMessage();}
-        },builder);}catch(RejectedExecutionException error){slot.error="BUSY";return CompletableFuture.failedFuture(error);}
+            }catch(CancellationException ignored){}catch(RuntimeException error){slot.error=error.getMessage()==null?"INDEX_FAILED":error.getMessage();report(kind,error);}
+        },builder);}catch(RejectedExecutionException error){slot.error="BUSY";report(kind,error);return CompletableFuture.failedFuture(error);}
     }
     public synchronized void fail(String kind,String error){reserve(kind).error=error;}
     public synchronized Map<String,Integer> counts(){Map<String,Integer> out=new LinkedHashMap<>();slots.forEach((kind,slot)->out.put(kind,slot.index==null?(slot.error==null?slot.total:Math.max(0,slot.total)):slot.index.size()));return out;}

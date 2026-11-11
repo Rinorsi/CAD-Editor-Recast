@@ -11,12 +11,6 @@ div.advwin.k-modal
         img.o-ico [src="oriel:textures/icons/list.png" style="height:16px;width:16px"]
         span "全部组件"
       div.advnav-i
-        img.o-ico [src="oriel:textures/icons/code.png" style="height:16px;width:16px"]
-        span "物品数据"
-      div.advnav-i
-        img.o-ico [src="oriel:textures/icons/terminal.png" style="height:16px;width:16px"]
-        span "命令"
-      div.advnav-i
         img.o-ico [src="oriel:textures/icons/filter.png" style="height:16px;width:16px"]
         span "改动对比"
       div.advnav-i

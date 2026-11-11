@@ -50,10 +50,20 @@ public final class RegistrySnapshot {
         return path == null ? raw : "minecraft:" + path;
     }
     private final Function<Identifier, Component> subtitles;
+    private final Map<Identifier, String> songNames = new LinkedHashMap<>();
     public RegistrySnapshot(RegistryAccess access, Function<Identifier, Component> subtitles) {
         BuiltInRegistries.REGISTRY.forEach(r -> registries.put(r.key().identifier(), r));
         access.registries().forEach(r -> registries.put(r.key().identifier(), r.value()));
         this.subtitles = subtitles;
+        // A sound event usually has no title of its own. Song descriptions are registry
+        // Components, so language/resource packs and data-pack songs remain authoritative.
+        Registry<?> songs = registries.get(Identifier.withDefaultNamespace("jukebox_song"));
+        if (songs != null) songs.listElements().sorted(java.util.Comparator.comparing(h -> h.key().identifier().toString())).forEach(holder -> {
+            if (holder.value() instanceof JukeboxSong song) {
+                String title = song.description().getString();
+                if (!title.isBlank()) songNames.putIfAbsent(song.soundEvent().value().location(), title);
+            }
+        });
     }
     public Map<String,Integer> catalogCounts(){
         Map<String,Integer> out=new LinkedHashMap<>();registries.forEach((id,registry)->{out.put(id.toString(),registry.size());out.put("tags:"+id,(int)registry.getTags().count());});return out;
@@ -140,7 +150,7 @@ public final class RegistrySnapshot {
                 row.addProperty("anvil_cost", e.getAnvilCost());
                 row.addProperty("min_cost", e.getMinCost(1)); row.addProperty("max_cost", e.getMaxCost(1));
                 relation(row, "exclusive", e.exclusiveSet(), id);
-                relation(row, "supported", e.getSupportedItems(), id);
+                relation(row, "supported", e.definition().supportedItems(), id);
                 relation(row, "primary", e.definition().primaryItems().orElse(HolderSet.direct()), id);
                 JsonArray slots = new JsonArray(); e.definition().slots().forEach(s -> slots.add(s.getSerializedName())); row.add("slots", slots);
                 JsonArray tags = new JsonArray(); holder.tags().map(t -> t.location().toString()).sorted().forEach(tags::add); row.add("tags", tags);
@@ -157,6 +167,9 @@ public final class RegistrySnapshot {
             }
             if (registry.key().identifier().equals(Identifier.withDefaultNamespace("sound_event"))) {
                 Component subtitle = subtitles.apply(id); if (subtitle != null) row.addProperty("subtitle", subtitle.getString());
+                String title = songNames.get(id);
+                if (title != null) row.addProperty("name", title);
+                else if (subtitle != null && !subtitle.getString().isBlank()) row.addProperty("name", subtitle.getString());
             }
             return row;
     }
@@ -181,7 +194,7 @@ public final class RegistrySnapshot {
         Object value = registry == null ? null : registry.getValue(id);
         if (!(value instanceof Enchantment e)) throw new IllegalArgumentException("未知附魔: " + id);
         return ids(switch (field) {
-            case "supported" -> e.getSupportedItems();
+            case "supported" -> e.definition().supportedItems();
             case "primary" -> e.definition().primaryItems().orElse(HolderSet.direct());
             case "exclusive" -> e.exclusiveSet();
             default -> throw new IllegalArgumentException("未知附魔关系: " + field);

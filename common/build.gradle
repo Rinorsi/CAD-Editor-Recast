@@ -3,10 +3,13 @@ neoForge {
     neoFormVersion = neo_form_version
     accessTransformers.from(stonecutter.process(parent.file('src/main/resources/META-INF/accesstransformer.cfg'), 'build/stonecutter-processed/accesstransformer.cfg'))
 }
-dependencies { compileOnly files(rootProject.file("libs/oriel-fabric-${minecraft_version}-${oriel_version}.jar")) }
+dependencies { compileOnly("dev.oriel:oriel-fabric-${minecraft_version}:${oriel_version}") { transitive = false } }
 sourceSets { testFixtures; smoke }
 // Shared verification sources are consumed and executed by each loader.
 tasks.named('compileTestJava') { enabled = false }
+// Loader projects compile these shared mixins with their own Mixin implementation.
+// Common is a compile-only source bridge and deliberately has no loader dependency.
+tasks.named('compileJava', JavaCompile) { exclude('dev/rinorsi/editor/mixin/**') }
 tasks.named('test') { enabled = false }
 configurations {
     commonSmoke { canBeResolved = false; canBeConsumed = true }

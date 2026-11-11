@@ -5,9 +5,9 @@
 /* ---------- 绑定上下文 ---------- */
 var Ctx = {
   doc: function () { return Store.doc(); },
-  get: function (cid) { var v = effectiveComps(Store.doc())[cid]; return v === undefined ? undefined : clone(v); },
-  proto: function (cid) { var v = protoOf(Store.doc().id)[cid]; return v === undefined ? undefined : clone(v); },
-  has: function (cid) { return effectiveComps(Store.doc())[cid] !== undefined; },
+  get: function (cid) { return effectiveGet(Store.doc(), cid); },
+  proto: function (cid) { componentRead(cid); var v = protoOf(Store.doc().id)[cid]; return v === undefined ? undefined : clone(v); },
+  has: function (cid) { var source = effectiveSource(Store.doc(), cid); return !!source && source[cid] !== undefined; },
   modified: function (cid) { return intentOf(Store.doc(), cid) !== 'inherit'; },
   set: function (cid, val, o) { o = o || {}; Store.set(cid, val, { key: 'k-' + cid + (o.key || ''), structural: false, label: o.label }); },
   /* 和原型一样就不写覆盖 */
@@ -21,7 +21,7 @@ var Ctx = {
   enable: function (cid, val, label) { Store.set(cid, val, { key: 'k-en-' + cid, structural: true, label: label }); },
   reset: function (cid) { Store.inherit(cid); },
   /* 去掉一个功能：原型有就屏蔽（!组件），没有就恢复 */
-  disable: function (cid, o) { o = o || {}; if (protoOf(Store.doc().id)[cid] !== undefined) Store.remove(cid, { structural: o.structural !== false, key: 'k-' + cid }); else Store.inherit(cid, { structural: o.structural !== false, key: 'k-' + cid }); },
+  disable: function (cid, o) { o = o || {}; if ((!Reg.preview() && Reg.defaultsOf(Store.doc().id) === null) || protoOf(Store.doc().id)[cid] !== undefined) Store.remove(cid, { structural: o.structural !== false, key: 'k-' + cid }); else Store.inherit(cid, { structural: o.structural !== false, key: 'k-' + cid }); },
   setPresence: function (cid, on, o) {
     var p = protoOf(Store.doc().id)[cid];
     if (on) { if (p !== undefined) Store.inherit(cid, { structural: false, key: 'k-' + cid }); else Ctx.set(cid, {}, o); }
@@ -63,9 +63,20 @@ function presetsFromItems(ids, cid, prop, fmt) {
   return out;
 }
 var TIER_TOOLS = ['wooden_sword', 'stone_sword', 'copper_sword', 'iron_sword', 'golden_sword', 'diamond_sword', 'netherite_sword'];
+function codecField(value, cid, key, preview) { return value && value[key] !== undefined ? value[key] : Reg.codecDefault(cid, key, preview); }
+function codecToggle(value, change, label) { var t = kToggle(value === true, change, label); if (value === undefined) setTip(t.el, '默认值读取中，可直接设置'); return t; }
+/* Unknown defaults stay blank and manually editable; no +/- operation can silently start at an invented game default. */
+function codecNumber(value, options) {
+  return kNumber(value, options);
+}
 /* 功能还没开：这一行只剩标题和右侧的开关，打开开关才会展开设置 */
 function enableBox(card, text, label, make) {
-  card.el.classList.add('off'); card.make = make; card.offHint = text[1];
+  card.el.classList.add('off');
+  var waiting = !Reg.preview() && Reg.defaultsOf(Ctx.doc().id) === null;
+  function defaultNote() { return Reg.defs[Reg.full(Ctx.doc().id)] === false ? '游戏未提供此物品的默认组件；可从全部组件手动添加，现有覆盖保留' : '正在读取默认组件；现有覆盖与手动组件入口保留'; }
+  card.make = waiting ? function () { if (Reg.defaultsOf(Ctx.doc().id) === null) { toast(defaultNote(), 'warn'); return; } make(); } : make;
+  card.offHint = waiting ? defaultNote() : text[1];
+  if (waiting) card.body.appendChild(kHint(card.offHint));
   return card;
 }
 function itemTone() { var r = Ctx.get('rarity') || 'common'; return { common: '#FFFFFF', uncommon: '#FFFF55', rare: '#55FFFF', epic: '#FF55FF' }[r] || '#FFFFFF'; }
@@ -116,25 +127,28 @@ CARDS.lore = function () {
   return card;
 };
 
+function cardHeadSelect(card, options, get, set, free) {
+  var head = card.el.querySelector('.k-chead'), slot = h('div', { class: 'card-head-select' });
+  card.onHead = function () { return true; };
+  head.appendChild(slot);
+  function paint() { clear(slot); slot.appendChild(combo({ options: options, value: get(), free: !!free, placeholder: '选择或手动填写', onPick: set })); }
+  card.live.push(paint); paint(); return card;
+}
 CARDS.rarity = function () {
-  var card = kCard({ id: 'rarity', icon: 'star', title: '稀有度', desc: '决定名称的颜色，让物品看起来更珍贵', comps: ['rarity'] }, Ctx);
-  var T = [{ v: 'common', label: '普通', sub: '白色', color: '#ffffff' }, { v: 'uncommon', label: '优秀', sub: '黄色', color: '#ffff55' }, { v: 'rare', label: '稀有', sub: '青色', color: '#55ffff' }, { v: 'epic', label: '史诗', sub: '粉紫色', color: '#ff55ff' }];
-  var tiles = kTiles(T, Ctx.get('rarity') || 'common', function (v) { Ctx.setSmart('rarity', v, { label: '稀有度' }); }, { pill: true });
-  card.body.appendChild(tiles.el);
-  card.live.push(function () { tiles.set(Ctx.get('rarity') || 'common'); });
-  return card;
+  var card = kCard({ id: 'rarity', icon: 'star', title: '稀有度', desc: '决定名称的颜色，让物品看起来更珍贵', comps: ['rarity'], eager: true, bare: true, cls: 'head-select-card' }, Ctx);
+  var tones = { common: '#ffffff', uncommon: '#ffff55', rare: '#55ffff', epic: '#ff55ff' };
+  var T = Labels.rarity.map(function (r) { return Object.assign({}, r, {sub:r.title, color:tones[r.v]}); });
+  return cardHeadSelect(card, function () { return Reg.enumOptions('rarity', T); }, function () { return Ctx.get('rarity') || ''; }, function (v) { Ctx.setSmart('rarity', v, { label: '稀有度' }); }, true);
 };
 
 CARDS.glint = function () {
-  var card = kCard({ id: 'glint', icon: 'sparkle', title: '附魔光效', desc: '物品表面的紫色流光', comps: ['enchantment_glint_override'] }, Ctx);
+  var card = kCard({ id: 'glint', icon: 'sparkle', title: '附魔光效', desc: '物品表面的紫色流光', comps: ['enchantment_glint_override'], eager: true, bare: true, cls: 'head-select-card' }, Ctx);
   function cur() { var v = Ctx.get('enchantment_glint_override'); return v === undefined ? 'auto' : (v ? 'on' : 'off'); }
   var T = [{ v: 'auto', label: '自动', sub: '有附魔才发光', icon: function () { return uiIcon('refresh', 16); } }, { v: 'on', label: '总是发光', sub: '没附魔也闪', icon: function () { return uiIcon('sparkle', 16); } }, { v: 'off', label: '不发光', sub: '有附魔也不闪', icon: function () { return uiIcon('eye_off', 16); } }];
-  var tiles = kTiles(T, cur(), function (v) {
+  return cardHeadSelect(card, T, cur, function (v) {
     if (v === 'auto') { if (Ctx.modified('enchantment_glint_override')) Store.inherit('enchantment_glint_override', { structural: false, key: 'k-glint' }); }
     else Ctx.setSmart('enchantment_glint_override', v === 'on', { label: '附魔光效' });
-  }, { pill: true });
-  card.body.appendChild(tiles.el); card.live.push(function () { tiles.set(cur()); });
-  return card;
+  });
 };
 
 var HIDE_PARTS = [['enchantments', '附魔'], ['attribute_modifiers', '属性加成'], ['unbreakable', '不可破坏'], ['dyed_color', '染色'], ['trim', '盔甲纹饰'], ['stored_enchantments', '书中的附魔'], ['potion_contents', '药水效果'], ['jukebox_playable', '唱片信息']];
@@ -147,7 +161,7 @@ CARDS.tooltip = function () {
   function paint() {
     clear(chips);
     /* 常用的几项直接给按钮；其余的（含模组组件）选中后也以按钮出现，用“＋其他组件”从游戏的组件注册表里挑或手输 */
-    var shown = HIDE_PARTS.map(function (p) { return ['minecraft:' + p[0], p[1]]; });
+    var shown = HIDE_PARTS.filter(function (p) { return Reg.preview() || Reg.entryState('data_component_type', p[0]) === true; }).map(function (p) { return ['minecraft:' + p[0], p[1]]; });
     (v.hidden_components || []).forEach(function (id) {
       if (shown.some(function (x) { return x[0] === id; })) return;
       var zh = null; EDATA.comps.forEach(function (c) { if ('minecraft:' + c.id === id) zh = c.name; });
@@ -175,8 +189,8 @@ CARDS.tooltip = function () {
 };
 
 CARDS.model = function () {
-  var card = kCard({ id: 'model', icon: 'image', title: '外观借用', desc: '让它看起来像另一个物品（只改外观，功能不变）', comps: ['item_model'], eager: true }, Ctx);
-  var holder = h('div', { class: 'k-row hd-pick' });
+  var card = kCard({ id: 'model', icon: 'image', title: '外观借用', desc: '让它看起来像另一个物品（只改外观，功能不变）', comps: ['item_model'], eager: true, bare: true, cls: 'head-select-card' }, Ctx);
+  var holder = h('div', { class: 'k-row card-head-select' });
   function draw() {
     clear(holder);
     var m = Ctx.get('item_model'), id = m ? shortId(m) : Ctx.id();
@@ -188,7 +202,7 @@ CARDS.model = function () {
     holder.appendChild(btn);
   }
   draw(); card.live.push(draw);
-  var hd = card.el.firstChild; hd.insertBefore(holder, hd.querySelector('.k-cval')); card.el.classList.add('flat');
+  var hd = card.el.firstChild; hd.appendChild(holder); card.el.classList.add('flat'); card.onHead = function () { return true; };
   return card;
 };
 
@@ -215,7 +229,12 @@ CARDS.damage = function () {
   var card = kCard({ id: 'damage', icon: 'hammer', title: '当前磨损', desc: '现在还剩多少耐久；设为满耐久就是一件全新的物品', comps: ['damage'] }, Ctx);
   var maxd = Ctx.get('max_damage');
   if (typeof maxd !== 'number') { card.body.appendChild(kHint('这个物品没有耐久，所以没有磨损值。')); return card; }
-  var num = kNumber(maxd - (Ctx.get('damage') || 0), { min: 0, max: 2147483647, softMax: maxd, step: 1, big: true, unit: '/ ' + fmtInt(maxd), presets: [{ v: maxd, label: '全新' }, { v: Math.max(1, Math.round(maxd / 2)), label: '一半' }, { v: 1, label: '只剩 1 点' }], onChange: function (v) { Ctx.setSmart('damage', Math.max(0, maxd - v), { label: '当前磨损' }); } });
+  var linkedMax = null;
+  var num = kNumber(maxd - (Ctx.get('damage') || 0), { min: 0, max: 2147483647, softMax: maxd, step: 1, big: true, presets: [{ v: maxd, label: '全新' }, { v: Math.max(1, Math.round(maxd / 2)), label: '一半' }, { v: 1, label: '只剩 1 点' }], onChange: function (v) {
+    var currentMax = Ctx.get('max_damage');
+    if (v > currentMax) { linkedMax = v; Store.setLinked({ max_damage: v, damage: 0 }, '剩余耐久与最大耐久联动'); }
+    else { Ctx.setSmart('damage', currentMax - v, { label: '当前磨损' }); }
+  } });
   var bar = h('div', { class: 'k-meter' }, [h('i', {})]);
   var eff = kEffect('');
   card.body.appendChild(num.el); card.body.appendChild(bar); card.body.appendChild(eff.el);
@@ -224,7 +243,8 @@ CARDS.damage = function () {
     if (typeof m !== 'number') return;
     var r = m - d, ratio = Math.max(0, Math.min(1, r / m));
     num.set(r); bar.firstChild.style.width = (ratio * 100) + '%'; bar.className = 'k-meter' + (ratio < 0.15 ? ' bad' : ratio < 0.4 ? ' warn' : '');
-    eff.set(r <= 0 ? '耐久已耗尽，下一次使用就会损坏' : '剩余 ' + fmtInt(r) + ' / ' + fmtInt(m) + '（' + Math.round(ratio * 100) + '%）', r <= 0 ? 'bad' : '');
+    var linkedMsg = linkedMax === m && diffDoc(Store.doc()).some(function (x) { return x.cid === 'max_damage'; }) ? '应用时将同步提高最大耐久至 ' + fmtInt(m) + '；' : '';
+    eff.set(linkedMsg + (r <= 0 ? '耐久已耗尽，下一次使用就会损坏' : '剩余 ' + fmtInt(r) + ' / ' + fmtInt(m) + '（' + Math.round(ratio * 100) + '%）；超过最大耐久时会同步提高上限'), r <= 0 ? 'bad' : '');
   });
   return card;
 };
@@ -283,11 +303,11 @@ CARDS.resist = function () {
 };
 
 CARDS.stack = function () {
-  var card = kCard({ id: 'stack', icon: 'layers', title: '最大堆叠', desc: '一格里最多能放多少个', comps: ['max_stack_size'], value: function () { return (Ctx.get('max_stack_size') || 64) + ' 个/格'; } }, Ctx);
+  var card = kCard({ id: 'stack', icon: 'layers', title: '最大堆叠', desc: '一格里最多能放多少个', comps: ['max_stack_size'], value: function () { var n = Ctx.get('max_stack_size'); return n === undefined ? '正在读取' : n + ' 个/格'; } }, Ctx);
   var locked = typeof Ctx.get('max_damage') === 'number';
-  var num = kNumber(Ctx.get('max_stack_size') || 64, { min: 1, max: 99, softMax: 99, step: 1, big: true, presets: locked ? [] : [{ v: 1, label: '1 不可堆叠' }, { v: 16, label: '16' }, { v: 64, label: '64 标准' }, { v: 99, label: '99 上限' }], limitWhy: '游戏规定堆叠范围是 1 到 99', onChange: function (v) { Ctx.setSmart('max_stack_size', v, { label: '最大堆叠' }); } });
+  var num = codecNumber(Ctx.get('max_stack_size'), { min: 1, max: 99, softMax: 99, step: 1, big: true, presets: locked ? [] : [{ v: 1, label: '1 不可堆叠' }, { v: 16, label: '16' }, { v: 64, label: '64' }, { v: 99, label: '99' }], onChange: function (v) { Ctx.setSmart('max_stack_size', v, { label: '最大堆叠' }); } });
   card.body.appendChild(num.el);
-  card.live.push(function () { num.set(Ctx.get('max_stack_size') || 64); });
+  card.live.push(function () { num.set(Ctx.get('max_stack_size')); });
   if (locked) card.body.appendChild(kEffect('可损坏的物品必须是 1，否则游戏会拒绝这个物品。', 'warn').el);
   return card;
 };
@@ -298,32 +318,32 @@ CARDS.enchants = function (cid) {
   var stored = cid === 'stored_enchantments';
   var card = kCard({ id: cid, icon: itemIcon('enchanted_book', 18), title: stored ? '书里储存的附魔' : '附魔', desc: stored ? '这本书里存着的附魔，可在铁砧上转给装备' : '等级可以直接输入任意数字', comps: [cid], span: 2,
     value: function () { var m = Ctx.get(cid); var n = m ? Object.keys(m).length : 0; return n ? n + ' 个' : ''; },
-    summary: function () { var m = Ctx.get(cid); if (!m) return ''; return Object.keys(m).slice(0, 4).map(function (k) { var e = ENIDX[shortId(k)]; return (e ? e.name : shortId(k)) + ' ' + levelText(m[k]); }).join('、') + (Object.keys(m).length > 4 ? '…' : ''); } }, Ctx);
+    summary: function () { var m = Ctx.get(cid); if (!m) return ''; return Object.keys(m).slice(0, 4).map(function (k) { var e = Reg.enchant(k); return (e ? e.name : shortId(k)) + ' ' + levelText(m[k]); }).join('、') + (Object.keys(m).length > 4 ? '…' : ''); } }, Ctx);
   var map = Ctx.get(cid) || {};
   var sid = Ctx.id(), isBook = Ctx.kind() === 'ebook';
   var selWrap = h('div', { class: 'k-sortlist' });
   var f = { mode: isBook || stored ? 'all' : 'fit', q: '' };
-  function fits(e) { return isBook || stored || e.items.indexOf(sid) >= 0; }
+  function fits(e) { return isBook || stored || Reg.enchantFits(e, sid) === true; }
   function commit() { Ctx.setSmart(cid, clone(map), { label: stored ? '书中附魔' : '附魔' }); }
   function conflicts(id) {
     var rg = Reg.enchant(id), out = []; if (!rg) return out;
-    Object.keys(map).forEach(function (k) { var o = Reg.full(k); if (o !== rg.full && rg.excl.indexOf(o) >= 0) out.push(Reg.nameOf('enchantments', o) || shortId(o)); });
+    Object.keys(map).forEach(function (k) { var o = Reg.full(k); if (o !== rg.full && Reg.enchantConflict(rg, k) === true) out.push(Reg.nameOf('enchantments', o) || shortId(o)); });
     return out;
   }
   function reorder(from, to) { var keys = Object.keys(map); var k = keys.splice(from, 1)[0]; keys.splice(to, 0, k); var n = {}; keys.forEach(function (x) { n[x] = map[x]; }); map = n; commit(); drawSel(); }
 
   function selRow(k) {
-    var id = shortId(k), e = ENIDX[id], rg = Reg.enchant(k), lv = map[k], cf = conflicts(id);
+    var id = shortId(k), e = Reg.enchant(k), rg = e, lv = map[k], cf = conflicts(id);
     var num = kNumber(lv, { min: 1, max: 2147483647, noSlider: true, step: 1, warnMax: 255, warnWhy: '原版附魔等级最高 255', onChange: function (v) { map[k] = v; commit(); paintMeta(); } });
     var meta = h('div', { class: 's' });
-    function paintMeta() { var cur = map[k], txt = []; if (e && cur > e.max) txt.push('超过自然上限 ' + e.max); var c2 = conflicts(id); if (c2.length) txt.push('⚠ 与「' + c2.join('、') + '」互斥'); if (!e) txt.push('不在原版 26.1.2 里（模组附魔？）'); meta.textContent = txt.length ? txt.join('；') : (e ? e.desc : ''); meta.className = 's' + (txt.length ? ' w' : ''); rom.textContent = levelText(cur); rom.className = 'rom' + (e && cur > e.max ? ' over' : ''); }
+    function paintMeta() { var cur = map[k], txt = []; if (e && e.max !== null && cur > e.max) txt.push('超过自然上限 ' + e.max); var c2 = conflicts(id); if (c2.length) txt.push('⚠ 与「' + c2.join('、') + '」互斥'); if (!e || e.max === null) txt.push('尚无实时最高等级，保留原 ID 与等级'); meta.textContent = txt.length ? txt.join('；') : (e ? e.desc : ''); meta.className = 's' + (txt.length ? ' w' : ''); rom.textContent = levelText(cur); rom.className = 'rom' + (e && e.max !== null && cur > e.max ? ' over' : ''); }
     var rom = h('span', { class: 'rom' });
     var rm = h('div', { class: 'k-mini del', text: '×', title: '移除这个附魔' }); activate(rm, function () { delete map[k]; commit(); drawSel(); drawCat(); });
     var row = h('div', { class: 'k-enrow k-srow' }, [kGrip(), h('div', { class: 'ic' }, [itemIcon(ENCH_ICON[id] || 'enchanted_book', 22)]), h('div', { class: 'tx' }, [h('div', { class: 'z', text: rg ? rg.name : (e ? e.name : id) }), meta]), rom, num.el, rm]);
     paintMeta();
     onContext(row, function () {
       var keys = Object.keys(map), idx = keys.indexOf(k);
-      return [{ label: '升到自然最高（' + (e ? e.max : '?') + '）', icon: 'up', dis: !e, run: function () { map[k] = e.max; commit(); drawSel(); } }, { label: '等级 +1', run: function () { map[k]++; commit(); drawSel(); } }, { label: '等级 −1', dis: map[k] <= 1, run: function () { map[k]--; commit(); drawSel(); } }, { sep: 1 }, { label: '移到最前', dis: idx === 0, run: function () { reorder(idx, 0); } }, { label: '移到最后', dis: idx === keys.length - 1, run: function () { reorder(idx, keys.length - 1); } }, { sep: 1 }, { label: '移除', icon: 'trash', danger: 1, run: function () { delete map[k]; commit(); drawSel(); drawCat(); } }];
+      return [{ label: '升到自然最高（' + (e && e.max !== null ? e.max : '?') + '）', icon: 'up', dis: !e || e.max === null, run: function () { if (!e || e.max === null) return; map[k] = e.max; commit(); drawSel(); } }, { label: '等级 +1', run: function () { map[k]++; commit(); drawSel(); } }, { label: '等级 −1', dis: map[k] <= 1, run: function () { map[k]--; commit(); drawSel(); } }, { sep: 1 }, { label: '移到最前', dis: idx === 0, run: function () { reorder(idx, 0); } }, { label: '移到最后', dis: idx === keys.length - 1, run: function () { reorder(idx, keys.length - 1); } }, { sep: 1 }, { label: '移除', icon: 'trash', danger: 1, run: function () { delete map[k]; commit(); drawSel(); drawCat(); } }];
     });
     return row;
   }
@@ -336,16 +356,16 @@ CARDS.enchants = function (cid) {
   kSortable(selWrap, { onMove: reorder });
 
   var bar = h('div', { class: 'k-row wrap' });
-  bar.appendChild(kBtn('升到自然最高', function () { Object.keys(map).forEach(function (k) { var e = ENIDX[shortId(k)]; if (e) map[k] = e.max; }); commit(); drawSel(); }, { icon: 'up', title: '把已选附魔都提到各自的自然最高等级' }));
-  bar.appendChild(kBtn('按名称排序', function () { var keys = Object.keys(map).sort(function (a, b) { return (ENIDX[shortId(a)] ? ENIDX[shortId(a)].name : a).localeCompare(ENIDX[shortId(b)] ? ENIDX[shortId(b)].name : b, 'zh'); }); var n = {}; keys.forEach(function (x) { n[x] = map[x]; }); map = n; commit(); drawSel(); }, { icon: 'sort' }));
+  bar.appendChild(kBtn('升到自然最高', function () { var changed = false; Object.keys(map).forEach(function (k) { var e = Reg.enchant(k); if (e && e.max !== null && map[k] !== e.max) { map[k] = e.max; changed = true; } }); if (!changed) { if (!Reg.preview()) toast('没有可调整的实时最高等级；未读取的附魔保持原值。', 'warn'); return; } commit(); drawSel(); }, { icon: 'up', title: '只调整已读取最高等级的附魔；未知 ID 保留原值' }));
+  bar.appendChild(kBtn('按名称排序', function () { var keys = Object.keys(map).sort(function (a, b) { return (Reg.nameOf('enchantments', a) || a).localeCompare(Reg.nameOf('enchantments', b) || b, 'zh'); }); var n = {}; keys.forEach(function (x) { n[x] = map[x]; }); map = n; commit(); drawSel(); }, { icon: 'sort' }));
   bar.appendChild(kBtn('清空', function () { map = {}; commit(); drawSel(); drawCat(); }, { cls: 'dng', icon: 'trash' }));
 
   /* 目录 */
   var grid = h('div', { class: 'k-engrid' }), seg = null, openBtn;
   function tile(e) {
-    var key = 'minecraft:' + e.id, on = map[key] !== undefined;
-    var t = h('div', { class: 'k-en' + (on ? ' on' : '') + (!fits(e) ? ' na' : ''), title: e.name + '（minecraft:' + e.id + '）\n' + e.desc + '\n自然最高 ' + e.max + ' 级' + (fits(e) ? '' : '\n通常不能附在这件物品上') }, [
-      h('div', { class: 'ic' }, [itemIcon(ENCH_ICON[e.id] || 'enchanted_book', 22)]),
+    var key = e.full, on = map[key] !== undefined;
+    var t = h('div', { class: 'k-en' + (on ? ' on' : '') + (!fits(e) ? ' na' : ''), title: e.name + '（' + e.full + '）\n' + e.desc + '\n自然最高 ' + e.max + ' 级' + (fits(e) ? '' : '\n通常不能附在这件物品上') }, [
+      h('div', { class: 'ic' }, [itemIcon(ENCH_ICON[shortId(e.full)] || 'enchanted_book', 22)]),
       h('div', { class: 'tx' }, [h('div', { class: 'z', text: e.name }), h('div', { class: 's', text: fits(e) ? e.desc : '通常不适用于此物品' })]),
       on ? h('div', { class: 'ck', text: '✓' }) : h('div', { class: 'ck add', text: '+' }),
     ]);
@@ -355,28 +375,31 @@ CARDS.enchants = function (cid) {
   function drawCat() {
     clear(grid);
     var q = f.q.trim().toLowerCase(), n = 0;
-    EDATA.enchants.forEach(function (e) {
+    Reg.enchants().forEach(function (e) {
       if (f.mode === 'fit' && !fits(e)) return;
-      if (q && !kMatch(e.name + e.id, q)) return;
+      if (q && !kMatch(e.name + e.full, q)) return;
       n++; grid.appendChild(tile(e));
     });
     if (!n) grid.appendChild(xEmpty('没有匹配的附魔'));
   }
-  var fitN = EDATA.enchants.filter(fits).length;
-  seg = kSeg([{ v: 'fit', label: '适用于它 ' + fitN }, { v: 'all', label: '全部 ' + EDATA.enchants.length }], f.mode, function (v) { f.mode = v; drawCat(); });
+  var fitN = Reg.enchants().filter(fits).length;
+  seg = kSeg([{ v: 'fit', label: '适用于它 ' + fitN }, { v: 'all', label: '全部 ' + Reg.enchants().length }], f.mode, function (v) { f.mode = v; drawCat(); });
   var search = kInput('', function (v) { f.q = v; drawCat(); }, { placeholder: '搜索附魔名称' });
   var custom = kInput('', function () {}, { placeholder: '模组附魔？输入 ID，如 mymod:fireball，回车添加' });
   onKey(custom, { Enter: function () { var v = custom.value.trim(); if (!v) return; if (v.indexOf(':') < 0) v = 'minecraft:' + v; if (map[v] === undefined) map[v] = 1; custom.value = ''; commit(); drawSel(); drawCat(); } });
   /* 目录放进二级窗口：可多选，搜索、筛选、自定义 ID 都在里面 */
   var openBtn = kBtn('添加附魔', function () {
-    var present = {}; Object.keys(map).forEach(function (k) { present[Reg.full(k)] = 1; });
-    openEnchantPicker({ itemId: sid, any: isBook || stored, stored: stored, present: present, onConfirm: function (ids, vals) {
-      ids.forEach(function (id) { if (map[id] === undefined) map[id] = (vals && vals[id] && vals[id].level) || 1; });
+    var present = {}, values = {}; Object.keys(map).forEach(function (k) { present[Reg.full(k)] = 1; values[Reg.full(k)] = { level: map[k] }; });
+    openEnchantPicker({ itemId: sid, any: isBook || stored, stored: stored, present: present, values: values, onConfirm: function (ids, vals, edit) {
+      var wanted = {}, have = {}; ids.forEach(function (id) { wanted[Reg.full(id)] = 1; });
+      Object.keys(map).forEach(function (key) { var id = Reg.full(key); if (!wanted[id]) delete map[key]; else { have[id] = 1; if (edit && edit.changes[id] && edit.changes[id].level) map[key] = vals[id].level; } });
+      ids.forEach(function (id) { if (!have[id]) { map[id] = (vals && vals[id] && vals[id].level) || 1; have[id] = 1; } });
       commit(); drawSel();
     } });
   }, { icon: 'plus', cls: 'k-addbig' });
   card.body.appendChild(h('div', { class: 'k-scrollbox tall' }, [selWrap]));
   card.body.appendChild(openBtn); card.body.appendChild(bar);
+  if (!Reg.preview() && !Reg.list('enchantments')) card.body.appendChild(kHint('正在读取实时附魔；可以手动输入 ID 和等级。自然最高操作等待数据。'));
   drawSel();
   card.live.push(function () { var m = Ctx.get(cid) || {}; if (!deepEq(m, map)) { map = m; drawSel(); drawCat(); } });
   return card;
@@ -386,7 +409,7 @@ CARDS.enchantable = function () {
   var card = kCard({ id: 'enchantable', icon: 'wand', title: '附魔台适性', desc: '在附魔台里附魔时的「好不好附」', comps: ['enchantable'], value: function () { var v = Ctx.get('enchantable'); return v ? '适性 ' + v.value : ''; } }, Ctx);
   var v0 = Ctx.get('enchantable');
   if (!v0) return enableBox(card, ['这个物品不能在附魔台附魔', '启用后可以放进附魔台。'], '允许在附魔台附魔', function () { Ctx.enable('enchantable', { value: 10 }, '允许附魔台附魔'); });
-  var num = kNumber(v0.value, { min: 1, max: 2147483647, softMax: 50, step: 1, big: true, presets: [{ v: 5, label: '5 石' }, { v: 9, label: '9 龟壳' }, { v: 10, label: '10 钻石' }, { v: 14, label: '14 铁' }, { v: 15, label: '15 木/下界合金' }, { v: 22, label: '22 金' }], onChange: function (v) { Ctx.setSmart('enchantable', { value: v }, { label: '附魔台适性' }); } });
+  var num = kNumber(v0.value, { min: 1, max: 2147483647, softMax: 50, step: 1, big: true, presets: [{ v: 5, label: '5' }, { v: 9, label: '9' }, { v: 10, label: '10' }, { v: 14, label: '14' }, { v: 15, label: '15' }, { v: 22, label: '22' }].concat(presetsFromItems(['stone_sword', 'turtle_helmet', 'diamond_sword', 'iron_sword', 'wooden_sword', 'netherite_sword', 'golden_sword'], 'enchantable', 'value')), onChange: function (v) { Ctx.setSmart('enchantable', { value: v }, { label: '附魔台适性' }); } });
   card.body.appendChild(num.el);
   card.live.push(function () { var v = Ctx.get('enchantable'); if (v) num.set(v.value); });
   return card;
