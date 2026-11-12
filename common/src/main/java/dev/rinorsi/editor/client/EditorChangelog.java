@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.client;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.oriel.mod.client.DocumentDriver;
@@ -20,17 +22,17 @@ final class EditorChangelog {
             JsonObject result = new JsonObject();
             try {
                 if (value == null || !value.isJsonObject() || value.toString().length() > 512)
-                    throw new IllegalArgumentException("更新日志请求无效");
+                    throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.editorchangelog.1e059cdf57"));
                 var message = value.getAsJsonObject();
                 String request = message.get("requestId").getAsString();
-                if (request.isBlank() || request.length() > 80) throw new IllegalArgumentException("更新日志请求编号无效");
+                if (request.isBlank() || request.length() > 80) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.editorchangelog.e8f88d4950"));
                 result.addProperty("requestId", request);
                 JsonArray notes = notes();
                 if (message.has("version")) {
                     String version = message.get("version").getAsString();
                     JsonObject found = null;
                     for (var release : notes) if (release.getAsJsonObject().get("version").getAsString().equals(version)) { found = release.getAsJsonObject(); break; }
-                    if (found == null) throw new IllegalArgumentException("此包没有该版本的更新日志");
+                    if (found == null) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.editorchangelog.1ee7f7dcd0"));
                     result.add("release", found.deepCopy());
                 } else {
                     JsonArray index = new JsonArray();
@@ -42,11 +44,11 @@ final class EditorChangelog {
                     }
                     result.add("releases", index);
                 }
-                if (result.toString().length() > 24000) throw new IllegalArgumentException("此版本日志过长，请查看包内 CHANGELOG.md");
+                if (result.toString().length() > 24000) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.editorchangelog.0e68d7e9c8"));
                 result.addProperty("status", "ok");
             } catch (IOException | RuntimeException error) {
                 result.remove("release"); result.remove("releases");
-                result.addProperty("status", "error"); result.addProperty("reason", "更新日志读取失败，可重试");
+                result.addProperty("status", "error"); result.addProperty("reason", EditorI18n.tr("cadeditor.ui.changelog.f9923ce918"));
                 EditorDiagnostics.failure("settings.changelog", "request=" + result.get("requestId"), error);
             }
             driver.patch("editor_changelog", result);
@@ -57,10 +59,10 @@ final class EditorChangelog {
         if (releases != null) return releases;
         byte[] bytes;
         try (var input = EditorChangelog.class.getResourceAsStream("/assets/cadeditor/CHANGELOG.md")) {
-            if (input == null) throw new IOException("包内缺少 assets/cadeditor/CHANGELOG.md");
+            if (input == null) throw new IOException(EditorI18n.tr("cadeditor.message.editorchangelog.077ae60600"));
             bytes = input.readNBytes(262145);
         }
-        if (bytes.length > 262144) throw new IOException("包内更新日志超过256KiB");
+        if (bytes.length > 262144) throw new IOException(EditorI18n.tr("cadeditor.message.editorchangelog.3d0c95a0eb"));
         JsonArray parsed = new JsonArray(); JsonObject release = null, section = null;
         for (String raw : new String(bytes, StandardCharsets.UTF_8).lines().toList()) {
             String line = raw.trim(); var match = VERSION.matcher(line);
@@ -84,7 +86,7 @@ final class EditorChangelog {
                 else items.set(items.size() - 1, new com.google.gson.JsonPrimitive(items.get(items.size() - 1).getAsString() + " " + line));
             }
         }
-        if (parsed.isEmpty()) throw new IOException("包内更新日志没有版本条目");
+        if (parsed.isEmpty()) throw new IOException(EditorI18n.tr("cadeditor.message.editorchangelog.d5b4a260e8"));
         releases = parsed; return releases;
     }
 

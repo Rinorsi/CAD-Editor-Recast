@@ -87,7 +87,17 @@ public final class DoubleChestWorldEditTest {
     private static void check(boolean value,String message){if(!value)throw new AssertionError(message);checks++;}
     private static final class ChestLevel extends EntitySchemaTestLevel {
         final Map<BlockPos,BlockEntity> blocks=new HashMap<>();BlockPos failAt;int neighborUpdates;
+        private final net.minecraft.world.level.chunk.ChunkSource chunks=new net.minecraft.world.level.chunk.ChunkSource(){
+            @Override public boolean hasChunk(int x,int z){return true;}
+            @Override public net.minecraft.world.level.chunk.ChunkAccess getChunk(int x,int z,net.minecraft.world.level.chunk.status.ChunkStatus status,boolean load){throw new AssertionError("map-backed chest fixture must not load chunks");}
+            @Override public void tick(java.util.function.BooleanSupplier time,boolean tickChunks){throw new AssertionError("map-backed chest fixture must not tick chunks");}
+            @Override public String gatherStats(){return "map-backed chest fixture";}
+            @Override public int getLoadedChunksCount(){return 0;}
+            @Override public net.minecraft.world.level.lighting.LevelLightEngine getLightEngine(){return null;}
+            @Override public net.minecraft.world.level.BlockGetter getLevel(){return ChestLevel.this;}
+        };
         ChestLevel(RegistryAccess access){super(access);}
+        @Override public net.minecraft.world.level.chunk.ChunkSource getChunkSource(){return chunks;}
         ChestBlockEntity put(BlockPos p,BlockState state){var be=(ChestBlockEntity)((EntityBlock)state.getBlock()).newBlockEntity(p,state);blocks.put(p,be);return be;}
         @Override public boolean hasChunkAt(BlockPos p){return true;}
         @Override public BlockEntity getBlockEntity(BlockPos p){return blocks.get(p);}

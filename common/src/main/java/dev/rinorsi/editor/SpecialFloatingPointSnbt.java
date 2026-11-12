@@ -100,7 +100,7 @@ final class SpecialFloatingPointSnbt {
         return tag;
     }
     private static IllegalArgumentException ambiguous() {
-        return new IllegalArgumentException("特殊浮点值经过了无法保真恢复的 SNBT 运算；请使用直接的 float/double 值");
+        return new IllegalArgumentException(EditorI18n.tr("cadeditor.message.specialfloatingpointsnbt.97181ad227"));
     }
     private record FloatReplacement(int checkBits, float value) {}
     private record DoubleReplacement(long checkBits, double value) {}

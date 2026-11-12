@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.registry;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -16,15 +18,15 @@ public final class RegistryFragments {
 
     static List<JsonObject> split(JsonObject logical) {
         JsonArray rows = logical.getAsJsonArray("entries");
-        if (rows.size() > MAX_ROWS) throw new IllegalArgumentException("注册表分片条目数超过 " + MAX_ROWS);
+        if (rows.size() > MAX_ROWS) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.registryfragments.86c6e0613c", (MAX_ROWS)));
         String payload = logical.toString();
-        if (payload.length() > MAX_RESPONSE_CHARS) throw new IllegalArgumentException("注册表完整响应超过 " + MAX_RESPONSE_CHARS + " 字符: " + logical.get("name"));
+        if (payload.length() > MAX_RESPONSE_CHARS) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.registryfragments.6fc75456bb", (MAX_RESPONSE_CHARS), (logical.get("name"))));
         JsonObject header = logical.deepCopy(); header.add("entries", new JsonArray()); header.addProperty("version", 2);
         header.addProperty("encoding", ENCODING); header.addProperty("transferId", "registry-fragment-" + IDS.incrementAndGet());
         header.addProperty("responseChars", payload.length()); header.addProperty("checksum", checksum(payload));
         List<JsonObject> pages = new ArrayList<>(); int offset=0, wireChars=0;
         while (offset < payload.length()) {
-            if (pages.size() >= MAX_FRAGMENTS) throw new IllegalArgumentException("注册表分片数超过 " + MAX_FRAGMENTS);
+            if (pages.size() >= MAX_FRAGMENTS) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.registryfragments.bf43d9f825", (MAX_FRAGMENTS)));
             // Search using the worst count/index widths. Escaped quotes/backslashes count
             // against the real JSON envelope; UTF-16 surrogate pairs never cross a frame.
             int low=1, high=Math.min(payload.length()-offset, RegistryPages.MAX_CHARS), length=0;
@@ -34,10 +36,10 @@ public final class RegistryFragments {
                 if (probe.toString().length()<=RegistryPages.MAX_CHARS) { length=mid;low=mid+1; } else high=mid-1;
             }
             if (length>0 && offset+length<payload.length() && Character.isHighSurrogate(payload.charAt(offset+length-1)) && Character.isLowSurrogate(payload.charAt(offset+length))) length--;
-            if (length<=0) throw new IllegalArgumentException("注册表分片信封没有可用内容空间");
+            if (length<=0) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.registryfragments.6014f7df92"));
             JsonObject page=frame(header,pages.size(),MAX_FRAGMENTS,offset,payload.substring(offset,offset+length));
             wireChars+=page.toString().length();
-            if (wireChars>MAX_WIRE_CHARS) throw new IllegalArgumentException("注册表分片总线大小超过 " + MAX_WIRE_CHARS);
+            if (wireChars>MAX_WIRE_CHARS) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.registryfragments.ed869be17b", (MAX_WIRE_CHARS)));
             pages.add(page); offset+=length;
         }
         for (JsonObject page:pages) page.addProperty("fragmentCount", pages.size());

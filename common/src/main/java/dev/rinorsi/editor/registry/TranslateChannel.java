@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.registry;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -15,14 +17,14 @@ public final class TranslateChannel {
         var entries=new JsonArray();
         String error=null;
         try {
-            if(request.toString().length()>8192)throw new IllegalArgumentException("翻译请求过长");
+            if(request.toString().length()>8192)throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.translatechannel.479f7e5081"));
             if(request.has("requestId")){
                 var id=request.get("requestId");
-                if(!id.isJsonPrimitive()||!id.getAsJsonPrimitive().isString()||id.getAsString().length()>80)throw new IllegalArgumentException("无效 requestId");
+                if(!id.isJsonPrimitive()||!id.getAsJsonPrimitive().isString()||id.getAsString().length()>80)throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.translatechannel.5da38d91a1"));
                 context.add("requestId",id.deepCopy());
             }
             var raw=request.get("keys");
-            if(raw==null||!raw.isJsonArray()||raw.getAsJsonArray().size()>200)throw new IllegalArgumentException("keys 必须为最多 200 项的数组");
+            if(raw==null||!raw.isJsonArray()||raw.getAsJsonArray().size()>200)throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.translatechannel.a4c365a088"));
             var seen=new HashSet<String>();
             for(var value:raw.getAsJsonArray()){
                 if(!value.isJsonPrimitive()||!value.getAsJsonPrimitive().isString())continue;
@@ -41,7 +43,7 @@ public final class TranslateChannel {
             for(var raw:page.getAsJsonArray("entries")){var row=raw.getAsJsonObject();map.add(row.get("id").getAsString(),row.get("name"));}
             page.add("map",map);
             if(error!=null)page.addProperty("error",error);
-            if(page.toString().length()>RegistryPages.MAX_CHARS)throw new IllegalStateException("翻译分页超过上限");
+            if(page.toString().length()>RegistryPages.MAX_CHARS)throw new IllegalStateException(EditorI18n.tr("cadeditor.message.translatechannel.84275183aa"));
         }
         return pages;
     }

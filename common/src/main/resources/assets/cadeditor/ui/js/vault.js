@@ -8,12 +8,12 @@ var Vault = {
     for (k in fields) msg[k] = fields[k];
     if (view) msg.view = view;
     function fail(code, why) { if (cb) cb({ ok: false, error: code, reason: why }); }
-    if (typeof oriel === 'undefined' || !oriel.send) { fail('UNAVAILABLE', '没有连接游戏'); return; }
-    var len; try { len = JSON.stringify(msg).length; } catch (e) { fail('BAD_REQUEST', '数据无法序列化'); return; }
-    if (len > 7900) { fail('REQUEST_TOO_LARGE', '请求太大'); return; }
-    var w = this.wait[id] = { cb: cb, t: setTimeout(function () { if (me.wait[id]) { delete me.wait[id]; fail('TIMEOUT', op === 'give' ? '取出结果未知，保险库已保留；请核对背包，勿重复取出' : '游戏没有响应，可能还没进入世界或模组版本太旧'); } }, op === 'give' ? 12000 : 8000) };
+    if (typeof oriel === 'undefined' || !oriel.send) { fail('UNAVAILABLE', I18n.t("cadeditor.ui.vault.5ab6af62fc")); return; }
+    var len; try { len = JSON.stringify(msg).length; } catch (e) { fail('BAD_REQUEST', I18n.t("cadeditor.ui.vault.cd9476aae6")); return; }
+    if (len > 7900) { fail('REQUEST_TOO_LARGE', I18n.t("cadeditor.ui.vault.cb846fc8ac")); return; }
+    var w = this.wait[id] = { cb: cb, t: setTimeout(function () { if (me.wait[id]) { delete me.wait[id]; fail('TIMEOUT', op === 'give' ? I18n.t("cadeditor.ui.vault.7eb1b91a20") : I18n.t("cadeditor.ui.vault.8e740a2bb0")); } }, op === 'give' ? 12000 : 8000) };
     var sent = false; try { sent = oriel.send('vault', msg); } catch (e) {}
-    if (sent === false) { clearTimeout(w.t); delete this.wait[id]; fail('UNAVAILABLE', '宿主没有接受请求'); }
+    if (sent === false) { clearTimeout(w.t); delete this.wait[id]; fail('UNAVAILABLE', I18n.t("cadeditor.ui.vault.c8da8c3b3d")); }
   },
   receive: function (r) {
     if (!r || !r.requestId) return;
@@ -64,23 +64,23 @@ var Vault = {
     this.call('get', { ids: [id] }, function (r) {
       if (!r.ok) { cb(r); return; }
       var e = r.entries && r.entries[0];
-      if (e && typeof e.snbt === 'string') cb({ ok: true, snbt: e.snbt, entry: e }); else cb({ ok: false, error: 'NOT_FOUND', reason: '这一条已经不存在，或不是生物' });
+      if (e && typeof e.snbt === 'string') cb({ ok: true, snbt: e.snbt, entry: e }); else cb({ ok: false, error: 'NOT_FOUND', reason: I18n.t("cadeditor.ui.vault.bfbc9d688b") });
     });
   },
   /* 取出完整的栈（编辑器 wire 格式）；get 超限就按 export 分页拼 */
   take: function (id, cb) {
     var me = this;
     this.call('get', { ids: [id] }, function (r) {
-      if (r.ok) { var e = r.entries && r.entries[0]; if (e && e.stack) cb({ ok: true, stack: e.stack, entry: e }); else cb({ ok: false, error: 'NOT_FOUND', reason: '这一条已经不存在' }); return; }
+      if (r.ok) { var e = r.entries && r.entries[0]; if (e && e.stack) cb({ ok: true, stack: e.stack, entry: e }); else cb({ ok: false, error: 'NOT_FOUND', reason: I18n.t("cadeditor.ui.vault.82294d4800") }); return; }
       if (r.error !== 'RESPONSE_LIMIT') { cb(r); return; }
       var text = '', off = 0, rev = null;
       (function more() {
         me.call('export', { ids: [id], offset: off, limit: 3000 }, function (x) {
           if (!x.ok) { cb(x); return; }
-          if (rev !== null && x.revision !== rev) { cb({ ok: false, error: 'CHANGED', reason: '读取过程中保险库变了，请重试' }); return; }
+          if (rev !== null && x.revision !== rev) { cb({ ok: false, error: 'CHANGED', reason: I18n.t("cadeditor.ui.vault.d0759fc3f6") }); return; }
           rev = x.revision; text += x.text;
           if (!x.done) { off = x.nextOffset; more(); return; }
-          try { var e = JSON.parse(text).entries[0]; cb({ ok: true, stack: e.stack, entry: e }); } catch (err) { cb({ ok: false, error: 'BAD_DATA', reason: '取出的数据无法解析' }); }
+          try { var e = JSON.parse(text).entries[0]; cb({ ok: true, stack: e.stack, entry: e }); } catch (err) { cb({ ok: false, error: 'BAD_DATA', reason: I18n.t("cadeditor.ui.vault.41781b29e4") }); }
         });
       })();
     });
@@ -104,7 +104,7 @@ function vaultNested(stack) {
 function vaultMeta(e, isEnt) {
   var tags = (e.tags || []), note = (e.note || '').replace(/s+/g, ' ').trim();
   if (!tags.length && !note && !isEnt) return null;
-  var kids = []; if (isEnt) kids.push(h('span', { class: 'k-tag', text: 'SNBT', title: '带类型的实体数据，取出时整段使用' }));
+  var kids = []; if (isEnt) kids.push(h('span', { class: 'k-tag', text: 'SNBT', title: I18n.t("cadeditor.ui.vault.34346f4dcc") }));
   tags.forEach(function (t) { kids.push(h('span', { class: 'k-tag dim', text: t })); });
   if (note) kids.push(h('span', { class: 'vt-note', text: note.length > 40 ? note.slice(0, 40) + '…' : note }));
   return h('div', { class: 'vt-meta' }, kids);
@@ -114,9 +114,9 @@ function vaultEntityObj(snbt) { return parseSnbtUser(snbt); }
 /* 乘客需要独立 type，但初始数据仍须逐节点保留 byte/float/long/数组。不能经过普通 JSON 打印。 */
 function vaultEntityPayload(snbt) {
   var tree = nbtParse(snbt);
-  if (tree.k !== 'obj') throw new Error('生物数据必须是 SNBT 复合对象');
+  if (tree.k !== 'obj') throw new Error(I18n.t("cadeditor.ui.vault.bf2d64a9f0"));
   var id = tree.map.id;
-  if (!id || id.k !== 'str' || !id.v) throw new Error('生物数据缺少类型 ID');
+  if (!id || id.k !== 'str' || !id.v) throw new Error(I18n.t("cadeditor.ui.vault.76fcee4032"));
   delete tree.map.id; tree.keys = tree.keys.filter(function (key) { return key !== 'id'; });
   return { type: id.v, snbt: nbtPrint(tree, false) };
 }
@@ -124,60 +124,60 @@ function vaultEntInfo(e) { var s = e.summary || e.entity || {}; return { id: e.e
 function vaultEntitySummary(e) {
   var i = vaultEntInfo(e), s = i.s, bits = [];
   if (i.id) bits.push(entityName(i.id));
-  if (s.baby) bits.push('幼体');
-  if (s.hasCustomName) bits.push('有名字');
-  if (s.equipmentCount) bits.push(s.equipmentCount + ' 件装备');
-  if (s.attributeCount) bits.push(s.attributeCount + ' 项属性');
-  if (s.effectCount) bits.push(s.effectCount + ' 个效果');
+  if (s.baby) bits.push(I18n.t("cadeditor.ui.vault.24bea1d12b"));
+  if (s.hasCustomName) bits.push(I18n.t("cadeditor.ui.vault.40b4f5ccc3"));
+  if (s.equipmentCount) bits.push(I18n.t("cadeditor.ui.vault.234dc54bb1", (s.equipmentCount)));
+  if (s.attributeCount) bits.push(I18n.t("cadeditor.ui.vault.7966586cad", (s.attributeCount)));
+  if (s.effectCount) bits.push(I18n.t("cadeditor.ui.vault.f90556fed7", (s.effectCount)));
   return bits.join(' · ');
 }
 /* 方块 / 玩家预设条目：摘要键见 docs/vault-contract.md（block、blockStateFields、nbtFields；sections、counts） */
 function vaultOtherIcon(e) { var s = e.summary || {}; return e.kind === 'block' ? itemIcon(shortId(s.block || 'minecraft:stone'), 16) : uiIcon('user', 16); }
 function vaultOtherSummary(e) {
   var s = e.summary || {}, bits = [];
-  if (e.kind === 'block') { if (s.block) bits.push(nameOf('block', shortId(s.block)) || humanId(s.block)); if (s.blockStateFields) bits.push(s.blockStateFields + ' 项状态'); if (s.nbtFields) bits.push(s.nbtFields + ' 项数据'); }
+  if (e.kind === 'block') { if (s.block) bits.push(nameOf('block', shortId(s.block)) || humanId(s.block)); if (s.blockStateFields) bits.push(I18n.t("cadeditor.ui.vault.94c65fcf5a", (s.blockStateFields))); if (s.nbtFields) bits.push(I18n.t("cadeditor.ui.vault.00aec7c35f", (s.nbtFields))); }
   else (s.sections || []).forEach(function (k) { var n = s.counts && s.counts[k]; bits.push((Labels.vaultSection[k] || k) + (n ? ' ' + n : '')); });
   return bits.join(' · ');
 }
 function vaultSummary(e) {
   var s = e.summary || {}, bits = [];
-  if (s.enchantCount) bits.push('附魔 ' + s.enchantCount);
-  if (s.hasCustomName) bits.push('自定义名');
-  if (s.containerSize) bits.push('内含 ' + s.containerSize + ' 种');
+  if (s.enchantCount) bits.push(I18n.t("cadeditor.ui.vault.e1a2e07baa", (s.enchantCount)));
+  if (s.hasCustomName) bits.push(I18n.t("cadeditor.ui.vault.62f9d0c12e"));
+  if (s.containerSize) bits.push(I18n.t("cadeditor.ui.vault.27df4d37dc", (s.containerSize)));
   if (e.item && e.item.count > 1) bits.push('× ' + e.item.count);
-  if (e.incompatible) bits.push('当前版本打不开');
+  if (e.incompatible) bits.push(I18n.t("cadeditor.ui.vault.4b98ca70b9"));
   return bits.join(' · ');
 }
 var VaultGivePending = {};
 function vInput(value, onCommit, ph) { var el = kInput(value, function () {}, { placeholder: ph, onCommit: onCommit }); el.classList.add('vt-in'); return el; }
-function vaultErr(r) { toast((r && r.reason) || (r && r.error) || '保险库操作失败', 'error'); }
+function vaultErr(r) { toast((r && r.reason) || (r && r.error) || I18n.t("cadeditor.ui.vault.7e9f8e6d11"), 'error'); }
 
 /* opts.pick(stack, entry)：作为选择器打开时，点「使用」把栈交出去；不传就是普通的保险库窗口 */
 function openVault(opts) {
   opts = opts || {};
   var V = { query: '', tags: [], sort: 'recent', rows: [], total: 0, next: null, token: 0, open: -1, kind: opts.pickEntity || opts.kind === 'entity' ? 'entity' : (opts.kind === 'block' || opts.kind === 'player_preset' ? opts.kind : 'item') };
   var fixedKind = !!(opts.pick || opts.pickEntity || opts.pickEntry);   // 作为选择器打开时只看对应的一类
-  var q = h('input', { class: 'k-input', type: 'text', placeholder: '搜索名称、标签、物品（支持拼音）', spellcheck: 'false' });
+  var q = h('input', { class: 'k-input', type: 'text', placeholder: I18n.t("cadeditor.ui.vault.c4791fad1a"), spellcheck: 'false' });
   var sbox = kSearchBox(q, function (v) { V.query = v; refresh(); });
   var tagBar = h('div', { class: 'k-chips vt-tags' }), list, stat = h('span', { class: 'k-sub vt-stat' }), warn = h('div', { class: 'vt-warn' });
-  var sort = kSeg([{ v: 'recent', label: '最近' }, { v: 'name', label: '名称' }, { v: 'item', label: '类型' }], 'recent', function (v) { V.sort = v; refresh(); });
+  var sort = kSeg([{ v: 'recent', label: I18n.t("cadeditor.ui.vault.997a5e6e51") }, { v: 'name', label: I18n.t("cadeditor.ui.cards1.d44e9b3d3b") }, { v: 'item', label: I18n.t("cadeditor.ui.labels.ba40014ff4") }], 'recent', function (v) { V.sort = v; refresh(); });
   var persistPoll = 0, pickingEntity = false, pickMask;
   function pollPersisted() {   // 后台落盘完成时游戏不会主动通知：还显示“正在保存…”就隔一会儿问一次
     if (Vault.st.persisted || persistPoll >= 12 || !$('modal')) return;
     persistPoll++; setTimeout(function () { Vault.call('stats', {}, function () { paintState(); }); }, 600);
   }
   function paintState() {
-    stat.textContent = (Vault.st.entries === null ? '' : '共 ' + Vault.st.entries + ' 条') + (Vault.st.persisted ? '' : ' · 正在保存…');
-    setTip(stat, Vault.st.storage ? '保存在：' + Vault.st.storage + '（这台电脑上所有存档和服务器共用）' : '');
+    stat.textContent = (Vault.st.entries === null ? '' : I18n.t("cadeditor.ui.vault.336a1a82d0", (Vault.st.entries))) + (Vault.st.persisted ? '' : I18n.t("cadeditor.ui.vault.fd51c3a891"));
+    setTip(stat, Vault.st.storage ? I18n.t("cadeditor.ui.vault.73f8eaaea1", (Vault.st.storage)) : '');
     clear(warn);
-    var w = Vault.st.storageError ? '保存到磁盘失败（' + Vault.st.storageError + '），修改保留在内存里，会自动重试' : Vault.st.readOnly ? '保险库文件版本比这个模组新，只读，不会被改动' : Vault.st.warning ? '保险库文件有问题：' + Vault.st.warning + '（原文件已另存，没有丢数据）' : '';
+    var w = Vault.st.storageError ? I18n.t("cadeditor.ui.vault.55985c19f0", (Vault.st.storageError)) : Vault.st.readOnly ? I18n.t("cadeditor.ui.vault.a554471fc5") : Vault.st.warning ? I18n.t("cadeditor.ui.vault.b88ba015fd", (Vault.st.warning)) : '';
     if (w) warn.appendChild(h('div', { class: 'vt-msg bad', text: w }));
     if (!fixedKind && V.kind === 'item' && Vault.st.giveCapability) warn.appendChild(h('div', { class: 'vt-msg', text: Vault.st.giveCapability }));
     pollPersisted();
   }
-  var tagsOpen = false, tagBtn = kBtn('标签', function () { tagsOpen = !tagsOpen; tagBar.style.display = tagsOpen ? '' : 'none'; }, { icon: 'tag', title: '按标签筛选' });
+  var tagsOpen = false, tagBtn = kBtn(I18n.t("cadeditor.ui.eschema.1d0fd5f933"), function () { tagsOpen = !tagsOpen; tagBar.style.display = tagsOpen ? '' : 'none'; }, { icon: 'tag', title: I18n.t("cadeditor.ui.vault.234b0b84e2") });
   tagBar.style.display = 'none'; tagBtn.style.display = 'none';
-  function paintTagBtn() { clear(tagBtn); tagBtn.appendChild(uiIcon('tag', 12)); tagBtn.appendChild(h('span', { text: V.tags.length ? '标签 ' + V.tags.length : '标签' })); tagBtn.classList.toggle('on', V.tags.length > 0); }
+  function paintTagBtn() { clear(tagBtn); tagBtn.appendChild(uiIcon('tag', 12)); tagBtn.appendChild(h('span', { text: V.tags.length ? I18n.t("cadeditor.ui.vault.b4e29c715a", (V.tags.length)) : I18n.t("cadeditor.ui.eschema.1d0fd5f933") })); tagBtn.classList.toggle('on', V.tags.length > 0); }
   function paintTags(tags) {
     clear(tagBar); tagBtn.style.display = (tags || []).length ? '' : 'none'; if (!(tags || []).length) { tagsOpen = false; tagBar.style.display = 'none'; } paintTagBtn();
     (tags || []).forEach(function (t) {
@@ -189,7 +189,7 @@ function openVault(opts) {
   function load(append, tries) {
     if (append && V.next === null) return;
     var tok = ++V.token;
-    if (!append) { clear(errBox); errBox.appendChild(kLoadingRow('正在读取保险库…')); }   // 读完（或失败）时 errBox 会被清掉 / 换成错误提示
+    if (!append) { clear(errBox); errBox.appendChild(kLoadingRow(I18n.t("cadeditor.ui.vault.bf6ab0af32"))); }   // 读完（或失败）时 errBox 会被清掉 / 换成错误提示
     Vault.call('list', { kind: V.kind, query: V.query, tags: V.tags, sort: V.sort, offset: append ? V.next : 0, limit: 40 }, function (r) {
       if (tok !== V.token) return;
       if (!r.ok) {
@@ -208,7 +208,7 @@ function openVault(opts) {
   }
   function refresh() { V.open = -1; load(false); Vault.call('tags', {}, function (r) { if (r.ok) paintTags(r.tags); }); Vault.call('stats', {}, function () { paintState(); }); }
   var errBox = h('div', {});
-  function vaultErrRow(r) { clear(errBox); errBox.appendChild(xEmpty((r.reason || r.error || '读取保险库失败') + (r.error === 'NOT_READY' ? '（文件还在加载，稍后再点一下搜索）' : ''))); }
+  function vaultErrRow(r) { clear(errBox); errBox.appendChild(xEmpty((r.reason || r.error || I18n.t("cadeditor.ui.vault.9b343ce02d")) + (r.error === 'NOT_READY' ? I18n.t("cadeditor.ui.vault.e998734752") : ''))); }
   function takeAnd(e, fn) { Vault.take(e.id, function (r) { if ($('modal') !== pickMask) return; if (!r.ok) { vaultErr(r); return; } fn(r.stack, r.entry); }); }
   function editAndUse(e, entity) {
     if (pickingEntity) return;
@@ -217,25 +217,25 @@ function openVault(opts) {
       pickingEntity = false;
       if ($('modal') !== pickMask) return;
       if (!r.ok) { vaultErr(r); return; }
-      if (!valid()) { toast('编辑目标已变化，请重新选择', 'warn'); return; }
+      if (!valid()) { toast(I18n.t("cadeditor.ui.vault.f7ce0f6b1c"), 'warn'); return; }
       function use(value) { if ($('modal') !== pickMask) return; closeModal(); if (entity) opts.pickEntity(value, r.entry); else opts.pick(value, r.entry); }
-      if (entity) openEntityDraft(r.snbt, { title: e.name || '编辑生物', valid: valid, commit: use });
-      else openNestedItem(r.stack, { title: e.name || '编辑物品', commitUnchanged: true, valid: valid, commit: use });
+      if (entity) openEntityDraft(r.snbt, { title: e.name || I18n.t("cadeditor.ui.eschema.7de591c132"), valid: valid, commit: use });
+      else openNestedItem(r.stack, { title: e.name || I18n.t("cadeditor.ui.cards3.7f559289d4"), commitUnchanged: true, valid: valid, commit: use });
     }
     if (entity) Vault.takeEntity(e.id, received); else Vault.take(e.id, received);
   }
   var xl = xList({
-    items: function () { return V.rows; }, empty: V.legacy ? '这个版本的游戏还不支持把生物存进保险库，请更新模组后重启游戏。' : V.query || V.tags.length ? '没有匹配的条目' : V.kind === 'block' ? '还没有存过方块。对准一个方块打开它的编辑页，点“存入保险库”。' : V.kind === 'player_preset' ? '还没有存过玩家预设。打开玩家编辑页，点“存入保险库”。' : V.kind === 'entity' ? '还没有存过生物。在刷怪蛋、刷怪笼或世界里的生物编辑页点“存入保险库”。' : '保险库还是空的。编辑好物品后点上面的“存入当前物品”。',
+    items: function () { return V.rows; }, empty: V.legacy ? I18n.t("cadeditor.ui.vault.bfc73b763d") : V.query || V.tags.length ? I18n.t("cadeditor.ui.vault.4031b1da23") : V.kind === 'block' ? I18n.t("cadeditor.ui.vault.11d652b1bf") : V.kind === 'player_preset' ? I18n.t("cadeditor.ui.vault.d0d235a74f") : V.kind === 'entity' ? I18n.t("cadeditor.ui.vault.e44a6782fe") : I18n.t("cadeditor.ui.vault.b1874b26f1"),
     row: function (e, i) {
       var tagEls = (e.tags || []).map(function (t) { return h('span', { class: 'k-tag dim', text: t }); });
       var acts = h('div', { class: 'x-rt' }, []);
       var isEnt = V.kind === 'entity';
       var isOther = V.kind === 'block' || V.kind === 'player_preset';
       if (isOther) {
-        if (opts.pickEntry) acts.appendChild(kBtn('套用', function () { opts.pickEntry(e); }, { cls: 'pri', icon: 'check' }));
-        else if (V.kind === 'player_preset') acts.appendChild(kBtn('套用到自己身上', function () { vwApplyToSelf(e); }, { icon: 'download', title: '读取你当前的数据，再选择分区、查看覆盖内容并确认；需要服务端支持和管理员权限' }));
+        if (opts.pickEntry) acts.appendChild(kBtn(I18n.t("cadeditor.ui.vault.77af807d6a"), function () { opts.pickEntry(e); }, { cls: 'pri', icon: 'check' }));
+        else if (V.kind === 'player_preset') acts.appendChild(kBtn(I18n.t("cadeditor.ui.vault.8d3d75ebc0"), function () { vwApplyToSelf(e); }, { icon: 'download', title: I18n.t("cadeditor.ui.vault.87477e553b") }));
       }
-      else if (isEnt && opts.pickEntity) acts.appendChild(kBtn('使用', function () {
+      else if (isEnt && opts.pickEntity) acts.appendChild(kBtn(I18n.t("cadeditor.ui.vault.cdfd0b34e4"), function () {
         if (pickingEntity) return; pickingEntity = true;
         Vault.takeEntity(e.id, function (r) {
           pickingEntity = false;
@@ -245,31 +245,31 @@ function openVault(opts) {
         });
       }, { cls: 'pri', icon: 'check' }));
       else if (isEnt) { /* 生物条目在窗口里只管理；取出在各处“选择生物”里 */ }
-      else if (opts.pick) acts.appendChild(kBtn('使用', function () { takeAnd(e, function (stack, entry) { closeModal(); opts.pick(stack, entry); }); }, { cls: 'pri', icon: 'check' }));
+      else if (opts.pick) acts.appendChild(kBtn(I18n.t("cadeditor.ui.vault.cdfd0b34e4"), function () { takeAnd(e, function (stack, entry) { closeModal(); opts.pick(stack, entry); }); }, { cls: 'pri', icon: 'check' }));
       else {
-        var giveBtn = kBtn('给我', function () {
+        var giveBtn = kBtn(I18n.t("cadeditor.ui.vault.22e840cf33"), function () {
           if (VaultGivePending[e.id]) return;   // 回执回来之前不重复发，不然会给出好几份
           VaultGivePending[e.id] = true; giveBtn.classList.add('dis');
           Vault.call('give', { id: e.id, slot: 'inventory' }, function (r) {
             delete VaultGivePending[e.id]; giveBtn.classList.remove('dis');
-            if (r.ok) toast(r.reason || '已放进背包', 'ok'); else vaultErr(r);
+            if (r.ok) toast(r.reason || I18n.t("cadeditor.ui.vault.d963df6fa6"), 'ok'); else vaultErr(r);
           });
-        }, { icon: 'download', title: '放进背包空位（非创造模式需要服务器授予原版命令权限；可能通知本人和其他 OP）' });
+        }, { icon: 'download', title: I18n.t("cadeditor.ui.vault.a3580a2241") });
         acts.appendChild(giveBtn);
       }
-      if ((isEnt && opts.pickEntity) || (!isEnt && !isOther && opts.pick)) acts.appendChild(kBtn('编辑后使用', function () { editAndUse(e, isEnt); }, { icon: 'edit' }));
+      if ((isEnt && opts.pickEntity) || (!isEnt && !isOther && opts.pick)) acts.appendChild(kBtn(I18n.t("cadeditor.ui.vault.5c0bf39ed3"), function () { editAndUse(e, isEnt); }, { icon: 'edit' }));
       var entI = isEnt ? vaultEntInfo(e) : null;
       return { chevron: true, icon: isOther ? vaultOtherIcon(e) : isEnt ? entityIcon(entI.id || 'minecraft:pig', 16) : itemIcon(e.item && e.item.id || 'minecraft:stick', 16), title: e.name, sub: isOther ? vaultOtherSummary(e) : isEnt ? (vaultEntitySummary(e) || entI.id) : (vaultSummary(e) || (e.item && e.item.id) || ''), tip: (e.note || '') + (e.translatedName ? '\n' + e.translatedName : ''), right: acts, meta: vaultMeta(e, isEnt),
         body: function () {
-          var nm = vInput(e.name || '', function (v) { if (!v.trim()) return; Vault.call('update', { id: e.id, name: v }, function (r) { if (r.ok) { e.name = v; paintState(); } else vaultErr(r); }); }, '名称');
-          var tg = vInput((e.tags || []).join('，'), function (v) { var t = splitTags(v).slice(0, 8); Vault.call('update', { id: e.id, tags: t }, function (r) { if (r.ok) { e.tags = t; refresh();  xl.draw(); } else vaultErr(r); }); }, '标签，用逗号隔开（最多 8 个）');
-          var nt = vInput(e.note || '', function (v) { Vault.call('update', { id: e.id, note: v }, function (r) { if (r.ok) { e.note = v; xl.draw(); } else vaultErr(r); }); }, '备注（最多 200 字）');
-          var copyBtn = kBtn('复制一份', function () { Vault.call('duplicate', { id: e.id }, function (r) { if (r.ok) refresh(); else vaultErr(r); }); }, { icon: 'copy' });
-          var delBtn = kBtn('删除', function () { Vault.call('delete', { ids: [e.id] }, function (r) { if (r.ok) { Vault.undo = { token: r.token, until: Date.now() + 29000 }; toast('已删除，30 秒内可在窗口底部撤销', 'info'); refresh(); undoBar(); } else vaultErr(r); }); }, { cls: 'dng', icon: 'trash' });
+          var nm = vInput(e.name || '', function (v) { if (!v.trim()) return; Vault.call('update', { id: e.id, name: v }, function (r) { if (r.ok) { e.name = v; paintState(); } else vaultErr(r); }); }, I18n.t("cadeditor.ui.cards1.d44e9b3d3b"));
+          var tg = vInput((e.tags || []).join('，'), function (v) { var t = splitTags(v).slice(0, 8); Vault.call('update', { id: e.id, tags: t }, function (r) { if (r.ok) { e.tags = t; refresh();  xl.draw(); } else vaultErr(r); }); }, I18n.t("cadeditor.ui.vault.c323e24416"));
+          var nt = vInput(e.note || '', function (v) { Vault.call('update', { id: e.id, note: v }, function (r) { if (r.ok) { e.note = v; xl.draw(); } else vaultErr(r); }); }, I18n.t("cadeditor.ui.vault.00552c83e3"));
+          var copyBtn = kBtn(I18n.t("cadeditor.ui.vault.9587076ee6"), function () { Vault.call('duplicate', { id: e.id }, function (r) { if (r.ok) refresh(); else vaultErr(r); }); }, { icon: 'copy' });
+          var delBtn = kBtn(I18n.t("cadeditor.ui.common.delete"), function () { Vault.call('delete', { ids: [e.id] }, function (r) { if (r.ok) { Vault.undo = { token: r.token, until: Date.now() + 29000 }; toast(I18n.t("cadeditor.ui.vault.04490543c2"), 'info'); refresh(); undoBar(); } else vaultErr(r); }); }, { cls: 'dng', icon: 'trash' });
           function vf(label, el) { return h('div', { class: 'vt-f' }, [h('span', { class: 'k-sub', text: label }), el]); }
           var acts = [copyBtn, delBtn];
-          if (e.kind === 'player_preset') acts.unshift(kBtn('查看玩家数据', function () { if (typeof oriel !== 'undefined' && oriel.send) { oriel.send('open_world', { vault_id: e.id }); closeModal(); } }, { cls: 'pri', icon: 'eye', title: '用玩家编辑页打开这份预设，可以直接看和改里面的背包、装备、属性；左上角可回到自己' }));
-          return [h('div', { class: 'vt-det' }, [vf('名称', nm), vf('标签', tg), vf('备注', nt), h('div', { class: 'vt-act' }, acts)])];
+          if (e.kind === 'player_preset') acts.unshift(kBtn(I18n.t("cadeditor.ui.vault.ae81e1b269"), function () { if (typeof oriel !== 'undefined' && oriel.send) { oriel.send('open_world', { vault_id: e.id }); closeModal(); } }, { cls: 'pri', icon: 'eye', title: I18n.t("cadeditor.ui.vault.8659ba8d20") }));
+          return [h('div', { class: 'vt-det' }, [vf(I18n.t("cadeditor.ui.cards1.d44e9b3d3b"), nm), vf(I18n.t("cadeditor.ui.eschema.1d0fd5f933"), tg), vf(I18n.t("cadeditor.ui.vault.daede98817"), nt), h('div', { class: 'vt-act' }, acts)])];
         } };
     }
   });
@@ -277,57 +277,57 @@ function openVault(opts) {
   function undoBar() {
     clear(undoEl);
     if (!Vault.undo || Date.now() > Vault.undo.until) return;
-    undoEl.appendChild(h('div', { class: 'vt-msg' }, [h('span', { text: '刚删除了条目  ' }), kBtn('撤销删除', function () { var t = Vault.undo.token; Vault.undo = null; Vault.call('restore', { token: t }, function (r) { if (r.ok) { toast('已恢复', 'ok'); refresh(); clear(undoEl); } else vaultErr(r); }); }, { icon: 'undo' })]));
+    undoEl.appendChild(h('div', { class: 'vt-msg' }, [h('span', { text: I18n.t("cadeditor.ui.vault.a5b0ad55b1") }), kBtn(I18n.t("cadeditor.ui.vault.d1ff25a76b"), function () { var t = Vault.undo.token; Vault.undo = null; Vault.call('restore', { token: t }, function (r) { if (r.ok) { toast(I18n.t("cadeditor.ui.vault.3617f737f4"), 'ok'); refresh(); clear(undoEl); } else vaultErr(r); }); }, { icon: 'undo' })]));
   }
   list = h('div', { class: 'vt-list' }, [xl.el, errBox]);
-  var more = kBtn('显示更多', function () { load(true); }, { icon: 'down' }); more.style.display = 'none';
-  var saveBtn = kBtn('存入当前物品', function () { openVaultSave(function () { refresh(); }); }, { cls: 'pri', icon: 'plus' });
+  var more = kBtn(I18n.t("cadeditor.ui.vault.331af79f34"), function () { load(true); }, { icon: 'down' }); more.style.display = 'none';
+  var saveBtn = kBtn(I18n.t("cadeditor.ui.vault.8cdec4d718"), function () { openVaultSave(function () { refresh(); }); }, { cls: 'pri', icon: 'plus' });
   if (!(Store.docs && Store.docs.length) || V.kind !== 'item' || opts.pickEntity) saveBtn.style.display = 'none';
-  var impBtn = kBtn('导入…', function () { openVaultImport(refresh); }, { icon: 'upload' });
-  var expBtn = kBtn('导出全部', function () { vaultExport(); }, { icon: 'download' });
-  var kindSeg = fixedKind ? null : kSeg([{ v: 'item', label: '物品', icon: 'backpack' }, { v: 'entity', label: '生物', icon: 'paw' }, { v: 'block', label: '方块', icon: 'cube' }, { v: 'player_preset', label: '玩家预设', icon: 'user' }], V.kind, function (v) { V.kind = v; V.tags = []; saveBtn.style.display = v === 'item' && Store.docs && Store.docs.length ? '' : 'none'; q.setAttribute('placeholder', v === 'entity' ? '搜索名称、标签、生物（支持拼音）' : v === 'block' ? '搜索名称、标签、方块' : v === 'player_preset' ? '搜索名称、标签' : '搜索名称、标签、物品（支持拼音）'); refresh(); }).el;
+  var impBtn = kBtn(I18n.t("cadeditor.ui.vault.1b9818e1ad"), function () { openVaultImport(refresh); }, { icon: 'upload' });
+  var expBtn = kBtn(I18n.t("cadeditor.ui.vault.d97210c260"), function () { vaultExport(); }, { icon: 'download' });
+  var kindSeg = fixedKind ? null : kSeg([{ v: 'item', label: I18n.t("cadeditor.ui.pages.7c89d6ebe1"), icon: 'backpack' }, { v: 'entity', label: I18n.t("cadeditor.ui.screens.61aacd674a"), icon: 'paw' }, { v: 'block', label: I18n.t("cadeditor.ui.picker.2753766d18"), icon: 'cube' }, { v: 'player_preset', label: I18n.t("cadeditor.ui.vault.d4f6dca6d8"), icon: 'user' }], V.kind, function (v) { V.kind = v; V.tags = []; saveBtn.style.display = v === 'item' && Store.docs && Store.docs.length ? '' : 'none'; q.setAttribute('placeholder', v === 'entity' ? I18n.t("cadeditor.ui.vault.ac46bde162") : v === 'block' ? I18n.t("cadeditor.ui.vault.72743a0e26") : v === 'player_preset' ? I18n.t("cadeditor.ui.vault.25368377db") : I18n.t("cadeditor.ui.vault.c4791fad1a")); refresh(); }).el;
   var body = [h('div', { class: 'vt-bar' }, [kindSeg, sbox.el, sort.el, tagBtn, stat]), tagBar, warn, list, more];
-  var win = modalShell('保险库', opts.pickEntity ? '选一只生物' : opts.pick ? '选一件放进去' : '存在这台电脑上，所有存档和服务器通用', body, [saveBtn, impBtn, expBtn, undoEl, h('div', { class: 'grow' }), kBtn('完成', closeModal, { cls: 'pri' })], 'wide vtwin');
+  var win = modalShell(I18n.t("cadeditor.ui.common.vault"), opts.pickEntity ? I18n.t("cadeditor.ui.vault.7b1a20be0f") : opts.pick ? I18n.t("cadeditor.ui.vault.fc7a21ee03") : I18n.t("cadeditor.ui.vault.0a34c6f361"), body, [saveBtn, impBtn, expBtn, undoEl, h('div', { class: 'grow' }), kBtn(I18n.t("cadeditor.ui.common.done"), closeModal, { cls: 'pri' })], 'wide vtwin');
   pickMask = openModal(win, !!opts.pick || opts.stacked !== false); windowify(win, 'vault');   // 默认保留打开保险库的父窗口；显式 false 才替换。
   refresh(); paintState();
 }
 
 /* 存入一只生物：snbt 是带类型的实体数据文本；名称默认用生物名 */
 function openVaultSaveEntity(snbt, defName, done) {
-  if (!snbt || snbt === '{}') { toast('这只生物还没有数据', 'warn'); return; }
-  var nm = kInput(defName || '', function () {}, { placeholder: '名称' }), tg = kInput('', function () {}, { placeholder: '标签，用逗号隔开（可不填）' }), nt = kInput('', function () {}, { placeholder: '备注（可不填）' });
-  var go = kBtn('存入', function () {
+  if (!snbt || snbt === '{}') { toast(I18n.t("cadeditor.ui.vault.0250a6cfea"), 'warn'); return; }
+  var nm = kInput(defName || '', function () {}, { placeholder: I18n.t("cadeditor.ui.cards1.d44e9b3d3b") }), tg = kInput('', function () {}, { placeholder: I18n.t("cadeditor.ui.vault.f8735b187b") }), nt = kInput('', function () {}, { placeholder: I18n.t("cadeditor.ui.vault.88a5087375") });
+  var go = kBtn(I18n.t("cadeditor.ui.vault.c77eea6fd1"), function () {
     var tags = splitTags(tg.value).slice(0, 8);
     Vault.saveEntity(snbt, { name: (nm.value || '').trim(), tags: tags, note: nt.value || '' }, function (r) {
       if (!r.ok) { vaultErr(r); return; }
-      closeModal(); toast((r.duplicate ? '保险库里已经有一模一样的了：' : '已存入保险库：') + (r.entry ? r.entry.name : '') + (r.stripped && r.stripped.length ? '（位置、UUID 等运行时数据没有存）' : ''), 'ok');
+      closeModal(); toast((r.duplicate ? I18n.t("cadeditor.ui.vault.75a5fa2fdf") : I18n.t("cadeditor.ui.vault.970b72c06c")) + (r.entry ? r.entry.name : '') + (r.stripped && r.stripped.length ? I18n.t("cadeditor.ui.vault.3e8731cd39") : ''), 'ok');
       if (done) done();
     });
   }, { cls: 'pri', icon: 'check' });
-  openModal(modalShell('存入保险库', '生物', [fieldRow('名称', nm), fieldRow('标签', tg), fieldRow('备注', nt)], [h('div', { class: 'grow' }), kBtn('取消', closeModal), go]), true);
+  openModal(modalShell(I18n.t("cadeditor.ui.eschema.248306082a"), I18n.t("cadeditor.ui.screens.61aacd674a"), [fieldRow(I18n.t("cadeditor.ui.cards1.d44e9b3d3b"), nm), fieldRow(I18n.t("cadeditor.ui.eschema.1d0fd5f933"), tg), fieldRow(I18n.t("cadeditor.ui.vault.daede98817"), nt)], [h('div', { class: 'grow' }), kBtn(I18n.t("cadeditor.ui.common.cancel"), closeModal), go]), true);
 }
 
 /* 存入当前物品：名称 / 标签 / 备注可以填，不填就用默认 */
 function openVaultSave(done) {
-  var d = Store.doc(); if (!d) { toast('没有正在编辑的物品', 'warn'); return; }
-  var nm = kInput(displayName(d), function () {}, { placeholder: '名称' }), tg = kInput('', function () {}, { placeholder: '标签，用逗号隔开（可不填）' }), nt = kInput('', function () {}, { placeholder: '备注（可不填）' });
+  var d = Store.doc(); if (!d) { toast(I18n.t("cadeditor.ui.vault.a51f6bdadd"), 'warn'); return; }
+  var nm = kInput(displayName(d), function () {}, { placeholder: I18n.t("cadeditor.ui.cards1.d44e9b3d3b") }), tg = kInput('', function () {}, { placeholder: I18n.t("cadeditor.ui.vault.f8735b187b") }), nt = kInput('', function () {}, { placeholder: I18n.t("cadeditor.ui.vault.88a5087375") });
   function val(c) { return c.value || ''; }
-  var go = kBtn('存入', function () {
+  var go = kBtn(I18n.t("cadeditor.ui.vault.c77eea6fd1"), function () {
     var tags = splitTags(val(tg)).slice(0, 8);
     Vault.save(hostTipStack(d), { name: val(nm).trim(), tags: tags, note: val(nt) }, function (r) {
       if (!r.ok) { vaultErr(r); return; }
-      closeModal(); toast(r.duplicate ? '保险库里已经有一模一样的了：' + r.entry.name : '已存入保险库：' + r.entry.name, 'ok');
+      closeModal(); toast(r.duplicate ? I18n.t("cadeditor.ui.vault.afd272732d", (r.entry.name)) : I18n.t("cadeditor.ui.vault.d5cdd79d2a", (r.entry.name)), 'ok');
       if (done) done();
     });
   }, { cls: 'pri', icon: 'check' });
-  openModal(modalShell('存入保险库', itemNameOf(d), [fieldRow('名称', nm), fieldRow('标签', tg), fieldRow('备注', nt)], [h('div', { class: 'grow' }), kBtn('取消', closeModal), go]), true);
+  openModal(modalShell(I18n.t("cadeditor.ui.eschema.248306082a"), itemNameOf(d), [fieldRow(I18n.t("cadeditor.ui.cards1.d44e9b3d3b"), nm), fieldRow(I18n.t("cadeditor.ui.eschema.1d0fd5f933"), tg), fieldRow(I18n.t("cadeditor.ui.vault.daede98817"), nt)], [h('div', { class: 'grow' }), kBtn(I18n.t("cadeditor.ui.common.cancel"), closeModal), go]), true);
 }
 function itemNameOf(d) { return nameOfItem(d.id); }
 
 /* 导入：粘贴导出的文本 */
 function openVaultImport(done) {
-  var ta = h('textarea', { class: 'ed-snbt', spellcheck: 'false', placeholder: '粘贴从保险库导出的文本' }), msg = h('div', { class: 'k-sub' });
-  var go = kBtn('导入', function () {
+  var ta = h('textarea', { class: 'ed-snbt', spellcheck: 'false', placeholder: I18n.t("cadeditor.ui.vault.1798a1081c") }), msg = h('div', { class: 'k-sub' });
+  var go = kBtn(I18n.t("cadeditor.ui.kit2.576d81bb06"), function () {
     var text = ta.value.trim(); if (!text) return;
     var okN = 0, bad = 0, off = 0;
     function page(tokenObj) {
@@ -336,24 +336,24 @@ function openVaultImport(done) {
         if (!r.ok) { msg.textContent = r.reason || r.error; return; }
         (r.results || []).forEach(function (x) { if (x.ok) okN++; else bad++; });
         if (!r.done) { off = r.nextOffset; page(tokenObj); return; }
-        closeModal(); toast('导入完成：' + okN + ' 条成功' + (bad ? '，' + bad + ' 条被拒绝（重复或格式不对）' : ''), bad ? 'warn' : 'ok'); if (done) done();
+        closeModal(); toast(I18n.t("cadeditor.ui.vault.71124f0d28", (okN), (bad ? I18n.t("cadeditor.ui.vault.372909d167", (bad)) : '')), bad ? 'warn' : 'ok'); if (done) done();
       });
     }
     if (text.length < 6500) page(null); else Vault.upload(text, function (u) { if (!u.ok) { msg.textContent = u.reason || u.error; return; } page(u.token); });
   }, { cls: 'pri', icon: 'upload' });
-  openModal(modalShell('导入', '', [ta, msg], [h('div', { class: 'grow' }), kBtn('取消', closeModal), go]), true);
+  openModal(modalShell(I18n.t("cadeditor.ui.kit2.576d81bb06"), '', [ta, msg], [h('div', { class: 'grow' }), kBtn(I18n.t("cadeditor.ui.common.cancel"), closeModal), go]), true);
 }
 function vaultExport() {
   var text = '', off = 0, rev = null;
   (function more() {
     Vault.call('export', { all: true, offset: off, limit: 6000 }, function (x) {
       if (!x.ok) { vaultErr(x); return; }
-      if (rev !== null && x.revision !== rev) { toast('导出过程中保险库变了，请重新导出', 'warn'); return; }
+      if (rev !== null && x.revision !== rev) { toast(I18n.t("cadeditor.ui.vault.e9e0735fb0"), 'warn'); return; }
       rev = x.revision; text += x.text;
       if (!x.done) { off = x.nextOffset; more(); return; }
-      if (Prefs.hostClip && typeof oriel !== 'undefined' && oriel.send) { oriel.send('clipboard', { text: text }); toast('已复制到剪贴板（' + text.length + ' 字符）。粘贴到文本文件里保存即可', 'ok'); return; }
+      if (Prefs.hostClip && typeof oriel !== 'undefined' && oriel.send) { oriel.send('clipboard', { text: text }); toast(I18n.t("cadeditor.ui.vault.f160ff0d2b", (text.length)), 'ok'); return; }
       var ta = h('textarea', { class: 'ed-snbt', spellcheck: 'false' }); ta.value = text;
-      openModal(modalShell('导出', '全选复制，保存成文本文件', [ta], [h('div', { class: 'grow' }), kBtn('完成', closeModal, { cls: 'pri' })]), true);
+      openModal(modalShell(I18n.t("cadeditor.ui.vault.76420433f2"), I18n.t("cadeditor.ui.vault.26c4215990"), [ta], [h('div', { class: 'grow' }), kBtn(I18n.t("cadeditor.ui.common.done"), closeModal, { cls: 'pri' })]), true);
     });
   })();
 }

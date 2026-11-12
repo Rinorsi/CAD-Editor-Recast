@@ -2,7 +2,7 @@
 
 /* ---------- 大数字 / 等级 ---------- */
 function fmtInt(n) { var s = String(Math.round(n)); var neg = s.charAt(0) === '-'; if (neg) s = s.substring(1); s = s.replace(/\B(?=(\d{3})+(?!\d))/g, ','); return (neg ? '-' : '') + s; }
-function bigText(n) { var a = Math.abs(n); if (a >= 1e8) return +(n / 1e8).toFixed(2) + '亿'; if (a >= 1e4) return +(n / 1e4).toFixed(2) + '万'; return null; }
+function bigText(n) { var a = Math.abs(n); if (a >= 1e8) return I18n.t("cadeditor.ui.kit2.fe53fdcd86", (+(n / 1e8).toFixed(2))); if (a >= 1e4) return I18n.t("cadeditor.ui.kit2.2f2da9a7f3", (+(n / 1e4).toFixed(2))); return null; }
 function numBig(n) { var b = bigText(n); return fmtNum(n) + (b ? '（' + b + '）' : ''); }
 function levelText(n) { return n >= 1 && n <= 10 ? roman(n) : fmtInt(n); }
 
@@ -52,7 +52,7 @@ function kSortable(container, o) {
     document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
   });
 }
-function kGrip() { return h('div', { class: 'k-grip', title: '按住拖动排序' }, [uiIcon('drag', 12)]); }
+function kGrip() { return h('div', { class: 'k-grip', title: I18n.t("cadeditor.ui.kit2.f787d2260a") }, [uiIcon('drag', 12)]); }
 
 /* ---------- 右键菜单 ---------- */
 function kMenu(x, y, items) {
@@ -160,7 +160,7 @@ function renderRuns(el, base, runs, def) {
     if (deco.length) css += 'text-decoration-line:' + deco.join(' ') + ';';
     var s = h('span', { text: st.obfuscated && !r._object ? r.text.replace(/./g, '▒') : r.text }); s.setAttribute('style', css); el.appendChild(s);
   });
-  if (!any) el.appendChild(h('span', { class: 'k-ph', text: def.placeholder || '（空）' }));
+  if (!any) el.appendChild(h('span', { class: 'k-ph', text: def.placeholder || I18n.t("cadeditor.ui.kit2.fa8bc5e925") }));
 }
 /* § 代码 ⇄ 分段 */
 var SECT = String.fromCharCode(167);
@@ -207,11 +207,11 @@ function lerpHex(a, b, t) { var pa = parseInt(a.replace('#', ''), 16), pb = pars
    o = { mode, multiline, lines, compact, openKey, placeholder, def:{color,italic,placeholder}, preview（默认显示）, paper（'book'|'sign'）,
          height, max（字符上限：数字或函数，undefined=读取中、null=游戏没给上限）, onChange(v, empty), onRender(api), onKey(e) }
    返回 { el, set(v), focus(), runs(), lineRuns() }；内容含编辑器不认识的结构（点击事件、翻译键等）时 lines 模式返回 null，其他模式退回原始 SNBT 编辑。 */
-var RD_FLAGS = [['bold', 'B', '粗体（Ctrl+B）', 'l'], ['italic', 'I', '斜体（Ctrl+I）', 'o'], ['underlined', 'U', '下划线（Ctrl+U）', 'n'], ['strikethrough', 'S', '删除线', 'm'], ['obfuscated', '?', '乱码字（游戏里不停变化）', 'k']];
+var RD_FLAGS = [['bold', 'B', I18n.t("cadeditor.ui.kit2.22694175d5"), 'l'], ['italic', 'I', I18n.t("cadeditor.ui.kit2.c4fa127a1c"), 'o'], ['underlined', 'U', I18n.t("cadeditor.ui.kit2.fddf8e9c67"), 'n'], ['strikethrough', 'S', I18n.t("cadeditor.ui.forms.5b050892a8"), 'm'], ['obfuscated', '?', I18n.t("cadeditor.ui.kit2.327981b6ac"), 'k']];
 var RD_OBJ = '\uFFFC';  /* 分段里精灵图的占位字：渲染时由精灵字体画成图 */
 var SPR_DY = 4;  /* 平滑字体下输入框里的图标比普通字偏上，整体往下挪几个像素；游戏默认字体下对得齐，不挪 */
-var RD_MARK = '\u53E3';  /* 输入框里精灵图的占位字（透明）：用和一个汉字等宽的「口」，这样图标盖上去不会遮住后面的字；原生输入框画不了图，真图标由镜像层盖在上面 */
-var RD_CODES_WHY = '书与笔每页只保存纯文字，游戏只认 16 种 § 颜色；自定义颜色和精灵图要写在成书里';
+var RD_MARK = I18n.t("cadeditor.ui.kit2.037bb71227");  /* 输入框里精灵图的占位字（透明）：用和一个汉字等宽的「口」，这样图标盖上去不会遮住后面的字；原生输入框画不了图，真图标由镜像层盖在上面 */
+var RD_CODES_WHY = I18n.t("cadeditor.ui.kit2.24f79b8796");
 function rdNorm(st) { var o = {}; Object.keys(st || {}).forEach(function (k) { if (st[k] !== undefined && st[k] !== '') o[k] = st[k]; }); return o; }
 function rdStyleOf(r) { var s = runStyleOf(r); if (r._object) s._object = clone(r._object); return s; }
 /* 分段 → 文字 + 每个字符的样式（UTF-16 下标对齐输入框） */
@@ -337,7 +337,7 @@ function kRichDoc(value, o) {
     var m = typeof o.max === 'function' ? o.max() : o.max, len = typeof v === 'string' ? v.length : text.length;
     count.textContent = len + (typeof m === 'number' ? ' / ' + m : m === undefined ? ' / …' : '');
     count.classList.toggle('bad', typeof m === 'number' && len > m);
-    setTip(count, typeof m === 'number' ? (codes ? '按保存的原文计数，§ 代码也算字符；游戏上限 ' + m : '游戏上限 ' + m) : m === undefined ? '正在读取游戏的字数上限' : '');
+    setTip(count, typeof m === 'number' ? (codes ? I18n.t("cadeditor.ui.kit2.dcc4de2076", (m)) : I18n.t("cadeditor.ui.kit2.ba573d570e", (m))) : m === undefined ? I18n.t("cadeditor.ui.kit2.f931bd4344") : '');
   }
   function paintPrev() { if (prev) renderRuns(prev, {}, rdRuns(text, sty), def); }
   function rendered(v) { scheduleSprites(); paintPrev(); paintCount(v === undefined ? curValue() : v); if (o.onRender) o.onRender(api); if (followAside) followAside(); }
@@ -359,7 +359,7 @@ function kRichDoc(value, o) {
       /* 末尾还有空行就让出来：在中间按回车，整体下移一行，最后一个空行被挤掉 */
       var ls = nt.split('\n'), extra = ls.length - n, caret = typeof ta.selectionStart === 'number' ? ta.selectionStart : nt.length;
       while (extra > 0 && ls.length && ls[ls.length - 1] === '') { ls.pop(); extra--; }
-      if (extra > 0) { var back = sel.s; ta.value = text; if (typeof ta.setSelectionRange === 'function') ta.setSelectionRange(back, back); toast('这里最多 ' + n + ' 行', 'info', 'rd-lines'); return; }
+      if (extra > 0) { var back = sel.s; ta.value = text; if (typeof ta.setSelectionRange === 'function') ta.setSelectionRange(back, back); toast(I18n.t("cadeditor.ui.kit2.cd33816ad9", (n)), 'info', 'rd-lines'); return; }
       nt = ls.join('\n'); ta.value = nt; if (typeof ta.setSelectionRange === 'function') ta.setSelectionRange(Math.min(caret, nt.length), Math.min(caret, nt.length));
       while (nt.split('\n').length < n) nt += '\n'; ta.value = nt;
       if (typeof ta.setSelectionRange === 'function') ta.setSelectionRange(Math.min(caret, nt.length), Math.min(caret, nt.length));
@@ -409,18 +409,18 @@ function kRichDoc(value, o) {
     return b;
   }
   var chip = h('i', { class: 'k-rdsw' });
-  var colorB = tb('color', chip, '文字颜色', function (b) {
+  var colorB = tb('color', chip, I18n.t("cadeditor.ui.kit2.f21ef4aba5"), function (b) {
     var keep = { s: sel.s, e: sel.e }, box = h('div', { class: 'k-pickbox' }), sw = h('div', { class: 'k-swatches' });
     function pick(c) { kPopClose(); sel = keep; setColor(c); }
     function paint() {
       clear(sw);
-      var none = h('div', { class: 'k-sw nonec', title: '默认颜色' }, [h('i', { text: '×' })]);
+      var none = h('div', { class: 'k-sw nonec', title: I18n.t("cadeditor.ui.forms.af76608af8") }, [h('i', { text: '×' })]);
       none.addEventListener('mousedown', function (e) { e.preventDefault(); pick(null); }); sw.appendChild(none);
       mcColors().forEach(function (c) { var s = h('div', { class: 'k-sw', title: c[2], style: 'background:#' + c[1] }); s.addEventListener('mousedown', function (e) { e.preventDefault(); pick(c[0]); }); sw.appendChild(s); });
-      if (!mcColors().length) sw.appendChild(h('span', { class: 'k-sub', text: '正在读取颜色…' }));
+      if (!mcColors().length) sw.appendChild(h('span', { class: 'k-sub', text: I18n.t("cadeditor.ui.kit2.5b31288086") }));
     }
     paint(); box.appendChild(sw);
-    var hex = h('input', { class: 'k-input', type: 'text', placeholder: codes ? '书与笔不能用自定义颜色' : '#RRGGBB', maxlength: '7' });
+    var hex = h('input', { class: 'k-input', type: 'text', placeholder: codes ? I18n.t("cadeditor.ui.kit2.da991056cf") : '#RRGGBB', maxlength: '7' });
     if (codes) { hex.setAttribute('disabled', ''); setTip(hex, RD_CODES_WHY); }
     else hex.addEventListener('change', function () { var t = hex.value.trim(); if (/^#[0-9a-fA-F]{6}$/.test(t)) pick(t.toUpperCase()); });
     box.appendChild(hex);
@@ -431,11 +431,11 @@ function kRichDoc(value, o) {
   RD_FLAGS.forEach(function (f) { flagB[f[0]] = tb('flag ' + f[0], f[1], f[2], function () { toggleFlag(f[0]); }); bar.appendChild(flagB[f[0]]); });
   bar.appendChild(h('i', { class: 'k-rdsep' }));
   {
-    bar.appendChild(tb('sprite' + (codes ? ' dis' : ''), uiIcon('image', 12), codes ? '精灵图：' + RD_CODES_WHY : '在光标处插入精灵图', function (b) {
+    bar.appendChild(tb('sprite' + (codes ? ' dis' : ''), uiIcon('image', 12), codes ? I18n.t("cadeditor.ui.kit2.da2237ac2a", (RD_CODES_WHY)) : I18n.t("cadeditor.ui.kit2.838b76d29d"), function (b) {
       if (codes) { toast(RD_CODES_WHY, 'info', 'rd-codes'); return; }
       var keep = { s: sel.s, e: sel.e }, ver = version;
       pickSprite(b, function (object) {
-        if (ver !== version) { toast('文字已变化，请重新选择插入位置', 'info'); return; }
+        if (ver !== version) { toast(I18n.t("cadeditor.ui.kit2.19a59c1fe9"), 'info'); return; }
         sel = keep; replaceSel(RD_MARK, [{ _object: clone(object), color: 'white' }]);
       });
     }));
@@ -452,28 +452,28 @@ function kRichDoc(value, o) {
   function gradientPop(anchor) {
     wholeIfEmpty(); var keep = { s: sel.s, e: sel.e }, c1 = '#FF5555', c2 = '#5555FF';
     var box = h('div', { class: 'k-pickbox' });
-    if (codes) box.appendChild(kHint('只有 16 色，逐字取最接近的'));
-    box.appendChild(kHint('起始')); box.appendChild(kColor(0xFF5555, function (v) { c1 = hex6(v); }).el);
-    box.appendChild(kHint('结束')); box.appendChild(kColor(0x5555FF, function (v) { c2 = hex6(v); }).el);
-    box.appendChild(kBtn('应用到' + (keep.s === 0 && keep.e === text.length ? '全部文字' : '选中文字'), function () {
+    if (codes) box.appendChild(kHint(I18n.t("cadeditor.ui.kit2.fde0eb242b")));
+    box.appendChild(kHint(I18n.t("cadeditor.ui.kit2.e81827cb51"))); box.appendChild(kColor(0xFF5555, function (v) { c1 = hex6(v); }).el);
+    box.appendChild(kHint(I18n.t("cadeditor.ui.kit2.c7b24e7997"))); box.appendChild(kColor(0x5555FF, function (v) { c2 = hex6(v); }).el);
+    box.appendChild(kBtn(I18n.t("cadeditor.ui.kit2.cd36448686", (keep.s === 0 && keep.e === text.length ? I18n.t("cadeditor.ui.kit2.e6aa32cdd5") : I18n.t("cadeditor.ui.kit2.1017949653"))), function () {
       var idx = []; for (var i = keep.s; i < keep.e; i++) if (text.charAt(i) !== '\n' && !(sty[i] && sty[i]._object)) idx.push(i);
-      if (idx.length > 256) { toast('渐变最多 256 个字', 'error'); return; }
+      if (idx.length > 256) { toast(I18n.t("cadeditor.ui.kit2.9f7870106e"), 'error'); return; }
       idx.forEach(function (i, k) { var s = clone(sty[i] || {}); var hx = lerpHex(c1, c2, idx.length > 1 ? k / (idx.length - 1) : 0); s.color = codes ? (nearestColor(hx) || hx) : hx; sty[i] = s; });
       kPopClose(); sel = keep; emit(); highlight(); paintBar(); refocus();
     }, { cls: 'pri' }));
     kPopover(anchor, box, { width: 280, maxHeight: 360 });
   }
   function codePop(anchor) {
-    var src = h('textarea', { class: 'k-input ed-code-in', spellcheck: 'false', placeholder: codes ? '§6金色§l加粗' : '&6金色&l加粗' });
+    var src = h('textarea', { class: 'k-input ed-code-in', spellcheck: 'false', placeholder: codes ? I18n.t("cadeditor.ui.kit2.2f5a449b16") : I18n.t("cadeditor.ui.kit2.2829ddfe71") });
     src.value = rdCodes(rdRuns(text, sty));
     src.setAttribute('style', 'height:140px');
-    var grip = h('div', { class: 'k-pop-grip', title: '拖动调整大小' });
-    var apply = kBtn(codes ? '使用这段原文' : '导入', function () {
+    var grip = h('div', { class: 'k-pop-grip', title: I18n.t("cadeditor.ui.kit2.6cf2895f00") });
+    var apply = kBtn(codes ? I18n.t("cadeditor.ui.kit2.dd86f34ae6") : I18n.t("cadeditor.ui.kit2.576d81bb06"), function () {
       var nt = { text: '', sty: [] }; rdFromRuns(parseCodes(src.value, codes), nt);
       if (!multi) { nt.text = nt.text.replace(/\n/g, ''); nt.sty = nt.sty.slice(0, nt.text.length); }
       kPopClose(); sel = { s: 0, e: text.length }; replaceSel(nt.text, nt.sty);
     }, { cls: 'pri' });
-    var pop = kPopover(anchor, h('div', { class: 'k-pickbox' }, [codes ? kHint('这一页保存的原文；§ 代码由游戏解释。') : null, src, h('div', { class: 'k-pop-foot' }, [apply, grip])]), { width: 400, maxHeight: 520 });
+    var pop = kPopover(anchor, h('div', { class: 'k-pickbox' }, [codes ? kHint(I18n.t("cadeditor.ui.kit2.9530218f45")) : null, src, h('div', { class: 'k-pop-foot' }, [apply, grip])]), { width: 400, maxHeight: 520 });
     grip.addEventListener('mousedown', function (e) {
       if (e.button !== undefined && e.button !== 0) return;
       var scale = uiScaleFactor(), vp = uiViewport(), pr = pop.getBoundingClientRect(), sx = e.clientX, sy = e.clientY;
@@ -487,14 +487,14 @@ function kRichDoc(value, o) {
       });
     });
   }
-  gradB = tb('grad', uiIcon('palette', 12), '渐变色（选中文字；没选就是整页）', function (b) { gradientPop(b); });
+  gradB = tb('grad', uiIcon('palette', 12), I18n.t("cadeditor.ui.kit2.180d65c050"), function (b) { gradientPop(b); });
   bar.appendChild(gradB);
-  var more = tb('more', uiIcon('menu', 12), '§ 代码、清除格式', function (b) {
+  var more = tb('more', uiIcon('menu', 12), I18n.t("cadeditor.ui.kit2.d3aa3a9101"), function (b) {
     var r = b.getBoundingClientRect();
     kMenu(r.left, r.bottom + 2, [
-      { label: codes ? '查看 / 编辑原文' : '§ 代码导入 / 导出', icon: 'code', run: function () { codePop(more); } },
+      { label: codes ? I18n.t("cadeditor.ui.kit2.257439af69") : I18n.t("cadeditor.ui.kit2.5443ceb9ac"), icon: 'code', run: function () { codePop(more); } },
       { sep: 1 },
-      { label: '清除格式', icon: 'restore', run: function () { wholeIfEmpty(); patch(function (s) { return s._object ? { _object: s._object } : {}; }); } }
+      { label: I18n.t("cadeditor.ui.kit2.0e40ec4be2"), icon: 'restore', run: function () { wholeIfEmpty(); patch(function (s) { return s._object ? { _object: s._object } : {}; }); } }
     ].filter(Boolean));
   });
   bar.appendChild(more); bar.appendChild(count);
@@ -505,7 +505,7 @@ function kRichDoc(value, o) {
     var hx = same ? (tcHex(colors[0]) || tcHex(def.color) || '') : '';
     chip.className = 'k-rdsw' + (same ? '' : ' mixed') + (same && !colors[0] ? ' def' : '');
     chip.setAttribute('style', hx ? 'background:' + hx : '');
-    setTip(colorB, '文字颜色：' + (!same ? '多种' : colors[0] ? (mcColors().filter(function (c) { return c[0] === colors[0]; }).map(function (c) { return c[2]; })[0] || colors[0]) : '默认'));
+    setTip(colorB, I18n.t("cadeditor.ui.kit2.a523d6c2dd", (!same ? I18n.t("cadeditor.ui.kit2.9967cbbd81") : colors[0] ? (mcColors().filter(function (c) { return c[0] === colors[0]; }).map(function (c) { return c[2]; })[0] || colors[0]) : I18n.t("cadeditor.ui.common.default"))));
   }
 
   /* aside：放在输入框右边、和它等高的预览（书页）；两边按滚动比例同步 */
@@ -575,7 +575,7 @@ function kRichDoc(value, o) {
   var openKey = o.openKey || 'rich', open = !o.compact || !!UIOpen[openKey];
   function sync() { edit.style.display = open ? 'flex' : 'none'; wrap.classList.toggle('open', open); }
   if (o.compact && prev) {
-    prev.classList.add('click'); setTip(prev, '点击展开编辑');
+    prev.classList.add('click'); setTip(prev, I18n.t("cadeditor.ui.kit2.20300edac6"));
     prev.addEventListener('click', function () { open = !open; UIOpen[openKey] = open; sync(); if (open) refocus(); });
   }
   sync();
@@ -641,29 +641,29 @@ function kBookEditor(o) {
   function go(i) { var l = pages(); if (!l.length) return; i = Math.max(0, Math.min(l.length - 1, i)); if (i === at) return; setAt(i, l.length); drawAll(true); }
   function insert(i, page) {
     var l = pages(), m = maxPages();
-    if (typeof m === 'number' && l.length >= m) { toast('这本书最多 ' + m + ' 页（游戏上限）', 'error', 'book-max'); return; }
-    i = Math.max(0, Math.min(i, l.length)); l.splice(i, 0, page); put(l, '插入第 ' + (i + 1) + ' 页'); setAt(i, l.length); drawAll(true);
+    if (typeof m === 'number' && l.length >= m) { toast(I18n.t("cadeditor.ui.kit2.6d4da57b8d", (m)), 'error', 'book-max'); return; }
+    i = Math.max(0, Math.min(i, l.length)); l.splice(i, 0, page); put(l, I18n.t("cadeditor.ui.kit2.5cc302cb3d", (i + 1))); setAt(i, l.length); drawAll(true);
   }
-  function remove(i) { var l = pages(); if (i < 0 || i >= l.length) return; l.splice(i, 1); put(l, '删除第 ' + (i + 1) + ' 页'); setAt(Math.min(at, l.length - 1), l.length); drawAll(); }
-  function move(from, to) { var l = pages(); if (to < 0 || to >= l.length || from === to) return; var x = l.splice(from, 1)[0]; l.splice(to, 0, x); put(l, '移动第 ' + (from + 1) + ' 页'); setAt(to, l.length); drawAll(); }
+  function remove(i) { var l = pages(); if (i < 0 || i >= l.length) return; l.splice(i, 1); put(l, I18n.t("cadeditor.ui.kit2.3159a03f08", (i + 1))); setAt(Math.min(at, l.length - 1), l.length); drawAll(); }
+  function move(from, to) { var l = pages(); if (to < 0 || to >= l.length || from === to) return; var x = l.splice(from, 1)[0]; l.splice(to, 0, x); put(l, I18n.t("cadeditor.ui.kit2.3ce05c0632", (from + 1))); setAt(to, l.length); drawAll(); }
   function setPage(v) {
     var l = pages(); if (at >= l.length) return;
     var p = l[at]; if (bookFiltered(p)) { p = clone(p); p.raw = v; l[at] = p; } else l[at] = v;
-    put(l, '修改第 ' + (at + 1) + ' 页');
+    put(l, I18n.t("cadeditor.ui.kit2.4f66f7c56d", (at + 1)));
   }
   function pageMenu(i) {
     var n = pages().length;
     return [
-      { label: '在前面插入空白页', icon: 'plus', run: function () { insert(i, ''); } },
-      { label: '在后面插入空白页', icon: 'plus', run: function () { insert(i + 1, ''); } },
-      { label: '复制这一页', icon: 'copy', run: function () { insert(i + 1, clone(pages()[i])); } },
+      { label: I18n.t("cadeditor.ui.kit2.4fda16fdd3"), icon: 'plus', run: function () { insert(i, ''); } },
+      { label: I18n.t("cadeditor.ui.kit2.5e6a9c4e56"), icon: 'plus', run: function () { insert(i + 1, ''); } },
+      { label: I18n.t("cadeditor.ui.kit2.99276f18d2"), icon: 'copy', run: function () { insert(i + 1, clone(pages()[i])); } },
       { sep: 1 },
-      { label: '往前移一页', icon: 'back', dis: i === 0, run: function () { move(i, i - 1); } },
-      { label: '往后移一页', icon: 'forward', dis: i >= n - 1, run: function () { move(i, i + 1); } },
-      { label: '移到第一页', icon: 'up', dis: i === 0, run: function () { move(i, 0); } },
-      { label: '移到最后一页', icon: 'down', dis: i >= n - 1, run: function () { move(i, n - 1); } },
+      { label: I18n.t("cadeditor.ui.kit2.ac5cabbd1b"), icon: 'back', dis: i === 0, run: function () { move(i, i - 1); } },
+      { label: I18n.t("cadeditor.ui.kit2.265648665b"), icon: 'forward', dis: i >= n - 1, run: function () { move(i, i + 1); } },
+      { label: I18n.t("cadeditor.ui.kit2.b213e1acd8"), icon: 'up', dis: i === 0, run: function () { move(i, 0); } },
+      { label: I18n.t("cadeditor.ui.kit2.4d88bb535e"), icon: 'down', dis: i >= n - 1, run: function () { move(i, n - 1); } },
       { sep: 1 },
-      { label: '删除这一页', icon: 'trash', danger: 1, run: function () { remove(i); } }
+      { label: I18n.t("cadeditor.ui.kit2.9623f116ab"), icon: 'trash', danger: 1, run: function () { remove(i); } }
     ];
   }
   function iconBtn(icon, tip, fn, cls) { return kBtn('', fn, { icon: icon, title: tip, cls: 'k-book-ib' + (cls ? ' ' + cls : '') }); }
@@ -671,27 +671,27 @@ function kBookEditor(o) {
     var inp = h('input', { class: 'k-input', type: 'text', placeholder: '1 – ' + n });
     function ok() { var v = parseInt(inp.value, 10); if (!isNaN(v)) { kPopClose(); go(v - 1); } }
     inp.addEventListener('change', ok);
-    kPopover(anchor, h('div', { class: 'k-pickbox' }, [kHint('跳到第几页'), inp, kBtn('跳转', ok, { cls: 'pri' })]), { width: 150 });
+    kPopover(anchor, h('div', { class: 'k-pickbox' }, [kHint(I18n.t("cadeditor.ui.kit2.712ee795cf")), inp, kBtn(I18n.t("cadeditor.ui.kit2.afd0b9482d"), ok, { cls: 'pri' })]), { width: 150 });
     setTimeout(function () { if (inp.focus) inp.focus(); }, 0);
   }
   function paintFoot() {
     var l = pages(), n = l.length, m = maxPages();
     clear(acts); clear(pager); clear(info);
-    acts.appendChild(iconBtn('plus', '在这一页后面插入空白页', function () { insert(n ? at + 1 : 0, ''); }, typeof m === 'number' && n >= m ? 'dis' : ''));
-    acts.appendChild(iconBtn('copy', '复制这一页', function () { if (n) insert(at + 1, clone(pages()[at])); }, n ? '' : 'dis'));
-    acts.appendChild(iconBtn('trash', '删除这一页', function () { remove(at); }, 'dng' + (n ? '' : ' dis')));
-    var prev = iconBtn('back', '上一页（PageUp）', function () { go(at - 1); }, at <= 0 ? 'dis' : '');
-    var next = iconBtn('forward', '下一页（PageDown）', function () { go(at + 1); }, at >= n - 1 ? 'dis' : '');
+    acts.appendChild(iconBtn('plus', I18n.t("cadeditor.ui.kit2.62486c1fa1"), function () { insert(n ? at + 1 : 0, ''); }, typeof m === 'number' && n >= m ? 'dis' : ''));
+    acts.appendChild(iconBtn('copy', I18n.t("cadeditor.ui.kit2.99276f18d2"), function () { if (n) insert(at + 1, clone(pages()[at])); }, n ? '' : 'dis'));
+    acts.appendChild(iconBtn('trash', I18n.t("cadeditor.ui.kit2.9623f116ab"), function () { remove(at); }, 'dng' + (n ? '' : ' dis')));
+    var prev = iconBtn('back', I18n.t("cadeditor.ui.kit2.e954052b5e"), function () { go(at - 1); }, at <= 0 ? 'dis' : '');
+    var next = iconBtn('forward', I18n.t("cadeditor.ui.kit2.9b73dadd0e"), function () { go(at + 1); }, at >= n - 1 ? 'dis' : '');
     pager.appendChild(prev);
     bookPagerItems(n, at).forEach(function (i) {
-      if (i === '…') { var gap = h('div', { class: 'k-book-pn gap', text: '…', title: '跳到指定页' }); activate(gap, function () { jumpPop(gap, n); }); pager.appendChild(gap); return; }
-      var b = h('div', { class: 'k-book-pn' + (i === at ? ' on' : ''), text: String(i + 1), title: '第 ' + (i + 1) + ' 页（右键：移动、复制、删除）' });
+      if (i === '…') { var gap = h('div', { class: 'k-book-pn gap', text: '…', title: I18n.t("cadeditor.ui.kit2.69a9b10a2a") }); activate(gap, function () { jumpPop(gap, n); }); pager.appendChild(gap); return; }
+      var b = h('div', { class: 'k-book-pn' + (i === at ? ' on' : ''), text: String(i + 1), title: I18n.t("cadeditor.ui.kit2.7dac322785", (i + 1)) });
       activate(b, function () { go(i); }); onContext(b, function () { return pageMenu(i); });
       pager.appendChild(b);
     });
     pager.appendChild(next);
-    info.textContent = '共 ' + n + ' 页' + (typeof m === 'number' ? ' / ' + m : '');
-    setTip(info, typeof m === 'number' ? '游戏上限 ' + m + ' 页' : m === undefined ? '正在读取页数上限' : '');
+    info.textContent = I18n.t("cadeditor.ui.kit2.49841c5030", (n), (typeof m === 'number' ? ' / ' + m : ''));
+    setTip(info, typeof m === 'number' ? I18n.t("cadeditor.ui.kit2.dc0288a54c", (m)) : m === undefined ? I18n.t("cadeditor.ui.kit2.88f01e9a82") : '');
   }
   /* 游戏里的书页：宽 114、最多 14 行、每行 9（游戏像素）。界面字号固定 12px，游戏字体里 6 像素宽的数字在这里宽 9.0508，所以放大倍数是固定的 */
   var BOOK_W = 114, BOOK_N = 14, BOOK_LH = 9, bookS = 1.5085;
@@ -748,35 +748,35 @@ function kBookEditor(o) {
       var head = { text: ld.text.slice(0, k), sty: ld.sty.slice(0, k) }, tail = { text: ld.text.slice(k), sty: ld.sty.slice(k) };
       if (j === at && caret >= k) caretPage = { page: at + 1, pos: caret - k };
       if (j + 1 >= l.length) {
-        if (typeof maxP === 'number' && l.length >= maxP) { toast('这本书已经是最多 ' + maxP + ' 页，写满的这一页后面的行游戏里会被截断', 'error', 'book-flow'); return; }
+        if (typeof maxP === 'number' && l.length >= maxP) { toast(I18n.t("cadeditor.ui.kit2.624d43e3a7", (maxP)), 'error', 'book-flow'); return; }
         l.push('');
       }
       l[j] = withRaw(l[j], rdVal(head)); changed = true; carry = tail; j++;
     }
     if (!changed) return;
-    put(l, '写满一页，自动换到下一页');
+    put(l, I18n.t("cadeditor.ui.kit2.6ca704982b"));
     if (caretPage) { setAt(caretPage.page, l.length); drawAll(true); if (ed && ed.setCaret) ed.setCaret(caretPage.pos); }
     else { drawAll(true); if (ed && ed.setCaret) ed.setCaret(Math.min(caret, ed.length())); }
-    toast('这一页写满了（游戏里每页最多 ' + BOOK_N + ' 行），多出的内容已移到下一页', 'info', 'book-flow');
+    toast(I18n.t("cadeditor.ui.kit2.ce057ebb56", (BOOK_N)), 'info', 'book-flow');
   }
   function paintPaper() {
     pageStyle(pgBody, 'min-height:' + Math.round(BOOK_N * BOOK_LH * bookS) + 'px;border-bottom:1px dashed #b0a07a;');
-    if (ed && !ed.raw) renderRuns(pgBody, {}, ed.runs(), { color: '#000000', placeholder: '（空白页）' });
+    if (ed && !ed.raw) renderRuns(pgBody, {}, ed.runs(), { color: '#000000', placeholder: I18n.t("cadeditor.ui.kit2.2f38ab5a28") });
     else clear(pgBody);
   }
   function drawEditor(focus) {
     clear(edHost); clear(note); ed = null; var l = pages();
     if (!l.length) {
-      edHost.appendChild(h('div', { class: 'k-book-empty' }, [h('span', { class: 'k-sub', text: '这本书还没有页' }), kBtn('添加第一页', function () { insert(0, ''); }, { icon: 'plus', cls: 'pri' })]));
+      edHost.appendChild(h('div', { class: 'k-book-empty' }, [h('span', { class: 'k-sub', text: I18n.t("cadeditor.ui.kit2.29fbb3a0d7") }), kBtn(I18n.t("cadeditor.ui.kit2.61556539e9"), function () { insert(0, ''); }, { icon: 'plus', cls: 'pri' })]));
       return;
     }
     var p = l[at];
     ed = kRichDoc(raw(p), { mode: codes ? 'codes' : 'component', multiline: true, preview: false, paper: 'book', aside: paper,
-      placeholder: '写下第 ' + (at + 1) + ' 页的内容…', def: { color: '#000000', placeholder: '（空白页）' }, max: codes ? o.maxChars : undefined,
+      placeholder: I18n.t("cadeditor.ui.kit2.7b207cfd82", (at + 1)), def: { color: '#000000', placeholder: I18n.t("cadeditor.ui.kit2.2f38ab5a28") }, max: codes ? o.maxChars : undefined,
       onChange: function (v) { setPage(v); flow(); }, onRender: paintPaper });
     edHost.appendChild(ed.el);
-    if (ed.raw) note.appendChild(kHint('这一页带点击、悬停等事件，按 SNBT 编辑以免丢失。', 'hint'));
-    if (bookFiltered(p) && p.filtered !== undefined) note.appendChild(kHint('这一页另有一份过滤文本（开启聊天过滤的玩家看到的版本），会原样保留。'));
+    if (ed.raw) note.appendChild(kHint(I18n.t("cadeditor.ui.kit2.da34ae760d"), 'hint'));
+    if (bookFiltered(p) && p.filtered !== undefined) note.appendChild(kHint(I18n.t("cadeditor.ui.kit2.c5c3a4cc8b")));
     if (focus && ed.focus) ed.focus();
   }
   function drawAll(focus) { var l = pages(); seen = JSON.stringify(l); setAt(at, l.length); drawEditor(focus); paintPaper(); paintFoot(); }

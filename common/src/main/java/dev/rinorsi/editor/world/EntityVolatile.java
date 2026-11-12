@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.world;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import dev.rinorsi.editor.EditorSessions;
 import java.util.*;
 import net.minecraft.nbt.*;
@@ -33,7 +35,7 @@ public final class EntityVolatile {
         if (!undo) {
             WorldNbt.protect(baseline,requested,true);
             for (String key : CURRENT) if (!key.equals("Motion") && !Objects.equals(baseline.get(key),requested.get(key)))
-                EditorSessions.fail("protected_field","运行时动态字段只读："+key);
+                EditorSessions.fail("protected_field",EditorI18n.tr("cadeditor.message.entityvolatile.b663042ca1", (key)));
         }
         var result = requested.copy();
         for (String key : CURRENT) if (!key.equals("Motion") || Objects.equals(baseline.get(key),requested.get(key))) copy(current,result,key);

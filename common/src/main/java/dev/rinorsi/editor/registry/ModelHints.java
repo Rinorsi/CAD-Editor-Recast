@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.registry;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.*;
 import java.io.Reader;
 import java.util.*;
@@ -18,8 +20,8 @@ public final class ModelHints {
             try (Reader reader = resource.get().openAsReader()) {
                 StringBuilder text = new StringBuilder(); char[] buffer = new char[4096]; int n;
                 while ((n = reader.read(buffer)) != -1) {
-                    if (text.length() + n > 1_048_576) throw new IllegalArgumentException("模型资源超过1Mi字符: " + id);
-                    if ((total[0] += n) > 4_194_304) throw new IllegalArgumentException("模型引用资源合计超过4Mi字符");
+                    if (text.length() + n > 1_048_576) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.modelhints.b314c85538", (id)));
+                    if ((total[0] += n) > 4_194_304) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.modelhints.0ce4cd6f15"));
                     text.append(buffer, 0, n);
                 }
                 return JsonParser.parseString(text.toString());
@@ -37,12 +39,12 @@ public final class ModelHints {
         Walker(Source source) { this.source = source; }
         void resource(Identifier id, int depth) {
             if (!visited.add(id)) return;
-            if (visited.size() > 256) throw new IllegalArgumentException("模型引用超过256个资源");
+            if (visited.size() > 256) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.modelhints.76ac179739"));
             try { JsonElement json = source.read(id); if (json != null) walk(json, depth + 1); }
-            catch (Exception error) { throw new IllegalArgumentException("模型解析失败 " + id + ": " + error.getMessage(), error); }
+            catch (Exception error) { throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.modelhints.3a775bd106", (id), (error.getMessage())), error); }
         }
         void walk(JsonElement json, int depth) {
-            if (++nodes > 100_000 || depth > 96) throw new IllegalArgumentException("模型结构过深或过大");
+            if (++nodes > 100_000 || depth > 96) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.modelhints.b4eb1ff1cd"));
             if (json.isJsonArray()) { for (var child : json.getAsJsonArray()) walk(child, depth + 1); return; }
             if (!json.isJsonObject()) return;
             JsonObject node = json.getAsJsonObject();
@@ -54,14 +56,14 @@ public final class ModelHints {
                     if (node.has("entries")) for (var branch : node.getAsJsonArray("entries")) {
                         JsonElement threshold = branch.getAsJsonObject().get("threshold");
                         if (threshold == null || !threshold.isJsonPrimitive() || !threshold.getAsJsonPrimitive().isNumber() || !Double.isFinite(threshold.getAsDouble()))
-                            throw new IllegalArgumentException("range_dispatch.threshold必须为有限数字");
+                            throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.modelhints.2108925bf6"));
                         if (!thresholds.contains(threshold)) thresholds.add(threshold);
                     }
                 } else if (vanilla(type, "select")) {
                     JsonArray cases = hint(node, "select").getAsJsonArray("cases");
                     if (node.has("cases")) for (var branch : node.getAsJsonArray("cases")) {
                         JsonElement when = branch.getAsJsonObject().get("when");
-                        if (when == null) throw new IllegalArgumentException("select.case缺少when");
+                        if (when == null) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.modelhints.6bf003e89f"));
                         if (when.isJsonArray()) for (var item : when.getAsJsonArray()) addCase(cases, item);
                         else addCase(cases, when);
                     }
@@ -73,7 +75,7 @@ public final class ModelHints {
                 String reference = string(node, field);
                 if (reference != null) {
                     Identifier id = Identifier.tryParse(reference);
-                    if (id == null) throw new IllegalArgumentException("无效子模型id: " + reference);
+                    if (id == null) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.modelhints.830ce80898", (reference)));
                     resource(Identifier.fromNamespaceAndPath(id.getNamespace(), "models/" + id.getPath() + ".json"), depth + 1);
                 }
             }
@@ -83,8 +85,8 @@ public final class ModelHints {
             int index = 0;
             if (node.has("index")) {
                 var n = node.get("index");
-                if (!n.isJsonPrimitive() || !n.getAsJsonPrimitive().isNumber()) throw new IllegalArgumentException("custom_model_data.index必须为整数");
-                index = n.getAsBigDecimal().intValueExact(); if (index < 0) throw new IllegalArgumentException("index不能为负数");
+                if (!n.isJsonPrimitive() || !n.getAsJsonPrimitive().isNumber()) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.modelhints.38aad16884"));
+                index = n.getAsBigDecimal().intValueExact(); if (index < 0) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.modelhints.a7aeeaf557"));
             }
             String key = kind + ":" + index; JsonObject existing = hints.get(key); if (existing != null) return existing;
             JsonObject entry = new JsonObject(); entry.addProperty("kind", kind); entry.addProperty("index", index);
@@ -93,7 +95,7 @@ public final class ModelHints {
             hints.put(key, entry); return entry;
         }
         private static void addCase(JsonArray cases, JsonElement value) {
-            if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()) throw new IllegalArgumentException("custom_model_data select.when必须为字符串");
+            if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.modelhints.5f4918add3"));
             if (!cases.contains(value)) cases.add(value);
         }
         private static String string(JsonObject node, String field) {

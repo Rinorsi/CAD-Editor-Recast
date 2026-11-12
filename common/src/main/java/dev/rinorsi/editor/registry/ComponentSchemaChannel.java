@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.registry;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import dev.rinorsi.editor.platform.Platform;
 import dev.rinorsi.editor.platform.ClientPlatform;
 import com.google.gson.*;
@@ -39,7 +41,7 @@ final class ComponentSchemaChannel {
                 if (request.toString().length() > 8192 || ++rate[1] > 20 || mc.level == null) {
                     result = new JsonObject(); result.addProperty("ok", false);
                     if (request.has("requestId") && request.get("requestId").isJsonPrimitive()) result.add("requestId", request.get("requestId"));
-                    result.addProperty("error", mc.level == null ? "已经离开世界" : "校验请求超过大小或频率限制，请稍后重试");
+                    result.addProperty("error", mc.level == null ? EditorI18n.tr("cadeditor.message.componentschemachannel.380c513b2e") : EditorI18n.tr("cadeditor.message.componentschemachannel.e2b443bea4"));
                     var errors = new JsonArray(); ComponentSchema.addError(errors, "$", "request_limit", result.get("error").getAsString()); result.add("errors", errors);
                 } else result = ComponentSchemaValidation.validate(request, mc.level.registryAccess());
                 driver.patchJson("component_validate.result", result.toString());
@@ -49,7 +51,7 @@ final class ComponentSchemaChannel {
     static void request(JsonObject request, String name, String currentGeneration, BiConsumer<List<String>, JsonObject> reply) {
         var mc = Minecraft.getInstance(); var context = new JsonObject();
         try {
-            if (mc.level == null) throw new IllegalStateException("已经离开世界");
+            if (mc.level == null) throw new IllegalStateException(EditorI18n.tr("cadeditor.message.componentschemachannel.380c513b2e"));
             if (world != mc.level || !Objects.equals(generation, currentGeneration)) {
                 world = mc.level; generation = currentGeneration; CACHE.clear(); JOBS.clear();
             }
@@ -62,7 +64,7 @@ final class ComponentSchemaChannel {
             if (id != null && request.has("rangesOnly") && request.get("rangesOnly").isJsonPrimitive()
                 && request.getAsJsonPrimitive("rangesOnly").isBoolean() && request.get("rangesOnly").getAsBoolean())
                 context.addProperty("rangesOnly", true);
-            if (JOBS.size() >= 8) throw new IllegalArgumentException("组件结构索引繁忙，请稍后重试");
+            if (JOBS.size() >= 8) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.componentschemachannel.1475fae22c"));
             JOBS.add(new Job(name, currentGeneration, context, ids.iterator(), new JsonArray(), world, reply));
         } catch (RuntimeException error) { error(name, currentGeneration, context, error, reply); }
     }

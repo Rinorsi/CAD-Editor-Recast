@@ -4,7 +4,7 @@ const vm = require('node:vm');
 const path = require('node:path');
 const dir = path.resolve(__dirname, '../common/src/main/resources/assets/cadeditor/ui/js');
 const c = vm.createContext({ Reg:{on(){}}, Labels: {slotEquip:{},mode:{},dim:{}}, console, setTimeout(){},clearTimeout(){}, clone:x=>JSON.parse(JSON.stringify(x)) });
-for (const file of ['data','core','nbt','worldedit','worldview','worldentity','worldplayer']) vm.runInContext(fs.readFileSync(fs.existsSync(path.join(dir,file+'.js'))?path.join(dir,file+'.js'):path.join(process.env.EDITOR_BASE_SOURCE_ROOT,'common/src/main/resources/assets/cadeditor/ui/js',file+'.js'),'utf8'),c);
+for (const file of ['data','i18n-catalogs','i18n','core','nbt','worldedit','worldview','worldentity','worldplayer']) vm.runInContext(fs.readFileSync(fs.existsSync(path.join(dir,file+'.js'))?path.join(dir,file+'.js'):path.join(process.env.EDITOR_BASE_SOURCE_ROOT,'common/src/main/resources/assets/cadeditor/ui/js',file+'.js'),'utf8'),c);
 let sends=0; c.oriel={send(){sends++;return true;}}; c.toast=()=>{};
 c.weDirtyText=()=>false; c.drawWorldTop=()=>{}; c.drawWorldFoot=()=>{};
 function setup(editable, backend='vanilla_self') {

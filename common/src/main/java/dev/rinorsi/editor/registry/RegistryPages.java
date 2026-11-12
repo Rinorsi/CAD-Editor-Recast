@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.registry;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -27,14 +29,13 @@ public final class RegistryPages {
         List<JsonObject> result = new ArrayList<>();
         JsonArray page = new JsonArray();
         int offset = 0, chars = 0;
-        if (limit < 1024 || limit > MAX_CHARS) throw new IllegalArgumentException("分页大小无效");
+        if (limit < 1024 || limit > MAX_CHARS) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.registrypages.41bc1b9f30"));
         int overhead = envelope(name, generation, 0, entries.size(), new JsonArray(), context).toString().length() + 64;
         int budget = limit - overhead;
         for (JsonElement entry : entries) {
             int size = entry.toString().length() + 1;
             // Oversized single rows still use the v1 24000-char maximum rather than truncating fields.
-            if (size > MAX_CHARS - overhead) throw new IllegalArgumentException("注册表条目超过分页大小: " + name + " chars=" + size
-                    + (entry.isJsonObject() ? " id=" + entry.getAsJsonObject().get("id") + " fields=" + entry.getAsJsonObject().entrySet().stream().map(e -> e.getKey()+":"+e.getValue().toString().length()).toList() : " type=non-object"));
+            if (size > MAX_CHARS - overhead) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.registrypages.2171f491df", (name), (size), ((entry.isJsonObject() ? " id=" + entry.getAsJsonObject().get("id") + " fields=" + entry.getAsJsonObject().entrySet().stream().map(e -> e.getKey()+":"+e.getValue().toString().length()).toList() : " type=non-object"))));
             if (!page.isEmpty() && chars + size > budget) {
                 result.add(envelope(name, generation, offset, entries.size(), page, context));
                 offset += page.size(); page = new JsonArray(); chars = 0;
@@ -47,7 +48,7 @@ public final class RegistryPages {
     private static JsonObject envelope(String name, String generation, int offset, int total, JsonArray entries, JsonObject context) {
         JsonObject p = complete(name, generation, entries, context);
         p.addProperty("offset", offset); p.addProperty("total", total); p.addProperty("done", offset + entries.size() == total);
-        if (p.toString().length() > MAX_CHARS) throw new IllegalArgumentException("注册表分页信封过长");
+        if (p.toString().length() > MAX_CHARS) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.registrypages.9892d5b6fe"));
         return p;
     }
     private static JsonObject complete(String name, String generation, JsonArray entries, JsonObject context) {

@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.vault;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.*;
 import dev.rinorsi.editor.world.EntityVolatile;
 import java.nio.charset.StandardCharsets;
@@ -28,7 +30,7 @@ public final class VaultEntities {
 
   public static Validated validate(String text) {
     if (text.getBytes(StandardCharsets.UTF_8).length > VaultStore.MAX_ENTRY_BYTES)
-      throw new VaultStore.Failure("ENTRY_TOO_LARGE", "生物SNBT最多8MiB");
+      throw new VaultStore.Failure("ENTRY_TOO_LARGE", EditorI18n.tr("cadeditor.message.vaultentities.1b3cdbc0dd"));
     int depth = 0;
     char quote = 0;
     boolean escape = false;
@@ -39,20 +41,20 @@ public final class VaultEntities {
         else if (c == quote) quote = 0;
       } else if (c == '\'' || c == '"') quote = c;
       else if (c == '{' || c == '[') {
-        if (++depth > 96) throw new VaultStore.Failure("INVALID_ENTITY", "SNBT嵌套过深");
+        if (++depth > 96) throw new VaultStore.Failure("INVALID_ENTITY", EditorI18n.tr("cadeditor.message.vaultentities.b99da925be"));
       } else if (c == '}' || c == ']') depth--;
     }
     CompoundTag tag;
     try {
       var parsed = TagParser.create(NbtOps.INSTANCE).parseFully(text);
-      if (!(parsed instanceof CompoundTag compound)) throw new IllegalArgumentException("必须为复合标签");
+      if (!(parsed instanceof CompoundTag compound)) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.vaultentities.bb3c61a3d1"));
       tag = compound;
     } catch (Exception bad) {
-      throw new VaultStore.Failure("INVALID_ENTITY", "生物SNBT无效：" + VaultStore.reason(bad));
+      throw new VaultStore.Failure("INVALID_ENTITY", EditorI18n.tr("cadeditor.message.vaultentities.957f10fe93", (VaultStore.reason(bad))));
     }
     String id = tag.getString("id").orElse("");
     if (id.isEmpty() || Identifier.tryParse(id) == null)
-      throw new VaultStore.Failure("INVALID_ENTITY_ID", "生物必须包含合法的字符串id");
+      throw new VaultStore.Failure("INVALID_ENTITY_ID", EditorI18n.tr("cadeditor.message.vaultentities.2c42e22364"));
     id = Identifier.parse(id).toString();
     tag.putString("id", id);
     JsonArray stripped = new JsonArray(), warnings = new JsonArray();

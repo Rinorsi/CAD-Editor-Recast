@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.vault;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.JsonObject;
 import dev.rinorsi.editor.*;
 import net.minecraft.network.protocol.game.ClientboundSetPlayerInventoryPacket;
@@ -14,10 +16,10 @@ public final class VaultGiveServer {
     public static JsonObject give(ServerPlayer player, JsonObject request) {
         InventoryWrites.rateLimit(player.getUUID());
         // Never trust client abilities or a previous acknowledgement as permission.
-        if (!EditorPolicy.gameMaster(player)) EditorSessions.fail("permission_denied", "需要游戏管理员命令权限（OP或单人开启作弊）才能在非创造模式取出物品");
-        if (player.isCreative()) EditorSessions.fail("creative_path_required", "创造模式请使用客户端创造栏位写入路径");
+        if (!EditorPolicy.gameMaster(player)) EditorSessions.fail("permission_denied", EditorI18n.tr("cadeditor.message.vaultgiveserver.4aaf05b1ce"));
+        if (player.isCreative()) EditorSessions.fail("creative_path_required", EditorI18n.tr("cadeditor.message.vaultgiveserver.df3c77632e"));
         if (player.connection == null || !player.isAlive())
-            EditorSessions.fail("not_connected", "玩家已离线或当前状态无法接收物品");
+            EditorSessions.fail("not_connected", EditorI18n.tr("cadeditor.message.vaultgiveserver.6fac38444e"));
         EditorWire.requirePayload(request.toString());
         VaultStore.checkDepth(request);
         JsonObject reply = RECEIPTS.computeIfAbsent(player.getUUID(), ignored -> new GiveReceipts()).execute(request, () -> write(player, request));
@@ -31,7 +33,7 @@ public final class VaultGiveServer {
     private static JsonObject write(ServerPlayer player, JsonObject request) {
         net.minecraft.world.item.ItemStack stack;
         try { stack = StackCodec.decode(StackCodec.object(request, "stack"), player.registryAccess()); }
-        catch (RuntimeException invalid) { throw new EditorSessions.Failure("invalid_stack", "保险库物品组件无效：" + invalid.getMessage()); }
+        catch (RuntimeException invalid) { throw new EditorSessions.Failure("invalid_stack", EditorI18n.tr("cadeditor.message.vaultgiveserver.1b69f35edc", (invalid.getMessage()))); }
         dev.rinorsi.editor.registry.EntitySchemaValidation.validateStack(stack, player.level());
         int index = InventoryWrites.insert(player.getInventory(), stack, request);
         var reply = new JsonObject();
@@ -44,7 +46,7 @@ public final class VaultGiveServer {
         reply.addProperty("inventoryIndex", index);
         reply.addProperty("path", "server");
         var item = new JsonObject(); item.addProperty("id", net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString()); item.addProperty("count", stack.getCount()); reply.add("item", item);
-        reply.addProperty("reason", index < 9 ? "已放进快捷栏第" + (index+1) + "格" : "已放进背包第" + (index-8) + "格（槽位"+index+"）");
+        reply.addProperty("reason", index < 9 ? EditorI18n.tr("cadeditor.message.vaultgiveserver.45216fc6b9", ((index+1))) : EditorI18n.tr("cadeditor.message.vaultgiveserver.cc08d67454", ((index-8)), (index)));
         return reply;
     }
 }

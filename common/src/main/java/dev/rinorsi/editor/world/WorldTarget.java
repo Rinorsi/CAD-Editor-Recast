@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.world;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.*;
 import com.mojang.serialization.JsonOps;
 import dev.rinorsi.editor.*;
@@ -48,9 +50,9 @@ public final class WorldTarget {
     public static WorldTarget resolve(ServerPlayer player, JsonObject slot, Vec3 openingPosition) {
         var level = (ServerLevel) player.level();
         boolean gameMaster=EditorPolicy.gameMaster(player);
-        if (!player.isAlive() || (player.isSpectator() && !gameMaster)) EditorSessions.fail("not_allowed", "当前玩家状态不能编辑世界目标");
+        if (!player.isAlive() || (player.isSpectator() && !gameMaster)) EditorSessions.fail("not_allowed", EditorI18n.tr("cadeditor.message.worldtarget.6b9da09b1d"));
         if (!StackCodec.string(slot, "dim").equals(level.dimension().identifier().toString()))
-            EditorSessions.fail("target_unavailable", "目标不在玩家当前维度");
+            EditorSessions.fail("target_unavailable", EditorI18n.tr("cadeditor.message.worldtarget.26f1c7f5d2"));
         String kind = StackCodec.string(slot, "kind");
         BlockEntity block = null; Entity entity = null; BlockPos pos; Vec3 returnPosition=null;
         if (kind.equals("block")) {
@@ -58,9 +60,9 @@ public final class WorldTarget {
             WorldAccess.loaded(WorldAccess.isLoaded(level,pos));
             WorldAccess.reach(player.isWithinBlockInteractionRange(pos, 0));
             block = level.getBlockEntity(pos);
-            if (level.getBlockState(pos).isAir() || (block != null && block.isRemoved())) EditorSessions.fail("target_unavailable", "该位置没有可编辑的已放置方块");
+            if (level.getBlockState(pos).isAir() || (block != null && block.isRemoved())) EditorSessions.fail("target_unavailable", EditorI18n.tr("cadeditor.message.worldtarget.40d3a9c748"));
             if (level.getBlockState(pos).getBlock() instanceof net.minecraft.world.level.block.GameMasterBlock && !EditorPolicy.gameMaster(player))
-                EditorSessions.fail("not_allowed", "该方块需要原版游戏管理员命令权限");
+                EditorSessions.fail("not_allowed", EditorI18n.tr("cadeditor.message.worldtarget.9834ff68d9"));
         } else if (kind.equals("entity")) {
             entity = slot.has("player") ? null : slot.has("uuid") ? level.getEntityInAnyDimension(UUID.fromString(StackCodec.string(slot, "uuid")))
                     : level.getEntity(StackCodec.integer(slot,"id",0,Integer.MAX_VALUE));
@@ -70,9 +72,9 @@ public final class WorldTarget {
                 entity=selector.equals("self")?player:selector.equals("name")?level.getServer().getPlayerList().getPlayerByName(StackCodec.string(slot,"name")):slot.has("uuid")?level.getServer().getPlayerList().getPlayer(UUID.fromString(StackCodec.string(slot,"uuid"))):null;
                 PlayerWorldEdit.requireOnline(entity instanceof ServerPlayer);
             }
-            if(entity instanceof Player && !(entity instanceof ServerPlayer))EditorSessions.fail("player_target","仅支持服务器在线玩家");
+            if(entity instanceof Player && !(entity instanceof ServerPlayer))EditorSessions.fail("player_target",EditorI18n.tr("cadeditor.message.worldtarget.3a00e7cac4"));
             if(entity instanceof ServerPlayer) { PlayerWorldEdit.requirePermission(player.permissions());PlayerWorldEdit.requireOnline(level.getServer().getPlayerList().getPlayer(entity.getUUID())==entity); }
-            if (entity == null || entity.level() != level || entity.isRemoved()) EditorSessions.fail("target_unavailable", "实体已卸载、移除或离开维度");
+            if (entity == null || entity.level() != level || entity.isRemoved()) EditorSessions.fail("target_unavailable", EditorI18n.tr("cadeditor.message.worldtarget.25e6712a59"));
             boolean inReach=entity==player || player.isWithinEntityInteractionRange(entity, 0);
             if (!inReach && openingPosition!=null && !(entity instanceof Player)) {
                 WorldAccess.reach(player.isWithinEntityInteractionRange(entity.getBoundingBox().move(openingPosition.subtract(entity.position())),0));
@@ -82,10 +84,10 @@ public final class WorldTarget {
                 returnPosition=openingPosition;
             } else WorldAccess.reach(inReach);
             if (entity.getType().onlyOpCanSetNbt() && !EditorPolicy.gameMaster(player))
-                EditorSessions.fail("not_allowed", "该实体需要原版游戏管理员命令权限");
+                EditorSessions.fail("not_allowed", EditorI18n.tr("cadeditor.message.worldtarget.0b51b5a295"));
             pos = entity.blockPosition();
             WorldAccess.loaded(WorldAccess.isLoaded(level,pos));
-        } else throw new EditorSessions.Failure("slot_invalid", "未知世界目标类型");
+        } else throw new EditorSessions.Failure("slot_invalid", EditorI18n.tr("cadeditor.message.worldtarget.97568477dc"));
         WorldAccess.area(level.getWorldBorder().isWithinBounds(pos) && player.mayInteract(level, pos) && level.mayInteract(player, pos) && (gameMaster || player.mayBuild()));
         var target=new WorldTarget(level, block, entity, kind.equals("block") ? pos : null);
         target.returnPosition=returnPosition;
@@ -170,7 +172,7 @@ public final class WorldTarget {
         }
         if(entity instanceof ServerPlayer p){var result=snapshot(slot,canUndo);addPlayerView(result,p,nbt,slot);return result;}
         var copy = entity.getType().create(level,EntitySpawnReason.COMMAND);
-        if (copy == null) EditorSessions.fail("unsupported_target", "无法生成目标校验副本");
+        if (copy == null) EditorSessions.fail("unsupported_target", EditorI18n.tr("cadeditor.message.worldtarget.52da849378"));
         var problems = new ProblemReporter.Collector(); copy.load(TagValueInput.create(problems,level.registryAccess(),nbt)); requireClean(problems);
         return new WorldTarget(level,null,copy).snapshot(slot,canUndo);
     }
@@ -185,7 +187,7 @@ public final class WorldTarget {
                 *///?} else {
                 if (copy.canExecuteClickCommands(net.minecraft.world.level.block.entity.SignTextSlot.FRONT, player) || copy.canExecuteClickCommands(net.minecraft.world.level.block.entity.SignTextSlot.BACK, player))
                 //?}
-                    EditorSessions.fail("not_allowed", "写入可执行命令的标牌需要原版游戏管理员命令权限");
+                    EditorSessions.fail("not_allowed", EditorI18n.tr("cadeditor.message.worldtarget.59960e2429"));
             }
         }
     }
@@ -235,7 +237,7 @@ public final class WorldTarget {
         if (source instanceof SpawnerBlockEntity) SpawnerData.validateClassic(nbt, access);
         if (source instanceof TrialSpawnerBlockEntity) SpawnerData.validateTrial(nbt, access);
         var copy = source.getType().create(source.getBlockPos(), source.getBlockState());
-        if (copy == null) throw new EditorSessions.Failure("unsupported_target", "此方块实体无法创建验证副本");
+        if (copy == null) throw new EditorSessions.Failure("unsupported_target", EditorI18n.tr("cadeditor.message.worldtarget.284aa94c31"));
         var problems = new ProblemReporter.Collector(); copy.loadWithComponents(TagValueInput.create(problems, access, nbt)); requireClean(problems);
         return copy;
     }
@@ -243,7 +245,7 @@ public final class WorldTarget {
         if(entity instanceof ServerPlayer p)return PlayerWorldEdit.prepare(p,nbt,request);
         CompoundTag before = save(); WorldNbt.protect(before, nbt, entity != null);
         if(entity instanceof net.minecraft.world.entity.npc.villager.AbstractVillager merchant && merchant.isTrading() && !Objects.equals(before.get("Offers"),nbt.get("Offers")))
-            EditorSessions.fail("not_allowed","商人正在交易，请关闭交易界面后再编辑交易");
+            EditorSessions.fail("not_allowed",EditorI18n.tr("cadeditor.message.worldtarget.d578830892"));
         if (block != null) {
             BlockViews.requireUnwaxed(block,before,nbt);
             var copy = copyBlock(block, nbt, level.registryAccess());
@@ -252,7 +254,7 @@ public final class WorldTarget {
             return copy.saveWithFullMetadata(level.registryAccess());
         }
         if(entity == null) {
-            if(!before.equals(nbt) || request.has("container") || request.has("views")) EditorSessions.fail("unsupported_target","普通方块仅支持 block_state 编辑");
+            if(!before.equals(nbt) || request.has("container") || request.has("views")) EditorSessions.fail("unsupported_target",EditorI18n.tr("cadeditor.message.worldtarget.bb976e6a7c"));
             return nbt.copy();
         }
         if (request.has("entity")) {
@@ -274,7 +276,7 @@ public final class WorldTarget {
         if(entity instanceof ServerPlayer)return this;
         if(blockPos!=null){var temp=new WorldTarget(level,block==null?null:copyBlock(block,opened,level.registryAccess()),null,blockPos);temp.previewState=state;if(temp.block!=null){temp.block.setBlockState(state);temp.block.setLevel(level);}return temp;}
         var copy=entity.getType().create(level,EntitySpawnReason.COMMAND);
-        if(copy==null)EditorSessions.fail("unsupported_target","无法创建编辑基线副本");
+        if(copy==null)EditorSessions.fail("unsupported_target",EditorI18n.tr("cadeditor.message.worldtarget.bc27f1bfe3"));
         var problems=new ProblemReporter.Collector();copy.load(TagValueInput.create(problems,level.registryAccess(),opened));requireClean(problems);
         var temp=new WorldTarget(level,null,copy);temp.draftData=opened.copy();return temp;
     }
@@ -285,7 +287,7 @@ public final class WorldTarget {
         WorldAccess.nonPlayer(source instanceof Player);
         WorldNbt.protect(before, nbt, true);
         var temp = source.getType().create(level, EntitySpawnReason.COMMAND);
-        if (temp == null) throw new EditorSessions.Failure("unsupported_target", "此实体无法创建验证副本");
+        if (temp == null) throw new EditorSessions.Failure("unsupported_target", EditorI18n.tr("cadeditor.message.worldtarget.759f4fedae"));
         var problems = new ProblemReporter.Collector(); temp.load(TagValueInput.create(problems, access, nbt)); requireClean(problems);
         var prepared = saveEntity(temp, access);
         // Entity.load intentionally does not instantiate passengers. Keep the current graph.
@@ -294,17 +296,17 @@ public final class WorldTarget {
     }
     private void editContainer(BlockEntity copy, JsonObject edits) {
         if (block instanceof RandomizableContainerBlockEntity random && random.getLootTable() != null)
-            EditorSessions.fail("unsupported_target", "尚未展开战利品表，不能同时写入容器槽位；请先在游戏中打开容器");
+            EditorSessions.fail("unsupported_target", EditorI18n.tr("cadeditor.message.worldtarget.b8232ad38e"));
         var target = inventory(copy); var original = inventory(block);
-        if (target == null || original == null) EditorSessions.fail("unsupported_target", "目标不提供容器槽位");
+        if (target == null || original == null) EditorSessions.fail("unsupported_target", EditorI18n.tr("cadeditor.message.worldtarget.c8c3455807"));
         var seen = new HashSet<Integer>();
         for (var row : edits.getAsJsonArray("slots")) {
             var obj = row.getAsJsonObject(); int index = StackCodec.integer(obj, "slot", 0, target.size()-1);
-            if (!seen.add(index)) EditorSessions.fail("invalid_request", "容器槽位重复");
+            if (!seen.add(index)) EditorSessions.fail("invalid_request", EditorI18n.tr("cadeditor.message.doublechestedit.44aec1f72a"));
             var value = StackCodec.object(obj, "stack");
             ItemStack next = value.has("empty") && value.get("empty").getAsBoolean() ? ItemStack.EMPTY : StackCodec.decode(value, level.registryAccess(), original.get(index));
             if (block instanceof Container c && (!next.isEmpty() && (!canReplaceContainerItem(c, index, next) || next.getCount() > c.getMaxStackSize(next))))
-                EditorSessions.fail("slot_invalid", "物品不符合目标容器槽位的类型或数量限制");
+                EditorSessions.fail("slot_invalid", EditorI18n.tr("cadeditor.message.worldtarget.346e19830a"));
             if (copy instanceof JukeboxBlockEntity) {
                 // Its gameplay setter starts playback and requires a live level.
                 // Validation copies must use the native loader, not emit events.
@@ -318,7 +320,7 @@ public final class WorldTarget {
             } else target.set(index, next);
         }
         for (int i = 0; i < target.size(); i++) if (!seen.contains(i) && !StackComparison.matches(original.get(i), target.get(i), level.registryAccess()))
-            EditorSessions.fail("invalid_nbt", "未编辑的容器槽位发生变化，已取消整笔提交");
+            EditorSessions.fail("invalid_nbt", EditorI18n.tr("cadeditor.message.worldtarget.787d787772"));
     }
     private void validateInventory(BlockEntity copy) {
         var before = inventory(block); var after = inventory(copy);
@@ -326,14 +328,14 @@ public final class WorldTarget {
         for (int i = 0; i < after.size(); i++) {
             var next = after.get(i);
             if (StackComparison.matches(before.get(i),next,level.registryAccess()) || next.isEmpty()) continue;
-            if (next.getCount() > next.getMaxStackSize()) EditorSessions.fail("slot_invalid", "物品数量超过组件规定的堆叠上限");
+            if (next.getCount() > next.getMaxStackSize()) EditorSessions.fail("slot_invalid", EditorI18n.tr("cadeditor.message.worldtarget.b6c73e5acb"));
             ItemStack.validateStrict(next).getOrThrow();
             if (block instanceof Container c && (!canReplaceContainerItem(c,i,next) || next.getCount() > c.getMaxStackSize(next)))
-                EditorSessions.fail("slot_invalid", "修改后的物品不符合该容器槽位限制");
+                EditorSessions.fail("slot_invalid", EditorI18n.tr("cadeditor.message.worldtarget.5b62b1a0cc"));
             if (copy instanceof LecternBlockEntity && (!next.is(net.minecraft.tags.ItemTags.LECTERN_BOOKS) || next.getCount() != 1))
-                EditorSessions.fail("slot_invalid", "讲台仅接受实时 lectern_books 标签中的单本书");
+                EditorSessions.fail("slot_invalid", EditorI18n.tr("cadeditor.message.worldtarget.3e1c4d473a"));
             if (copy instanceof CampfireBlockEntity && (next.getCount() != 1 || ((ServerLevel)level).recipeAccess().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.CAMPFIRE_COOKING,new net.minecraft.world.item.crafting.SingleRecipeInput(next),level).isEmpty()))
-                EditorSessions.fail("slot_invalid", "营火仅接受实时营火配方中的单件物品");
+                EditorSessions.fail("slot_invalid", EditorI18n.tr("cadeditor.message.worldtarget.0a05a863cf"));
         }
     }
     /** Jukebox insertion also tests whether its slot is empty. Editing the
@@ -343,7 +345,7 @@ public final class WorldTarget {
     private static boolean canReplaceContainerItem(Container container, int index, ItemStack next) {
         if (container instanceof JukeboxBlockEntity jukebox) {
             var empty = jukebox.getType().create(jukebox.getBlockPos(),jukebox.getBlockState());
-            if (!(empty instanceof Container)) EditorSessions.fail("unsupported_target", "唱片机无法创建槽位验证副本");
+            if (!(empty instanceof Container)) EditorSessions.fail("unsupported_target", EditorI18n.tr("cadeditor.message.worldtarget.6fc3f6209a"));
             return ((Container)empty).canPlaceItem(index,next);
         }
         return container.canPlaceItem(index,next);
@@ -354,13 +356,13 @@ public final class WorldTarget {
     public void write(CompoundTag next, net.minecraft.world.level.block.state.BlockState state, boolean updateNeighbors) {
         if(entity instanceof ServerPlayer p){PlayerWorldEdit.write(p,next);return;}
         if(blockPos != null && !state.equals(level.getBlockState(blockPos))) {
-            if(!level.setBlock(blockPos,state,BlockStateEdit.flags(updateNeighbors))) EditorSessions.fail("invalid_block_state","世界拒绝应用方块状态");
+            if(!level.setBlock(blockPos,state,BlockStateEdit.flags(updateNeighbors))) EditorSessions.fail("invalid_block_state",EditorI18n.tr("cadeditor.message.worldtarget.02435d889a"));
             BlockStateEdit.requireApplied(state,level.getBlockState(blockPos));
             // Same block type: vanilla retains its BE. Reattach a factory instance if callbacks removed it.
             if(block != null) {
                 var actual=level.getBlockEntity(blockPos);
-                if(actual == null) { actual=block.getType().create(blockPos,state);if(actual == null) EditorSessions.fail("unsupported_target","无法恢复方块实体");level.setBlockEntity(actual); }
-                if(actual.getType()!=block.getType()) EditorSessions.fail("target_changed","邻居更新改变了方块实体类型");block=actual;
+                if(actual == null) { actual=block.getType().create(blockPos,state);if(actual == null) EditorSessions.fail("unsupported_target",EditorI18n.tr("cadeditor.message.worldtarget.73450ed4d2"));level.setBlockEntity(actual); }
+                if(actual.getType()!=block.getType()) EditorSessions.fail("target_changed",EditorI18n.tr("cadeditor.message.worldtarget.3733ee600d"));block=actual;
             }
         }
         if(entity == null && block == null) return;
@@ -380,6 +382,6 @@ public final class WorldTarget {
         result.addProperty("snbt",nbt.toString());result.add("nbt",NbtOps.INSTANCE.convertTo(JsonOps.INSTANCE,nbt));
     }
     private static void requireClean(ProblemReporter.Collector problems) {
-        if (!problems.isEmpty()) EditorSessions.fail("invalid_nbt", "原版数据加载校验失败：" + problems.getReport());
+        if (!problems.isEmpty()) EditorSessions.fail("invalid_nbt", EditorI18n.tr("cadeditor.message.worldtarget.3bc8f60d8f", (problems.getReport())));
     }
 }

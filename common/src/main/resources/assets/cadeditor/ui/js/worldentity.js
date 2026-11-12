@@ -19,6 +19,17 @@ function evSet(g, k, v, part) {
   if (g === 'player' && typeof wpCommandTrack === 'function') wpCommandTrack(k, v, part);
   weDraftSet(WE.ent, g, k, v, evVal(g));
   if (g === 'dropped_item' && k === 'Item') weHeroLive();
+  if (g === 'pose') weHeroLive();   /* 左侧 3D 盔甲架跟着姿势和外观开关动 */
+}
+/* 预览盔甲架的姿势串：与 EditorStandPreview 的属性格式一致 */
+function evStandAttr() {
+  var F = evFields('pose'), out = [];
+  EV_PARTS.forEach(function (pp) {
+    var c = evGet('pose', pp[0]); if (!Array.isArray(c)) c = (F[pp[0]] && F[pp[0]].default) || null;
+    if (Array.isArray(c) && c.length >= 3) out.push(pp[0] + '=' + [0, 1, 2].map(function (i) { var n = +c[i]; return isFinite(n) ? n : 0; }).join(','));
+  });
+  ['ShowArms', 'Small', 'NoBasePlate'].forEach(function (k) { var v = evGet('pose', k); if (typeof v === 'boolean') out.push(k + '=' + (v ? 1 : 0)); });
+  return out.join(';');
 }
 function evDirty() { return !!WE.w && (Object.keys(WE.ent).length > 0 || (typeof wpCommandIntentDirty === 'function' && wpCommandIntentDirty()) || (typeof wpSlotsDirty === 'function' && wpSlotsDirty() > 0) || WE.offers !== null && JSON.stringify(WE.offers) !== JSON.stringify(evOffersOrig())); }
 function evOffersOrig() { var t = evGroup('trades'); return t && t.offers ? t.offers : []; }
@@ -41,16 +52,43 @@ function evStack(cur, onSet, o) {
   function norm(st) { var s = clone(st); delete s.slot; delete s.label; return s; }
   activate(btn, function () { pickItem(btn, function (id) { onSet({ id: fullId(id), count: 1, comps: {}, removed: {} }); kPopClose(); }, { onStack: function (st) { onSet(norm(st)); kPopClose(); } }); });
   var kids = [btn];
-  if (has) kids.push(kBtn('编辑物品', function () { openNestedItem(cur, { title: '编辑物品', valid: nestedDraftGuard(), commit: function (st) { onSet(norm(st)); }, render: weRedrawBody }); }, { icon: 'edit' }));
-  if (has && o.clear !== false) kids.push(kBtn('清空', function () { onSet(o.empty); }, { icon: 'trash' }));
+  if (has) kids.push(kBtn(I18n.t("cadeditor.ui.cards3.7f559289d4"), function () { openNestedItem(cur, { title: I18n.t("cadeditor.ui.cards3.7f559289d4"), valid: nestedDraftGuard(), commit: function (st) { onSet(norm(st)); }, render: weRedrawBody }); }, { icon: 'edit' }));
+  if (has && o.clear !== false) kids.push(kBtn(I18n.t("cadeditor.ui.common.clear"), function () { onSet(o.empty); }, { icon: 'trash' }));
   return h('div', { class: 'k-row' }, kids);
 }
 
 /* ---------- 盔甲架姿势 ---------- */
-var EV_PARTS = [['Head', '头'], ['Body', '身体'], ['LeftArm', '左臂'], ['RightArm', '右臂'], ['LeftLeg', '左腿'], ['RightLeg', '右腿']];
+var EV_PARTS = [['Head', I18n.t("cadeditor.ui.labels.5f64ab0089")], ['Body', I18n.t("cadeditor.ui.labels.4729deedde")], ['LeftArm', I18n.t("cadeditor.ui.worldentity.191a64ea93")], ['RightArm', I18n.t("cadeditor.ui.worldentity.219f589113")], ['LeftLeg', I18n.t("cadeditor.ui.worldentity.0a37897b0c")], ['RightLeg', I18n.t("cadeditor.ui.worldentity.e2b6076662")]];
+/* 编辑器自带的造型，依 EV_PARTS 排列；不是游戏注册表或原版默认值。 */
+var EV_POSE_PRESETS = [
+  { label: I18n.t("cadeditor.ui.worldentity.464fbc400e"), angles: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]] },
+  { label: I18n.t("cadeditor.ui.worldentity.9be36caed7"), angles: [[0, -15, 0], [0, 0, 0], [0, 0, -5], [-150, 0, 25], [0, 0, 0], [0, 0, 0]] },
+  { label: I18n.t("cadeditor.ui.worldentity.8a3639e900"), angles: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [-110, -15, 30], [0, 0, 0], [0, 0, 0]] },
+  { label: I18n.t("cadeditor.ui.worldentity.97b01328de"), angles: [[-15, 0, 0], [0, 0, 0], [-165, 0, -15], [-165, 0, 15], [0, 0, -5], [0, 0, 5]] },
+  { label: I18n.t("cadeditor.ui.worldentity.9f5a6eca33"), angles: [[0, 0, 0], [0, 0, 0], [-10, 0, -5], [-10, 0, 5], [-90, 0, 0], [-90, 0, 0]] },
+  { label: I18n.t("cadeditor.ui.worldentity.65b5d7cf74"), angles: [[0, 0, 0], [0, 0, 0], [-35, 0, 0], [35, 0, 0], [35, 0, 0], [-35, 0, 0]] },
+  { label: I18n.t("cadeditor.ui.worldentity.d26d64795f"), angles: [[10, 0, 0], [15, 0, 0], [-65, 0, -10], [65, 0, 10], [55, 0, 0], [-55, 0, 0]] },
+  { label: I18n.t("cadeditor.ui.worldentity.9dd94a11d9"), angles: [[30, 0, 0], [45, 0, 0], [0, 0, -5], [0, 0, 5], [0, 0, 0], [0, 0, 0]] }
+];
+function evPosePreset(preset) {
+  var F = evFields('pose'), orig = evVal('pose');
+  EV_PARTS.forEach(function (pp, i) {
+    var key = pp[0], angles = preset ? preset.angles[i] : F[key] && F[key].default;
+    if (Array.isArray(angles)) weDraftSet(WE.ent, 'pose', key, angles.slice(), orig);
+  });
+  if (preset && ('ShowArms' in orig || F.ShowArms)) weDraftSet(WE.ent, 'pose', 'ShowArms', true, orig);
+  weHeroLive();
+  weRedrawBody();
+}
 function evPoseTab(body) {
   var F = evFields('pose');
-  body.appendChild(xSec('user', '姿势', '角度，单位度'));
+  body.appendChild(xSec('user', I18n.t("cadeditor.ui.worldentity.a7fd67532d"), I18n.t("cadeditor.ui.worldentity.eaa37ecc6e")));
+  var presets = EV_POSE_PRESETS.map(function (preset) {
+    return kBtn(preset.label, function () { evPosePreset(preset); }, { title: I18n.t("cadeditor.ui.worldentity.19a9424a51", (preset.label)) });
+  });
+  presets.push(kBtn(I18n.t("cadeditor.ui.common.reset"), function () { evPosePreset(null); }, { icon: 'undo', title: I18n.t("cadeditor.ui.worldentity.aebb0340c2") }));
+  body.appendChild(h('div', { class: 'k-row wrap' }, presets));
+  body.appendChild(xSec('user', I18n.t("cadeditor.ui.worldedit.94049dba4d"), I18n.t("cadeditor.ui.worldentity.1de092dfa7")));
   EV_PARTS.forEach(function (pp) {
     var key = pp[0], cur = evGet('pose', key); if (!Array.isArray(cur)) cur = (F[key] && F[key].default) || [0, 0, 0];
     cur = cur.slice(0, 3);
@@ -59,38 +97,38 @@ function evPoseTab(body) {
     body.appendChild(xRow({ icon: false, title: pp[1], sub: 'X ' + fmtNum(cur[0]) + '°  Y ' + fmtNum(cur[1]) + '°  Z ' + fmtNum(cur[2]) + '°', chevron: true, open: open,
       onHead: function () { UIOpen[k] = !UIOpen[k]; weRender(); },
       body: function () {
-        var rows = ['X 前后摆', 'Y 左右转', 'Z 侧倾'].map(function (nm, i) {
+        var rows = [I18n.t("cadeditor.ui.worldentity.6b6f1f6084"), I18n.t("cadeditor.ui.worldentity.12f6ccbd82"), I18n.t("cadeditor.ui.worldentity.96b4c06a43")].map(function (nm, i) {
           var n = kNumber(cur[i], { softMin: -180, softMax: 180, step: 1, dec: 1, unit: '°', onChange: function (v) { setAxis(i, v); } });
           return xField(null, nm, n.el);
         });
-        rows.push(h('div', { class: 'x2f' }, [h('div', { class: 'grow' }), kBtn('恢复默认', function () { evSet('pose', key, def.slice()); weRender(); }, { icon: 'undo' })]));
+        rows.push(h('div', { class: 'x2f' }, [h('div', { class: 'grow' }), kBtn(I18n.t("cadeditor.ui.common.reset"), function () { evSet('pose', key, def.slice()); weRender(); }, { icon: 'undo' })]));
         return rows;
       } }));
   });
-  body.appendChild(xSec('sliders', '状态'));
-  [['ShowArms', '显示手臂', '手臂可以拿东西'], ['Small', '小号', '缩小到一半大'], ['NoBasePlate', '没有底座', ''], ['Invisible', '隐形', ''], ['Marker', '没有碰撞箱', '点不到、也不挡路']].forEach(function (f) {
+  body.appendChild(xSec('sliders', I18n.t("cadeditor.ui.worldedit.6320b4a872")));
+  [['ShowArms', I18n.t("cadeditor.ui.labels.45974c68a9"), I18n.t("cadeditor.ui.labels.abf5dec49c")], ['Small', I18n.t("cadeditor.ui.worldentity.511f41e70f"), I18n.t("cadeditor.ui.worldentity.d56a5a4e7d")], ['NoBasePlate', I18n.t("cadeditor.ui.worldentity.095258cca0"), ''], ['Invisible', I18n.t("cadeditor.ui.worldentity.61411f0650"), ''], ['Marker', I18n.t("cadeditor.ui.worldentity.90abf8fefc"), I18n.t("cadeditor.ui.worldentity.9ad9a91cad")]].forEach(function (f) {
     if (!(f[0] in evVal('pose')) && !(F[f[0]])) return;
     body.appendChild(evBool(f[1], evGet('pose', f[0]), f[2], function (on) { evSet('pose', f[0], on); }));
   });
-  body.appendChild(kHint('手里拿的、身上穿的在「属性」页的装备里改。'));
+  body.appendChild(kHint(I18n.t("cadeditor.ui.worldentity.acc013f371")));
 }
 
 /* ---------- 展示框 / 荧光展示框 ---------- */
 function evFrameTab(body) {
   var F = evFields('item_frame'), v = evVal('item_frame');
-  body.appendChild(xSec('image', '展示框'));
+  body.appendChild(xSec('image', I18n.t("cadeditor.ui.worldedit.69dee9b158")));
   var cur = evGet('item_frame', 'item');
-  body.appendChild(xRow({ icon: false, title: '框里的物品', right: evStack(cur, function (st) { evSet('item_frame', 'item', st); weRender(); }, { empty: { empty: true } }) }));
+  body.appendChild(xRow({ icon: false, title: I18n.t("cadeditor.ui.worldentity.c423ab40ce"), right: evStack(cur, function (st) { evSet('item_frame', 'item', st); weRender(); }, { empty: { empty: true } }) }));
   var rotMax = F.ItemRotation && F.ItemRotation.max !== undefined ? F.ItemRotation.max : 7;
-  body.appendChild(evNum('物品转了几格', evGet('item_frame', 'ItemRotation'), { min: 0, max: rotMax, sub: '每格 45°，共 ' + (rotMax + 1) + ' 个朝向' }, function (x) { evSet('item_frame', 'ItemRotation', x); }));
-  body.appendChild(evBool('隐形框', evGet('item_frame', 'Invisible'), '只看到里面的物品', function (on) { evSet('item_frame', 'Invisible', on); }));
-  body.appendChild(evBool('固定', evGet('item_frame', 'Fixed'), '不能转动、取下物品', function (on) { evSet('item_frame', 'Fixed', on); }));
-  body.appendChild(evNum('被打掉时掉落物品的概率', evGet('item_frame', 'ItemDropChance'), { step: 0.1, dec: 3, sub: '1 是必掉' }, function (x) { evSet('item_frame', 'ItemDropChance', x); }));
+  body.appendChild(evNum(I18n.t("cadeditor.ui.worldentity.fc0885e901"), evGet('item_frame', 'ItemRotation'), { min: 0, max: rotMax, sub: I18n.t("cadeditor.ui.worldentity.e105c7d221", (rotMax + 1)) }, function (x) { evSet('item_frame', 'ItemRotation', x); }));
+  body.appendChild(evBool(I18n.t("cadeditor.ui.worldentity.698f672825"), evGet('item_frame', 'Invisible'), I18n.t("cadeditor.ui.worldentity.8fa4baf8b6"), function (on) { evSet('item_frame', 'Invisible', on); }));
+  body.appendChild(evBool(I18n.t("cadeditor.ui.forms.d4b3f49cd2"), evGet('item_frame', 'Fixed'), I18n.t("cadeditor.ui.worldentity.d468bbd952"), function (on) { evSet('item_frame', 'Fixed', on); }));
+  body.appendChild(evNum(I18n.t("cadeditor.ui.worldentity.fe3b890515"), evGet('item_frame', 'ItemDropChance'), { step: 0.1, dec: 3, sub: I18n.t("cadeditor.ui.worldentity.b5e0ac8d73") }, function (x) { evSet('item_frame', 'ItemDropChance', x); }));
 }
 function evPaintingTab(body) {
-  body.appendChild(xSec('image', '画'));
-  var sel = kRegSelect({ reg: 'painting_variant', value: evGet('painting', 'variant') || '', title: '选择画', onChange: function (id) { evSet('painting', 'variant', id); } });
-  body.appendChild(xRow({ icon: false, title: '画面', sub: '朝向和挂的位置不能在这里改', right: sel.el }));
+  body.appendChild(xSec('image', I18n.t("cadeditor.ui.worldedit.de9f18b00a")));
+  var sel = kRegSelect({ reg: 'painting_variant', value: evGet('painting', 'variant') || '', title: I18n.t("cadeditor.ui.worldentity.9df2d33919"), onChange: function (id) { evSet('painting', 'variant', id); } });
+  body.appendChild(xRow({ icon: false, title: I18n.t("cadeditor.ui.worldentity.d051df30a6"), sub: I18n.t("cadeditor.ui.worldentity.c53909da69"), right: sel.el }));
 }
 
 /* ---------- 展示实体 ---------- */
@@ -112,65 +150,65 @@ function evVec(label, g, path, idx3, defv) {
 }
 function evDisplayTab(body) {
   var g = 'display', F = evFields(g), v = evVal(g), isText = 'text' in v || 'alignment' in v, isItem = 'item_display' in v || (v.item && !('block_state' in v)), isBlock = 'block_state' in v;
-  body.appendChild(xSec('cube', '位置与大小'));
+  body.appendChild(xSec('cube', I18n.t("cadeditor.ui.worldentity.0aefd7730f")));
   var kt = 'we:disp:xf';
-  body.appendChild(xRow({ icon: false, title: '变换', sub: '偏移、缩放、旋转（四元数）', chevron: true, open: UIOpen[kt] !== false, onHead: function () { UIOpen[kt] = UIOpen[kt] === false; weRender(); },
-    body: function () { return [evVec('偏移', g, 'translation', true, [0, 0, 0]), evVec('缩放', g, 'scale', true, [1, 1, 1]), evVec('先转', g, 'left_rotation', false, [0, 0, 0, 1]), evVec('后转', g, 'right_rotation', false, [0, 0, 0, 1])]; } }));
+  body.appendChild(xRow({ icon: false, title: I18n.t("cadeditor.ui.worldentity.ca4842bc9e"), sub: I18n.t("cadeditor.ui.worldentity.e6ee9371cd"), chevron: true, open: UIOpen[kt] !== false, onHead: function () { UIOpen[kt] = UIOpen[kt] === false; weRender(); },
+    body: function () { return [evVec(I18n.t("cadeditor.ui.worldentity.f905e85ff3"), g, 'translation', true, [0, 0, 0]), evVec(I18n.t("cadeditor.ui.worldentity.b762aec769"), g, 'scale', true, [1, 1, 1]), evVec(I18n.t("cadeditor.ui.worldentity.6aa2ab94ce"), g, 'left_rotation', false, [0, 0, 0, 1]), evVec(I18n.t("cadeditor.ui.worldentity.5562235485"), g, 'right_rotation', false, [0, 0, 0, 1])]; } }));
   var bills = (F.billboard && F.billboard.options) || ['fixed', 'vertical', 'horizontal', 'center'];
-  var BN = { fixed: '固定', vertical: '绕竖轴', horizontal: '绕横轴', center: '始终面向' };
-  body.appendChild(xSeg({ title: '朝向', sub: '要不要跟着玩家的视角转', options: bills.map(function (b) { return { v: b, label: BN[b] || b }; }), value: evGet(g, 'billboard') || 'fixed', onChange: function (x) { evSet(g, 'billboard', x); } }));
+  var BN = { fixed: I18n.t("cadeditor.ui.forms.d4b3f49cd2"), vertical: I18n.t("cadeditor.ui.worldentity.33933a7c57"), horizontal: I18n.t("cadeditor.ui.worldentity.ab68213179"), center: I18n.t("cadeditor.ui.worldentity.619da1fb2b") };
+  body.appendChild(xSeg({ title: I18n.t("cadeditor.ui.labels.5f0c712324"), sub: I18n.t("cadeditor.ui.worldentity.9b8f80a834"), options: bills.map(function (b) { return { v: b, label: BN[b] || b }; }), value: evGet(g, 'billboard') || 'fixed', onChange: function (x) { evSet(g, 'billboard', x); } }));
   var br = evGet(g, 'brightness'), brOn = br && typeof br === 'object';
-  body.appendChild(evBool('固定亮度', brOn, '不跟随周围的光照', function (on) { evSet(g, 'brightness', on ? { block: 15, sky: 15 } : null); weRender(); }));
+  body.appendChild(evBool(I18n.t("cadeditor.ui.worldentity.510941cf31"), brOn, I18n.t("cadeditor.ui.worldentity.563d65ead5"), function (on) { evSet(g, 'brightness', on ? { block: 15, sky: 15 } : null); weRender(); }));
   if (brOn) {
-    body.appendChild(evNum('方块光', br.block, { min: 0, max: 15, softMin: 0, softMax: 15, noSlider: false }, function (x) { evSet(g, 'brightness', { block: x, sky: (evGet(g, 'brightness') || br).sky }); }));
-    body.appendChild(evNum('天空光', br.sky, { min: 0, max: 15, softMin: 0, softMax: 15, noSlider: false }, function (x) { evSet(g, 'brightness', { block: (evGet(g, 'brightness') || br).block, sky: x }); }));
+    body.appendChild(evNum(I18n.t("cadeditor.ui.worldentity.83630ee4c3"), br.block, { min: 0, max: 15, softMin: 0, softMax: 15, noSlider: false }, function (x) { evSet(g, 'brightness', { block: x, sky: (evGet(g, 'brightness') || br).sky }); }));
+    body.appendChild(evNum(I18n.t("cadeditor.ui.worldentity.87c1f65df5"), br.sky, { min: 0, max: 15, softMin: 0, softMax: 15, noSlider: false }, function (x) { evSet(g, 'brightness', { block: (evGet(g, 'brightness') || br).block, sky: x }); }));
   }
-  body.appendChild(xSec('eye', '显示'));
-  [['view_range', '可见距离', '相对默认的倍数'], ['width', '宽度', '裁剪用，0 是不裁'], ['height', '高度', '裁剪用，0 是不裁'], ['shadow_radius', '阴影半径', ''], ['shadow_strength', '阴影浓度', '']].forEach(function (f) {
+  body.appendChild(xSec('eye', I18n.t("cadeditor.ui.screens.4e1449e7d5")));
+  [['view_range', I18n.t("cadeditor.ui.worldentity.2cdcc90c07"), I18n.t("cadeditor.ui.worldentity.7e587c29c6")], ['width', I18n.t("cadeditor.ui.worldentity.3b730da0ad"), I18n.t("cadeditor.ui.worldentity.2e659a9c9e")], ['height', I18n.t("cadeditor.ui.worldentity.968dd036cb"), I18n.t("cadeditor.ui.worldentity.2e659a9c9e")], ['shadow_radius', I18n.t("cadeditor.ui.worldentity.77f59c497b"), ''], ['shadow_strength', I18n.t("cadeditor.ui.worldentity.1043bf62c7"), '']].forEach(function (f) {
     if (!(f[0] in v)) return;
     body.appendChild(evNum(f[1], evGet(g, f[0]), { step: 0.1, dec: 3, sub: f[2] }, function (x) { evSet(g, f[0], x); }));
   });
-  if ('glow_color_override' in v) body.appendChild(evNum('发光颜色', evGet(g, 'glow_color_override'), { sub: '整数颜色，-1 表示不覆盖' }, function (x) { evSet(g, 'glow_color_override', x); }));
-  body.appendChild(xSec('clock', '动画'));
-  body.appendChild(evNum('过渡时长', evGet(g, 'interpolation_duration'), { unit: '刻', sub: '变换改变后用多久平滑过去' }, function (x) { evSet(g, 'interpolation_duration', x); }));
-  body.appendChild(evNum('移动平滑', evGet(g, 'teleport_duration'), { unit: '刻', sub: '游戏最多保留 59' }, function (x) { evSet(g, 'teleport_duration', x); }));
+  if ('glow_color_override' in v) body.appendChild(evNum(I18n.t("cadeditor.ui.worldentity.16cea41bac"), evGet(g, 'glow_color_override'), { sub: I18n.t("cadeditor.ui.worldentity.e0863e674a") }, function (x) { evSet(g, 'glow_color_override', x); }));
+  body.appendChild(xSec('clock', I18n.t("cadeditor.ui.worldentity.b15435ced2")));
+  body.appendChild(evNum(I18n.t("cadeditor.ui.worldentity.8ae7e69c14"), evGet(g, 'interpolation_duration'), { unit: I18n.t("cadeditor.ui.cards2.3ccf035260"), sub: I18n.t("cadeditor.ui.worldentity.0a6626fa87") }, function (x) { evSet(g, 'interpolation_duration', x); }));
+  body.appendChild(evNum(I18n.t("cadeditor.ui.worldentity.e511deb7c3"), evGet(g, 'teleport_duration'), { unit: I18n.t("cadeditor.ui.cards2.3ccf035260"), sub: I18n.t("cadeditor.ui.worldentity.97e48993ce") }, function (x) { evSet(g, 'teleport_duration', x); }));
   if (isItem) {
-    body.appendChild(xSec('sword', '展示的物品'));
-    body.appendChild(xRow({ icon: false, title: '物品', right: evStack(evGet(g, 'item'), function (st) { evSet(g, 'item', st); weRender(); }, { empty: null }) }));
+    body.appendChild(xSec('sword', I18n.t("cadeditor.ui.worldentity.9141b0a653")));
+    body.appendChild(xRow({ icon: false, title: I18n.t("cadeditor.ui.pages.7c89d6ebe1"), right: evStack(evGet(g, 'item'), function (st) { evSet(g, 'item', st); weRender(); }, { empty: null }) }));
     var ctx = (F.item_display && F.item_display.options) || ['none', 'thirdperson_lefthand', 'thirdperson_righthand', 'firstperson_lefthand', 'firstperson_righthand', 'head', 'gui', 'ground', 'fixed', 'on_shelf'];
-    body.appendChild(xSelect({ title: '展示方式', sub: '摆的位置不同，物品的模型姿态也不同', options: ctx.map(function (c) { return { v: c, label: c }; }), value: evGet(g, 'item_display') || 'none', width: 200, onChange: function (x) { evSet(g, 'item_display', x); } }));
+    body.appendChild(xSelect({ title: I18n.t("cadeditor.ui.worldentity.a9fd468be9"), sub: I18n.t("cadeditor.ui.worldentity.417b1d471c"), options: ctx.map(function (c) { return { v: c, label: c }; }), value: evGet(g, 'item_display') || 'none', width: 200, onChange: function (x) { evSet(g, 'item_display', x); } }));
   }
   if (isBlock) {
-    body.appendChild(xSec('cube_grass', '展示的方块'));
+    body.appendChild(xSec('cube_grass', I18n.t("cadeditor.ui.worldentity.c5ef457848")));
     var bs = evGet(g, 'block_state') || { Name: 'minecraft:air' };
-    var sel = kRegSelect({ reg: 'block', value: bs.Name, title: '选择方块', onChange: function (id) { evSet(g, 'block_state', { Name: id }); } });
-    body.appendChild(xRow({ icon: false, title: '方块', sub: bs.Properties ? '带有方块状态：换方块会清掉' : '', right: sel.el }));
+    var sel = kRegSelect({ reg: 'block', value: bs.Name, title: I18n.t("cadeditor.ui.picker.289673e823"), onChange: function (id) { evSet(g, 'block_state', { Name: id }); } });
+    body.appendChild(xRow({ icon: false, title: I18n.t("cadeditor.ui.picker.2753766d18"), sub: bs.Properties ? I18n.t("cadeditor.ui.worldentity.9aea4206f2") : '', right: sel.el }));
   }
   if (isText) {
-    body.appendChild(xSec('chat', '文字'));
-    var ta = h('textarea', { class: 'ed-snbt we-cmd', spellcheck: 'false', placeholder: '文字，或文本组件 JSON：{"text":"你好","bold":true}' }); ta.value = msgText(evGet(g, 'text'));
+    body.appendChild(xSec('chat', I18n.t("cadeditor.ui.cards4.14b69bd6ee")));
+    var ta = h('textarea', { class: 'ed-snbt we-cmd', spellcheck: 'false', placeholder: I18n.t("cadeditor.ui.worldentity.6be061a45c") }); ta.value = msgText(evGet(g, 'text'));
     ta.addEventListener('change', function () { evSet(g, 'text', textMsg(ta.value)); });
     body.appendChild(ta);
-    var al = (F.alignment && F.alignment.options) || ['center', 'left', 'right'], AN = { center: '居中', left: '靠左', right: '靠右' };
-    body.appendChild(xSeg({ title: '对齐', options: al.map(function (a) { return { v: a, label: AN[a] || a }; }), value: evGet(g, 'alignment') || 'center', onChange: function (x) { evSet(g, 'alignment', x); } }));
-    body.appendChild(evNum('一行最宽', evGet(g, 'line_width'), { unit: '像素', sub: '超过会自动换行' }, function (x) { evSet(g, 'line_width', x); }));
+    var al = (F.alignment && F.alignment.options) || ['center', 'left', 'right'], AN = { center: I18n.t("cadeditor.ui.worldentity.4cc3885c18"), left: I18n.t("cadeditor.ui.worldentity.6548f6b58c"), right: I18n.t("cadeditor.ui.worldentity.be92a99ec4") };
+    body.appendChild(xSeg({ title: I18n.t("cadeditor.ui.worldentity.fd5fb78ba2"), options: al.map(function (a) { return { v: a, label: AN[a] || a }; }), value: evGet(g, 'alignment') || 'center', onChange: function (x) { evSet(g, 'alignment', x); } }));
+    body.appendChild(evNum(I18n.t("cadeditor.ui.worldentity.098482a8f5"), evGet(g, 'line_width'), { unit: I18n.t("cadeditor.ui.worldentity.b512acc781"), sub: I18n.t("cadeditor.ui.worldentity.59bddd83dd") }, function (x) { evSet(g, 'line_width', x); }));
     var op = evGet(g, 'text_opacity'), op255 = typeof op === 'number' ? (op < 0 ? op + 256 : op) : 255;
-    body.appendChild(evNum('文字不透明度', op255, { min: 0, max: 255, softMin: 0, softMax: 255, noSlider: false, sub: '0 全透明，255 不透明' }, function (x) { evSet(g, 'text_opacity', x > 127 ? x - 256 : x); }));
-    body.appendChild(evBool('文字阴影', evGet(g, 'shadow'), '', function (on) { evSet(g, 'shadow', on); }));
-    body.appendChild(evBool('穿过方块也看得见', evGet(g, 'see_through'), '', function (on) { evSet(g, 'see_through', on); }));
-    body.appendChild(evBool('用默认背景', evGet(g, 'default_background'), '和聊天栏同样的半透明底', function (on) { evSet(g, 'default_background', on); }));
-    body.appendChild(evNum('背景颜色', evGet(g, 'background'), { sub: '整数 ARGB，-16777216 是不透明黑' }, function (x) { evSet(g, 'background', x); }));
+    body.appendChild(evNum(I18n.t("cadeditor.ui.worldentity.116d7c255c"), op255, { min: 0, max: 255, softMin: 0, softMax: 255, noSlider: false, sub: I18n.t("cadeditor.ui.worldentity.3df5a74a84") }, function (x) { evSet(g, 'text_opacity', x > 127 ? x - 256 : x); }));
+    body.appendChild(evBool(I18n.t("cadeditor.ui.worldentity.490573c228"), evGet(g, 'shadow'), '', function (on) { evSet(g, 'shadow', on); }));
+    body.appendChild(evBool(I18n.t("cadeditor.ui.worldentity.ad2a19566c"), evGet(g, 'see_through'), '', function (on) { evSet(g, 'see_through', on); }));
+    body.appendChild(evBool(I18n.t("cadeditor.ui.worldentity.23f25f6fdb"), evGet(g, 'default_background'), I18n.t("cadeditor.ui.worldentity.88b41781df"), function (on) { evSet(g, 'default_background', on); }));
+    body.appendChild(evNum(I18n.t("cadeditor.ui.worldentity.882fe2e842"), evGet(g, 'background'), { sub: I18n.t("cadeditor.ui.worldentity.881f880c05") }, function (x) { evSet(g, 'background', x); }));
   }
 }
 
 /* ---------- 杂项实体视图：掉落物 / 下落方块 / TNT / 苦力怕 / 末影人 / 药水云 / 经验球 / 箭 / 交互实体
    后端视图和字段范围见 docs/world-entity-contract.md（P2-2 ~ P2-5）。范围读 schema.fields，游戏没给的不设限。 ---------- */
-var EV_SIMPLE = [['dropped_item', '掉落物', 'sword'], ['falling_block', '下落方块', 'cube'], ['tnt', 'TNT', 'flame'], ['creeper', '苦力怕', 'flame'],
-  ['enderman', '末影人', 'cube'], ['area_effect_cloud', '药水云', 'flask'], ['experience_orb', '经验球', 'sparkle'], ['arrow', '箭', 'sword'], ['interaction', '交互实体', 'sliders'],
-  ['horse', '驯服与骑乘', 'paw'], ['chested', '驮兽箱子', 'chest'], ['vehicle_container', '载具容器', 'chest'], ['minecart_display', '矿车显示的方块', 'cube'],
-  ['minecart_command', '命令矿车', 'terminal'], ['boat_type', '船', 'cart'], ['zombie_conversion', '僵尸村民转化', 'clock']];
+var EV_SIMPLE = [['dropped_item', I18n.t("cadeditor.ui.worldentity.c45ad896f7"), 'sword'], ['falling_block', I18n.t("cadeditor.ui.worldentity.f66600ef7e"), 'cube'], ['tnt', 'TNT', 'flame'], ['creeper', I18n.t("cadeditor.ui.worldentity.98ade0e3ff"), 'flame'],
+  ['enderman', I18n.t("cadeditor.ui.worldentity.bc62439003"), 'cube'], ['area_effect_cloud', I18n.t("cadeditor.ui.worldentity.a250351ac7"), 'flask'], ['experience_orb', I18n.t("cadeditor.ui.worldentity.a545a56f46"), 'sparkle'], ['arrow', I18n.t("cadeditor.ui.worldentity.674650b36c"), 'sword'], ['interaction', I18n.t("cadeditor.ui.worldentity.942d3ea994"), 'sliders'],
+  ['horse', I18n.t("cadeditor.ui.worldentity.82cb6b0074"), 'paw'], ['chested', I18n.t("cadeditor.ui.worldentity.20fddf1a33"), 'chest'], ['vehicle_container', I18n.t("cadeditor.ui.worldentity.e17cc1185f"), 'chest'], ['minecart_display', I18n.t("cadeditor.ui.worldentity.fbcf224c9d"), 'cube'],
+  ['minecart_command', I18n.t("cadeditor.ui.worldentity.94bd1ea025"), 'terminal'], ['boat_type', I18n.t("cadeditor.ui.worldentity.15b7f7a95c"), 'cart'], ['zombie_conversion', I18n.t("cadeditor.ui.worldentity.b649082cd2"), 'clock']];
 function evSimpleGroups() { return EV_SIMPLE.filter(function (g) { return evGroup(g[0]); }); }
-function evSimpleTabInfo() { var g = evSimpleGroups(); return g.length === 1 ? { label: g[0][1], icon: g[0][2] } : { label: '实体设置', icon: 'sliders' }; }
+function evSimpleTabInfo() { var g = evSimpleGroups(); return g.length === 1 ? { label: g[0][1], icon: g[0][2] } : { label: I18n.t("cadeditor.ui.worldentity.45ca6da80f"), icon: 'sliders' }; }
 /* 范围来自后端的字段元数据的数值行：o = { sub, unit, step, dec, def, nullAt（等于这个值时发 null）} */
 function evNumF(g, k, label, o) {
   o = o || {}; var f = evFields(g)[k] || {}, cur = evGet(g, k);
@@ -187,117 +225,117 @@ function evSlotList(g, key, count) {
     if (st && !st.empty && st.id) { var s = clone(st); delete s.slot; delete s.label; l.push({ slot: i, stack: s }); }
     l.sort(function (a, b) { return a.slot - b.slot; }); evSet(g, key, l); weMarkDirty();
   }
-  var grid = kSlotGrid({ tight: true, indices: ix, cols: count <= 9 ? count : 9, stackOf: stackAt, titleOf: function (i) { return '格子 ' + (i + 1); }, set: setSlot });
+  var grid = kSlotGrid({ tight: true, indices: ix, cols: count <= 9 ? count : 9, stackOf: stackAt, titleOf: function (i) { return I18n.t("cadeditor.ui.slots.1748b1d05d", (i + 1)); }, set: setSlot });
   grid.setSlot = setSlot;
   return grid;
 }
-var EV_PICKUP = { DISALLOWED: '不能拾起', ALLOWED: '都能拾起', CREATIVE_ONLY: '只有创造模式能拾起' };
+var EV_PICKUP = { DISALLOWED: I18n.t("cadeditor.ui.worldentity.5bb38cc13b"), ALLOWED: I18n.t("cadeditor.ui.worldentity.c650080c09"), CREATIVE_ONLY: I18n.t("cadeditor.ui.worldentity.bc5e81caeb") };
 function evSimpleTab(body) {
   var gs = evSimpleGroups();
-  if (!gs.length) { body.appendChild(xEmpty('这个实体没有专用设置。')); return; }
+  if (!gs.length) { body.appendChild(xEmpty(I18n.t("cadeditor.ui.worldentity.4dad02b510"))); return; }
   gs.forEach(function (info) { var fn = EV_SIMPLE_TAB[info[0]]; if (fn) { body.appendChild(xSec(info[2], info[1])); fn(body); } });
 }
 var EV_SIMPLE_TAB = {
   /* 马 / 驴 / 骡 / 羊驼等：驯服状态、驯服进度、主人。鞍和身体装备在「属性」页的装备格里（同一次应用里先驯服再上鞍也可以） */
   horse: function (body) {
     var g = 'horse', own = evGroup(g) || {}, cur = evGet(g, 'Owner') || '', players = own.players || [];
-    body.appendChild(evBool('已驯服', evGet(g, 'Tame'), '', function (on) { evSet(g, 'Tame', on); }));
-    body.appendChild(evNumF(g, 'Temper', '驯服进度', { sub: '越高越容易被驯服' }));
+    body.appendChild(evBool(I18n.t("cadeditor.ui.worldentity.bbcaf5e4d0"), evGet(g, 'Tame'), '', function (on) { evSet(g, 'Tame', on); }));
+    body.appendChild(evNumF(g, 'Temper', I18n.t("cadeditor.ui.worldentity.76004ea0d3"), { sub: I18n.t("cadeditor.ui.worldentity.40c382ced1") }));
     var entries = players.map(function (p) { return { v: p.uuid, label: p.name, sub: p.uuid }; });
-    if (cur && !entries.some(function (e) { return e.v === cur; })) entries.push({ v: cur, label: '不在线的玩家', sub: cur });
-    var sel = kSelect(entries, cur || null, function (v) { evSet(g, 'Owner', v); weRender(); }, { width: 240, empty: '（无）', placeholder: '搜索在线玩家' });
-    var right = [sel.el]; if (cur) right.push(kBtn('清除', function () { evSet(g, 'Owner', null); weRender(); }, { icon: 'trash' }));
-    body.appendChild(xRow({ icon: false, title: '主人', sub: '清除不会取消驯服', right: h('div', { class: 'k-row' }, right) }));
-    body.appendChild(kHint('鞍、马铠在「属性」页的装备格里换。'));
+    if (cur && !entries.some(function (e) { return e.v === cur; })) entries.push({ v: cur, label: I18n.t("cadeditor.ui.worldentity.38405b5fdc"), sub: cur });
+    var sel = kSelect(entries, cur || null, function (v) { evSet(g, 'Owner', v); weRender(); }, { width: 240, empty: I18n.t("cadeditor.ui.pages.c7bcc6d27f"), placeholder: I18n.t("cadeditor.ui.worldentity.e9a396c7c4") });
+    var right = [sel.el]; if (cur) right.push(kBtn(I18n.t("cadeditor.ui.picker.bce2377283"), function () { evSet(g, 'Owner', null); weRender(); }, { icon: 'trash' }));
+    body.appendChild(xRow({ icon: false, title: I18n.t("cadeditor.ui.worldentity.c11c5f262d"), sub: I18n.t("cadeditor.ui.worldentity.a258804253"), right: h('div', { class: 'k-row' }, right) }));
+    body.appendChild(kHint(I18n.t("cadeditor.ui.worldentity.b9a3d659d1")));
   },
   chested: function (body) {
     var g = 'chested', own = evGroup(g) || {}, cap = typeof own.capacity === 'number' ? own.capacity : 0, on = evGet(g, 'ChestedHorse');
-    body.appendChild(evBool('背着箱子', on, '去掉箱子会丢掉里面的东西', function (v) { evSet(g, 'ChestedHorse', v); if (!v) evSet(g, 'Items', []); weRender(); }));
+    body.appendChild(evBool(I18n.t("cadeditor.ui.worldentity.ee8df25961"), on, I18n.t("cadeditor.ui.worldentity.90e7212e1b"), function (v) { evSet(g, 'ChestedHorse', v); if (!v) evSet(g, 'Items', []); weRender(); }));
     if (on && cap > 0) { body.appendChild(evSlotList(g, 'Items', cap)); }
-    else if (on) body.appendChild(kHint('这个箱子暂时没有格子（羊驼的格数跟力量有关）。'));
+    else if (on) body.appendChild(kHint(I18n.t("cadeditor.ui.worldentity.dbbaa2e528")));
   },
   vehicle_container: function (body) {
     var g = 'vehicle_container', own = evGroup(g) || {};
-    if (own.unresolved_loot) { body.appendChild(kHint('里面还有没展开的战利品，先在游戏里打开一次再来改。')); return; }
+    if (own.unresolved_loot) { body.appendChild(kHint(I18n.t("cadeditor.ui.worldentity.f35a1836fb"))); return; }
     body.appendChild(evSlotList(g, 'slots', own.size || 0));
   },
   minecart_display: function (body) {
     var g = 'minecart_display', off = evGet(g, 'DisplayOffset');
-    body.appendChild(kBlockState(evGet(g, 'DisplayState'), function (v) { evSet(g, 'DisplayState', v); weRender(); }, { label: '显示的方块', sub: '清除 = 用矿车原来的样子', allowNone: true, empty: '（原样）' }));
-    body.appendChild(evNum('显示高度偏移', typeof off === 'number' ? off : 6, { sub: '原样是 6' }, function (x) { evSet(g, 'DisplayOffset', x); }));
-    if (typeof off === 'number') body.appendChild(xRow({ icon: false, title: '恢复默认偏移', right: kBtn('恢复', function () { evSet(g, 'DisplayOffset', null); weRender(); }, { icon: 'undo' }) }));
+    body.appendChild(kBlockState(evGet(g, 'DisplayState'), function (v) { evSet(g, 'DisplayState', v); weRender(); }, { label: I18n.t("cadeditor.ui.worldentity.fd19bb0349"), sub: I18n.t("cadeditor.ui.worldentity.d2d0bd1dcf"), allowNone: true, empty: I18n.t("cadeditor.ui.worldentity.f382bbd44c") }));
+    body.appendChild(evNum(I18n.t("cadeditor.ui.worldentity.5b4e21cb63"), typeof off === 'number' ? off : 6, { sub: I18n.t("cadeditor.ui.worldentity.ec52a82f67") }, function (x) { evSet(g, 'DisplayOffset', x); }));
+    if (typeof off === 'number') body.appendChild(xRow({ icon: false, title: I18n.t("cadeditor.ui.worldentity.855cdff1a5"), right: kBtn(I18n.t("cadeditor.ui.drafts.e0534b8a4e"), function () { evSet(g, 'DisplayOffset', null); weRender(); }, { icon: 'undo' }) }));
   },
   minecart_command: function (body) {
     var g = 'minecart_command', own = evGroup(g) || {};
-    var ta = h('textarea', { class: 'ed-snbt we-cmd', spellcheck: 'false', placeholder: '命令，不用写开头的 /' }); ta.value = String(evGet(g, 'Command') || '');
+    var ta = h('textarea', { class: 'ed-snbt we-cmd', spellcheck: 'false', placeholder: I18n.t("cadeditor.ui.worldentity.c9e2a31717") }); ta.value = String(evGet(g, 'Command') || '');
     ta.addEventListener('change', function () { evSet(g, 'Command', ta.value); });
-    body.appendChild(xRow({ icon: false, title: '命令' })); body.appendChild(ta);
-    var lo = own.LastOutput; body.appendChild(xRow({ icon: false, title: '上次输出', sub: '只读', right: h('span', { class: 'k-sub', text: lo ? msgText(lo) : '（没有）' }) }));
+    body.appendChild(xRow({ icon: false, title: I18n.t("cadeditor.ui.screens.928f87d450") })); body.appendChild(ta);
+    var lo = own.LastOutput; body.appendChild(xRow({ icon: false, title: I18n.t("cadeditor.ui.worldentity.6312d40100"), sub: I18n.t("cadeditor.ui.worldentity.3b5ec3533b"), right: h('span', { class: 'k-sub', text: lo ? msgText(lo) : I18n.t("cadeditor.ui.worldentity.23ce821ecd") }) }));
   },
   boat_type: function (body) {
     var own = evGroup('boat_type') || {};
-    body.appendChild(xRow({ icon: false, title: '种类', sub: '由实体类型决定，不能换', right: h('span', { class: 'k-sub', text: own.entityType ? entityName(own.entityType) : '' }) }));
+    body.appendChild(xRow({ icon: false, title: I18n.t("cadeditor.ui.worldentity.a28cf187c6"), sub: I18n.t("cadeditor.ui.worldentity.42e17c3026"), right: h('span', { class: 'k-sub', text: own.entityType ? entityName(own.entityType) : '' }) }));
   },
   zombie_conversion: function (body) {
     var own = evGroup('zombie_conversion') || {}, t = own.ConversionTime;
-    body.appendChild(xRow({ icon: false, title: '转化倒计时', sub: '只读', right: h('span', { class: 'k-sub', text: typeof t === 'number' && t >= 0 ? t + ' 刻' : '没在转化' }) }));
+    body.appendChild(xRow({ icon: false, title: I18n.t("cadeditor.ui.worldentity.a157892a0c"), sub: I18n.t("cadeditor.ui.worldentity.3b5ec3533b"), right: h('span', { class: 'k-sub', text: typeof t === 'number' && t >= 0 ? I18n.t("cadeditor.ui.worldentity.6082b43313", (t)) : I18n.t("cadeditor.ui.worldentity.f58a450afb") }) }));
   },
   dropped_item: function (body) {
     var g = 'dropped_item', st = evGet(g, 'Item') || { id: 'minecraft:stone', count: 1, comps: {}, removed: {} };
-    body.appendChild(xRow({ icon: false, title: '物品', right: evStack(st, function (s) { evSet(g, 'Item', s); weRender(); }, { clear: false }) }));
-    body.appendChild(evNum('数量', st.count, { min: 1, max: 99 }, function (x) { var n = clone(evGet(g, 'Item') || st); n.count = x; evSet(g, 'Item', n); }));
-    body.appendChild(evNumF(g, 'PickupDelay', '拾取延迟', { unit: '刻', sub: '32767 = 永远捡不起来' }));
-    body.appendChild(evNumF(g, 'Age', '已存在', { unit: '刻', sub: '6000 刻后消失；-32768 永不消失' }));
+    body.appendChild(xRow({ icon: false, title: I18n.t("cadeditor.ui.pages.7c89d6ebe1"), right: evStack(st, function (s) { evSet(g, 'Item', s); weRender(); }, { clear: false }) }));
+    body.appendChild(evNum(I18n.t("cadeditor.ui.pages.5e29d121dd"), st.count, { min: 1, max: 99 }, function (x) { var n = clone(evGet(g, 'Item') || st); n.count = x; evSet(g, 'Item', n); }));
+    body.appendChild(evNumF(g, 'PickupDelay', I18n.t("cadeditor.ui.worldentity.b1d4b6b19b"), { unit: I18n.t("cadeditor.ui.cards2.3ccf035260"), sub: I18n.t("cadeditor.ui.worldentity.bd61bcf0fe") }));
+    body.appendChild(evNumF(g, 'Age', I18n.t("cadeditor.ui.worldentity.e8b1268c1e"), { unit: I18n.t("cadeditor.ui.cards2.3ccf035260"), sub: I18n.t("cadeditor.ui.worldentity.bff67a450b") }));
   },
   falling_block: function (body) {
     var g = 'falling_block';
-    body.appendChild(kBlockState(evGet(g, 'BlockState'), function (v) { evSet(g, 'BlockState', v || { Name: 'minecraft:sand' }); }, { label: '方块', title: '选择方块' }));
-    body.appendChild(evNumF(g, 'Time', '已经掉了', { unit: '刻' }));
-    body.appendChild(evNumF(g, 'FallHurtAmount', '每格砸伤害', { step: 0.1, dec: 3 }));
-    body.appendChild(evNumF(g, 'FallHurtMax', '砸伤害上限'));
-    body.appendChild(evBool('落地时掉出物品', evGet(g, 'DropItem'), '', function (on) { evSet(g, 'DropItem', on); }));
-    body.appendChild(evBool('砸到的生物受伤', evGet(g, 'HurtEntities'), '', function (on) { evSet(g, 'HurtEntities', on); }));
-    body.appendChild(evBool('取消掉落', evGet(g, 'CancelDrop'), '', function (on) { evSet(g, 'CancelDrop', on); }));
+    body.appendChild(kBlockState(evGet(g, 'BlockState'), function (v) { evSet(g, 'BlockState', v || { Name: 'minecraft:sand' }); }, { label: I18n.t("cadeditor.ui.picker.2753766d18"), title: I18n.t("cadeditor.ui.picker.289673e823") }));
+    body.appendChild(evNumF(g, 'Time', I18n.t("cadeditor.ui.worldentity.19622fd92f"), { unit: I18n.t("cadeditor.ui.cards2.3ccf035260") }));
+    body.appendChild(evNumF(g, 'FallHurtAmount', I18n.t("cadeditor.ui.worldentity.285632652e"), { step: 0.1, dec: 3 }));
+    body.appendChild(evNumF(g, 'FallHurtMax', I18n.t("cadeditor.ui.worldentity.3a6d31d01d")));
+    body.appendChild(evBool(I18n.t("cadeditor.ui.worldentity.fa2be25830"), evGet(g, 'DropItem'), '', function (on) { evSet(g, 'DropItem', on); }));
+    body.appendChild(evBool(I18n.t("cadeditor.ui.worldentity.b71aaf8c2d"), evGet(g, 'HurtEntities'), '', function (on) { evSet(g, 'HurtEntities', on); }));
+    body.appendChild(evBool(I18n.t("cadeditor.ui.worldentity.0bf3c87cac"), evGet(g, 'CancelDrop'), '', function (on) { evSet(g, 'CancelDrop', on); }));
   },
-  tnt: function (body) { body.appendChild(evNumF('tnt', 'fuse', '引信', { unit: '刻', sub: '20 刻 = 1 秒，倒数到 0 爆炸' })); },
+  tnt: function (body) { body.appendChild(evNumF('tnt', 'fuse', I18n.t("cadeditor.ui.worldentity.ad3579be98"), { unit: I18n.t("cadeditor.ui.cards2.3ccf035260"), sub: I18n.t("cadeditor.ui.worldentity.4e15e07ba1") })); },
   creeper: function (body) {
-    body.appendChild(evNumF('creeper', 'Fuse', '引爆倒数', { unit: '刻', sub: '点燃后多久爆炸' }));
-    body.appendChild(evNumF('creeper', 'ExplosionRadius', '爆炸威力'));
+    body.appendChild(evNumF('creeper', 'Fuse', I18n.t("cadeditor.ui.worldentity.36ae2e27f0"), { unit: I18n.t("cadeditor.ui.cards2.3ccf035260"), sub: I18n.t("cadeditor.ui.worldentity.455cd64c6f") }));
+    body.appendChild(evNumF('creeper', 'ExplosionRadius', I18n.t("cadeditor.ui.worldentity.5116a4d35c")));
   },
   enderman: function (body) {
     var g = 'enderman';
-    body.appendChild(kBlockState(evGet(g, 'carriedBlockState'), function (v) { evSet(g, 'carriedBlockState', v); }, { label: '手里拿的方块', sub: '清除 = 什么都没拿', allowNone: true, empty: '（没拿）' }));
+    body.appendChild(kBlockState(evGet(g, 'carriedBlockState'), function (v) { evSet(g, 'carriedBlockState', v); }, { label: I18n.t("cadeditor.ui.worldentity.56560d36fd"), sub: I18n.t("cadeditor.ui.worldentity.58a83fcaf8"), allowNone: true, empty: I18n.t("cadeditor.ui.worldentity.b7836b9a80") }));
   },
   area_effect_cloud: function (body) {
     var g = 'area_effect_cloud', pc = evGet(g, 'potion_contents');
     var pot = typeof pc === 'string' ? pc : (pc && pc.potion) || '';
-    var sel = kRegSelect({ reg: 'potion', value: pot, title: '选择药水', empty: '（无）', allowClear: true,
+    var sel = kRegSelect({ reg: 'potion', value: pot, title: I18n.t("cadeditor.ui.worldentity.26b9af843f"), empty: I18n.t("cadeditor.ui.pages.c7bcc6d27f"), allowClear: true,
       onChange: function (id) { var o = pc && typeof pc === 'object' ? clone(pc) : {}; if (id) o.potion = id; else delete o.potion; evSet(g, 'potion_contents', Object.keys(o).length ? o : null); } });
-    var extra = pc && typeof pc === 'object' && Array.isArray(pc.custom_effects) && pc.custom_effects.length ? '另有 ' + pc.custom_effects.length + ' 个自定义效果，在「数据」页改' : '';
-    body.appendChild(xRow({ icon: false, title: '药水', right: sel.el }));
+    var extra = pc && typeof pc === 'object' && Array.isArray(pc.custom_effects) && pc.custom_effects.length ? I18n.t("cadeditor.ui.worldentity.b00c73b708", (pc.custom_effects.length)) : '';
+    body.appendChild(xRow({ icon: false, title: I18n.t("cadeditor.ui.cards3.fb729c163d"), right: sel.el }));
     if (extra) body.appendChild(kHint(extra));
-    body.appendChild(evNumF(g, 'Radius', '半径', { step: 0.1, dec: 3 }));
-    body.appendChild(evNumF(g, 'RadiusOnUse', '每次生效后半径变化', { step: 0.1, dec: 3 }));
-    body.appendChild(evNumF(g, 'RadiusPerTick', '每刻半径变化', { step: 0.01, dec: 4 }));
-    body.appendChild(evNumF(g, 'Duration', '总时长', { unit: '刻' }));
-    body.appendChild(evNumF(g, 'Age', '已存在', { unit: '刻' }));
-    body.appendChild(evNumF(g, 'WaitTime', '生效前等待', { unit: '刻' }));
-    body.appendChild(evNumF(g, 'ReapplicationDelay', '同一生物的间隔', { unit: '刻' }));
-    body.appendChild(evNumF(g, 'DurationOnUse', '每次生效后时长变化', { unit: '刻' }));
+    body.appendChild(evNumF(g, 'Radius', I18n.t("cadeditor.ui.worldentity.3e65075eb3"), { step: 0.1, dec: 3 }));
+    body.appendChild(evNumF(g, 'RadiusOnUse', I18n.t("cadeditor.ui.worldentity.468d4e9685"), { step: 0.1, dec: 3 }));
+    body.appendChild(evNumF(g, 'RadiusPerTick', I18n.t("cadeditor.ui.worldentity.e37e75671f"), { step: 0.01, dec: 4 }));
+    body.appendChild(evNumF(g, 'Duration', I18n.t("cadeditor.ui.worldentity.9b1830480c"), { unit: I18n.t("cadeditor.ui.cards2.3ccf035260") }));
+    body.appendChild(evNumF(g, 'Age', I18n.t("cadeditor.ui.worldentity.e8b1268c1e"), { unit: I18n.t("cadeditor.ui.cards2.3ccf035260") }));
+    body.appendChild(evNumF(g, 'WaitTime', I18n.t("cadeditor.ui.worldentity.86e5b41d64"), { unit: I18n.t("cadeditor.ui.cards2.3ccf035260") }));
+    body.appendChild(evNumF(g, 'ReapplicationDelay', I18n.t("cadeditor.ui.worldentity.6cd49a0b83"), { unit: I18n.t("cadeditor.ui.cards2.3ccf035260") }));
+    body.appendChild(evNumF(g, 'DurationOnUse', I18n.t("cadeditor.ui.worldentity.878070a524"), { unit: I18n.t("cadeditor.ui.cards2.3ccf035260") }));
     var ds = evGet(g, 'potion_duration_scale');
-    body.appendChild(evNum('效果时长倍数', typeof ds === 'number' ? ds : 1, { step: 0.1, dec: 3, sub: '1 = 原样' }, function (x) { evSet(g, 'potion_duration_scale', x === 1 ? null : x); }));
+    body.appendChild(evNum(I18n.t("cadeditor.ui.worldentity.0824e7a2b0"), typeof ds === 'number' ? ds : 1, { step: 0.1, dec: 3, sub: I18n.t("cadeditor.ui.worldentity.053e1f2d75") }, function (x) { evSet(g, 'potion_duration_scale', x === 1 ? null : x); }));
   },
-  experience_orb: function (body) { body.appendChild(evNumF('experience_orb', 'Value', '经验值')); },
+  experience_orb: function (body) { body.appendChild(evNumF('experience_orb', 'Value', I18n.t("cadeditor.ui.worldentity.3d2343c45d"))); },
   arrow: function (body) {
     var g = 'arrow', opts = (evFields(g).pickup || {}).options || [];
-    body.appendChild(evNumF(g, 'damage', '伤害', { step: 0.5, dec: 3 }));
-    if (opts.length) body.appendChild(xSeg({ title: '拾取方式', options: opts.map(function (o) { return { v: o.value, label: EV_PICKUP[o.label] || o.label }; }), value: evGet(g, 'pickup'), onChange: function (x) { evSet(g, 'pickup', x); } }));
+    body.appendChild(evNumF(g, 'damage', I18n.t("cadeditor.ui.worldentity.30e1196888"), { step: 0.5, dec: 3 }));
+    if (opts.length) body.appendChild(xSeg({ title: I18n.t("cadeditor.ui.worldentity.6a32771239"), options: opts.map(function (o) { return { v: o.value, label: EV_PICKUP[o.label] || o.label }; }), value: evGet(g, 'pickup'), onChange: function (x) { evSet(g, 'pickup', x); } }));
   },
   interaction: function (body) {
     var g = 'interaction';
-    body.appendChild(evNumF(g, 'width', '宽度', { step: 0.1, dec: 3 }));
-    body.appendChild(evNumF(g, 'height', '高度', { step: 0.1, dec: 3 }));
-    body.appendChild(evBool('点击有反应', evGet(g, 'response'), '点它的时候游戏会给出反馈', function (on) { evSet(g, 'response', on); }));
+    body.appendChild(evNumF(g, 'width', I18n.t("cadeditor.ui.worldentity.3b730da0ad"), { step: 0.1, dec: 3 }));
+    body.appendChild(evNumF(g, 'height', I18n.t("cadeditor.ui.worldentity.968dd036cb"), { step: 0.1, dec: 3 }));
+    body.appendChild(evBool(I18n.t("cadeditor.ui.worldentity.0e0c2cc2fd"), evGet(g, 'response'), I18n.t("cadeditor.ui.worldentity.3b713ba214"), function (on) { evSet(g, 'response', on); }));
   }
 };
 
@@ -310,64 +348,64 @@ function evRelationTab(body) {
   var own = evGroup('owner');
   if (own) {
     var cur = evGet('owner', 'Owner') || '', players = own.players || [];
-    body.appendChild(xSec('user', '主人'));
-    if (own.available === false) body.appendChild(xRow({ icon: false, title: '主人', sub: '没有服务器时不能换，只能清除', right: h('span', { class: 'k-sub', text: cur || '（无）' }) }));
+    body.appendChild(xSec('user', I18n.t("cadeditor.ui.worldentity.c11c5f262d")));
+    if (own.available === false) body.appendChild(xRow({ icon: false, title: I18n.t("cadeditor.ui.worldentity.c11c5f262d"), sub: I18n.t("cadeditor.ui.worldentity.852261cb41"), right: h('span', { class: 'k-sub', text: cur || I18n.t("cadeditor.ui.pages.c7bcc6d27f") }) }));
     var entries = players.map(function (p) { return { v: p.uuid, label: p.name, sub: p.uuid }; });
-    if (cur && !entries.some(function (e) { return e.v === cur; })) entries.push({ v: cur, label: '不在线的玩家', sub: cur });
-    var sel = kSelect(entries, cur || null, function (v) { evSet('owner', 'Owner', v); weRender(); }, { width: 240, empty: '（无）', placeholder: '搜索在线玩家' });
-    var right = [sel.el]; if (cur) right.push(kBtn('清除', function () { evSet('owner', 'Owner', null); weRender(); }, { icon: 'trash' }));
-    body.appendChild(xRow({ icon: false, title: '玩家', sub: '只能选在线的；清除后不再被驯服', right: h('div', { class: 'k-row' }, right) }));
+    if (cur && !entries.some(function (e) { return e.v === cur; })) entries.push({ v: cur, label: I18n.t("cadeditor.ui.worldentity.38405b5fdc"), sub: cur });
+    var sel = kSelect(entries, cur || null, function (v) { evSet('owner', 'Owner', v); weRender(); }, { width: 240, empty: I18n.t("cadeditor.ui.pages.c7bcc6d27f"), placeholder: I18n.t("cadeditor.ui.worldentity.e9a396c7c4") });
+    var right = [sel.el]; if (cur) right.push(kBtn(I18n.t("cadeditor.ui.picker.bce2377283"), function () { evSet('owner', 'Owner', null); weRender(); }, { icon: 'trash' }));
+    body.appendChild(xRow({ icon: false, title: I18n.t("cadeditor.ui.vaultworld.991e63fe29"), sub: I18n.t("cadeditor.ui.worldentity.a2c1a4a59d"), right: h('div', { class: 'k-row' }, right) }));
   }
   var team = evGroup('team'), leash = evGroup('leash');
-  body.appendChild(xSec('users', '只读'));
-  if (team) body.appendChild(xRow({ icon: false, title: '队伍', sub: team.available === false ? '这个世界没有记分板' : '', right: h('span', { class: 'k-sub', text: team.name || '（没有队伍）' }) }));
-  if (leash) body.appendChild(xRow({ icon: false, title: '拴绳', sub: leash.data ? '连接和解除还不能改' : '', right: h('span', { class: 'k-sub', text: leash.data ? '被拴着' : '没有拴着' }) }));
+  body.appendChild(xSec('users', I18n.t("cadeditor.ui.worldentity.3b5ec3533b")));
+  if (team) body.appendChild(xRow({ icon: false, title: I18n.t("cadeditor.ui.worldentity.1053fbb75f"), sub: team.available === false ? I18n.t("cadeditor.ui.worldentity.9b0289e7b8") : '', right: h('span', { class: 'k-sub', text: team.name || I18n.t("cadeditor.ui.worldentity.ecac3c5628") }) }));
+  if (leash) body.appendChild(xRow({ icon: false, title: I18n.t("cadeditor.ui.worldentity.3814469d5b"), sub: leash.data ? I18n.t("cadeditor.ui.worldentity.a513d81e18") : '', right: h('span', { class: 'k-sub', text: leash.data ? I18n.t("cadeditor.ui.worldentity.c1654ed36f") : I18n.t("cadeditor.ui.worldentity.903731802e") }) }));
 }
 
 /* ---------- 村民 / 流浪商人交易（只有服务端能改） ---------- */
 function evOffers() { if (WE.offers === null) WE.offers = clone(evOffersOrig()); return WE.offers; }
 function evTradePreview(offer) {
   function stack(st) {
-    if (!st || !st.id) return h('span', { class: 'k-sub', text: '未选择' });
+    if (!st || !st.id) return h('span', { class: 'k-sub', text: I18n.t("cadeditor.ui.worldentity.1182c5454f") });
     var icon = stackUiIcon(st, 20);
     if (icon.tagName && icon.tagName.toLowerCase() === 'item') icon.setAttribute('count', '1');
     return h('div', { class: 'trade-summary-stack' }, [icon, stackUiName(st), h('span', { class: 'trade-count', text: '× ' + (st.count || 1) })]);
   }
   return h('div', { class: 'trade-summary' }, [
-    h('div', { class: 'trade-summary-side' }, [h('span', { class: 'k-sub', text: '你支付' }), stack(offer.buy), offer.buyB ? h('span', { class: 'k-sub', text: '+' }) : null, offer.buyB ? stack(offer.buyB) : null]),
+    h('div', { class: 'trade-summary-side' }, [h('span', { class: 'k-sub', text: I18n.t("cadeditor.ui.worldentity.af57c547f9") }), stack(offer.buy), offer.buyB ? h('span', { class: 'k-sub', text: '+' }) : null, offer.buyB ? stack(offer.buyB) : null]),
     h('span', { class: 'trade-arrow', text: '→' }),
-    h('div', { class: 'trade-summary-side' }, [h('span', { class: 'k-sub', text: '你获得' }), stack(offer.sell)])]);
+    h('div', { class: 'trade-summary-side' }, [h('span', { class: 'k-sub', text: I18n.t("cadeditor.ui.worldentity.a871df32a6") }), stack(offer.sell)])]);
 }
 function openTradeDraft(offer, index) {
   var owner = WE.w, offers = WE.offers, priceOpen = false;
   var host = h('div', { class: 'trade-edit-body' });
   function valid() { return WE.w === owner && WE.offers === offers && offers.indexOf(offer) >= 0; }
-  function mark() { if (!valid()) { toast('交易目标已更新，请返回后重新打开', 'warn'); return false; } weMarkDirty(); return true; }
+  function mark() { if (!valid()) { toast(I18n.t("cadeditor.ui.worldentity.ff71a6f6c3"), 'warn'); return false; } weMarkDirty(); return true; }
   function stackEditor(key, optional) {
     var cur = offer[key], has = cur && cur.id;
     function put(st) {
-      if (!valid()) { toast('交易目标已更新，请返回后重新打开', 'warn'); return; }
+      if (!valid()) { toast(I18n.t("cadeditor.ui.worldentity.ff71a6f6c3"), 'warn'); return; }
       if (!st) delete offer[key];
       else { var next = clone(st); delete next.slot; delete next.label; if (cur && next.id !== cur.id) delete next.cost_predicate_snbt; offer[key] = next; }
       mark();
     }
-    var label = key === 'sell' ? '你获得' : optional ? '额外支付' : '你支付';
-    if (!has && optional) { var addCost = kBtn('添加第二种费用', function () { choose(addCost); }, { icon: 'plus', cls: 'trade-add-cost' }); return addCost; }
+    var label = key === 'sell' ? I18n.t("cadeditor.ui.worldentity.a871df32a6") : optional ? I18n.t("cadeditor.ui.worldentity.661dfbacfe") : I18n.t("cadeditor.ui.worldentity.af57c547f9");
+    if (!has && optional) { var addCost = kBtn(I18n.t("cadeditor.ui.worldentity.12ae2f2651"), function () { choose(addCost); }, { icon: 'plus', cls: 'trade-add-cost' }); return addCost; }
     var pick = kItemBtn(has ? cur : null, null);
     function choose(anchor) { pickItem(anchor, function (id) { put({ id: fullId(id), count: (cur && cur.count) || 1, comps: {}, removed: {} }); paint(); }, { onStack: function (st) { put(st); paint(); } }); }
     activate(pick, function () { choose(pick); });
     var controls = [];
     if (has) {
       var qty = kNumber(cur.count || 1, { min: 1, noSlider: true, step: 1, onChange: function (v) { if (valid()) { cur.count = v; var icon = pick.querySelector('item'); if (icon) icon.setAttribute('count', String(v)); mark(); } } });
-      var field = qty.el.querySelector('input'); if (field) field.setAttribute('aria-label', label + '数量');
-      controls.push(h('span', { class: 'k-sub', text: key === 'sell' ? '数量' : '基础数量', title: key === 'sell' ? '获得的数量' : '实际成交价还受价格调整和玩家声望影响' }), qty.el, kBtn('编辑', function () {
+      var field = qty.el.querySelector('input'); if (field) field.setAttribute('aria-label', I18n.t("cadeditor.ui.worldentity.e490535d77", (label)));
+      controls.push(h('span', { class: 'k-sub', text: key === 'sell' ? I18n.t("cadeditor.ui.pages.5e29d121dd") : I18n.t("cadeditor.ui.worldentity.8d938061d3"), title: key === 'sell' ? I18n.t("cadeditor.ui.worldentity.96975c8730") : I18n.t("cadeditor.ui.worldentity.6ee4e7d0d9") }), qty.el, kBtn(I18n.t("cadeditor.ui.common.edit"), function () {
         if (!valid()) { mark(); return; }
         var parentValid = nestedDraftGuard();
-        openNestedItem(cur, { title: '交易 · ' + label, valid: function (session) { return valid() && parentValid(session); }, commit: put, render: paint });
-      }, { icon: 'edit', title: '编辑此物品的名称、组件和 NBT' }));
-      if (optional) controls.push(kDelete(function () { put(null); paint(); }, '移除第二种费用'));
+        openNestedItem(cur, { title: I18n.t("cadeditor.ui.worldentity.a5d92586c1", (label)), valid: function (session) { return valid() && parentValid(session); }, commit: put, render: paint });
+      }, { icon: 'edit', title: I18n.t("cadeditor.ui.worldentity.b0117b69a3") }));
+      if (optional) controls.push(kDelete(function () { put(null); paint(); }, I18n.t("cadeditor.ui.worldentity.01e58347f9")));
     }
-    return h('div', { class: 'trade-item-editor' }, [optional ? h('span', { class: 'k-sub', text: '+ 额外支付' }) : null, pick, h('div', { class: 'trade-item-controls' }, controls)]);
+    return h('div', { class: 'trade-item-editor' }, [optional ? h('span', { class: 'k-sub', text: I18n.t("cadeditor.ui.worldentity.7d66b267a5") }) : null, pick, h('div', { class: 'trade-item-controls' }, controls)]);
   }
   function num(label, key, options) {
     options = options || {};
@@ -376,68 +414,68 @@ function openTradeDraft(offer, index) {
   }
   function paint() {
     clear(host);
-    var pay = h('div', { class: 'trade-edit-side' }, [h('div', { class: 'trade-side-title', text: '你支付' }), stackEditor('buy', false), stackEditor('buyB', true)]);
-    var gain = h('div', { class: 'trade-edit-side' }, [h('div', { class: 'trade-side-title', text: '你获得' }), stackEditor('sell', false)]);
+    var pay = h('div', { class: 'trade-edit-side' }, [h('div', { class: 'trade-side-title', text: I18n.t("cadeditor.ui.worldentity.af57c547f9") }), stackEditor('buy', false), stackEditor('buyB', true)]);
+    var gain = h('div', { class: 'trade-edit-side' }, [h('div', { class: 'trade-side-title', text: I18n.t("cadeditor.ui.worldentity.a871df32a6") }), stackEditor('sell', false)]);
     host.appendChild(h('div', { class: 'trade-edit-flow' }, [pay, h('div', { class: 'trade-arrow', text: '→' }), gain]));
-    host.appendChild(h('div', { class: 'trade-settings' }, [num('已用次数', 'uses', { min: 0 }), num('次数上限', 'maxUses', { min: 0 }), num('村民经验', 'xp', { min: 0 }),
-      xField(null, '玩家获得经验', kToggle(offer.rewardExp !== false, function (on) { if (valid()) { offer.rewardExp = on; mark(); } }).el)]));
-    host.appendChild(xRow({ icon: uiIcon('coins', 14), title: '价格调整', sub: '需求、折扣与价格倍率', chevron: true, open: priceOpen, onHead: function () { priceOpen = !priceOpen; paint(); }, body: function () {
-      return [num('价格倍率', 'priceMultiplier', { step: 0.01, dec: 3 }), num('需求值', 'demand'), num('特殊价格调整', 'specialPrice')];
+    host.appendChild(h('div', { class: 'trade-settings' }, [num(I18n.t("cadeditor.ui.worldentity.cb8181faed"), 'uses', { min: 0 }), num(I18n.t("cadeditor.ui.worldentity.84ad0ed83a"), 'maxUses', { min: 0 }), num(I18n.t("cadeditor.ui.worldentity.7ef2f1cc55"), 'xp', { min: 0 }),
+      xField(null, I18n.t("cadeditor.ui.worldentity.3032d87e0a"), kToggle(offer.rewardExp !== false, function (on) { if (valid()) { offer.rewardExp = on; mark(); } }).el)]));
+    host.appendChild(xRow({ icon: uiIcon('coins', 14), title: I18n.t("cadeditor.ui.worldentity.d0b7ca7e10"), sub: I18n.t("cadeditor.ui.worldentity.056be220aa"), chevron: true, open: priceOpen, onHead: function () { priceOpen = !priceOpen; paint(); }, body: function () {
+      return [num(I18n.t("cadeditor.ui.worldentity.2300b92775"), 'priceMultiplier', { step: 0.01, dec: 3 }), num(I18n.t("cadeditor.ui.worldentity.27b200c783"), 'demand'), num(I18n.t("cadeditor.ui.worldentity.f067cdb899"), 'specialPrice')];
     } }));
   }
   paint();
-  var modal = openModal(modalShell('交易 ' + (index + 1), '修改保存在父页面草稿', [host], [h('div', { class: 'grow' }), kBtn('完成', closeModal, { cls: 'pri' })], 'trade-editor'), true);
+  var modal = openModal(modalShell(I18n.t("cadeditor.ui.worldentity.16ccd8504b", (index + 1)), I18n.t("cadeditor.ui.worldentity.b5f56907da"), [host], [h('div', { class: 'grow' }), kBtn(I18n.t("cadeditor.ui.common.done"), closeModal, { cls: 'pri' })], 'trade-editor'), true);
   modal.onEditorClose = function () { if (valid() && !NestedItem) weRedrawBody(); };
 }
 function evTradeTab(body) {
   var t = evGroup('trades');
-  if (!t || t.available === false) { body.appendChild(xEmpty((t && t.reason) || '交易只能在有服务器时修改（单人游戏的内置服务器也行）。')); return; }
+  if (!t || t.available === false) { body.appendChild(xEmpty((t && t.reason) || I18n.t("cadeditor.ui.worldentity.b548253bf0"))); return; }
   var list = evOffers();
-  body.appendChild(xSec('coins', '交易', list.length + ' 条'));
+  body.appendChild(xSec('coins', I18n.t("cadeditor.ui.worldedit.919ddbbd91"), I18n.t("cadeditor.ui.worldentity.478a69f47b", (list.length))));
   function mark() { weMarkDirty(); }
   list.forEach(function (o, i) {
-    var row = xRow({ icon: false, title: '', sub: '已用 ' + (o.uses || 0) + ' / ' + (o.maxUses || 0) + ' 次', right: kBtn('编辑', function () { openTradeDraft(o, i); }, { icon: 'edit' }),
+    var row = xRow({ icon: false, title: '', sub: I18n.t("cadeditor.ui.worldentity.3dfd4e4820", (o.uses || 0), (o.maxUses || 0)), right: kBtn(I18n.t("cadeditor.ui.common.edit"), function () { openTradeDraft(o, i); }, { icon: 'edit' }),
       onDelete: function () { list.splice(i, 1); mark(); weRender(); }, onHead: function () { openTradeDraft(o, i); } });
     row.classList.add('trade-list-row'); row.querySelector('.z').appendChild(evTradePreview(o)); body.appendChild(row);
   });
-  if (list.length < 256) body.appendChild(xAdd('添加一条交易', function () { var offer = { buy: { id: 'minecraft:emerald', count: 1, comps: {}, removed: {} }, sell: { id: 'minecraft:bread', count: 1, comps: {}, removed: {} }, uses: 0, maxUses: 12, rewardExp: true, xp: 1, priceMultiplier: 0.05, demand: 0, specialPrice: 0 }; list.push(offer); mark(); weRender(); openTradeDraft(offer, list.length - 1); }));
-  body.appendChild(kHint('关闭游戏交易界面后，再应用修改。'));
+  if (list.length < 256) body.appendChild(xAdd(I18n.t("cadeditor.ui.worldentity.339169ef77"), function () { var offer = { buy: { id: 'minecraft:emerald', count: 1, comps: {}, removed: {} }, sell: { id: 'minecraft:bread', count: 1, comps: {}, removed: {} }, uses: 0, maxUses: 12, rewardExp: true, xp: 1, priceMultiplier: 0.05, demand: 0, specialPrice: 0 }; list.push(offer); mark(); weRender(); openTradeDraft(offer, list.length - 1); }));
+  body.appendChild(kHint(I18n.t("cadeditor.ui.worldentity.c2a147bbc7")));
 }
 
 /* ---------- 乘客 / 骑乘：每一步都是单独的 apply.riding，立刻提交 ---------- */
 function evRideSend(riding, note) {
-  if (weDirty()) { toast('还有没应用的修改。乘客的改动要单独提交，请先应用或放弃别的修改。', 'info'); return; }
-  weSend('apply', { requestId: 'w-' + Date.now() + '-' + (++WE.seq), slot: clone(WE.w.slot), riding: riding }, note || '已提交给游戏，等待回执…');
+  if (weDirty()) { toast(I18n.t("cadeditor.ui.worldentity.7b69ff66b8"), 'info'); return; }
+  weSend('apply', { requestId: 'w-' + Date.now() + '-' + (++WE.seq), slot: clone(WE.w.slot), riding: riding }, note || I18n.t("cadeditor.ui.worldedit.c34df32374"));
 }
 function evRidingTab(body) {
   var r = evGroup('riding') || {}, ps = r.passengers || [], vh = r.vehicle;
-  body.appendChild(xSec('users', '骑乘关系'));
-  if (vh) body.appendChild(xRow({ icon: entityIcon(vh.type, 22), title: '正骑着：' + (vh.summary || entityName(vh.type)), sub: shortId(vh.type), right: kBtn('下来', function () { evRideSend({ action: 'dismount' }, '正在让它下来…'); }, { icon: 'down' }) }));
-  else body.appendChild(kHint('没有骑着别的东西。'));
+  body.appendChild(xSec('users', I18n.t("cadeditor.ui.worldentity.e97ae3c027")));
+  if (vh) body.appendChild(xRow({ icon: entityIcon(vh.type, 22), title: I18n.t("cadeditor.ui.worldentity.d8008b3f1c", (vh.summary || entityName(vh.type))), sub: shortId(vh.type), right: kBtn(I18n.t("cadeditor.ui.worldentity.dd30687a43"), function () { evRideSend({ action: 'dismount' }, I18n.t("cadeditor.ui.worldentity.3cd8286686")); }, { icon: 'down' }) }));
+  else body.appendChild(kHint(I18n.t("cadeditor.ui.worldentity.dbe0660d09")));
   /* 乘客卡片：头部右侧放「添加」和「全部赶下去」，列表在下面，添加表单点「添加」才展开 */
   var addOpen = WE.rideAddOpen === undefined ? !ps.length : !!WE.rideAddOpen, addBox = h('div', { class: 'wp-addbox' });
   var acts = h('span', { class: 'wp-acts' }, [
-    ps.length ? kBtn('全部赶下去', function () { evRideSend({ action: 'eject' }, '正在让乘客全部下来…'); }, { icon: 'close', title: '只解除骑乘，生物不会被删除' }) : null,
-    kBtn('添加', function () { addOpen = !addOpen; WE.rideAddOpen = addOpen; if (addOpen) { addBox.style.display = ''; uiSlide(addBox, true); } else uiSlide(addBox, false, function () { addBox.style.display = 'none'; }); }, { icon: 'plus', cls: 'pri', title: '给它加一个乘客' })
+    ps.length ? kBtn(I18n.t("cadeditor.ui.worldentity.409a82de0b"), function () { evRideSend({ action: 'eject' }, I18n.t("cadeditor.ui.worldentity.3030e3c2a9")); }, { icon: 'close', title: I18n.t("cadeditor.ui.worldentity.1830da1d2a") }) : null,
+    kBtn(I18n.t("cadeditor.ui.cards3.7a8a11ead5"), function () { addOpen = !addOpen; WE.rideAddOpen = addOpen; if (addOpen) { addBox.style.display = ''; uiSlide(addBox, true); } else uiSlide(addBox, false, function () { addBox.style.display = 'none'; }); }, { icon: 'plus', cls: 'pri', title: I18n.t("cadeditor.ui.worldentity.279d7eef75") })
   ]);
-  body.appendChild(xSec('paw', '乘客', ps.length ? ps.length + ' 个' : '没有', acts));
+  body.appendChild(xSec('paw', I18n.t("cadeditor.ui.worldedit.54df03d398"), ps.length ? I18n.t("cadeditor.ui.cards1.a88dddda1c", (ps.length)) : I18n.t("cadeditor.ui.worldentity.f127804b92"), acts));
   function node(p, depth) {
-    body.appendChild(xRow({ icon: entityIcon(p.type, 22), title: (depth ? '↳ ' : '') + (p.summary || entityName(p.type)), sub: shortId(p.type) + (p.passengers && p.passengers.length ? ' · 背着 ' + p.passengers.length + ' 个' : ''), tip: p.uuid,
-      right: kBtn('赶下去', function () { evRideSend({ action: 'remove', uuid: p.uuid }, '正在让它下来…'); }, { icon: 'close', title: '只解除骑乘，生物不会被删除' }) }));
+    body.appendChild(xRow({ icon: entityIcon(p.type, 22), title: (depth ? '↳ ' : '') + (p.summary || entityName(p.type)), sub: shortId(p.type) + (p.passengers && p.passengers.length ? I18n.t("cadeditor.ui.worldentity.efc4ffe78f", (p.passengers.length)) : ''), tip: p.uuid,
+      right: kBtn(I18n.t("cadeditor.ui.worldentity.4b4411b6f7"), function () { evRideSend({ action: 'remove', uuid: p.uuid }, I18n.t("cadeditor.ui.worldentity.3cd8286686")); }, { icon: 'close', title: I18n.t("cadeditor.ui.worldentity.1830da1d2a") }) }));
     (p.passengers || []).forEach(function (c) { node(c, depth + 1); });
   }
-  if (!ps.length) body.appendChild(xEmpty('没有乘客。'));
+  if (!ps.length) body.appendChild(xEmpty(I18n.t("cadeditor.ui.worldentity.aa5849b6c1")));
   ps.forEach(function (p) { node(p, 0); });
   var type = WE.rideType || 'minecraft:chicken', data = WE.rideData || '';
-  addBox.appendChild(esEntityHeader({ id: type, snbtText: function () { var e = vaultEntityObj(WE.rideData || '{}'); e.id = WE.rideType || type; return nbtMerge(e, null); }, onPick: function (id) { if (WE.rideType !== id) WE.rideData = ''; WE.rideType = id; weRedrawBody(); }, onEntityNbt: function (snbt) { try { var payload = vaultEntityPayload(snbt); WE.rideType = payload.type; WE.rideData = payload.snbt; weRedrawBody(); } catch (e) { toast(e.message || '生物数据无法读取', 'error'); } } }));
-  var inp = kInput(data, function () {}, { placeholder: '可选的数据，比如 {CustomName:"小鸡"}', onCommit: function (t) { WE.rideData = t; } }); inp.classList.add('we-in');
-  addBox.appendChild(xRow({ icon: false, title: '初始数据', sub: 'SNBT，可以不填', right: inp }));
-  addBox.appendChild(h('div', { class: 'k-row' }, [kBtn('加上去', function () {
+  addBox.appendChild(esEntityHeader({ id: type, snbtText: function () { var e = vaultEntityObj(WE.rideData || '{}'); e.id = WE.rideType || type; return nbtMerge(e, null); }, onPick: function (id) { if (WE.rideType !== id) WE.rideData = ''; WE.rideType = id; weRedrawBody(); }, onEntityNbt: function (snbt) { try { var payload = vaultEntityPayload(snbt); WE.rideType = payload.type; WE.rideData = payload.snbt; weRedrawBody(); } catch (e) { toast(e.message || I18n.t("cadeditor.ui.worldentity.1c154dffd3"), 'error'); } } }));
+  var inp = kInput(data, function () {}, { placeholder: I18n.t("cadeditor.ui.worldentity.5a0ab96b11"), onCommit: function (t) { WE.rideData = t; } }); inp.classList.add('we-in');
+  addBox.appendChild(xRow({ icon: false, title: I18n.t("cadeditor.ui.worldentity.0f6449e41e"), sub: I18n.t("cadeditor.ui.worldentity.65b7bb7301"), right: inp }));
+  addBox.appendChild(h('div', { class: 'k-row' }, [kBtn(I18n.t("cadeditor.ui.worldentity.e10af7b489"), function () {
     var act = { action: 'add', type: WE.rideType || 'minecraft:chicken' }; if ((WE.rideData || '').trim()) act.entity_data = WE.rideData.trim();
-    evRideSend(act, '正在加上乘客…');
+    evRideSend(act, I18n.t("cadeditor.ui.worldentity.9bdb565850"));
   }, { cls: 'pri', icon: 'plus' })]));
-  addBox.appendChild(kHint('骑乘关系的修改不能撤销。'));
-  addBox.insertBefore(kHint('新生物会按游戏的规则判断能不能骑上去'), addBox.firstChild);
+  addBox.appendChild(kHint(I18n.t("cadeditor.ui.worldentity.247e5ab95b")));
+  addBox.insertBefore(kHint(I18n.t("cadeditor.ui.worldentity.0f6d2f52a5")), addBox.firstChild);
   addBox.style.display = addOpen ? '' : 'none';
   body.appendChild(addBox);
 }

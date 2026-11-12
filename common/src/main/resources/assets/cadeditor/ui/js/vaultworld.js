@@ -6,15 +6,15 @@ var VW_COPY_PENDING = false;
 function vwPlayerBackpackToSelf() {
   var source = WE.w;
   if (!source || !source.player || source.player.self || source.player.preset || WE.tab !== 'pinv' || VW_COPY_PENDING || vwBusy()) return;
-  if (weDirty()) { toast('先应用或放弃页面上的修改，再套用这位玩家的背包。', 'warn'); return; }
+  if (weDirty()) { toast(I18n.t("cadeditor.ui.vaultworld.11e2fc1970"), 'warn'); return; }
   VW_COPY_PENDING = true; drawWorldTop();
   function finish() { VW_COPY_PENDING = false; if (weActive()) drawWorldTop(); }
   Vault.upload(JSON.stringify({ world: source, sections: ['inventory'] }), function (u) {
     if (!u.ok) { finish(); vaultErr(u); return; }
-    Vault.call('save', { kind: 'player_preset', uploadToken: u.token, name: (source.player.name || '玩家') + ' 的背包', tags: [] }, function (r) {
+    Vault.call('save', { kind: 'player_preset', uploadToken: u.token, name: I18n.t("cadeditor.ui.vaultworld.398d5d3e8d", (source.player.name || I18n.t("cadeditor.ui.vaultworld.991e63fe29"))), tags: [] }, function (r) {
       finish();
       if (!r.ok) { vaultErr(r); return; }
-      if (WE.w !== source || weDirty()) { toast('已存入保险库；页面已切换或出现新修改，请从保险库重新选择套用。', 'info'); return; }
+      if (WE.w !== source || weDirty()) { toast(I18n.t("cadeditor.ui.vaultworld.57993db835"), 'info'); return; }
       vwApplyToSelf(r.entry || { id: r.id });
     });
   });
@@ -25,32 +25,32 @@ function vwSecName(s) { return Labels.vaultSection[s] || s; }
 function vwActions() {
   var kind = vwKind(); if (!kind) return null;
   return h('div', { class: 'ed-vault' }, [
-    kBtn('存入保险库', function () { vwSaveDialog(kind); }, { icon: 'plus', title: kind === 'block' ? '把这个方块的状态和数据存起来，之后可以套用到同类方块' : '把这位玩家的背包、装备等存成预设' }),
-    kBtn('从保险库套用…', function () { vwPick(kind); }, { icon: 'download', title: '选一份已存的内容套用到这里；套用前会先显示将被覆盖的内容' })]);
+    kBtn(I18n.t("cadeditor.ui.eschema.248306082a"), function () { vwSaveDialog(kind); }, { icon: 'plus', title: kind === 'block' ? I18n.t("cadeditor.ui.vaultworld.2248575d63") : I18n.t("cadeditor.ui.vaultworld.7eb1afdf12") }),
+    kBtn(I18n.t("cadeditor.ui.vaultworld.82e8b94594"), function () { vwPick(kind); }, { icon: 'download', title: I18n.t("cadeditor.ui.vaultworld.2a05e922e1") })]);
 }
 function vwBusy() {
-  if (WE.pending) { toast('上一笔修改还没有回执', 'info', 'we-wait'); return true; }
+  if (WE.pending) { toast(I18n.t("cadeditor.ui.vaultworld.53871cb811"), 'info', 'we-wait'); return true; }
   return false;
 }
 function vwDefaultName(kind) {
   var w = WE.w;
   if (kind === 'block') return nameOf('block', shortId(w.block || w.type)) || humanId(w.block || w.type);
-  return (w.player && w.player.name ? w.player.name : '玩家') + ' 的预设';
+  return I18n.t("cadeditor.ui.vaultworld.9babebf7e9", (w.player && w.player.name ? w.player.name : I18n.t("cadeditor.ui.vaultworld.991e63fe29")));
 }
 /* ---------- 存入 ---------- */
 function vwSaveDialog(kind) {
   if (vwBusy()) return;
-  var nm = kInput(vwDefaultName(kind), function () {}, { placeholder: '名称' }), tg = kInput('', function () {}, { placeholder: '标签，用逗号隔开（可不填）' }), nt = kInput('', function () {}, { placeholder: '备注（可不填）' });
-  var rows = [fieldRow('名称', nm), fieldRow('标签', tg), fieldRow('备注', nt)], picked = {};
+  var nm = kInput(vwDefaultName(kind), function () {}, { placeholder: I18n.t("cadeditor.ui.cards1.d44e9b3d3b") }), tg = kInput('', function () {}, { placeholder: I18n.t("cadeditor.ui.vault.f8735b187b") }), nt = kInput('', function () {}, { placeholder: I18n.t("cadeditor.ui.vault.88a5087375") });
+  var rows = [fieldRow(I18n.t("cadeditor.ui.cards1.d44e9b3d3b"), nm), fieldRow(I18n.t("cadeditor.ui.eschema.1d0fd5f933"), tg), fieldRow(I18n.t("cadeditor.ui.vault.daede98817"), nt)], picked = {};
   if (kind === 'player_preset') {
     VW_SECTIONS.forEach(function (s) { picked[s] = true; });
-    rows.push(xSec('check', '存哪些部分', '没勾选的部分套用时保持原样'));
+    rows.push(xSec('check', I18n.t("cadeditor.ui.vaultworld.e8cc891caa"), I18n.t("cadeditor.ui.vaultworld.28d59e4710")));
     VW_SECTIONS.forEach(function (s) { rows.push(xToggle({ title: vwSecName(s), value: true, onChange: function (on) { picked[s] = on; } })); });
   }
-  if (typeof weChangeCount === 'function' && weChangeCount() > 0) rows.unshift(kHint('存入的是游戏里现在的数据，页面上还没应用的修改不会被存进去。', 'note'));
-  var go = kBtn('存入', function () {
+  if (typeof weChangeCount === 'function' && weChangeCount() > 0) rows.unshift(kHint(I18n.t("cadeditor.ui.vaultworld.488e0579eb"), 'note'));
+  var go = kBtn(I18n.t("cadeditor.ui.vault.c77eea6fd1"), function () {
     var secs = kind === 'player_preset' ? VW_SECTIONS.filter(function (s) { return picked[s]; }) : null;
-    if (secs && !secs.length) { toast('至少选一部分', 'warn'); return; }
+    if (secs && !secs.length) { toast(I18n.t("cadeditor.ui.vaultworld.d969ec7e97"), 'warn'); return; }
     var pack = { world: WE.w }; if (secs) pack.sections = secs;
     var meta = { kind: kind, name: (nm.value || '').trim(), tags: splitTags(tg.value).slice(0, 8), note: nt.value || '' };
     go.classList.add('dis');
@@ -60,43 +60,43 @@ function vwSaveDialog(kind) {
       Vault.call('save', meta, function (r) {
         go.classList.remove('dis');
         if (!r.ok) { vaultErr(r); return; }
-        closeModal(); toast('已存入保险库：' + (r.entry ? r.entry.name : meta.name), 'ok');
+        closeModal(); toast(I18n.t("cadeditor.ui.vault.d5cdd79d2a", (r.entry ? r.entry.name : meta.name)), 'ok');
       });
     });
   }, { cls: 'pri', icon: 'check' });
-  openModal(modalShell('存入保险库', kind === 'block' ? '方块' : '玩家预设', rows, [h('div', { class: 'grow' }), kBtn('取消', closeModal), go]), true);
+  openModal(modalShell(I18n.t("cadeditor.ui.eschema.248306082a"), kind === 'block' ? I18n.t("cadeditor.ui.picker.2753766d18") : I18n.t("cadeditor.ui.vault.d4f6dca6d8"), rows, [h('div', { class: 'grow' }), kBtn(I18n.t("cadeditor.ui.common.cancel"), closeModal), go]), true);
 }
 /* ---------- 套用 ---------- */
 function vwPick(kind) {
   if (vwBusy()) return;
-  if (typeof weChangeCount === 'function' && weChangeCount() > 0) { toast('先应用或放弃页面上的修改，再套用保险库的内容。', 'warn', 'vw-dirty'); return; }
+  if (typeof weChangeCount === 'function' && weChangeCount() > 0) { toast(I18n.t("cadeditor.ui.vaultworld.0e14bf18d1"), 'warn', 'vw-dirty'); return; }
   openVault({ kind: kind, pickEntry: function (e) { closeModal(); if (kind === 'player_preset') vwSections(e); else vwPreview(e, null); } });
 }
 /* 预设可以只套用其中几部分；条目里记着存了哪些 */
 function vwApplyToSelf(e) {
   if (vwBusy() || (typeof EditorBridge !== 'undefined' && EditorBridge.pending)) return;
   if ((weActive() && weDirty()) || (!weActive() && Store.docs.some(function (d) { return diffDoc(d).length > 0; }))) {
-    toast('先应用或放弃页面上的修改，再套用保险库的内容。', 'warn', 'vw-dirty'); return;
+    toast(I18n.t("cadeditor.ui.vaultworld.0e14bf18d1"), 'warn', 'vw-dirty'); return;
   }
-  if (typeof oriel === 'undefined' || !oriel.send) { toast('请进入游戏后套用玩家预设。', 'warn'); return; }
+  if (typeof oriel === 'undefined' || !oriel.send) { toast(I18n.t("cadeditor.ui.vaultworld.0b41f07af8"), 'warn'); return; }
   oriel.send('open_world', { apply_preset: e.id });
   closeModal();
 }
 function vwSections(e) {
   var have = (e.sections || (e.summary && e.summary.sections) || VW_SECTIONS).map(function (s) { return s.section || s; }), picked = {};
   have.forEach(function (s) { picked[s] = true; });
-  var rows = [xSec('check', '套用哪些部分', '没勾选的部分保持原样')];
+  var rows = [xSec('check', I18n.t("cadeditor.ui.vaultworld.4d141cde05"), I18n.t("cadeditor.ui.vaultworld.326ad9136c"))];
   have.forEach(function (s) { rows.push(xToggle({ title: vwSecName(s), value: true, onChange: function (on) { picked[s] = on; } })); });
-  var go = kBtn('下一步：看会覆盖什么', function () {
+  var go = kBtn(I18n.t("cadeditor.ui.vaultworld.7fdc2996a5"), function () {
     var secs = have.filter(function (s) { return picked[s]; });
-    if (!secs.length) { toast('至少选一部分', 'warn'); return; }
+    if (!secs.length) { toast(I18n.t("cadeditor.ui.vaultworld.d969ec7e97"), 'warn'); return; }
     closeModal(); vwPreview(e, secs);
   }, { cls: 'pri', icon: 'check' });
-  openModal(modalShell('套用预设', e.name || '', rows, [h('div', { class: 'grow' }), kBtn('取消', closeModal), go]), true);
+  openModal(modalShell(I18n.t("cadeditor.ui.vaultworld.73353b4674"), e.name || '', rows, [h('div', { class: 'grow' }), kBtn(I18n.t("cadeditor.ui.common.cancel"), closeModal), go]), true);
 }
 function vwPreview(e, secs) {
   var pack = { world: WE.w }; if (secs) pack.sections = secs;
-  toast('正在核对…', 'info', 'vw-pre');
+  toast(I18n.t("cadeditor.ui.vaultworld.9f7698381e"), 'info', 'vw-pre');
   Vault.upload(JSON.stringify(pack), function (u) {
     if (!u.ok) { toastDismiss('vw-pre'); vaultErr(u); return; }
     var f = { id: e.id, uploadToken: u.token }; if (secs) f.sections = secs;
@@ -107,18 +107,18 @@ function vwPreview(e, secs) {
     });
   });
 }
-var VW_ERR = { block_type_mismatch: '方块种类不一样：这份数据存的是别的方块，不能套用到这里（不会静默改方块种类）。', wrong_kind: '这一条不是能套用到这里的类型。', RESPONSE_LIMIT: '内容太大，无法预览。' };
-function vwPreviewErr(r) { toast(VW_ERR[r.error] || VW_ERR[r.code] || r.reason || r.error || '核对失败', 'error'); }
+var VW_ERR = { block_type_mismatch: I18n.t("cadeditor.ui.vaultworld.6ca30f0298"), wrong_kind: I18n.t("cadeditor.ui.vaultworld.64f9c3ccaf"), RESPONSE_LIMIT: I18n.t("cadeditor.ui.vaultworld.374083eb4a") };
+function vwPreviewErr(r) { toast(VW_ERR[r.error] || VW_ERR[r.code] || r.reason || r.error || I18n.t("cadeditor.ui.vaultworld.39c3c2517f"), 'error'); }
 function vwConfirm(e, r) {
   var ov = (r.summary && r.summary.overwrites) || [], rows = [];
-  rows.push(kHint(ov.length ? '套用后，下面这些会被覆盖：' : '套用后没有会被覆盖的内容。', ov.length ? 'note' : 'sub'));
+  rows.push(kHint(ov.length ? I18n.t("cadeditor.ui.vaultworld.5e2ef90ea4") : I18n.t("cadeditor.ui.vaultworld.9da4a0c7c7"), ov.length ? 'note' : 'sub'));
   ov.forEach(function (o) { rows.push(xRow({ icon: false, title: vwSecName(o.section), sub: String(o.before === undefined ? '' : o.before) + ' → ' + String(o.after === undefined ? '' : o.after) })); });
-  var go = kBtn('确认套用', function () {
+  var go = kBtn(I18n.t("cadeditor.ui.vaultworld.afde9407b6"), function () {
     if (vwBusy()) return;
     var msg = clone(r.apply); msg.requestId = 'w-' + Date.now() + '-' + (++WE.seq);
-    closeModal(); weSend('apply', msg, '正在套用「' + (e.name || '') + '」…');
+    closeModal(); weSend('apply', msg, I18n.t("cadeditor.ui.vaultworld.2ccbee6a40", (e.name || '')));
   }, { cls: 'pri', icon: 'check' });
-  openModal(modalShell('确认套用', e.name || '', rows, [h('div', { class: 'grow' }), kBtn('取消', closeModal), go]), true);
+  openModal(modalShell(I18n.t("cadeditor.ui.vaultworld.afde9407b6"), e.name || '', rows, [h('div', { class: 'grow' }), kBtn(I18n.t("cadeditor.ui.common.cancel"), closeModal), go]), true);
 }
 
 /* 覆盖玩家数据之前：保险库里有没有现在这份数据的备份？没有就问一句要不要先存。是 = 存进去再继续，否 = 直接继续，取消 = 不套用 */
@@ -129,14 +129,14 @@ function vwBackupGate(secs, next) {
     var f = { kind: 'player_preset', uploadToken: u.token }; if (secs) f.sections = secs;
     Vault.call('has_backup', f, function (r) {
       if (!r.ok || r.backed_up) { next(); return; }
-      var rows = [h('div', { class: 'k-sub', text: '保险库里还没有现在这份数据。要先存入保险库吗？' })];
-      var yes = kBtn('是，先存入', function () {
-        Vault.call('save', { kind: 'player_preset', uploadToken: u.token, name: vwDefaultName('player_preset') + ' · 套用前备份', tags: ['备份'] }, function (sv) {
+      var rows = [h('div', { class: 'k-sub', text: I18n.t("cadeditor.ui.vaultworld.fea7880ef0") })];
+      var yes = kBtn(I18n.t("cadeditor.ui.vaultworld.7e9e590e0e"), function () {
+        Vault.call('save', { kind: 'player_preset', uploadToken: u.token, name: I18n.t("cadeditor.ui.vaultworld.256e218153", (vwDefaultName('player_preset'))), tags: [I18n.t("cadeditor.ui.vaultworld.70e372abba")] }, function (sv) {
           if (!sv.ok) { vaultErr(sv); return; }
-          closeModal(); toast('已存入保险库', 'ok'); next();
+          closeModal(); toast(I18n.t("cadeditor.ui.vaultworld.84ee4ef9a9"), 'ok'); next();
         });
       }, { cls: 'pri', icon: 'check' });
-      openModal(modalShell('当前数据没有备份', '', rows, [h('div', { class: 'grow' }), kBtn('取消', closeModal), kBtn('否，直接套用', function () { closeModal(); next(); }), yes]), true);
+      openModal(modalShell(I18n.t("cadeditor.ui.vaultworld.d79ea14da5"), '', rows, [h('div', { class: 'grow' }), kBtn(I18n.t("cadeditor.ui.common.cancel"), closeModal), kBtn(I18n.t("cadeditor.ui.vaultworld.ee4e02b0b5"), function () { closeModal(); next(); }), yes]), true);
     });
   });
 }

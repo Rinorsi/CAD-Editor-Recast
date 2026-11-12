@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.vault;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.JsonObject;
 import dev.rinorsi.editor.EditorSessions;
 import java.nio.charset.StandardCharsets;
@@ -16,16 +18,16 @@ public final class GiveReceipts {
     private final Map<String, Receipt> receipts = new HashMap<>();
     public JsonObject execute(JsonObject request, Supplier<JsonObject> write) {
         String id = dev.rinorsi.editor.StackCodec.string(request, "requestId");
-        if (id.isBlank() || id.length() > 80) EditorSessions.fail("invalid_request", "取出请求编号无效");
+        if (id.isBlank() || id.length() > 80) EditorSessions.fail("invalid_request", EditorI18n.tr("cadeditor.message.givereceipts.5281a12cd8"));
         String digest;
         try { digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(request.toString().getBytes(StandardCharsets.UTF_8))); }
         catch (NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
         Receipt old = receipts.get(id);
         if (old != null) {
-            if (!old.digest.equals(digest)) EditorSessions.fail("request_id_conflict", "同一取出请求编号不能用于不同物品或槽位");
+            if (!old.digest.equals(digest)) EditorSessions.fail("request_id_conflict", EditorI18n.tr("cadeditor.message.givereceipts.7e9cdaac16"));
             return old.response.deepCopy();
         }
-        if (receipts.size() >= 4096) EditorSessions.fail("rate_limited", "本次连接取出请求过多，请重新连接后再试");
+        if (receipts.size() >= 4096) EditorSessions.fail("rate_limited", EditorI18n.tr("cadeditor.message.givereceipts.a3fb0a711a"));
         JsonObject result = write.get();
         receipts.put(id, new Receipt(digest, result.deepCopy()));
         return result;

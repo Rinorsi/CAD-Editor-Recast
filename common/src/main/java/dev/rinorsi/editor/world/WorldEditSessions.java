@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.world;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.JsonObject;
 import dev.rinorsi.editor.EditorSessions;
 import java.util.*;
@@ -17,7 +19,7 @@ public final class WorldEditSessions {
         State(JsonObject slot, CompoundTag baseline, Vec3 openingPosition) { this.slot = slot.deepCopy(); this.openingPosition=openingPosition; setBaseline(baseline); }
         private void setBaseline(CompoundTag after){baseline=after.copy();revision=UUID.randomUUID().toString().replace("-","")+UUID.randomUUID().toString().replace("-","");}
         public CompoundTag preimage() {
-            if (undo == null) EditorSessions.fail("undo_unavailable", "此会话没有可撤销的修改");
+            if (undo == null) EditorSessions.fail("undo_unavailable", EditorI18n.tr("cadeditor.message.worldeditsessions.897f536ea7"));
             return undo.copy();
         }
         public void saved(CompoundTag before, CompoundTag after, boolean undoing) { undo = undoing ? null : before.copy(); setBaseline(after); }
@@ -42,8 +44,8 @@ public final class WorldEditSessions {
     public State require(UUID player, JsonObject slot, String revision) {
         var state = states.get(player);
         if (state == null || !sameTarget(state.slot, slot) || !Objects.equals(state.slot.get("token"), slot.get("token")))
-            throw new EditorSessions.Failure("session_lost", "世界编辑会话已关闭或被替换；请重新打开，草稿已保留");
-        if(!Objects.equals(revision,state.revision))throw new WorldEditError("target_changed","页面数据版本太旧；请重新打开并比较草稿", "client_revision",null);
+            throw new EditorSessions.Failure("session_lost", EditorI18n.tr("cadeditor.message.worldeditsessions.360ad23d16"));
+        if(!Objects.equals(revision,state.revision))throw new WorldEditError("target_changed",EditorI18n.tr("cadeditor.message.worldeditsessions.5cfafee808"), "client_revision",null);
         return state;
     }
     public void requireDoubleChestPresent(UUID player,JsonObject slot,net.minecraft.world.level.Level level) {
@@ -54,7 +56,7 @@ public final class WorldEditSessions {
         long now = clock.getAsLong(); Long last = lastWrite.get(player);
         if (last != null && now - last < 500_000_000L){
             int retry=(int)((500_000_000L-(now-last)+999_999L)/1_000_000L);
-            throw new WorldEditError("rate_limited","世界修改过于频繁，请稍后再提交",null,retry);
+            throw new WorldEditError("rate_limited",EditorI18n.tr("cadeditor.message.worldeditsessions.3e4e8d549b"),null,retry);
         }
         lastWrite.put(player,now); // Rejected clicks never extend the existing window.
     }

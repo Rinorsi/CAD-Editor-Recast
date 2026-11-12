@@ -23,7 +23,7 @@ const c = vm.createContext({console, setTimeout:()=>1, clearTimeout(){},
   oriel:{data:{hostAudio:true},send(k,v){sent.push({k,v});},on(k,fn){receipts[k]=fn;}},
   clone:v=>JSON.parse(JSON.stringify(v)), isObj:v=>!!v && typeof v==='object' && !Array.isArray(v),
   fmtNum:String, toast:(...args)=>warnings.push(args) });
-for (const f of ['data.js','labels.js','core.js','nbt.js','reg.js','forms.js','specs.js','cards1.js']) vm.runInContext(fs.readFileSync(path.join(dir,f),'utf8'),c);
+for (const f of ['data.js','i18n-catalogs.js','i18n.js','labels.js','core.js','nbt.js','reg.js','forms.js','specs.js','cards1.js']) vm.runInContext(fs.readFileSync(path.join(dir,f),'utf8'),c);
 c.h = element; c.uiIcon = ()=>element('img');
 c.centerInput = ()=>{};
 c.Reg.meta = {generation:'compact-live'};

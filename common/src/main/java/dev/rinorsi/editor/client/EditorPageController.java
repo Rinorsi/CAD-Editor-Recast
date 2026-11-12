@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.client;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.oriel.engine.dom.Document;
@@ -97,7 +99,7 @@ public final class EditorPageController implements PageControllers.Controller {
     }
 
     private void restoreDraft(String json) {
-        document.documentElement().setAttribute("data-editor-restore-stage", "导入草稿");
+        document.documentElement().setAttribute("data-editor-restore-stage", EditorI18n.tr("cadeditor.message.editorpagecontroller.79b2d9f746"));
         String result = document.scripts().evaluateToJson("(function(s){"
                 + "if(typeof Store==='undefined'||typeof UI==='undefined'||!Store.doc()||!s.docs||!s.docs[s.index])return false;"
                 + "var old=s.docs[s.index],current=Store.doc();"
@@ -107,16 +109,16 @@ public final class EditorPageController implements PageControllers.Controller {
                 + "if(typeof UIOpen!=='undefined')for(var c in s.open)if(Object.prototype.hasOwnProperty.call(s.open,c))UIOpen[c]=s.open[c];"
                 + "if(typeof applyUiMotion==='function')applyUiMotion(Prefs.get('uiAnimations',true)!==false);"
                 + "if(typeof applyUiFont==='function')applyUiFont(Prefs.get('uiFont','mc'));"
-                + "document.documentElement.setAttribute('data-editor-restore-stage','绘制界面');"
+                + "document.documentElement.setAttribute('data-editor-restore-stage',I18n.t('cadeditor.ui.common.painting'));"
                 // Select under the loading guard, then paint once even when the restored UI was editing raw text.
                 + "UI.loading=true;try{Store.select(s.index);}finally{UI.loading=false;}rebuild();"
                 + "document.documentElement.setAttribute('data-editor-restored','true');"
-                + "document.documentElement.setAttribute('data-editor-restore-stage','完成');return true;"
+                + "document.documentElement.setAttribute('data-editor-restore-stage',I18n.t('cadeditor.ui.common.done'));return true;"
                 + "})(" + json + ");", "editor-restore-state");
         if ("true".equals(result)) LOG.info("Editor controller restored page state (same target only, one rebuild)");
-        else if (result == null) LOG.warn("[物品工坊] editor-restore-state 未完成；阶段={}，请查看此前脚本错误；不记为恢复成功", document.documentElement().getAttribute("data-editor-restore-stage"));
+        else if (result == null) LOG.warn(EditorI18n.tr("cadeditor.message.editorpagecontroller.40bd06f156"), document.documentElement().getAttribute("data-editor-restore-stage"));
         else {
-            document.documentElement().setAttribute("data-editor-restore-stage", "完成");
+            document.documentElement().setAttribute("data-editor-restore-stage", EditorI18n.tr("cadeditor.ui.common.done"));
             LOG.info("Editor controller skipped saved page state: target unavailable or changed");
         }
     }

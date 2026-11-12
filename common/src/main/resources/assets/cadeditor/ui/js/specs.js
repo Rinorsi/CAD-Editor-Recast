@@ -1,33 +1,33 @@
 /* 组件专用表单说明书：字段怎么分段、叫什么、什么单位。数据（有哪些字段、类型、默认值）仍然来自组件的真实结构，这里只管排版与文案 */
 var COND_SPEC = { compact: true, order: ["max_duration_ticks", "min_speed", "min_relative_speed"], over: {
-  max_duration_ticks: { label: "有效时长", unit: "刻", hint: "从开始使用算起，这么多刻之内条件才可能触发（20 刻 = 1 秒）" },
-  min_speed: { label: "自身最低速度", hint: "冲刺时你自己的速度至少要这么快" },
-  min_relative_speed: { label: "相对目标最低速度", hint: "朝向目标的相对速度至少要这么快" } } };
+  max_duration_ticks: { label: I18n.t("cadeditor.ui.specs.39c467a1ea"), unit: I18n.t("cadeditor.ui.cards2.3ccf035260"), hint: I18n.t("cadeditor.ui.specs.518dae96c1") },
+  min_speed: { label: I18n.t("cadeditor.ui.specs.51556c3a4e"), hint: I18n.t("cadeditor.ui.specs.7a096ee6f7") },
+  min_relative_speed: { label: I18n.t("cadeditor.ui.specs.38f40128a4"), hint: I18n.t("cadeditor.ui.specs.6ed005d70b") } } };
 
-SPEC_FORMS.blocks_attacks = { compact: true, order: [{ sec: "举盾" }, "block_delay_seconds", "disable_cooldown_scale", { sec: "减伤" }, "damage_reductions", { sec: "盾牌磨损" }, "item_damage", { sec: "例外与声音" }, "bypassed_by", "block_sound", "disabled_sound"], over: {
-  block_delay_seconds: { label: "举盾延迟", unit: "秒", step: 0.05, hint: "按下使用键后，要等多少秒才开始格挡", dtxt: "默认 0 秒（立即生效）" },
-  disable_cooldown_scale: { label: "破防冷却倍率", unit: "倍", step: 0.1, hint: "被斧头等破防后，盾牌冷却时间的倍数；1 与原版一致" },
-  damage_reductions: { flatList: true, label: "减伤规则", hint: "可以有多条：每条规定对哪类伤害、哪个方向、减免多少；没有任何规则就等于不减伤",
-    itemSummary: function (it) { var a = it.horizontal_blocking_angle === undefined ? 90 : it.horizontal_blocking_angle; var t = it.type === undefined ? "所有伤害" : (Array.isArray(it.type) ? it.type.length + " 种伤害" : String(it.type)); return "±" + a + "° · " + t + " · 减 " + (it.base || 0) + " 点 + " + Math.round((it.factor === undefined ? 1 : it.factor) * 100) + "%"; },
+SPEC_FORMS.blocks_attacks = { compact: true, order: [{ sec: I18n.t("cadeditor.ui.cards3.7ee0dbbb0d") }, "block_delay_seconds", "disable_cooldown_scale", { sec: I18n.t("cadeditor.ui.specs.74bc91c57e") }, "damage_reductions", { sec: I18n.t("cadeditor.ui.specs.1d13703770") }, "item_damage", { sec: I18n.t("cadeditor.ui.specs.34e6b3ad9e") }, "bypassed_by", "block_sound", "disabled_sound"], over: {
+  block_delay_seconds: { label: I18n.t("cadeditor.ui.specs.82c57e0647"), unit: I18n.t("cadeditor.ui.cards2.9dcdc2b289"), step: 0.05, hint: I18n.t("cadeditor.ui.specs.41ccd54924"), dtxt: I18n.t("cadeditor.ui.specs.70f75146e8") },
+  disable_cooldown_scale: { label: I18n.t("cadeditor.ui.specs.6002282f62"), unit: I18n.t("cadeditor.ui.cards2.16729fb40a"), step: 0.1, hint: I18n.t("cadeditor.ui.specs.7993e07d02") },
+  damage_reductions: { flatList: true, label: I18n.t("cadeditor.ui.specs.0dfccca241"), hint: I18n.t("cadeditor.ui.specs.8fa5842eaf"),
+    itemSummary: function (it) { var a = it.horizontal_blocking_angle === undefined ? 90 : it.horizontal_blocking_angle; var t = it.type === undefined ? I18n.t("cadeditor.ui.specs.304c5353c8") : (Array.isArray(it.type) ? I18n.t("cadeditor.ui.forms.fa4aa71989", (it.type.length)) : String(it.type)); return I18n.t("cadeditor.ui.specs.51b34ce32d", (a), (t), (it.base || 0), (Math.round((it.factor === undefined ? 1 : it.factor) * 100))); },
     itemSpec: { compact: true, order: ["horizontal_blocking_angle", "type", "base", "factor"], over: {
-      horizontal_blocking_angle: { label: "阻挡范围", unit: "度", min: 0, max: 180, step: 5, hint: "正前方左右各多少度之内的攻击会被挡住" },
-      type: { label: "适用伤害", dtxt: "所有伤害", hint: "不设置就是对所有伤害生效" },
-      base: { label: "固定减免", unit: "点", hint: "每次先减去的固定伤害" },
-      factor: { label: "按比例减免", step: 0.05, hint: "再减去被挡住伤害的这个比例；1 = 全挡" } } } },
-  item_damage: { flatten: true, label: "盾牌磨损", hint: "格挡时盾牌损失多少耐久：磨损 = 基础 + 被挡伤害 × 折算", spec: { compact: true, order: ["threshold", "base", "factor"], over: {
-    threshold: { label: "磨损门槛", unit: "点", hint: "低于此伤害时不损耗盾牌耐久" }, base: { label: "基础磨损", unit: "点" }, factor: { label: "伤害折算", unit: "倍", step: 0.1, hint: "磨损 = 基础磨损 + 被挡伤害 × 此倍率" } } } },
-  bypassed_by: { label: "无视盾牌的伤害", hint: "这些伤害不会被格挡（例如魔法、穿透）" },
-  block_sound: { label: "格挡声音" }, disabled_sound: { label: "被破防声音" } } };
+      horizontal_blocking_angle: { label: I18n.t("cadeditor.ui.specs.1853231397"), unit: I18n.t("cadeditor.ui.specs.e24a9725df"), min: 0, max: 180, step: 5, hint: I18n.t("cadeditor.ui.specs.223b53f29a") },
+      type: { label: I18n.t("cadeditor.ui.specs.49b243aee8"), dtxt: I18n.t("cadeditor.ui.specs.304c5353c8"), hint: I18n.t("cadeditor.ui.specs.037b21bf84") },
+      base: { label: I18n.t("cadeditor.ui.specs.c3aa95d538"), unit: I18n.t("cadeditor.ui.cards2.08dddeac13"), hint: I18n.t("cadeditor.ui.specs.eaf98e651b") },
+      factor: { label: I18n.t("cadeditor.ui.specs.d545b92896"), step: 0.05, hint: I18n.t("cadeditor.ui.specs.5ca39a1ead") } } } },
+  item_damage: { flatten: true, label: I18n.t("cadeditor.ui.specs.1d13703770"), hint: I18n.t("cadeditor.ui.specs.20f780805c"), spec: { compact: true, order: ["threshold", "base", "factor"], over: {
+    threshold: { label: I18n.t("cadeditor.ui.specs.1b14e1426c"), unit: I18n.t("cadeditor.ui.cards2.08dddeac13"), hint: I18n.t("cadeditor.ui.specs.e34b64fe1a") }, base: { label: I18n.t("cadeditor.ui.specs.3578b73608"), unit: I18n.t("cadeditor.ui.cards2.08dddeac13") }, factor: { label: I18n.t("cadeditor.ui.specs.96d826dc37"), unit: I18n.t("cadeditor.ui.cards2.16729fb40a"), step: 0.1, hint: I18n.t("cadeditor.ui.specs.c81731bfd5") } } } },
+  bypassed_by: { label: I18n.t("cadeditor.ui.specs.dbce6844e6"), hint: I18n.t("cadeditor.ui.specs.3ec8bbc46e") },
+  block_sound: { label: I18n.t("cadeditor.ui.specs.281fcebfdc") }, disabled_sound: { label: I18n.t("cadeditor.ui.specs.993dc0fc6e") } } };
 
-SPEC_FORMS.kinetic_weapon = { compact: true, order: [{ sec: "基础" }, "contact_cooldown_ticks", "delay_ticks", "forward_movement", "damage_multiplier", { sec: "触发条件" }, "dismount_conditions", "knockback_conditions", "damage_conditions", { sec: "声音" }, "sound", "hit_sound"], over: {
-  contact_cooldown_ticks: { label: "同目标命中间隔", unit: "刻", hint: "对同一个目标，两次命中之间至少隔多少刻（20 刻 = 1 秒）" },
-  delay_ticks: { label: "蓄力延迟", unit: "刻", hint: "开始使用后多久才开始生效" },
-  forward_movement: { label: "前冲修正", step: 0.1, hint: "冲刺时向前额外位移" },
-  damage_multiplier: { label: "速度伤害倍率", step: 0.1, hint: "伤害 = 基础伤害 × 速度 × 这个倍率" },
-  dismount_conditions: { label: "使目标下骑", hint: "满足条件时，把目标从坐骑上撞下来", spec: COND_SPEC },
-  knockback_conditions: { label: "击退目标", hint: "满足条件时，把目标击退", spec: COND_SPEC },
-  damage_conditions: { label: "造成伤害", hint: "满足条件时，才会造成伤害", spec: COND_SPEC },
-  sound: { label: "冲刺声音" }, hit_sound: { label: "命中声音" } } };
+SPEC_FORMS.kinetic_weapon = { compact: true, order: [{ sec: I18n.t("cadeditor.ui.detail.89e5e14c8d") }, "contact_cooldown_ticks", "delay_ticks", "forward_movement", "damage_multiplier", { sec: I18n.t("cadeditor.ui.specs.c386c341ca") }, "dismount_conditions", "knockback_conditions", "damage_conditions", { sec: I18n.t("cadeditor.ui.cards3.473400815c") }, "sound", "hit_sound"], over: {
+  contact_cooldown_ticks: { label: I18n.t("cadeditor.ui.specs.5e190f7574"), unit: I18n.t("cadeditor.ui.cards2.3ccf035260"), hint: I18n.t("cadeditor.ui.specs.6bacfb6439") },
+  delay_ticks: { label: I18n.t("cadeditor.ui.specs.9cd442205f"), unit: I18n.t("cadeditor.ui.cards2.3ccf035260"), hint: I18n.t("cadeditor.ui.specs.dea7df85c0") },
+  forward_movement: { label: I18n.t("cadeditor.ui.specs.9bcc0bfa89"), step: 0.1, hint: I18n.t("cadeditor.ui.specs.3bddcb5dc2") },
+  damage_multiplier: { label: I18n.t("cadeditor.ui.specs.63ec4d8a1e"), step: 0.1, hint: I18n.t("cadeditor.ui.specs.b7dff491a1") },
+  dismount_conditions: { label: I18n.t("cadeditor.ui.specs.08b178ceec"), hint: I18n.t("cadeditor.ui.specs.a7296ab466"), spec: COND_SPEC },
+  knockback_conditions: { label: I18n.t("cadeditor.ui.specs.ffb1e5300a"), hint: I18n.t("cadeditor.ui.specs.5368316149"), spec: COND_SPEC },
+  damage_conditions: { label: I18n.t("cadeditor.ui.specs.770efa8bbf"), hint: I18n.t("cadeditor.ui.specs.f014fd03ad"), spec: COND_SPEC },
+  sound: { label: I18n.t("cadeditor.ui.specs.c70f2443bc") }, hit_sound: { label: I18n.t("cadeditor.ui.specs.b46fa8c8f8") } } };
 
-SPEC_FORMS.piercing_weapon = { order: [{ sec: "效果" }, "deals_knockback", "dismounts", { sec: "声音" }, "sound", "hit_sound"], over: {
-  deals_knockback: { label: "击退目标" }, dismounts: { label: "使目标下骑" }, sound: { label: "攻击声音" }, hit_sound: { label: "命中声音" } } };
+SPEC_FORMS.piercing_weapon = { order: [{ sec: I18n.t("cadeditor.ui.picker.86a00cf742") }, "deals_knockback", "dismounts", { sec: I18n.t("cadeditor.ui.cards3.473400815c") }, "sound", "hit_sound"], over: {
+  deals_knockback: { label: I18n.t("cadeditor.ui.specs.ffb1e5300a") }, dismounts: { label: I18n.t("cadeditor.ui.specs.08b178ceec") }, sound: { label: I18n.t("cadeditor.ui.specs.fcfe359a8e") }, hit_sound: { label: I18n.t("cadeditor.ui.specs.b46fa8c8f8") } } };

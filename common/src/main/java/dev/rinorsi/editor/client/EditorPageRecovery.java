@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.client;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.oriel.engine.Limits;
 import dev.oriel.engine.dom.Document;
@@ -71,26 +73,24 @@ public final class EditorPageRecovery {
         String id = "ED-" + Long.toString(System.currentTimeMillis(), 36) + "-" + (++sequence);
         String location = location(driver, document);
         Limits budget = BUDGETS.getOrDefault(driver, Limits.current());
-        String summary = memory ? "编辑器内存不足，已停止此页。" : timeout ? "编辑器处理超时，已停止此页以免拖慢游戏。" : "编辑器页面发生错误，已停止此页。";
+        String summary = memory ? EditorI18n.tr("cadeditor.message.editorpagerecovery.b4e45af39a") : timeout ? EditorI18n.tr("cadeditor.message.editorpagerecovery.9be1d7aea7") : EditorI18n.tr("cadeditor.message.editorpagerecovery.74bbe885ab");
         StringWriter stack = new StringWriter(); if (error != null) error.printStackTrace(new PrintWriter(stack));
-        String detail = "物品工坊错误编号：" + id + "\n" + summary + "\n位置：" + location
-                + "\n页面：" + driver.name() + "\n脚本预算：" + budget.timeBudgetMs() + "ms / " + budget.instructionBudget() + "指令；加载预算：" + budget.loadTimeBudgetMs() + "ms"
-                + "\n日志：发生问题的客户端游戏目录/logs/latest.log\n" + title + "\n" + stack;
+        String detail = EditorI18n.tr("cadeditor.message.editorpagerecovery.6b982e478b", (id), (summary), (location), (driver.name()), (budget.timeBudgetMs()), (budget.instructionBudget()), (budget.loadTimeBudgetMs()), (title), (stack));
         FAULTS.put(driver, new Fault(id, summary, location, detail, !memory, light(document), false));
-        LoggerFactory.getLogger("CAD-Editor").error("[物品工坊] 错误编号={} {} 位置={}；查看发生问题的客户端 logs/latest.log。脚本预算={}ms/{}指令；加载预算={}ms；不会自动重试或应用修改。原始错误={}",
+        LoggerFactory.getLogger("CAD-Editor").error(EditorI18n.tr("cadeditor.message.editorpagerecovery.1ca5e8ab2e"),
                 id, summary, location, budget.timeBudgetMs(), budget.instructionBudget(), budget.loadTimeBudgetMs(), title, error);
     }
     private static boolean light(Document doc) { return doc != null && "light".equals(doc.documentElement().getAttribute("data-theme")); }
     private static String location(DocumentDriver driver, Document doc) {
         String stage = doc == null ? null : doc.documentElement().getAttribute("data-editor-restore-stage");
-        return stage != null && !stage.isEmpty() && !"完成".equals(stage) ? "恢复编辑状态：" + stage : EditorPageHost.lastStage(driver);
+        return stage != null && !stage.isEmpty() && !EditorI18n.tr("cadeditor.ui.common.done").equals(stage) ? EditorI18n.tr("cadeditor.message.editorpagerecovery.9f58399c8d", (stage)) : EditorPageHost.lastStage(driver);
     }
     static void preview(DocumentDriver driver) {
         if (!local(driver) || driver.document() == null || active(driver) || Minecraft.getInstance().gui.screen() != driver.screen()) return;
         String id = "ED-PREVIEW-" + (++sequence);
-        FAULTS.put(driver, new Fault(id, "这是恢复面板预览，页面没有发生错误。", "手动体验",
-                "物品工坊恢复面板预览：" + id + "\n未触发超时，未提交修改。\n日志：发生问题的客户端游戏目录/logs/latest.log", true, light(driver.document()), true));
-        LoggerFactory.getLogger("CAD-Editor").info("[物品工坊] 编号={} 打开恢复面板预览；未制造超时、未重新加载或应用修改", id);
+        FAULTS.put(driver, new Fault(id, EditorI18n.tr("cadeditor.message.editorpagerecovery.1867fb47ca"), EditorI18n.tr("cadeditor.message.editorpagerecovery.a5980321bb"),
+                EditorI18n.tr("cadeditor.message.editorpagerecovery.551de1bd5b", (id)), true, light(driver.document()), true));
+        LoggerFactory.getLogger("CAD-Editor").info(EditorI18n.tr("cadeditor.message.editorpagerecovery.f10181e9b8"), id);
     }
 
     public static boolean draw(DocumentDriver driver, GuiGraphicsExtractor original, int mouseX, int mouseY) {
@@ -101,9 +101,9 @@ public final class EditorPageRecovery {
         var font = Minecraft.getInstance().font;
         List<net.minecraft.util.FormattedCharSequence> lines = new ArrayList<>();
         String shortLocation = fault.location; int raw = shortLocation.indexOf('（'); if (raw >= 0) shortLocation = shortLocation.substring(0, raw);
-        for (String text : List.of(fault.summary, "位置：" + shortLocation,
-                fault.preview ? "返回编辑会关闭此预览。" : fault.retry ? "重试会重新加载；未落盘修改可能丢失。" : "请退出后重新打开；未落盘修改可能丢失。",
-                "编号：" + fault.id, "日志：客户端游戏目录/logs/latest.log")) lines.addAll(font.split(styled(text), Math.max(1, (int) ((w - 24) / TEXT_SCALE))));
+        for (String text : List.of(fault.summary, EditorI18n.tr("cadeditor.message.editorpagerecovery.ced14a346d", (shortLocation)),
+                fault.preview ? EditorI18n.tr("cadeditor.message.editorpagerecovery.5ec43ac5c4") : fault.retry ? EditorI18n.tr("cadeditor.message.editorpagerecovery.678725ebe7") : EditorI18n.tr("cadeditor.message.editorpagerecovery.f651cc5965"),
+                EditorI18n.tr("cadeditor.message.editorpagerecovery.2f8150f327", (fault.id)), EditorI18n.tr("cadeditor.message.editorpagerecovery.ff3f41904b"))) lines.addAll(font.split(styled(text), Math.max(1, (int) ((w - 24) / TEXT_SCALE))));
         int count = fault.retry ? 3 : 2, rows = w < 370 ? count : 1, bh = 26, gap = 6;
         int maxLines = Math.max(1, (height - 56 - rows * (bh + gap)) / 15);
         if (lines.size() > maxLines) lines = new ArrayList<>(lines.subList(0, maxLines));
@@ -112,7 +112,7 @@ public final class EditorPageRecovery {
         McGui.fill(g, 0, 0, width, height, 0x99000000);
         texture(g, "panel" + (fault.light ? "_l" : ""), x, y, w, panelHeight, false);
         McGui.fill(g, x + 10, y + 10, x + 12, y + 22, fault.light ? 0xFF2F7D1D : 0xFF6CC349);
-        text(g, styled(fault.preview ? "恢复面板预览" : "物品工坊已暂停").getVisualOrderText(), x + 18, y + 10, tx);
+        text(g, styled(fault.preview ? EditorI18n.tr("cadeditor.message.editorpagerecovery.a5c5656750") : EditorI18n.tr("cadeditor.message.editorpagerecovery.6ec1972f3a")).getVisualOrderText(), x + 18, y + 10, tx);
         McGui.fill(g, x + 2, y + 29, x + w - 2, y + 30, 0x55000000);
         int ty = y + 38;
         for (var line : lines) { text(g, line, x + 12, ty, sub); ty += 15; }
@@ -125,7 +125,7 @@ public final class EditorPageRecovery {
             boolean selected = button.contains(mx, my) || i == fault.focus;
             String buttonStyle = action == 0 ? "primary" : action == 2 && selected ? "destructive" : fault.light ? "secondary" : "neutral";
             texture(g, "button_" + buttonStyle + (selected ? "_hover" : ""), bx, by, bw, bh, true);
-            String label = switch (action) { case 0 -> fault.preview ? "返回编辑" : "延长等待并重试"; case 1 -> fault.copied ? "已复制诊断" : "复制诊断"; default -> "强制退出编辑器"; };
+            String label = switch (action) { case 0 -> fault.preview ? EditorI18n.tr("cadeditor.ui.drafts.16b38790d5") : EditorI18n.tr("cadeditor.message.editorpagerecovery.60ffeac569"); case 1 -> fault.copied ? EditorI18n.tr("cadeditor.message.editorpagerecovery.69d6fd4bfc") : EditorI18n.tr("cadeditor.message.editorpagerecovery.045e09f57e"); default -> EditorI18n.tr("cadeditor.message.editorpagerecovery.83decbadda"); };
             var caption = styled(label);
             text(g, caption.getVisualOrderText(), bx + (int) ((bw - font.width(caption) * TEXT_SCALE) / 2), by + 7, action == 0 || action == 2 && selected ? 0xFFFFFFFF : tx);
         }
@@ -146,9 +146,9 @@ public final class EditorPageRecovery {
     }
     private static void action(DocumentDriver driver, Fault fault, int action) {
         if (FAULTS.get(driver) != fault || Minecraft.getInstance().gui.screen() != driver.screen()) {
-            LoggerFactory.getLogger("CAD-Editor").warn("[物品工坊] 编号={} 忽略过期恢复操作 action={}", fault.id, action); return;
+            LoggerFactory.getLogger("CAD-Editor").warn(EditorI18n.tr("cadeditor.message.editorpagerecovery.b08516912e"), fault.id, action); return;
         }
-        LoggerFactory.getLogger("CAD-Editor").info("[物品工坊] 编号={} 用户选择={} preview={}；不会自动应用修改", fault.id, action == 0 ? fault.preview ? "返回编辑" : "延长等待并重新加载" : action == 1 ? "复制诊断" : "强制退出编辑器", fault.preview);
+        LoggerFactory.getLogger("CAD-Editor").info(EditorI18n.tr("cadeditor.message.editorpagerecovery.3c8f93ea4b"), fault.id, action == 0 ? fault.preview ? EditorI18n.tr("cadeditor.ui.drafts.16b38790d5") : EditorI18n.tr("cadeditor.message.editorpagerecovery.5dcb68e07a") : action == 1 ? EditorI18n.tr("cadeditor.message.editorpagerecovery.045e09f57e") : EditorI18n.tr("cadeditor.message.editorpagerecovery.83decbadda"), fault.preview);
         if (action == 1) {
             try { Minecraft.getInstance().keyboardHandler.setClipboard(fault.detail); fault.copied = true; }
             catch (RuntimeException error) { dev.rinorsi.editor.EditorDiagnostics.failure("page.recovery.clipboard", fault.id, error); }
@@ -157,7 +157,7 @@ public final class EditorPageRecovery {
         if (action == 0 && fault.retry) {
             if (fault.preview) { FAULTS.remove(driver); return; }
             EXTENDED.put(driver, true); FAULTS.remove(driver);
-            try { driver.reload(); } catch (RuntimeException error) { failed(driver, "重新加载失败", error); }
+            try { driver.reload(); } catch (RuntimeException error) { failed(driver, EditorI18n.tr("cadeditor.message.editorpagerecovery.5f696bacfe"), error); }
         } else driver.owner().closeDocument();
     }
     private static Component styled(String text) { return Component.literal(text).setStyle(FONT); }

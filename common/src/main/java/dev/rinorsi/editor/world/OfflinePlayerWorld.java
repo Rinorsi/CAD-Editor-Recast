@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.world;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.*;
 import dev.rinorsi.editor.*;
 import java.util.*;
@@ -14,7 +16,7 @@ final class OfflinePlayerWorld {
         policy.requirePlayerEdit(actor);
         var server=actor.level().getServer();var supplied=StackCodec.object(request,"slot");
         UUID uuid=UUID.fromString(StackCodec.string(supplied,"uuid"));String op=StackCodec.string(request,"op"),id=StackCodec.string(request,"requestId");
-        if(!Set.of("open","apply","undo").contains(op))EditorSessions.fail("invalid_request","未知离线玩家操作");
+        if(!Set.of("open","apply","undo").contains(op))EditorSessions.fail("invalid_request",EditorI18n.tr("cadeditor.message.offlineplayerworld.4a6d9aebd2"));
         sessions.rateLimit(actor.getUUID());var file=OfflinePlayerEdit.readFull(server,uuid);
         PlayerProfiles.loaded(server,file.data(),p->{
             var current=projection(p,uuid);var metadata=new JsonObject();metadata.addProperty("self",false);metadata.addProperty("uuid",uuid.toString());metadata.addProperty("name",PlayerProfiles.name(server,uuid));metadata.addProperty("offline",true);
@@ -24,7 +26,7 @@ final class OfflinePlayerWorld {
                 var state=sessions.open(actor.getUUID(),slot,current);world.addProperty("revision",state.revision);sink.accept(reply);return null;
             }
             var state=sessions.require(actor.getUUID(),supplied,StackCodec.string(request,"revision"),current);
-            if(op.equals("undo"))EditorSessions.fail("undo_unavailable","离线玩家修改不支持撤销，请从备份恢复");
+            if(op.equals("undo"))EditorSessions.fail("undo_unavailable",EditorI18n.tr("cadeditor.message.offlineplayerworld.bef6a182fa"));
             var mine=PlayerWorldEdit.prepare(p,state.baseline,request);var merged=WorldMerge.merge(state.baseline,mine,current);
             var prepared=PlayerWorldEdit.prepare(p,merged,new JsonObject());
             var nativeBefore=WorldTarget.saveEntity(p,p.registryAccess());PlayerWorldEdit.writeDetached(p,prepared);
@@ -43,9 +45,9 @@ final class OfflinePlayerWorld {
                 effect.getEffect().value().createModifiers(effect.getAmplifier(),(attribute,modifier)->effectModifiers.computeIfAbsent(net.minecraft.core.registries.BuiltInRegistries.ATTRIBUTE.getKey(attribute.value()).toString(),k->new HashSet<>()).add(modifier.id().toString()));
             }
             if(!withoutEffectModifiers(expectedValues,effectModifiers).equals(withoutEffectModifiers(actualValues,effectModifiers)))dropped.add("attributes");
-            if(!dropped.isEmpty())EditorSessions.fail("invalid_nbt","原版临时玩家未保留字段，未落盘："+dropped);
+            if(!dropped.isEmpty())EditorSessions.fail("invalid_nbt",EditorI18n.tr("cadeditor.message.offlineplayerworld.911266ffdd", (dropped)));
             var world=PlayerProfiles.loaded(server,desired,check->{
-                if(!PlayerWorldEdit.data(after).equals(PlayerWorldEdit.data(PlayerWorldEdit.save(check))))EditorSessions.fail("invalid_nbt","原版重新加载未保留玩家修改，未落盘");
+                if(!PlayerWorldEdit.data(after).equals(PlayerWorldEdit.data(PlayerWorldEdit.save(check))))EditorSessions.fail("invalid_nbt",EditorI18n.tr("cadeditor.message.offlineplayerworld.671441e629"));
                 return PlayerWorldEdit.snapshot(check,projection(check,uuid),state.slot,metadata,state.revision);
             });
             var reply=reply("saved",id,world);WorldWire.encode(reply);

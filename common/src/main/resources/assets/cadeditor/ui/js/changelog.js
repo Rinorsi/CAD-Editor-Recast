@@ -13,7 +13,7 @@ var ReleaseNotes = {
     clearTimeout(this.pending[key].timer); delete this.pending[key];
     if (r.status === 'ok' && key === 'index' && Array.isArray(r.releases)) this.index = r.releases;
     else if (r.status === 'ok' && r.release && r.release.version === key && Array.isArray(r.release.sections)) this.releases[key] = r.release;
-    else this.errors[key] = r.reason || '更新日志读取失败，可重试';
+    else this.errors[key] = r.reason || I18n.t("cadeditor.ui.changelog.f9923ce918");
     this.notify();
   },
   load:function (version) {
@@ -27,14 +27,14 @@ var ReleaseNotes = {
     var id = 'notes-' + (++this.sequence) + '-' + Date.now();
     this.pending[key] = {id:id, timer:setTimeout(function () {
       if (!me.pending[key] || me.pending[key].id !== id) return;
-      delete me.pending[key]; me.errors[key] = '读取超时，可重试';
+      delete me.pending[key]; me.errors[key] = I18n.t("cadeditor.ui.changelog.6f77dcf395");
       EditorDiag.error('settings.changelog.timeout', new Error('request=' + id + ' version=' + key)); me.notify();
     }, 8000)};
     try {
       var message = {requestId:id}; if (version) message.version = version;
-      if (oriel.send('editor_changelog', message) === false) throw new Error('宿主未接受更新日志请求');
+      if (oriel.send('editor_changelog', message) === false) throw new Error(I18n.t("cadeditor.ui.changelog.41582a5c69"));
     } catch (e) {
-      clearTimeout(this.pending[key].timer); delete this.pending[key]; this.errors[key] = '更新日志读取失败，可重试';
+      clearTimeout(this.pending[key].timer); delete this.pending[key]; this.errors[key] = I18n.t("cadeditor.ui.changelog.f9923ce918");
       EditorDiag.error('settings.changelog.request', e); this.notify();
     }
   }
@@ -71,13 +71,13 @@ function changelogSection(host, state) {
   host.appendChild(root);
   var current = Prefs.about && Prefs.about.version;
   if (!(Prefs.about && Prefs.about.changelog) || typeof oriel === 'undefined' || !oriel.send || !oriel.on) {
-    root.appendChild(h('div', {class:'release-state k-sub', text:'重启客户端后可查看更新日志'}));
+    root.appendChild(h('div', {class:'release-state k-sub', text:I18n.t("cadeditor.ui.changelog.a938edef48")}));
     return {dispose:function () { alive = false; }};
   }
   function message(parent, key, version) {
     var error = ReleaseNotes.errors[key];
-    var row = h('div', {class:'release-state' + (error ? ' bad' : '')}, [h('span', {text:error || '读取中…'})]);
-    if (error) row.appendChild(kBtn('重试', function () { ReleaseNotes.load(version); render(); }, {icon:'refresh', cls:'sm'}));
+    var row = h('div', {class:'release-state' + (error ? ' bad' : '')}, [h('span', {text:error || I18n.t("cadeditor.ui.common.loading_ellipsis")})]);
+    if (error) row.appendChild(kBtn(I18n.t("cadeditor.ui.common.retry"), function () { ReleaseNotes.load(version); render(); }, {icon:'refresh', cls:'sm'}));
     parent.appendChild(row);
   }
   function renderContent(parent, note) {
@@ -100,14 +100,14 @@ function changelogSection(host, state) {
     var scroll = host.parentNode, top = scroll ? scroll.scrollTop : 0;
     clear(root);
     if (!ReleaseNotes.index) { message(root, 'index'); return; }
-    if (!ReleaseNotes.index.length) { root.appendChild(h('div', {class:'release-state k-sub', text:'暂无更新日志'})); return; }
+    if (!ReleaseNotes.index.length) { root.appendChild(h('div', {class:'release-state k-sub', text:I18n.t("cadeditor.ui.changelog.dcb17aa981")})); return; }
     ReleaseNotes.index.forEach(function (entry, index) {
       var latest = entry.version === current, open = state.open[entry.version];
       if (open === undefined) open = state.open[entry.version] = latest || (!current && index === 0);
       var arrow = foldArrow(open, 10), labels = h('div', {class:'release-labels'}, [h('span', {class:'release-version', text:entry.version})]);
-      if (latest) labels.appendChild(h('span', {class:'release-current', text:'当前版本'}));
+      if (latest) labels.appendChild(h('span', {class:'release-current', text:I18n.t("cadeditor.ui.changelog.837bc95767")}));
       var head = h('div', {class:'release-head', role:'button', 'aria-expanded':String(open)}, [
-        labels, h('span', {class:'release-date', text:entry.date || ''}), h('div', {class:'grow'}), h('span', {class:'release-count', text:entry.count + ' 项'}), arrow
+        labels, h('span', {class:'release-date', text:entry.date || ''}), h('div', {class:'grow'}), h('span', {class:'release-count', text:I18n.t("cadeditor.ui.cards2.a9ab3a5f38", (entry.count))}), arrow
       ]);
       var content = h('div', {class:'release-content'});
       function fill() {

@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.client;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import dev.rinorsi.editor.platform.Platform;
 import dev.rinorsi.editor.platform.ClientPlatform;
 import com.google.gson.JsonElement;
@@ -45,6 +47,10 @@ public final class EditorClient  {
     private static final String PAGE = "cadeditor:ui/index.html";
 
     public void onInitializeClient() {
+        EditorI18n.client(() -> Minecraft.getInstance().options.languageCode, key -> {
+            var language = net.minecraft.locale.Language.getInstance();
+            return language.has(key) ? language.getOrDefault(key) : null;
+        });
         EditorPageHost.initialize();
         ClientPlatform.get().onStarted(client -> {
             EditorKeyBindings.removeUnavailableLibraryHome(client);
@@ -102,7 +108,7 @@ public final class EditorClient  {
         EditorWriteLog.event("client.open.begin", "-", traceContext());
         try {
             if (mc.getResourceManager().getResource(Identifier.parse(PAGE)).isEmpty())
-                StackCodec.fail("缺少物品工坊页面 cadeditor:ui/index.html，请检查 Editor jar 是否包含界面资源");
+                StackCodec.fail(EditorI18n.tr("cadeditor.message.editorclient.ee5083f71f"));
             JsonObject target = new JsonObject();
             ItemStack stack = mc.player.getMainHandItem();
             int inventoryIndex = mc.player.getInventory().getSelectedSlot();
@@ -119,7 +125,7 @@ public final class EditorClient  {
                     inventoryIndex = -1;
                     // Creative catalogue entries are templates, not an owned item stack.
                     if (container.getMenu() != mc.player.containerMenu || container.getMenu().containerId == 0)
-                        StackCodec.fail("该项不是玩家持有的槽位，请切到生存物品栏或把物品拿在主手");
+                        StackCodec.fail(EditorI18n.tr("cadeditor.message.editorclient.677ca19255"));
                     target.addProperty("kind", "menu");
                     target.addProperty("menuId", container.getMenu().containerId);
                     target.addProperty("index", hovered.index);
@@ -129,7 +135,7 @@ public final class EditorClient  {
                 target.addProperty("kind", "inventory");
                 target.addProperty("index", inventoryIndex);
             }
-            if (stack.isEmpty()) StackCodec.fail("没有选中物品，请悬停已有物品或拿在主手");
+            if (stack.isEmpty()) StackCodec.fail(EditorI18n.tr("cadeditor.message.editorclient.27e79c77fa"));
             connected = ClientPlatform.get().canSend(EditorPackets.Request.TYPE);
             EditorWriteLog.event("client.open.target", "-", traceContext() + " target=" + target + " " + stackSummary(stack));
             original = stack.copy();
@@ -145,10 +151,10 @@ public final class EditorClient  {
                 commandSession = !mc.player.isCreative() && inventoryIndex >= 0 && inventoryIndex <= 35
                         ? new HotbarCommandSession(inventoryIndex, commandContext(mc, inventoryIndex)) : null;
                 var snapshot = StackCodec.snapshot(stack, mc.level.registryAccess(), target, commandSession != null
-                        ? "命令写回自己的普通背包第1～36格；原版可能通知本人、管理员并记录日志"
-                        : "本地所选槽位（服务端未安装物品工坊）");
+                        ? EditorI18n.tr("cadeditor.message.editorclient.c549ef87f3")
+                        : EditorI18n.tr("cadeditor.message.editorclient.8ee99bea91"));
                 if (!mc.player.isCreative()) snapshot.addProperty("capability", commandSession == null
-                        ? "该目标需要服务端模组；纯客户端命令仅支持自己的普通背包第1～36格，不含装备、副手或容器"
+                        ? EditorI18n.tr("cadeditor.message.editorclient.f82c05ef9a")
                         : ClientInventoryCommands.capabilityHint(mc));
                 show(snapshot);
             }
@@ -197,15 +203,15 @@ public final class EditorClient  {
         boolean ownsPending = false;
         boolean creativeSent = false;
         try {
-            if (mc.player == null || mc.level == null) EditorSessions.fail("not_allowed", "已经离开世界；草稿已保留");
+            if (mc.player == null || mc.level == null) EditorSessions.fail("not_allowed", EditorI18n.tr("cadeditor.message.editorclient.2d78653181"));
             JsonObject edit = value.getAsJsonObject();
             requestId = StackCodec.string(edit, "requestId");
             EditorWriteLog.event(stage, requestId, traceContext());
             if (commandSession != null && !commandDocumentCurrent())
-                EditorSessions.fail("session_stale", "页面已重载或未就绪，请关闭后重新读取物品；草稿已保留，不能继续提交旧数据");
-            if (pending != null) StackCodec.fail("上一笔修改尚未得到回执");
+                EditorSessions.fail("session_stale", EditorI18n.tr("cadeditor.message.editorclient.a6546a27ec"));
+            if (pending != null) StackCodec.fail(EditorI18n.tr("cadeditor.ui.screens.9aa54f73a8"));
             if (!EditorSessions.sameSlot(slot, StackCodec.object(edit, "slot")))
-                EditorSessions.fail("slot_invalid", "页面槽位与打开时不一致；草稿已保留");
+                EditorSessions.fail("slot_invalid", EditorI18n.tr("cadeditor.message.editorclient.aa6e708556"));
             stage = "client.apply.decode";
             ItemStack next = StackCodec.decode(edit, mc.level.registryAccess(), original);
             stage = "client.apply.entity_validation";
@@ -229,11 +235,11 @@ public final class EditorClient  {
                     return;
                 }
                 stage = "client.apply.creative_preflight";
-                if (!mc.player.isCreative()) EditorSessions.fail("not_connected", "服务器未安装物品工坊；命令写回仅支持自己普通背包 0..35（主手绑定打开时槽位）。装备、副手、容器和其他目标需要服务端支持");
-                if (!StackCodec.string(slot, "kind").equals("inventory")) EditorSessions.fail("not_allowed", "容器槽位写回需要服务端安装物品工坊");
+                if (!mc.player.isCreative()) EditorSessions.fail("not_connected", EditorI18n.tr("cadeditor.message.editorclient.351e96b2c9"));
+                if (!StackCodec.string(slot, "kind").equals("inventory")) EditorSessions.fail("not_allowed", EditorI18n.tr("cadeditor.message.editorclient.1fd4c4d923"));
                 int index = StackCodec.integer(slot, "index", 0, mc.player.getInventory().getContainerSize() - 1);
                 if (!sameInventoryItem(mc, index, "local-apply"))
-                    EditorSessions.fail("item_changed", "物品在你编辑期间变了（玩家背包槽位 " + index + "；无法判定修改者）；草稿已保留，没有覆盖当前物品");
+                    EditorSessions.fail("item_changed", EditorI18n.tr("cadeditor.message.editorclient.9cf4742c78", (index)));
                 int creativeSlot = mc.player.inventoryMenu.slots.stream()
                         .filter(s -> s.container == mc.player.getInventory() && s.getContainerSlot() == index)
                         .mapToInt(s -> s.index).filter(i -> i >= 1 && i <= 45).findFirst().orElseThrow();
@@ -255,7 +261,7 @@ public final class EditorClient  {
                 submitted.addProperty("confirmed", false);
                 submitted.addProperty("fingerprint", baseline);
                 submitted.addProperty("code", "submitted");
-                submitted.addProperty("reason", "已提交创造模式修改，服务器未提供保存确认；草稿已保留。如服务器回退物品，请重新读取后核对");
+                submitted.addProperty("reason", EditorI18n.tr("cadeditor.message.editorclient.b2c95d4a97"));
                 pending = null; creativePrediction = next.copy(); creativeRequestId = requestId;
                 screen.driver().patch("result", submitted);
                 EditorWriteLog.event("client.creative.local_prediction", requestId, traceContext() + elapsed()
@@ -267,7 +273,7 @@ public final class EditorClient  {
                 pending = null;
                 if (commandSession != null && commandSession.pending()) commandSession.invalidate();
             }
-            if (creativeSent) reject(requestId, "创造修改已发出，但本地处理出错，结果未知；请重新读取物品核对，草稿已保留", "result_unknown");
+            if (creativeSent) reject(requestId, EditorI18n.tr("cadeditor.message.editorclient.b81514b363"), "result_unknown");
             else reject(requestId, e.getMessage(), e instanceof EditorSessions.Failure failure ? failure.code : "invalid_request");
         }
     }
@@ -306,7 +312,7 @@ public final class EditorClient  {
             }
             if (mc.gui.screen() != openingFrom) {
                 EditorWriteLog.warning("client.open.screen_changed", id, traceContext());
-                message("打开期间界面发生变化，请重新选择物品"); return;
+                message(EditorI18n.tr("cadeditor.message.editorclient.7cc64761a1")); return;
             }
             var item = StackCodec.object(result, "item");
             original = StackCodec.decode(item, mc.level.registryAccess(), original);
@@ -318,7 +324,7 @@ public final class EditorClient  {
             if (status.equals("commit")) {
                 int index = StackCodec.integer(slot, "index", 0, mc.player.getInventory().getContainerSize() - 1);
                 if (!mc.player.isCreative() || !sameInventoryItem(mc, index, "commit"))
-                    EditorSessions.fail("item_changed", "创造模式或物品发生变化，已取消写回；草稿已保留");
+                    EditorSessions.fail("item_changed", EditorI18n.tr("cadeditor.message.editorclient.7d870d6ccc"));
                 var next = StackCodec.decode(StackCodec.object(result, "item"), mc.level.registryAccess(), original);
                 int creativeSlot = StackCodec.integer(result, "creativeSlot", 1, 45);
                 mc.player.connection.send(new ServerboundSetCreativeModeSlotPacket(creativeSlot, next));
@@ -365,7 +371,7 @@ public final class EditorClient  {
                     screen.driver().document(), (outcome, id) -> {
                 if (outcome == HotbarCommandSession.Outcome.SAVED) {
                     original = mc.player.getInventory().getItem(commandSession.index()).copy();
-                    var item = StackCodec.snapshot(original, mc.level.registryAccess(), slot, "自己的普通背包（服务器同步已确认）");
+                    var item = StackCodec.snapshot(original, mc.level.registryAccess(), slot, EditorI18n.tr("cadeditor.message.editorclient.9d1dbddcd3"));
                     baseline = EditorSessions.fingerprint(original, mc.level.registryAccess());
                     var result = request("apply", id);
                     result.addProperty("status", "saved");
@@ -377,7 +383,7 @@ public final class EditorClient  {
                 } else {
                     EditorWriteLog.warning("client.command.unconfirmed", id, traceContext() + elapsed() + " outcome=" + outcome);
                     pending = null;
-                    reject(id, "未能确认写回结果（可能权限不足、条件不符、目标改变或连接中断）；请关闭后重读。草稿已保留，不会自动重发", "result_unknown");
+                    reject(id, EditorI18n.tr("cadeditor.message.editorclient.fd58058091"), "result_unknown");
                 }
             });
         }
@@ -400,13 +406,13 @@ public final class EditorClient  {
         if (usesGenericTimeout(commandSession != null, opening, pending, System.nanoTime(), deadline)) {
             if (opening != null) {
                 EditorWriteLog.warning("client.open.timeout", opening, traceContext() + " timeout_ms=10000");
-                opening = null; message("服务器读取物品超时，请重新打开");
+                opening = null; message(EditorI18n.tr("cadeditor.message.editorclient.1bfe6cc818"));
             }
             if (pending != null) {
                 EditorWriteLog.warning("client.apply.timeout", pending, traceContext() + elapsed()
                         + " outcome=unknown permission_denial_not_proven=true");
                 String id = pending; pending = null;
-                reject(id, "未收到服务器确认，结果未知；草稿已保留。请关闭后重读物品，勿重复提交", "request_timeout");
+                reject(id, EditorI18n.tr("cadeditor.message.editorclient.b5a4a694a5"), "request_timeout");
             }
         }
     }
@@ -432,7 +438,7 @@ public final class EditorClient  {
                 EditorWriteLog.warning("client.command.document_stale", commandSession.requestId(), traceContext());
                 commandPage.notified = true;
                 var state = new JsonObject(); state.addProperty("stale", true);
-                state.addProperty("reason", "页面已重载，旧物品不能继续写回。请关闭后重新读取物品；草稿已保留，上一笔结果请核对背包");
+                state.addProperty("reason", EditorI18n.tr("cadeditor.message.editorclient.b88115adf6"));
                 screen.driver().patch("inventory_session", state);
             }
         }
@@ -465,7 +471,7 @@ public final class EditorClient  {
         result.addProperty("status", "rejected");
         result.addProperty("requestId", requestId);
         result.addProperty("code", code);
-        result.addProperty("reason", reason == null ? "物品修改失败" : reason);
+        result.addProperty("reason", reason == null ? EditorI18n.tr("cadeditor.message.editorclient.728ba576db") : reason);
         if (screen != null) screen.driver().patch("result", result); else message(reason);
     }
     private static JsonObject request(String op, String requestId) {
@@ -497,6 +503,6 @@ public final class EditorClient  {
         return stack == null ? "item=none" : "item=" + net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()) + " count=" + stack.getCount();
     }
     private static void message(String text) {
-        EditorToast.show(EditorToast.Level.ERROR, text == null ? "无法打开物品工坊" : text);
+        EditorToast.show(EditorToast.Level.ERROR, text == null ? EditorI18n.tr("cadeditor.message.editorclient.3ce26dbcac") : text);
     }
 }

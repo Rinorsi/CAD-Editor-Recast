@@ -21,6 +21,15 @@ tasks.withType(JavaCompile).configureEach {
     options.compilerArgs.addAll(['-Xlint:deprecation', '-Xlint:unchecked'])
 }
 processResources {
+    if (rootProject.tasks.findByName('checkEditorI18n') == null) {
+        rootProject.tasks.register('checkEditorI18n', Exec) {
+            workingDir rootProject.projectDir
+            commandLine 'node', rootProject.file('tools/i18n-sync.cjs').absolutePath, '--check'
+            inputs.file(rootProject.file('tools/i18n-vanilla-en.json'))
+            inputs.files(rootProject.fileTree('common/src/main/resources/assets/cadeditor/lang'), rootProject.file('tools/i18n-data-fields.json'), rootProject.file('tools/i18n-sync.cjs'), rootProject.file('common/src/main/resources/assets/cadeditor/ui/js/i18n-catalogs.js'), rootProject.file('common/src/main/resources/assets/cadeditor/ui/js/data.js'))
+        }
+    }
+    dependsOn rootProject.tasks.named('checkEditorI18n')
     from(rootProject.file('CHANGELOG.md')) { into 'assets/cadeditor' }
     def properties = [version: project.version, modrinth_id: providers.gradleProperty('modrinth_id').getOrElse(''), curseforge_id: providers.gradleProperty('curseforge_id').getOrElse(''), minecraft_version: minecraft_version, minecraft_version_range: minecraft_version_range,
         fabric_minecraft_version: fabric_minecraft_version, fabric_loader_version: fabric_loader_version,

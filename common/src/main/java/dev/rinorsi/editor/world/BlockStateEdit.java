@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.world;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.*;
 import dev.rinorsi.editor.EditorSessions;
 import net.minecraft.nbt.*;
@@ -31,12 +33,12 @@ public final class BlockStateEdit {
         BlockState next = before;
         for (var entry : edits.entrySet()) {
             var property = before.getBlock().getStateDefinition().getProperty(entry.getKey());
-            if (property == null) throw new EditorSessions.Failure("invalid_block_state", "未知方块属性：" + entry.getKey());
-            if (!entry.getValue().isJsonPrimitive()) throw new EditorSessions.Failure("invalid_block_state", "属性必须为标量：" + entry.getKey());
+            if (property == null) throw new EditorSessions.Failure("invalid_block_state", EditorI18n.tr("cadeditor.message.blockstateedit.9cef7fcb5d", (entry.getKey())));
+            if (!entry.getValue().isJsonPrimitive()) throw new EditorSessions.Failure("invalid_block_state", EditorI18n.tr("cadeditor.message.blockstateedit.ed7c1fb77d", (entry.getKey())));
             next = set(next, property, entry.getValue().getAsString());
         }
         // StateDefinition enumerates legal states; environmental survival is deliberately not claimed.
-        if (!before.getBlock().getStateDefinition().getPossibleStates().contains(next)) throw new EditorSessions.Failure("invalid_block_state", "方块属性组合无效");
+        if (!before.getBlock().getStateDefinition().getPossibleStates().contains(next)) throw new EditorSessions.Failure("invalid_block_state", EditorI18n.tr("cadeditor.message.blockstateedit.68d0d84576"));
         return next;
     }
     /** Vanilla command modes are distinct blocks, not a StateDefinition property. */
@@ -44,7 +46,7 @@ public final class BlockStateEdit {
         var key=net.minecraft.resources.Identifier.tryParse(id);
         var block=key == null ? null : net.minecraft.core.registries.BuiltInRegistries.BLOCK.getOptional(key).orElse(null);
         if(!(before.getBlock() instanceof net.minecraft.world.level.block.CommandBlock) || !(block instanceof net.minecraft.world.level.block.CommandBlock))
-            throw new EditorSessions.Failure("invalid_block_state","block_type 仅接受实时注册表中的命令方块模式");
+            throw new EditorSessions.Failure("invalid_block_state",EditorI18n.tr("cadeditor.message.blockstateedit.60c695e4f6"));
         var shared=new JsonObject();var old=values(before);
         for(var property:block.getStateDefinition().getProperties())if(old.has(property.getName()))shared.add(property.getName(),old.get(property.getName()));
         return prepare(block.defaultBlockState(),shared);
@@ -54,7 +56,7 @@ public final class BlockStateEdit {
     }
     private static <T extends Comparable<T>> BlockState set(BlockState state, Property<T> property, String value) {
         var parsed = property.getValue(value);
-        if (parsed.isEmpty()) throw new EditorSessions.Failure("invalid_block_state", "属性 " + property.getName() + " 不接受 " + value + "；允许值：" + property.getPossibleValues());
+        if (parsed.isEmpty()) throw new EditorSessions.Failure("invalid_block_state", EditorI18n.tr("cadeditor.message.blockstateedit.22377b8199", (property.getName()), (value), (property.getPossibleValues())));
         return state.setValue(property, parsed.get());
     }
     public static CompoundTag tag(BlockState state) {
@@ -64,6 +66,6 @@ public final class BlockStateEdit {
     public static JsonObject json(CompoundTag tag) { var result = new JsonObject(); tag.keySet().forEach(k -> result.addProperty(k, tag.getString(k).orElseThrow())); return result; }
     public static int flags(boolean updateNeighbors) { return updateNeighbors ? 3 : 18; }
     public static void requireApplied(BlockState requested,BlockState actual) {
-        if(!requested.equals(actual))throw new EditorSessions.Failure("invalid_block_state","邻居更新未保留请求状态；实际状态："+values(actual)+"；请检查支撑与邻居条件，或关闭邻居更新");
+        if(!requested.equals(actual))throw new EditorSessions.Failure("invalid_block_state",EditorI18n.tr("cadeditor.message.blockstateedit.f110d90f42", (values(actual))));
     }
 }

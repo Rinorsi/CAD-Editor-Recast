@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.vault;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.*;
 import dev.rinorsi.editor.registry.search.Pinyin;
 import java.io.*;
@@ -89,7 +91,7 @@ public final class VaultStore implements AutoCloseable {
               StandardOpenOption.CREATE,
               StandardOpenOption.WRITE);
       fileLock = lockChannel.tryLock();
-      if (fileLock == null) throw new IOException("另一个Minecraft实例占用保险库");
+      if (fileLock == null) throw new IOException(EditorI18n.tr("cadeditor.message.vaultstore.138d7f3eb3"));
       lockUnavailable = false;
     } catch (IOException | java.nio.channels.OverlappingFileLockException failure) {
       lockUnavailable = true;
@@ -115,7 +117,7 @@ public final class VaultStore implements AutoCloseable {
       try {
         if (Files.size(path) != Files.size(legacy) || Files.mismatch(path, legacy) != -1)
           System.getLogger(VaultStore.class.getName())
-              .log(System.Logger.Level.INFO, "全局保险库与旧库内容不同，未自动合并；可使用merge-legacy.ps1");
+              .log(System.Logger.Level.INFO, EditorI18n.tr("cadeditor.message.vaultstore.87d7b12b1b"));
       } catch (IOException ignored) {
       }
       return;
@@ -125,13 +127,13 @@ public final class VaultStore implements AutoCloseable {
       readFile(legacy);
       migration = "legacy";
       System.getLogger(VaultStore.class.getName())
-          .log(System.Logger.Level.INFO, "已迁移当前旧保险库到全局目录，旧文件保留");
+          .log(System.Logger.Level.INFO, EditorI18n.tr("cadeditor.message.vaultstore.edc76d5417"));
       changed();
     } catch (IOException | RuntimeException invalid) {
       entries.clear();
       warning = "MIGRATION_FAILED";
       System.getLogger(VaultStore.class.getName())
-          .log(System.Logger.Level.WARNING, "旧保险库迁移失败，原文件未修改：" + invalid);
+          .log(System.Logger.Level.WARNING, EditorI18n.tr("cadeditor.message.vaultstore.6fcd2bd5bc", (invalid)));
     }
   }
 
@@ -161,21 +163,21 @@ public final class VaultStore implements AutoCloseable {
 
   public static String text(JsonObject o, String key, String fallback, int max) {
     if (!o.has(key)) {
-      if (fallback.length() > max) throw fail("BAD_REQUEST", key + " 默认值超出长度限制");
+      if (fallback.length() > max) throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.628ad5ec3c", (key)));
       return fallback;
     }
     JsonElement v = o.get(key);
     if (!v.isJsonPrimitive() || !v.getAsJsonPrimitive().isString())
-      throw fail("BAD_REQUEST", key + " 必须为文本");
+      throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.0b7ac59f71", (key)));
     String s = v.getAsString();
     if (s.length() > max || s.chars().anyMatch(c -> c == 0))
-      throw fail("BAD_REQUEST", key + " 超出长度限制");
+      throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.cbc1f56f5d", (key)));
     for (int i = 0; i < s.length(); i++) {
       char c = s.charAt(i);
       if (Character.isHighSurrogate(c)) {
         if (++i >= s.length() || !Character.isLowSurrogate(s.charAt(i)))
-          throw fail("BAD_REQUEST", "无效 Unicode");
-      } else if (Character.isLowSurrogate(c)) throw fail("BAD_REQUEST", "无效 Unicode");
+          throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.4ad3f235b0"));
+      } else if (Character.isLowSurrogate(c)) throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.4ad3f235b0"));
     }
     return s;
   }
@@ -190,7 +192,7 @@ public final class VaultStore implements AutoCloseable {
       if (n < min || n > max) throw new ArithmeticException();
       return n;
     } catch (RuntimeException e) {
-      throw fail("BAD_REQUEST", key + " 必须为 " + min + " 到 " + max + " 的整数");
+      throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.542f084381", (key), (min), (max)));
     }
   }
 
@@ -198,7 +200,7 @@ public final class VaultStore implements AutoCloseable {
     if (!o.has(key)) return false;
     var v = o.get(key);
     if (!v.isJsonPrimitive() || !v.getAsJsonPrimitive().isBoolean())
-      throw fail("BAD_REQUEST", key + " 必须为布尔值");
+      throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.3551d97e21", (key)));
     return v.getAsBoolean();
   }
 
@@ -207,7 +209,7 @@ public final class VaultStore implements AutoCloseable {
       if (!UUID.fromString(id).toString().equals(id)) throw new IllegalArgumentException();
       return id;
     } catch (RuntimeException e) {
-      throw fail("BAD_ID", "无效的保险库条目 ID");
+      throw fail("BAD_ID", EditorI18n.tr("cadeditor.message.vaultstore.ff120c0b9c"));
     }
   }
 
@@ -215,13 +217,13 @@ public final class VaultStore implements AutoCloseable {
     JsonArray out = new JsonArray();
     if (!o.has("tags")) return out;
     var v = o.get("tags");
-    if (!v.isJsonArray() || v.getAsJsonArray().size() > 8) throw fail("BAD_REQUEST", "最多8个标签");
+    if (!v.isJsonArray() || v.getAsJsonArray().size() > 8) throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.f6dac019ad"));
     Set<String> seen = new HashSet<>();
     for (var t : v.getAsJsonArray()) {
       if (!t.isJsonPrimitive() || !t.getAsJsonPrimitive().isString())
-        throw fail("BAD_REQUEST", "标签必须为文本");
+        throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.645cc31217"));
       String s = t.getAsString().strip();
-      if (s.isEmpty() || s.length() > 24) throw fail("BAD_REQUEST", "标签长度为1到24");
+      if (s.isEmpty() || s.length() > 24) throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.78006508d8"));
       if (seen.add(s)) out.add(s);
     }
     return out;
@@ -229,11 +231,11 @@ public final class VaultStore implements AutoCloseable {
 
   private static List<String> ids(JsonObject o, int max) {
     if (!o.has("ids") || !o.get("ids").isJsonArray() || o.getAsJsonArray("ids").size() > max)
-      throw fail("BAD_REQUEST", "ids 数量无效");
+      throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.754c1b3651"));
     List<String> out = new ArrayList<>();
     for (var id : o.getAsJsonArray("ids")) {
       if (!id.isJsonPrimitive() || !id.getAsJsonPrimitive().isString())
-        throw fail("BAD_ID", "ID 必须为文本");
+        throw fail("BAD_ID", EditorI18n.tr("cadeditor.message.vaultstore.3d53ce7629"));
       String s = uuid(id.getAsString());
       if (!out.contains(s)) out.add(s);
     }
@@ -241,25 +243,25 @@ public final class VaultStore implements AutoCloseable {
   }
 
   private static JsonObject object(JsonObject o, String key) {
-    if (!o.has(key) || !o.get(key).isJsonObject()) throw fail("BAD_REQUEST", key + " 必须为对象");
+    if (!o.has(key) || !o.get(key).isJsonObject()) throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.2c8bae988b", (key)));
     return o.getAsJsonObject(key);
   }
 
   private JsonObject require(String id) {
     JsonObject e = entries.get(uuid(id));
-    if (e == null) throw fail("NOT_FOUND", "保险库条目不存在");
+    if (e == null) throw fail("NOT_FOUND", EditorI18n.tr("cadeditor.message.vaultstore.1059eb982f"));
     return e;
   }
 
   public synchronized JsonObject stack(String id) {
     JsonObject e = require(id);
-    if (!kind(e).equals("item")) throw fail("wrong_kind", "该条目不能作为物品取出");
+    if (!kind(e).equals("item")) throw fail("wrong_kind", EditorI18n.tr("cadeditor.message.vaultstore.b1ebb513fb"));
     return object(e, "stack").deepCopy();
   }
 
   /** Native host only: no page transport size cap, still bounded by the entry quota. */
   public synchronized JsonObject playerPreset(String id) {
-    var e=require(id);if(!kind(e).equals("player_preset"))throw fail("wrong_kind","该条目不是玩家预设");
+    var e=require(id);if(!kind(e).equals("player_preset"))throw fail("wrong_kind",EditorI18n.tr("cadeditor.message.vaultstore.046b580717"));
     var out=e.deepCopy();out.addProperty("templateRevision",PlayerPresetHash.template(object(e,"template")));return out;
   }
 
@@ -273,17 +275,17 @@ public final class VaultStore implements AutoCloseable {
   }
 
   private void checkQuota(Collection<JsonObject> values) {
-    if (values.size() > MAX_ENTRIES) throw fail("ENTRY_LIMIT", "保险库最多2000个条目");
+    if (values.size() > MAX_ENTRIES) throw fail("ENTRY_LIMIT", EditorI18n.tr("cadeditor.message.vaultstore.f621891f80"));
     for (var e : values)
-      if (bytes(e.toString()) > MAX_ENTRY_BYTES) throw fail("ENTRY_TOO_LARGE", "单个条目最多8MiB");
+      if (bytes(e.toString()) > MAX_ENTRY_BYTES) throw fail("ENTRY_TOO_LARGE", EditorI18n.tr("cadeditor.message.vaultstore.097a04e33f"));
     if (bytes(envelope(values).toString()) > MAX_FILE_BYTES)
-      throw fail("FILE_LIMIT", "保险库文件最多64MiB");
+      throw fail("FILE_LIMIT", EditorI18n.tr("cadeditor.message.vaultstore.9be2993de9"));
   }
 
   private void put(JsonObject e) {
     if (readOnly)
       throw fail(
-          lockUnavailable ? "STORAGE_LOCKED" : "STORAGE_READ_ONLY", "保险库只读：其他实例占用、目录权限不足或文件版本较新");
+          lockUnavailable ? "STORAGE_LOCKED" : "STORAGE_READ_ONLY", EditorI18n.tr("cadeditor.message.vaultstore.a7a91c5f76"));
     LinkedHashMap<String, JsonObject> candidate = new LinkedHashMap<>(entries);
     candidate.put(e.get("id").getAsString(), e);
     checkQuota(candidate.values());
@@ -350,18 +352,18 @@ public final class VaultStore implements AutoCloseable {
   }
 
   private void readFile(Path source) throws IOException {
-    if (Files.size(source) > MAX_FILE_BYTES) throw fail("FILE_LIMIT", "文件过大");
+    if (Files.size(source) > MAX_FILE_BYTES) throw fail("FILE_LIMIT", EditorI18n.tr("cadeditor.message.vaultstore.5bfcab76a6"));
     JsonObject root = parse(Files.readString(source));
     if (!Set.of(1, 2, 3).contains(integer(root, "version", 0, 0, Integer.MAX_VALUE)))
-      throw fail("SCHEMA_VERSION", "不支持的保险库文件版本");
+      throw fail("SCHEMA_VERSION", EditorI18n.tr("cadeditor.message.vaultstore.f544882a0d"));
     if (!root.has("entries") || !root.get("entries").isJsonArray())
-      throw fail("BAD_REQUEST", "缺少 entries");
+      throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.9e258925cf"));
     LinkedHashMap<String, JsonObject> read = new LinkedHashMap<>();
     for (var raw : root.getAsJsonArray("entries")) {
       JsonObject e = raw.getAsJsonObject().deepCopy();
       validateStored(e);
       String id = e.get("id").getAsString();
-      if (read.put(id, e) != null) throw fail("BAD_ID", "重复 ID");
+      if (read.put(id, e) != null) throw fail("BAD_ID", EditorI18n.tr("cadeditor.message.vaultstore.e77cfcb979"));
     }
     checkQuota(read.values());
     entries.clear();
@@ -371,7 +373,7 @@ public final class VaultStore implements AutoCloseable {
   private static void validateStored(JsonObject e) {
     for (String key :
         List.of("id", "name", "tags", "note", "created", "updated", "mcDataVersion", "modVersion"))
-      if (!e.has(key)) throw fail("BAD_REQUEST", "缺少条目字段：" + key);
+      if (!e.has(key)) throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.6db4002fbe", (key)));
     uuid(text(e, "id", "", 36));
     text(e, "name", "", 256);
     text(e, "note", "", 200);
@@ -382,7 +384,7 @@ public final class VaultStore implements AutoCloseable {
             || !e.getAsJsonPrimitive(k).isNumber()
             || e.get(k).getAsBigDecimal().longValueExact() < 0) throw new ArithmeticException();
       } catch (RuntimeException bad) {
-        throw fail("BAD_REQUEST", "时间戳必须为非负整数");
+        throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.2c1ccc2d6f"));
       }
     e.addProperty("kind", kind(e));
     text(e, "modVersion", "", 128);
@@ -400,9 +402,9 @@ public final class VaultStore implements AutoCloseable {
       return;
     }
     JsonObject stack = object(e, "stack");
-    if (!stack.has("count")) throw fail("BAD_REQUEST", "缺少stack.count");
+    if (!stack.has("count")) throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.cadab02b10"));
     if (!text(stack, "id", "", 256).matches("[a-z0-9_.-]+:[a-z0-9_./-]+"))
-      throw fail("BAD_REQUEST", "无效物品 ID");
+      throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.37b0a6f2fa"));
     integer(stack, "count", 1, 1, 99);
     object(stack, "comps");
     object(stack, "removed");
@@ -411,13 +413,13 @@ public final class VaultStore implements AutoCloseable {
         for (var entry : object(stack, key).entrySet())
           if (!entry.getValue().isJsonPrimitive()
               || !entry.getValue().getAsJsonPrimitive().isString())
-            throw fail("BAD_REQUEST", "组件格式/SNBT必须为文本");
+            throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.e2b9941a88"));
     text(e, "modVersion", "", 128);
     integer(e, "mcDataVersion", 0, 0, Integer.MAX_VALUE);
   }
 
   public static JsonObject parse(String text) {
-    if (bytes(text) > MAX_FILE_BYTES) throw fail("FILE_LIMIT", "导入最多64MiB");
+    if (bytes(text) > MAX_FILE_BYTES) throw fail("FILE_LIMIT", EditorI18n.tr("cadeditor.message.vaultstore.ae49dd16e2"));
     int depth = 0;
     boolean quote = false, escape = false;
     for (char c : text.toCharArray()) {
@@ -427,17 +429,17 @@ public final class VaultStore implements AutoCloseable {
         else if (c == '"') quote = false;
       } else if (c == '"') quote = true;
       else if (c == '{' || c == '[') {
-        if (++depth > 96) throw fail("BAD_REQUEST", "JSON 嵌套过深");
+        if (++depth > 96) throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.a3270afdec"));
       } else if (c == '}' || c == ']') depth--;
     }
     try (var reader = new com.google.gson.stream.JsonReader(new StringReader(text))) {
       reader.setStrictness(Strictness.STRICT);
       var root = JsonParser.parseReader(reader);
       if (reader.peek() != com.google.gson.stream.JsonToken.END_DOCUMENT || !root.isJsonObject())
-        throw fail("BAD_REQUEST", "JSON 必须为对象");
+        throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.3058ee1b2d"));
       return root.getAsJsonObject();
     } catch (IOException | JsonParseException e) {
-      throw fail("BAD_REQUEST", "JSON 无效");
+      throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.65bc7b8746"));
     }
   }
 
@@ -455,7 +457,7 @@ public final class VaultStore implements AutoCloseable {
     Path temp = null;
     try {
       if (lockUnavailable && !readOnly) acquireLock();
-      if (lockUnavailable) throw new IOException("无法取得保险库独占文件锁");
+      if (lockUnavailable) throw new IOException(EditorI18n.tr("cadeditor.message.vaultstore.7e6fbe35d4"));
       Files.createDirectories(path.getParent());
       temp = Files.createTempFile(path.getParent(), "vault-", ".tmp");
       byte[] encoded = snapshot.toString().getBytes(StandardCharsets.UTF_8);
@@ -487,7 +489,7 @@ public final class VaultStore implements AutoCloseable {
       synchronized (this) {
         if (writeError.isEmpty())
           System.getLogger(VaultStore.class.getName())
-              .log(System.Logger.Level.WARNING, "WRITE_FAILED：保险库尚未落盘，保留内存数据并重试：" + e);
+              .log(System.Logger.Level.WARNING, EditorI18n.tr("cadeditor.message.vaultstore.6db89ba46a", (e)));
         writeError = "WRITE_FAILED";
         if (!writer.isShutdown()) pending = writer.schedule(this::write, 2, TimeUnit.SECONDS);
       }
@@ -523,7 +525,7 @@ public final class VaultStore implements AutoCloseable {
         writeError = e instanceof TimeoutException ? "FLUSH_TIMEOUT" : "WRITE_FAILED";
       }
       System.getLogger(VaultStore.class.getName())
-          .log(System.Logger.Level.WARNING, "保险库退出落盘失败：" + e);
+          .log(System.Logger.Level.WARNING, EditorI18n.tr("cadeditor.message.vaultstore.0fdb7ce051", (e)));
       return false;
     }
     synchronized (this) {
@@ -565,7 +567,7 @@ public final class VaultStore implements AutoCloseable {
       if (lockChannel != null) lockChannel.close();
     } catch (IOException e) {
       System.getLogger(VaultStore.class.getName())
-          .log(System.Logger.Level.WARNING, "保险库文件锁关闭失败：" + e);
+          .log(System.Logger.Level.WARNING, EditorI18n.tr("cadeditor.message.vaultstore.be169d1567", (e)));
     }
   }
 
@@ -573,12 +575,12 @@ public final class VaultStore implements AutoCloseable {
     try {
       return future.get(timeoutMs, TimeUnit.MILLISECONDS);
     } catch (TimeoutException e) {
-      throw fail("NOT_READY", "保险库仍在加载，请在250毫秒后重试；当前结果不代表空库");
+      throw fail("NOT_READY", EditorI18n.tr("cadeditor.message.vaultstore.3d06aad3e1"));
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      throw fail("NOT_READY", "保险库加载等待被中断，请重试");
+      throw fail("NOT_READY", EditorI18n.tr("cadeditor.message.vaultstore.37dab3b4f3"));
     } catch (ExecutionException e) {
-      throw fail("STORAGE_FAILED", "保险库加载失败：" + reason(e));
+      throw fail("STORAGE_FAILED", EditorI18n.tr("cadeditor.message.vaultstore.421ae2b170", (reason(e))));
     }
   }
 
@@ -630,7 +632,7 @@ public final class VaultStore implements AutoCloseable {
 
   private static String kind(JsonObject e) {
     String k = text(e, "kind", "item", 16);
-    if (!Set.of("item", "entity", "block", "player_preset").contains(k)) throw fail("BAD_REQUEST", "未知保险库类别");
+    if (!Set.of("item", "entity", "block", "player_preset").contains(k)) throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.be49095cc5"));
     return k;
   }
 
@@ -782,7 +784,7 @@ public final class VaultStore implements AutoCloseable {
     JsonObject template = VaultTemplates.capture(kind, request);
     var e = new JsonObject();
     e.addProperty("id", UUID.randomUUID().toString()); e.addProperty("kind", kind); e.add("template", template);
-    String fallback = kind.equals("block") ? template.get("block").getAsString() : "玩家预设";
+    String fallback = kind.equals("block") ? template.get("block").getAsString() : EditorI18n.tr("cadeditor.ui.vault.d4f6dca6d8");
     String name = text(request, "name", fallback, 256).strip();
     e.addProperty("name", uniqueName(name.isEmpty() ? fallback : name, ""));
     e.add("tags", tags(request)); e.addProperty("note", text(request, "note", "", 200));
@@ -793,7 +795,7 @@ public final class VaultStore implements AutoCloseable {
   }
 
   private JsonObject hasBackup(JsonObject request, Validator validator) {
-    if (!kind(request).equals("player_preset")) throw fail("wrong_kind", "备份检查只支持玩家预设");
+    if (!kind(request).equals("player_preset")) throw fail("wrong_kind", EditorI18n.tr("cadeditor.message.vaultstore.25d5abb27d"));
     var requested = VaultTemplates.backupTemplate(request).getAsJsonObject("sections");
     var wanted = new TreeMap<String,String>();
     for (var section : requested.entrySet()) wanted.put(section.getKey(), PlayerPresetHash.section(section.getKey(), section.getValue(), validator));
@@ -835,7 +837,7 @@ public final class VaultStore implements AutoCloseable {
     if (VaultTemplates.supported(kind(request))) return saveTemplate(request, validator);
     if (kind(request).equals("entity")) return saveEntity(request, validator);
     if (bytes(object(request, "stack").toString()) > MAX_ENTRY_BYTES)
-      throw fail("ENTRY_TOO_LARGE", "单个条目最多8MiB");
+      throw fail("ENTRY_TOO_LARGE", EditorI18n.tr("cadeditor.message.vaultstore.097a04e33f"));
     Validated valid = validate(validator, object(request, "stack"));
     String digest = hash(valid.stack());
     if (!bool(request, "force"))
@@ -875,7 +877,7 @@ public final class VaultStore implements AutoCloseable {
     if (readOnly
         && Set.of("save", "update", "delete", "restore", "duplicate", "import").contains(op))
       throw fail(
-          lockUnavailable ? "STORAGE_LOCKED" : "STORAGE_READ_ONLY", "保险库只读：其他实例占用、目录权限不足或文件版本较新");
+          lockUnavailable ? "STORAGE_LOCKED" : "STORAGE_READ_ONLY", EditorI18n.tr("cadeditor.message.vaultstore.a7a91c5f76"));
     switch (op) {
       case "save" -> out = save(request, validator);
       case "has_backup" -> out = hasBackup(request, validator);
@@ -883,13 +885,13 @@ public final class VaultStore implements AutoCloseable {
       case "list" -> {
         String filter = text(request, "kind", "item", 16);
         if (!Set.of("item", "entity", "block", "player_preset", "all").contains(filter))
-          throw fail("BAD_REQUEST", "未知保险库类别");
+          throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.be49095cc5"));
         String query = text(request, "query", "", 128).toLowerCase(Locale.ROOT).strip();
         JsonArray wanted = tags(request);
         int offset = integer(request, "offset", 0, 0, MAX_ENTRIES),
             limit = integer(request, "limit", 40, 1, 100);
         String sort = text(request, "sort", "recent", 16);
-        if (!Set.of("recent", "name", "item").contains(sort)) throw fail("BAD_REQUEST", "sort 无效");
+        if (!Set.of("recent", "name", "item").contains(sort)) throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.253657ab22"));
         List<JsonObject> rows = new ArrayList<>();
         for (var e : entries.values()) {
           if (!filter.equals("all") && !filter.equals(kind(e))) continue;
@@ -954,19 +956,19 @@ public final class VaultStore implements AutoCloseable {
         out.add("entries", found);
         out.add("missing", missing);
         if (out.toString().length() > 22000)
-          throw fail("RESPONSE_LIMIT", "完整条目过大，请使用 export 分页文本读取");
+          throw fail("RESPONSE_LIMIT", EditorI18n.tr("cadeditor.message.vaultstore.98d127966e"));
       }
       case "update" -> {
         JsonObject e = require(text(request, "id", "", 36)).deepCopy();
         if(request.has("template")) {
-          if(!kind(e).equals("player_preset"))throw fail("wrong_kind","仅玩家预设支持模板编辑");
-          if(!PlayerPresetHash.template(object(e,"template")).equals(text(request,"expectedTemplateRevision","",64)))throw fail("target_changed","预设内容已变化，请重新打开并比较草稿");
+          if(!kind(e).equals("player_preset"))throw fail("wrong_kind",EditorI18n.tr("cadeditor.message.vaultstore.9a27621683"));
+          if(!PlayerPresetHash.template(object(e,"template")).equals(text(request,"expectedTemplateRevision","",64)))throw fail("target_changed",EditorI18n.tr("cadeditor.message.vaultstore.74294f8233"));
           e.add("template",PlayerPresetValidation.validate(object(request,"template"),validator));
           out.addProperty("templateRevision",PlayerPresetHash.template(object(e,"template")));
         }
         if (request.has("name")) {
           String n = text(request, "name", "", 256).strip();
-          if (n.isEmpty()) throw fail("BAD_REQUEST", "名称不能为空");
+          if (n.isEmpty()) throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.e83654164a"));
           e.addProperty("name", VaultTemplates.supported(kind(e)) ? uniqueName(n, e.get("id").getAsString()) : n);
         }
         if (request.has("tags")) e.add("tags", tags(request));
@@ -991,11 +993,11 @@ public final class VaultStore implements AutoCloseable {
       case "restore" -> {
         if (undoToken == null
             || !undoToken.equals(text(request, "token", "", 36))
-            || clock.getAsLong() >= undoUntil) throw fail("UNDO_EXPIRED", "撤销已过期");
+            || clock.getAsLong() >= undoUntil) throw fail("UNDO_EXPIRED", EditorI18n.tr("cadeditor.message.vaultstore.de172350f6"));
         var candidate = new LinkedHashMap<>(entries);
         for (var e : deleted) {
           String id = e.get("id").getAsString();
-          if (candidate.containsKey(id)) throw fail("ID_CONFLICT", "撤销条目 ID 已被占用");
+          if (candidate.containsKey(id)) throw fail("ID_CONFLICT", EditorI18n.tr("cadeditor.message.vaultstore.37db9fff4e"));
           candidate.put(id, e);
         }
         checkQuota(candidate.values());
@@ -1020,11 +1022,11 @@ public final class VaultStore implements AutoCloseable {
         JsonObject root =
             request.has("text") ? parse(text(request, "text", "", MAX_FILE_BYTES)) : request;
         if (!Set.of(1, 2, 3).contains(integer(root, "version", 1, 1, Integer.MAX_VALUE)))
-          throw fail("SCHEMA_VERSION", "导入版本不支持");
+          throw fail("SCHEMA_VERSION", EditorI18n.tr("cadeditor.message.vaultstore.a7b54929ec"));
         if (!root.has("entries") || !root.get("entries").isJsonArray())
-          throw fail("BAD_REQUEST", "缺少 entries");
+          throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.9e258925cf"));
         JsonArray input = root.getAsJsonArray("entries");
-        if (input.size() > MAX_ENTRIES) throw fail("ENTRY_LIMIT", "导入最多2000项");
+        if (input.size() > MAX_ENTRIES) throw fail("ENTRY_LIMIT", EditorI18n.tr("cadeditor.message.vaultstore.8b283bea4c"));
         int offset = integer(request, "offset", 0, 0, MAX_ENTRIES),
             limit = integer(request, "limit", 32, 1, 32);
         JsonArray results = new JsonArray();
@@ -1044,7 +1046,7 @@ public final class VaultStore implements AutoCloseable {
             }
             validateStored(e);
             String id = e.get("id").getAsString();
-            if (entries.containsKey(id)) throw fail("ID_CONFLICT", "ID 已存在");
+            if (entries.containsKey(id)) throw fail("ID_CONFLICT", EditorI18n.tr("cadeditor.message.vaultstore.dc227e500f"));
             // Preserve incompatible stacks verbatim; importing never silently migrates them.
             try {
               if (kind(e).equals("item")) {
@@ -1102,7 +1104,7 @@ public final class VaultStore implements AutoCloseable {
             && offset < all.length()
             && Character.isLowSurrogate(all.charAt(offset))
             && Character.isHighSurrogate(all.charAt(offset - 1)))
-          throw fail("BAD_REQUEST", "offset不能切开Unicode字符");
+          throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.e052c69f18"));
         int end = Math.min(all.length(), offset + limit);
         if (end < all.length()
             && end > 0
@@ -1155,7 +1157,7 @@ public final class VaultStore implements AutoCloseable {
         out.addProperty("maxEntryBytes", MAX_ENTRY_BYTES);
         out.addProperty("maxFileBytes", MAX_FILE_BYTES);
       }
-      default -> throw fail("UNKNOWN_OP", "未知的保险库操作");
+      default -> throw fail("UNKNOWN_OP", EditorI18n.tr("cadeditor.message.vaultstore.041ab6a48c"));
     }
     out.addProperty("ok", true);
     out.addProperty("version", 1);
@@ -1166,7 +1168,7 @@ public final class VaultStore implements AutoCloseable {
     out.addProperty("readOnly", readOnly);
     if (!warning.isEmpty()) out.addProperty("warning", warning);
     if (!writeError.isEmpty()) out.addProperty("storageError", writeError);
-    if (out.toString().length() > RESPONSE_CHARS) throw fail("RESPONSE_LIMIT", "响应超过8Mi字符");
+    if (out.toString().length() > RESPONSE_CHARS) throw fail("RESPONSE_LIMIT", EditorI18n.tr("cadeditor.message.vaultstore.1060301f07"));
     return out;
   }
 
@@ -1176,7 +1178,7 @@ public final class VaultStore implements AutoCloseable {
     todo.add(new Node(value, 0));
     while (!todo.isEmpty()) {
       Node n = todo.removeLast();
-      if (n.depth() > 96) throw fail("BAD_REQUEST", "JSON 嵌套过深");
+      if (n.depth() > 96) throw fail("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultstore.a3270afdec"));
       if (n.value().isJsonObject())
         n.value()
             .getAsJsonObject()

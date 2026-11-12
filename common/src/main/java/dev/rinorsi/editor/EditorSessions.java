@@ -54,7 +54,7 @@ public final class EditorSessions {
         State state = sessions.get(player);
         if (baseline == null) {
             if (state == null || !sameSlot(state.slot, slot))
-                fail("session_lost", "缺少原物品基线，无法安全恢复编辑会话；草稿已保留，请更新客户端后重试");
+                fail("session_lost", EditorI18n.tr("cadeditor.message.editorsessions.a9395e91b4"));
         } else {
             // Always validate the caller's baseline, even when another screen replaced the cache.
             requireBaseline(baseline, current, registries, slot);
@@ -97,20 +97,19 @@ public final class EditorSessions {
                     default -> throw new IllegalArgumentException();
                 };
             } catch (RuntimeException e) {
-                fail("slot_invalid", "槽位信息无效；草稿已保留"); return null;
+                fail("slot_invalid", EditorI18n.tr("cadeditor.message.editormod.afc1cd076c")); return null;
             }
         }
     }
     public static void requireBaseline(String baseline, ItemStack current, RegistryAccess registries, JsonObject slot) {
         if (baseline == null || !baseline.matches("[0-9a-f]{64}"))
-            fail("session_lost", "缺少有效的原物品基线，无法安全恢复会话；草稿已保留");
+            fail("session_lost", EditorI18n.tr("cadeditor.message.editorsessions.0cc60b5de9"));
         if (current.isEmpty()) changed(slot);
         if (!baseline.equals(fingerprint(current, registries))) changed(slot);
     }
     static void changed(JsonObject slot) {
         var key = SlotKey.read(slot);
-        fail("item_changed", "物品在你编辑期间变了（" + (key.kind.equals("inventory") ? "玩家背包" : "容器")
-                + "槽位 " + key.index + "；无法判定修改者）；没有覆盖当前物品，草稿已保留");
+        fail("item_changed", EditorI18n.tr("cadeditor.message.editorsessions.7c39c9744e", ((key.kind.equals("inventory") ? EditorI18n.tr("cadeditor.message.editorsessions.f38b0d6142") : EditorI18n.tr("cadeditor.ui.pages.6d23f04b26"))), (key.index)));
     }
     /** Typed, canonical NBT fingerprint: retains long/array types lost by JSON snapshots. */
     public static String fingerprint(ItemStack stack, RegistryAccess registries) {

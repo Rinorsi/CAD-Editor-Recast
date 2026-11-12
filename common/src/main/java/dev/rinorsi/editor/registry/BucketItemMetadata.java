@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.registry;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import net.minecraft.core.component.DataComponentType;
@@ -74,7 +76,7 @@ final class BucketItemMetadata {
             out.add("bucket_fields", fieldsOut); out.add("bucket_components", components);
             out.addProperty("bucket_semantics", "Bucketable.loadDefaultDataFromBucketTag / species.loadFromBucketTag; variants via item components");
         } catch (ReflectiveOperationException | RuntimeException error) {
-            out.addProperty("bucket_metadata_error", "无法读取桶实体类型；使用物品栈原始数据：" + error.getClass().getSimpleName());
+            out.addProperty("bucket_metadata_error", EditorI18n.tr("cadeditor.message.bucketitemmetadata.284387c450", (error.getClass().getSimpleName())));
             dev.rinorsi.editor.EditorDiagnostics.failure("registry.bucket_metadata", BuiltInRegistries.ITEM.getKey(item).toString(), error);
         }
     }

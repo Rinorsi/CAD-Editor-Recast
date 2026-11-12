@@ -34,7 +34,7 @@ function stackUiName(st) {
 /* 「选择物品」按钮。cur 为 null / 空 = ＋ 选择物品（placeholder 可换字）；onClick 可省（调用方自己 activate） */
 function kItemBtn(cur, onClick, placeholder) {
   var empty = !cur || cur.empty || !cur.id;
-  var b = h('div', { class: 'k-btn' }, empty ? [uiIcon('plus', 12), h('span', { text: placeholder || '选择物品' })] : [stackUiIcon(cur, 22), stackUiName(cur)]);
+  var b = h('div', { class: 'k-btn' }, empty ? [uiIcon('plus', 12), h('span', { text: placeholder || I18n.t("cadeditor.ui.kit.662f204e9e") })] : [stackUiIcon(cur, 22), stackUiName(cur)]);
   if (onClick) activate(b, onClick);
   return b;
 }
@@ -44,13 +44,13 @@ function kSlotPaint(cell, st, title, o) {
   o = o || {};
   clear(cell);
   cell.classList.remove('fl', 'r-uncommon', 'r-rare', 'r-epic', 'r-ench');
-  if (!st || st.empty) { setTip(cell, title || '空格子'); return; }
+  if (!st || st.empty) { setTip(cell, title || I18n.t("cadeditor.ui.slots.e5f881178e")); return; }
   var icon = stackUiIcon(st, 26), native = icon.tagName && icon.tagName.toLowerCase() === 'item';
   if (native) { icon.style.width = '100%'; icon.style.height = '100%'; }
   cell.appendChild(icon);
   if (!native && (st.count || 1) > 1) cell.appendChild(h('span', { class: 'cnt', text: String(st.count) }));
   var marked = st.marked !== undefined ? st.marked : !!((st.comps && Object.keys(st.comps).length) || st.component_snbt);
-  if (marked) cell.appendChild(h('i', { class: 'mk', title: o.markTitle || '自定义组件' }));
+  if (marked) cell.appendChild(h('i', { class: 'mk', title: o.markTitle || I18n.t("cadeditor.ui.slots.51c4192c97") }));
   if (native) { cell.removeAttribute('title'); cell.removeAttribute('data-tip'); }
   else setTip(cell, ItemHistory.labelOf(stackUiDoc(st)) + ' × ' + (st.count || 1) + (title && !o.noSuffix ? '（' + title + '）' : ''));
 }
@@ -73,13 +73,13 @@ function kStackPop(anchor, cur, o) {
   if (header.children.length) box.appendChild(header);
   if (!empty) {
     var q = { min: 1, max: 99, noSlider: true, step: 1, onChange: function (v) { o.onCount(v); } };
-    if (!o.plain) { var ms = protoOf(cur.id).max_stack_size || 64; q.unit = '个'; q.warnMax = ms; q.warnWhy = '该物品原版最大堆叠 ' + ms; q.presets = [{ v: 1, label: '1' }, { v: 16, label: '16' }, { v: 64, label: '64' }]; }
-    box.appendChild(h('div', { class: 'k-stack-qty' }, [h('span', { class: 'k-sub', text: o.countLabel || '数量' }), kNumber(cur.count || 1, q).el]));
+    if (!o.plain) { var ms = protoOf(cur.id).max_stack_size || 64; q.unit = I18n.t("cadeditor.ui.cards3.3a116815bc"); q.warnMax = ms; q.warnWhy = I18n.t("cadeditor.ui.slots.59a6084c67", (ms)); q.presets = [{ v: 1, label: '1' }, { v: 16, label: '16' }, { v: 64, label: '64' }]; }
+    box.appendChild(h('div', { class: 'k-stack-qty' }, [h('span', { class: 'k-sub', text: o.countLabel || I18n.t("cadeditor.ui.pages.5e29d121dd") }), kNumber(cur.count || 1, q).el]));
     var tools = h('div', { class: 'k-stack-tools' });
-    if (o.pick !== false) tools.appendChild(kBtn('更换物品', choose, { icon: 'grid' }));
-    if (o.onEdit) tools.appendChild(kBtn('编辑物品', function () { kPopClose(); o.onEdit(); }, { icon: 'edit' }));
+    if (o.pick !== false) tools.appendChild(kBtn(I18n.t("cadeditor.ui.slots.2cf61f44db"), choose, { icon: 'grid' }));
+    if (o.onEdit) tools.appendChild(kBtn(I18n.t("cadeditor.ui.cards3.7f559289d4"), function () { kPopClose(); o.onEdit(); }, { icon: 'edit' }));
     tools.appendChild(h('div', { class: 'grow' }));
-    tools.appendChild(kBtn('清空', function () { o.onClear(); kPopClose(); }, { cls: 'dng', icon: 'trash', title: o.clearLabel || '清空这一格' }));
+    tools.appendChild(kBtn(I18n.t("cadeditor.ui.common.clear"), function () { o.onClear(); kPopClose(); }, { cls: 'dng', icon: 'trash', title: o.clearLabel || I18n.t("cadeditor.ui.slots.146689a14c") }));
     box.appendChild(tools);
   }
   var po = { width: empty ? 160 : (o.width || 320) };
@@ -94,7 +94,7 @@ function kWireStackPop(cell, cur, set, edit) {
     onEdit: function () {
       if (edit) { edit(cur); return; }
       var valid = nestedDraftGuard();
-      openNestedItem(cur, { title: '编辑物品', valid: valid, commit: set, render: function () { if (weActive()) weRedrawBody(); } });
+      openNestedItem(cur, { title: I18n.t("cadeditor.ui.cards3.7f559289d4"), valid: valid, commit: set, render: function () { if (weActive()) weRedrawBody(); } });
     },
     onPick: function (id) { set({ id: fullId(id), count: empty ? 1 : (cur.count || 1), comps: {}, removed: {} }); },
     onStack: function (st) { var s2 = clone(st); delete s2.slot; delete s2.label; set(s2); },
@@ -116,7 +116,7 @@ function kSlotGrid(cfg) {
   var po = { plain: cfg.plain, markTitle: cfg.markTitle, noSuffix: cfg.noSuffix };
   function paint(cell, i) {
     var s = cfg.stackOf(i);
-    kSlotPaint(cell, s, cfg.titleOf ? cfg.titleOf(i) : '格子 ' + (i + 1), po);
+    kSlotPaint(cell, s, cfg.titleOf ? cfg.titleOf(i) : I18n.t("cadeditor.ui.slots.1748b1d05d", (i + 1)), po);
     var g = cfg.ghostOf && cfg.ghostOf(i);
     if (g && (!s || s.empty)) cell.appendChild(uiIcon(g, 16, 'es-ghost'));
   }

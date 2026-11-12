@@ -7,7 +7,7 @@ const hero={getBoundingClientRect:()=>({width:heroWidth})};
 const c=vm.createContext({console,setTimeout(fn){pending.push(fn);return pending.length;},clearTimeout(){},
  document:{getElementById:id=>id==='win'?win:id==='hero'?hero:null,addEventListener(){}},
  window:{innerWidth:427,innerHeight:240,addEventListener(){}}});
-for(const file of ['data.js','core.js','labels.js','screens.js'])
+for(const file of ['data.js','i18n-catalogs.js','i18n.js','core.js','labels.js','screens.js'])
  vm.runInContext(fs.readFileSync(path.join(dir,'js',file),'utf8'),c);
 c.fitTopbar=()=>{};c.fitTip=()=>{};
 function fit(){c.scheduleFit();while(pending.length)pending.shift()();}

@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.registry;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.*;
 import com.mojang.serialization.JsonOps;
 import java.util.*;
@@ -23,7 +25,7 @@ public final class EntitySchema {
     private EntitySchema() {}
     public static Entity create(EntityType<?> type, Level level) {
         Entity e=type.create(level,EntitySpawnReason.LOAD);
-        if(e==null)throw new IllegalArgumentException("实体工厂不可用: "+BuiltInRegistries.ENTITY_TYPE.getKey(type));
+        if(e==null)throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.entityschema.900e3f0ed8", (BuiltInRegistries.ENTITY_TYPE.getKey(type))));
         // Constructors can contain pre-load sentinel values (e.g. llama strength 0, slime attributes).
         // Normalize through the official loader before measuring defaults and effective health limits.
         Problems problems=new Problems();e.load(TagValueInput.create(problems,level.registryAccess(),save(e,level.registryAccess())));problems.check();
@@ -107,7 +109,7 @@ public final class EntitySchema {
             var holders=lookup.lookupOrThrow(key);
             holders.listElements().limit(257).forEach(h->{@SuppressWarnings("unchecked") T value=(T)h;values.add(value);});
         }else if(original instanceof Enum<?> choice){kind="enum";for(Object c:choice.getDeclaringClass().getEnumConstants()){@SuppressWarnings("unchecked")T value=(T)c;values.add(value);}}else if(original instanceof Boolean){kind="bool";for(boolean b:new boolean[]{false,true}){@SuppressWarnings("unchecked")T value=(T)Boolean.valueOf(b);values.add(value);}}else return;
-        if(values.size()>256)throw new IllegalArgumentException("变种选项超过单实体探测预算256；请使用原始NBT，不返回截断选择器");
+        if(values.size()>256)throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.entityschema.190764b5c0"));
         List<Choice> choices=new ArrayList<>();for(T value:values){JsonElement label=component.codec().encodeStart(lookup.createSerializationContext(JsonOps.INSTANCE),value).getOrThrow();choices.add(new Choice(label.isJsonPrimitive()?label.getAsString():label.toString(),x->x.setComponent(component,value),x->Objects.equals(x.get(component),value)));}
         JsonObject row=variant(e,lookup,level,BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(component).toString(),kind,choices);if(row!=null){if(registry!=null)row.addProperty("registry",registry);out.add(row);}
     }
@@ -169,6 +171,6 @@ public final class EntitySchema {
     public static void put(CompoundTag tag,List<String> path,Tag value){CompoundTag parent=tag;for(int i=0;i<path.size()-1;i++){String key=path.get(i);if(!(parent.get(key)instanceof CompoundTag))parent.put(key,new CompoundTag());parent=(CompoundTag)parent.get(key);}parent.put(path.getLast(),value);}
     public static List<List<String>> diff(CompoundTag before,CompoundTag after){List<List<String>> result=new ArrayList<>();diffAt(before,after,new ArrayList<>(),result);return result;}
     private static void diffAt(CompoundTag a,CompoundTag b,List<String> prefix,List<List<String>> out){Set<String> keys=new TreeSet<>(a.keySet());keys.addAll(b.keySet());for(String key:keys){Tag x=a.get(key),y=b.get(key);if(Objects.equals(x,y))continue;List<String> p=new ArrayList<>(prefix);p.add(key);if(y instanceof CompoundTag yc&&(x==null||x instanceof CompoundTag))diffAt(x instanceof CompoundTag xc?xc:new CompoundTag(),yc,p,out);else if(x instanceof CompoundTag xc&&y instanceof CompoundTag yc)diffAt(xc,yc,p,out);else out.add(p);}}
-    public static final class Problems implements ProblemReporter {final List<String> errors=new ArrayList<>();public ProblemReporter forChild(ProblemReporter.PathElement path){return this;}public void report(ProblemReporter.Problem p){errors.add(p.toString());}public void check(){if(!errors.isEmpty())throw new IllegalArgumentException("实体数据无法加载: "+errors);}}
+    public static final class Problems implements ProblemReporter {final List<String> errors=new ArrayList<>();public ProblemReporter forChild(ProblemReporter.PathElement path){return this;}public void report(ProblemReporter.Problem p){errors.add(p.toString());}public void check(){if(!errors.isEmpty())throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.entityschema.91b96ec4cc", (errors)));}}
 }
 

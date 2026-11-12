@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.registry;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.*;
 import com.mojang.serialization.*;
 import com.mojang.serialization.codecs.*;
@@ -553,7 +555,7 @@ public final class ComponentSchema {
         if (input.isJsonObject() && !node.fields.isEmpty()) for (var entry : node.fields.entrySet()) {
             var child = entry.getValue(); var value = input.getAsJsonObject().get(entry.getKey());
             if (value != null) diagnose(child, value, propertyPath(path, entry.getKey()), ops, errors, depth + 1);
-            else if (!child.json.get("optional").getAsBoolean()) addError(errors, propertyPath(path, entry.getKey()), "required", "缺少必填字段");
+            else if (!child.json.get("optional").getAsBoolean()) addError(errors, propertyPath(path, entry.getKey()), "required", EditorI18n.tr("cadeditor.message.componentschema.cad81bac40"));
         }
         if (node.element != null && input.isJsonArray()) for (int i = 0; i < input.getAsJsonArray().size() && errors.size() < 32; i++)
             diagnose(node.element, input.getAsJsonArray().get(i), path + "[" + i + "]", ops, errors, depth + 1);
@@ -562,7 +564,7 @@ public final class ComponentSchema {
             diagnose(node.key, new JsonPrimitive(entry.getKey()), childPath, ops, errors, depth + 1);
             diagnose(node.element, entry.getValue(), childPath, ops, errors, depth + 1);
         }
-        if (before == errors.size()) addError(errors, path, "codec", result.error().map(DataResult.Error::message).orElse("Codec校验失败"));
+        if (before == errors.size()) addError(errors, path, "codec", result.error().map(DataResult.Error::message).orElse(EditorI18n.tr("cadeditor.message.componentschema.3a0e11f941")));
     }
     static String propertyPath(String parent, String key) { return key.matches("[A-Za-z_][A-Za-z_0-9]*") ? parent + "." + key : parent + "[" + new JsonPrimitive(key) + "]"; }
     public static void addError(JsonArray errors, String path, String code, String message) {

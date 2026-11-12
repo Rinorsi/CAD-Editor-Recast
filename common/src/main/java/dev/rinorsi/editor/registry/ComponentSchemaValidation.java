@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.registry;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.*;
 import dev.rinorsi.editor.ComponentValidation;
 import dev.rinorsi.editor.StackCodec;
@@ -27,7 +29,7 @@ public final class ComponentSchemaValidation {
         out.addProperty("path_precision", errors.isEmpty() ? "none" : errors.size() == 1 && errors.get(0).getAsJsonObject().get("path").getAsString().equals("$") ? "component" : "field");
         if (out.toString().length() > 24000) {
             out.remove("normalized"); out.remove("snbt"); out.remove("json"); out.addProperty("ok", false);
-            out.addProperty("error", "规范化结果超过字段校验消息大小限制");
+            out.addProperty("error", EditorI18n.tr("cadeditor.message.componentschemavalidation.b9e8d26553"));
             var limited = new JsonArray(); ComponentSchema.addError(limited, "$", "result_limit", out.get("error").getAsString());
             out.add("errors", limited); out.addProperty("path_precision", "component");
         }

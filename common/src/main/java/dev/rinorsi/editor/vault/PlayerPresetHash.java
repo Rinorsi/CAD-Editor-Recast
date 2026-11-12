@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.vault;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.*;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -16,7 +18,7 @@ final class PlayerPresetHash {
                 var row=raw.getAsJsonObject();var stack=row.getAsJsonObject("stack");
                 if(!stack.has("empty")) {
                     JsonObject nativeStack;
-                    try{nativeStack=validator.validate(stack).stack();}catch(VaultStore.Failure e){throw e;}catch(RuntimeException e){throw new VaultStore.Failure("INVALID_STACK","原版物品校验失败："+e.getMessage());}
+                    try{nativeStack=validator.validate(stack).stack();}catch(VaultStore.Failure e){throw e;}catch(RuntimeException e){throw new VaultStore.Failure("INVALID_STACK",EditorI18n.tr("cadeditor.message.playerpresethash.b54458a994", (e.getMessage())));}
                     var clean=new JsonObject();
                     // Exclude slot/label/UI metadata; typed sidecars remain part of identity.
                     for(String key:List.of("id","count","comps","removed","component_snbt"))if(nativeStack.has(key))clean.add(key,nativeStack.get(key));
@@ -36,8 +38,8 @@ final class PlayerPresetHash {
     private static JsonArray ordered(JsonArray array,String field,boolean numeric) {
         var rows=new ArrayList<JsonObject>();var seen=new HashSet<String>();
         for(var raw:array) {
-            if(!raw.isJsonObject()||!raw.getAsJsonObject().has(field))throw new VaultStore.Failure("BAD_REQUEST","预设条目缺少 "+field);
-            var row=raw.getAsJsonObject();String identity=row.get(field).getAsString();if(!seen.add(identity))throw new VaultStore.Failure("BAD_REQUEST","预设条目重复："+identity);rows.add(row);
+            if(!raw.isJsonObject()||!raw.getAsJsonObject().has(field))throw new VaultStore.Failure("BAD_REQUEST",EditorI18n.tr("cadeditor.message.playerpresethash.28443a421b", (field)));
+            var row=raw.getAsJsonObject();String identity=row.get(field).getAsString();if(!seen.add(identity))throw new VaultStore.Failure("BAD_REQUEST",EditorI18n.tr("cadeditor.message.playerpresethash.04ec304c2b", (identity)));rows.add(row);
         }
         rows.sort(numeric?Comparator.comparingInt(r->r.get(field).getAsInt()):Comparator.comparing(r->r.get(field).getAsString()));
         var result=new JsonArray();rows.forEach(result::add);return result;

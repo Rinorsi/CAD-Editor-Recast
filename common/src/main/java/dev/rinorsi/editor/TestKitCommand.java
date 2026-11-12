@@ -32,9 +32,13 @@ final class TestKitCommand {
         try { policy.get().require(player); return true; } catch (RuntimeException ignored) { return false; }
     }
     private static int run(CommandSourceStack source, Supplier<EditorPolicy> policy, String mode) {
+        String language = source.getEntity() instanceof ServerPlayer player ? player.clientInformation().language() : "en_us";
+        try (var scope = EditorI18n.forLanguage(language)) { return runLocalized(source, policy, mode); }
+    }
+    private static int runLocalized(CommandSourceStack source, Supplier<EditorPolicy> policy, String mode) {
         try {
-            if (!(source.getEntity() instanceof ServerPlayer player)) throw new IllegalArgumentException("仅玩家可使用测试道具命令");
-            if (!allowed(source, policy)) throw new IllegalArgumentException("测试道具仅限OP/创造模式或单人作弊，并须满足服务器编辑权限");
+            if (!(source.getEntity() instanceof ServerPlayer player)) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.testkitcommand.f975a352a0"));
+            if (!allowed(source, policy)) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.testkitcommand.1094fd2251"));
             policy.get().require(player);
             var indices = new ArrayList<Integer>();
             for (int i = 0; i < (mode.equals("hotbar") ? 9 : 36); i++) indices.add(i);
@@ -53,10 +57,9 @@ final class TestKitCommand {
             player.getInventory().setChanged(); player.inventoryMenu.broadcastChanges(); player.containerMenu.broadcastChanges();
             int count = specimens;
             source.sendSuccess(() -> Component.literal(mode.equals("clear")
-                    ? "已清除背包/副手中带测试标记的道具，普通物品保留；未扫描已放置的箱子"
-                    : "已发放 " + count + " 件测试道具（" + (mode.equals("hotbar") ? "前9号" : "覆盖" + TestKit.expectedComponents().size() + "组件")
-                            + "）；溢出放在测0道具包，未覆盖/丢弃已有物品；手持后按 I，测试步骤见 docs/TESTING.md"), false);
+                    ? EditorI18n.tr("cadeditor.message.testkitcommand.e43f7eb151")
+                    : EditorI18n.tr("cadeditor.message.testkitcommand.96f862dea7", (count), ((mode.equals("hotbar") ? EditorI18n.tr("cadeditor.message.testkitcommand.e787cbf75c") : EditorI18n.tr("cadeditor.message.testkitcommand.8ea3219ec9", (TestKit.expectedComponents().size())))))), false);
             return 1;
-        } catch (RuntimeException error) { source.sendFailure(Component.literal(error.getMessage() == null ? "测试道具操作失败，未发放" : error.getMessage())); return 0; }
+        } catch (RuntimeException error) { source.sendFailure(Component.literal(error.getMessage() == null ? EditorI18n.tr("cadeditor.message.testkitcommand.bad3ad0561") : error.getMessage())); return 0; }
     }
 }

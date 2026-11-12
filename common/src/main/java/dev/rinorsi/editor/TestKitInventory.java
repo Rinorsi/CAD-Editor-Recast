@@ -19,7 +19,7 @@ final class TestKitInventory {
         var plan = new ArrayList<ItemStack>(); inventory.forEach(stack -> plan.add(stack.copy()));
         var free = new ArrayList<Integer>();
         for (int i = 0; i < plan.size(); i++) if (plan.get(i).isEmpty()) free.add(i);
-        if (free.isEmpty()) throw new IllegalArgumentException("背包和副手已满；没有覆盖或丢弃任何物品，请先空出至少一格");
+        if (free.isEmpty()) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.testkitinventory.527535ab75"));
         int direct = kit.size() <= free.size() ? kit.size() : free.size() - 1;
         for (int i = 0; i < direct; i++) plan.set(free.get(i), kit.get(i).stack().copy());
         if (direct < kit.size()) {
@@ -30,9 +30,9 @@ final class TestKitInventory {
                 boolean containsShulker = chunk.stream().anyMatch(s -> s.getItem() instanceof BlockItem block
                         && block.getBlock() instanceof ShulkerBoxBlock);
                 // Vanilla prohibits shulker-inside-shulker. A barrel can legally hold one.
-                boxes.add(box(chunk, containsShulker, "测0·道具包" + (boxes.size() + 1), registries));
+                boxes.add(box(chunk, containsShulker, EditorI18n.tr("cadeditor.message.testkitinventory.6104fe6e1a", ((boxes.size() + 1))), registries));
             }
-            ItemStack packed = boxes.size() == 1 ? boxes.getFirst() : box(boxes, true, "测0·完整道具包（内含分箱）", registries);
+            ItemStack packed = boxes.size() == 1 ? boxes.getFirst() : box(boxes, true, EditorI18n.tr("cadeditor.message.testkitinventory.87c19bc4cd"), registries);
             plan.set(free.get(direct), packed);
         }
         return List.copyOf(plan);

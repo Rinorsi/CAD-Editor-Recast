@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.client;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import dev.oriel.mod.client.OrielScreen;
 import dev.rinorsi.editor.EditorWriteLog;
 import net.minecraft.client.Minecraft;
@@ -24,7 +26,7 @@ public final class EditorLayerScreen extends OrielScreen {
 
     void show() {
         var mc = Minecraft.getInstance();
-        if (mc.gui.screen() != parent) throw new IllegalStateException("打开编辑器前背包界面已改变");
+        if (mc.gui.screen() != parent) throw new IllegalStateException(EditorI18n.tr("cadeditor.message.editorlayerscreen.32aee5d567"));
         suspending = parent;
         try { mc.gui.setScreen(this); }
         finally { suspending = null; }

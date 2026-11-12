@@ -344,7 +344,7 @@ public final class VaultTest {
       tooBig
           .getAsJsonObject("stack")
           .getAsJsonObject("comps")
-          .addProperty("custom_data", "{value:\"" + "x".repeat(65536) + "\"}");
+          .addProperty("custom_data", "{value:\"" + "x".repeat(VaultStore.MAX_ENTRY_BYTES + 1) + "\"}");
       JsonObject formats = new JsonObject();
       formats.addProperty("custom_data", "snbt");
       tooBig.getAsJsonObject("stack").add("component_formats", formats);

@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.registry;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import dev.rinorsi.editor.platform.Platform;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -70,7 +72,7 @@ public final class RegistrySnapshot {
     }
     public JsonArray entries(Identifier registryId) {
         Registry<?> registry = registries.get(registryId);
-        if (registry == null) throw new IllegalArgumentException("当前客户端没有注册表: " + registryId);
+        if (registry == null) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.registrysnapshot.6338dc9f72", (registryId)));
         return serialize(registry);
     }
     public boolean containsRegistry(Identifier registryId) { return registryId != null && registries.containsKey(registryId); }
@@ -89,7 +91,7 @@ public final class RegistrySnapshot {
     }
     public JsonArray tagMembers(Identifier registryId, Identifier tagId) {
         var tag = registry(registryId).getTags().filter(t -> t.key().location().equals(tagId)).findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("当前注册表没有标签: " + tagId));
+                .orElseThrow(() -> new IllegalArgumentException(EditorI18n.tr("cadeditor.message.registrysnapshot.98a54ed47e", (tagId))));
         return ids(tag);
     }
     /** Fabric convention keys also cover mod registries; missing language entries retain the ID. */
@@ -104,7 +106,7 @@ public final class RegistrySnapshot {
     }
     private Registry<?> registry(Identifier registryId) {
         Registry<?> registry = registries.get(registryId);
-        if (registry == null) throw new IllegalArgumentException("当前客户端没有注册表: " + registryId);
+        if (registry == null) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.registrysnapshot.6338dc9f72", (registryId)));
         return registry;
     }
     private <T> JsonArray serialize(Registry<T> registry) {
@@ -192,12 +194,12 @@ public final class RegistrySnapshot {
     public JsonArray relation(Identifier id, String field) {
         Registry<?> registry = registries.get(Identifier.withDefaultNamespace("enchantment"));
         Object value = registry == null ? null : registry.getValue(id);
-        if (!(value instanceof Enchantment e)) throw new IllegalArgumentException("未知附魔: " + id);
+        if (!(value instanceof Enchantment e)) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.registrysnapshot.ed9c33ac4c", (id)));
         return ids(switch (field) {
             case "supported" -> e.definition().supportedItems();
             case "primary" -> e.definition().primaryItems().orElse(HolderSet.direct());
             case "exclusive" -> e.exclusiveSet();
-            default -> throw new IllegalArgumentException("未知附魔关系: " + field);
+            default -> throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.registrysnapshot.af35ab9294", (field)));
         });
     }
     private static String name(Identifier registry, Identifier id, Object value) {

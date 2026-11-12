@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.registry;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonElement;
@@ -16,7 +18,7 @@ public final class ItemDefaults {
     private ItemDefaults() {}
     public static JsonArray entries(RegistryAccess access, Identifier only) {
         var registry = access.lookup(Registries.ITEM).orElse(BuiltInRegistries.ITEM);
-        if (only != null && !registry.containsKey(only)) throw new IllegalArgumentException("未知物品: " + only);
+        if (only != null && !registry.containsKey(only)) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.itemdefaults.1cb764e364", (only)));
         var ops = access.createSerializationContext(JsonOps.INSTANCE);
         JsonArray entries = new JsonArray();
         registry.listElements().filter(h -> only == null || h.key().identifier().equals(only))
@@ -26,7 +28,7 @@ public final class ItemDefaults {
                     row.addProperty("id", holder.key().identifier().toString());
                     for (var component : holder.value().components()) {
                         var componentId = BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(component.type());
-                        if (componentId == null) throw new IllegalArgumentException("物品默认组件没有注册id: " + holder.key().identifier());
+                        if (componentId == null) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.itemdefaults.4dd31c0591", (holder.key().identifier())));
                         String id = componentId.toString();
                         if (id.startsWith("minecraft:")) id = id.substring(10);
                         if (component.type().codec() == null) { unsupported.add(id); continue; }

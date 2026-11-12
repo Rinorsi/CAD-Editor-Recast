@@ -4,11 +4,11 @@
 var GX_INT_RANGE = { byte: [-128, 127], short: [-32768, 32767], int: [-2147483648, 2147483647] };
 function gxShort(s) { s = String(s === undefined ? '' : s); return s.length > 40 ? s.slice(0, 40) + '…' : s; }
 function gxDecode(s) { try { var v = parseSnbt(String(s)); return typeof v === 'string' ? v : String(s); } catch (e) { return String(s); } }
-function gxNote(f) { return f.read_only_reason || f.editable_reason || '请用「数据」页'; }
+function gxNote(f) { return f.read_only_reason || f.editable_reason || I18n.t("cadeditor.ui.genericview.1b53b2bbd1"); }
 /* g：视图名；fields：schema.fields；get(g,k) / set(g,k,snbt)：方块和实体各自的草稿读写 */
 function gxFields(body, g, fields, get, set) {
   var keys = Object.keys(fields || {});
-  if (!keys.length) { body.appendChild(xEmpty('没有可以直接改的字段，请用「数据」页。')); return; }
+  if (!keys.length) { body.appendChild(xEmpty(I18n.t("cadeditor.ui.genericview.7bfbf5715c"))); return; }
   keys.forEach(function (key) {
     var f = fields[key] || {}, cur = get(g, key), kind = f.type || f.kind || 'unknown', nt = f.nbt_type || '';
     if (cur === undefined) cur = f.default_snbt === undefined ? '' : f.default_snbt;
@@ -26,19 +26,19 @@ function gxFields(body, g, fields, get, set) {
       body.appendChild(xText({ title: key, tip: key, value: gxDecode(cur), cls: 'we-in', onCommit: function (v) { set(g, key, JSON.stringify(v)); } }));
     } else if (kind === 'identifier' && (f.registry_matches || []).length === 1 && typeof Reg !== 'undefined' && Reg.live() && (Reg.options(f.registry_matches[0].replace(/^minecraft:/, '')) || Reg.isLazy(f.registry_matches[0].replace(/^minecraft:/, '')))) {
       var reg = f.registry_matches[0].replace(/^minecraft:/, '');
-      body.appendChild(xRow({ icon: false, title: key, sub: f.registry_matches[0], tip: key, right: kRegSelect({ reg: reg, value: gxDecode(cur), title: key, empty: '（未设置）', onChange: function (id) { set(g, key, JSON.stringify(id)); } }).el }));
+      body.appendChild(xRow({ icon: false, title: key, sub: f.registry_matches[0], tip: key, right: kRegSelect({ reg: reg, value: gxDecode(cur), title: key, empty: I18n.t("cadeditor.ui.genericview.ccb91ce53d"), onChange: function (id) { set(g, key, JSON.stringify(id)); } }).el }));
     } else {
       body.appendChild(xText({ title: key, sub: kind + (nt ? ' · ' + nt : ''), tip: key, value: String(cur), placeholder: 'SNBT', cls: 'we-in',
         onCommit: function (v) {
           var text = v.trim();
-          try { parseSnbtUser(text); } catch (e) { toast('「' + key + '」不是有效的 SNBT：' + (e.message || e), 'error', 'gx-bad'); return; }
+          try { parseSnbtUser(text); } catch (e) { toast(I18n.t("cadeditor.ui.genericview.9f785324a6", (key), (e.message || e)), 'error', 'gx-bad'); return; }
           set(g, key, text);
         } }));
     }
   });
 }
 function gxIntro(body, spec) {
-  if (spec && spec.available === false) body.appendChild(kHint(spec.editable_reason || '读不到这个类型的字段。', 'note'));
+  if (spec && spec.available === false) body.appendChild(kHint(spec.editable_reason || I18n.t("cadeditor.ui.genericview.9f90c79120"), 'note'));
 }
 WEV.generic = function (body, g) {
   var v = weViews()[g] || {}, sc = v.schema || {};

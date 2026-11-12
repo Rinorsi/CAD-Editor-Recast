@@ -17,9 +17,9 @@ public final class ComponentValidation {
     public static DataComponentType<?> type(String id) {
         Identifier key = Identifier.tryParse(id);
         if (key == null || !BuiltInRegistries.DATA_COMPONENT_TYPE.containsKey(key))
-            throw new IllegalArgumentException("未知组件：" + id);
+            throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.componentvalidation.9026297c8a", (id)));
         var type = BuiltInRegistries.DATA_COMPONENT_TYPE.getValue(key);
-        if (type.codec() == null) throw new IllegalArgumentException("组件没有持久化 Codec：" + id);
+        if (type.codec() == null) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.componentvalidation.942e7e98a3", (id)));
         return type;
     }
 
@@ -30,7 +30,7 @@ public final class ComponentValidation {
     /** The caller owns its transport/storage budget. The quick validation
      * endpoint has a smaller budget than chunked vault storage. */
     public static Tag parseSnbt(String text, int maxChars) {
-        if (text.length() > maxChars) throw new IllegalArgumentException("SNBT 超过 " + maxChars + " 字符");
+        if (text.length() > maxChars) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.componentvalidation.a06b98cd3b", (maxChars)));
         try { return SpecialFloatingPointSnbt.parse(text); }
         catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) { throw new IllegalArgumentException(e.getMessage(), e); }
     }
@@ -43,9 +43,9 @@ public final class ComponentValidation {
             out.addProperty("component", Identifier.parse(id).toString());
             String format = request.has("format") ? StackCodec.string(request, "format") : request.has("snbt") ? "snbt" : "json";
             JsonElement value = request.has("snbt") ? request.get("snbt") : request.get("value");
-            if (value == null) throw new IllegalArgumentException("缺少 value 或 snbt");
+            if (value == null) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.componentvalidation.5204b5471b"));
             normalize(out, type(id), format, value, access);
-            if (out.toString().length() > 23980) throw new IllegalArgumentException("规范化结果超过 24000 字符");
+            if (out.toString().length() > 23980) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.componentvalidation.ab4c6addd1"));
             out.addProperty("ok", true);
         } catch (RuntimeException e) {
             out.remove("normalized"); out.remove("snbt"); out.remove("json");
@@ -61,10 +61,10 @@ public final class ComponentValidation {
         var nbt = access.createSerializationContext(NbtOps.INSTANCE);
         var json = access.createSerializationContext(JsonOps.INSTANCE);
         if (format.equals("snbt")) {
-            if (!input.isJsonPrimitive() || !input.getAsJsonPrimitive().isString()) throw new IllegalArgumentException("SNBT 必须是字符串");
+            if (!input.isJsonPrimitive() || !input.getAsJsonPrimitive().isString()) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.componentvalidation.6c88d71e81"));
             value = type.codec().parse(nbt, parseSnbt(input.getAsString())).getOrThrow();
         } else if (format.equals("json")) value = type.codec().parse(json, input).getOrThrow();
-        else throw new IllegalArgumentException("format 仅支持 snbt 或 json");
+        else throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.componentvalidation.24b8fa6c8a"));
         String snbt = type.codec().encodeStart(nbt, value).getOrThrow().toString();
         JsonElement encoded = StackCodec.pageJson(type.codec().encodeStart(json, value).getOrThrow());
         out.addProperty("format", format); out.addProperty("snbt", snbt); out.add("json", encoded);

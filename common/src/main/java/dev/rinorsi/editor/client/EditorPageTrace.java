@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.client;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.JsonElement;
 import java.util.Locale;
 import java.util.function.LongSupplier;
@@ -42,18 +44,18 @@ final class EditorPageTrace {
         var elapsed = object.get("elapsedMs");
         long ms = elapsed != null && elapsed.isJsonPrimitive() && elapsed.getAsJsonPrimitive().isNumber() ? Math.max(0, elapsed.getAsLong()) : 0;
         log.log(!start && ms >= 250 ? EditorUiLog.Level.WARN : EditorUiLog.Level.INFO,
-                "[物品工坊阶段] " + (start ? "开始：" : "结束：") + describe(site) + "；stage=" + site + (!start ? "；耗时=" + ms + "ms" : ""));
+                EditorI18n.tr("cadeditor.message.editorpagetrace.a46a4cfb01", ((start ? EditorI18n.tr("cadeditor.message.editorpagetrace.cd439134e8") : EditorI18n.tr("cadeditor.message.editorpagetrace.6b2294b37c"))), (describe(site)), (site), ((!start ? EditorI18n.tr("cadeditor.message.editorpagetrace.6d9c0eb016", (ms)) : ""))));
     }
     String lastStage() {
-        return workStage == null ? "页面加载（尚未取得具体阶段）" : (working ? "正在" : "最后完成") + describe(workStage) + "（" + workStage + "）";
+        return workStage == null ? EditorI18n.tr("cadeditor.message.editorpagehost.1b3a6854e5") : (working ? EditorI18n.tr("cadeditor.message.editorpagetrace.e6b02a08e6") : EditorI18n.tr("cadeditor.message.editorpagetrace.b4d62b5724")) + describe(workStage) + "（" + workStage + "）";
     }
     private static String describe(String site) {
-        if (site.startsWith("registry.replay.")) return "恢复游戏字段信息";
+        if (site.startsWith("registry.replay.")) return EditorI18n.tr("cadeditor.message.editorpagetrace.f7fe390e55");
         return switch (site) {
-            case "boot.prefs" -> "读取界面设置"; case "boot.registry" -> "连接游戏注册表";
-            case "boot.world" -> "打开方块、实体或玩家页面"; case "boot.vault" -> "打开保险库";
-            case "item.load" -> "载入物品数据"; case "item.render" -> "绘制物品编辑界面";
-            case "item.drafts" -> "检查可恢复草稿"; default -> "处理编辑器页面";
+            case "boot.prefs" -> EditorI18n.tr("cadeditor.message.editorpagetrace.5563b48529"); case "boot.registry" -> EditorI18n.tr("cadeditor.message.editorpagetrace.05b962a5f1");
+            case "boot.world" -> EditorI18n.tr("cadeditor.message.editorpagetrace.eeb8d48f80"); case "boot.vault" -> EditorI18n.tr("cadeditor.message.editorpagetrace.90b3a9912a");
+            case "item.load" -> EditorI18n.tr("cadeditor.message.editorpagetrace.8b78064807"); case "item.render" -> EditorI18n.tr("cadeditor.message.editorpagetrace.f69f1c22fd");
+            case "item.drafts" -> EditorI18n.tr("cadeditor.message.editorpagetrace.16585cb522"); default -> EditorI18n.tr("cadeditor.message.editorpagetrace.e33fba89d3");
         };
     }
 }

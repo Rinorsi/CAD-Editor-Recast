@@ -1,4 +1,11 @@
 // Same headless regression tasks on every loader/version. No probes ship in release jars.
+tasks.register('i18nTest', JavaExec) {
+    dependsOn 'codecVerificationClasses'
+    classpath = sourceSets.codecVerification.runtimeClasspath
+    mainClass = 'dev.rinorsi.editor.EditorI18nTest'
+    workingDir = rootProject.projectDir
+}
+tasks.named('check') { dependsOn('i18nTest') }
 tasks.register('writeLogTest', JavaExec) {
     dependsOn 'codecVerificationClasses'
     classpath = sourceSets.codecVerification.runtimeClasspath
@@ -20,6 +27,7 @@ configurations { commonTests { canBeResolved = true; canBeConsumed = false } }
 dependencies { commonTests(project(path: ':common:' + project.name, configuration: 'commonTests')) }
 sourceSets {
     codecVerification {
+        resources.srcDir(rootProject.file('tools/fixtures/i18n'))
         java.setSrcDirs([])
         java.exclude('dev/rinorsi/editor/probe/**')
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath

@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.client;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import dev.rinorsi.editor.EditorSessions;
 import dev.rinorsi.editor.EditorWriteLog;
 import net.minecraft.client.Minecraft;
@@ -25,9 +27,9 @@ public final class ClientInventoryCommands {
 
     public static void requireAvailable(Minecraft mc) {
         if (mc.player == null || mc.level == null || mc.getConnection() == null)
-            EditorSessions.fail("not_connected", "当前未连接世界；草稿和保险库已保留");
+            EditorSessions.fail("not_connected", EditorI18n.tr("cadeditor.message.clientinventorycommands.b78075b9f7"));
         if (leaseBlocks(inFlight, mc.getConnection() == leaseConnection, System.nanoTime(), leaseUntil))
-            EditorSessions.fail("request_pending", "上一笔物品命令尚未得到服务器同步，请勿重复提交");
+            EditorSessions.fail("request_pending", EditorI18n.tr("cadeditor.message.clientinventorycommands.fbd7f99936"));
         var root = mc.player.connection.getCommands().getRoot();
         requireCommands(root.getChild("execute") != null, root.getChild("item") != null);
     }
@@ -39,15 +41,15 @@ public final class ClientInventoryCommands {
 
     public static void requireCommands(boolean execute, boolean item) {
         if (!execute || !item) EditorSessions.fail("command_unavailable",
-                "原版命令不可用或权限不足，需要服务器授予对应权限；草稿和保险库已保留");
+                EditorI18n.tr("cadeditor.message.clientinventorycommands.4c3c5e0d14"));
     }
 
     public static String capabilityHint(Minecraft mc) {
-        if (mc.player == null || mc.level == null || mc.getConnection() == null) return "当前未进入世界，不能取出到背包；本地保险库仍可管理";
+        if (mc.player == null || mc.level == null || mc.getConnection() == null) return EditorI18n.tr("cadeditor.message.clientinventorycommands.ef313e0f44");
         var root = mc.player.connection.getCommands().getRoot();
         if (root.getChild("execute") == null || root.getChild("item") == null)
-            return "原版命令不可用或权限不足，需要服务器授予对应权限；可继续编辑草稿和本地保险库";
-        return "命令模式仅支持自己的普通背包第1～36格；每笔由服务器授权，可能通知本人、其他 OP 和控制台";
+            return EditorI18n.tr("cadeditor.message.clientinventorycommands.db8c1818da");
+        return EditorI18n.tr("cadeditor.message.clientinventorycommands.358ee572e7");
     }
 
     public static void send(Minecraft mc, HotbarCommandSession session, String id, ItemStack original, ItemStack next) {

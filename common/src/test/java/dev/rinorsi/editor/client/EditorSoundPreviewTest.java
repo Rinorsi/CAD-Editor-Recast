@@ -30,18 +30,23 @@ public final class EditorSoundPreviewTest {
         preview.accept(toggle("minecraft:first")); check(audio.paused && audio.starts == 1, "pause must preserve position");
         for (int i = 0; i < 20 * 60; i++) preview.tick();
         check(audio.active && audio.paused && audio.starts == 1, "long pause keeps the original channel");
-        preview.accept(toggle("minecraft:first")); check(!audio.paused && audio.starts == 1, "resume must not restart");
+        int stopsBeforeRestart = audio.stops;
+        preview.accept(toggle("minecraft:first"));
+        check(!audio.paused && audio.starts == 2 && audio.stops == stopsBeforeRestart + 1, "play after pause restarts on a fresh channel");
+        check(audio.calls.subList(audio.calls.size() - 2, audio.calls.size()).equals(List.of("stop", "start")), "restart stops the old channel before starting");
+        check(receipts.getLast().get("state").getAsString().equals("playing"), "restart publishes playing state");
+        int stopsBeforeSwitch = audio.stops;
         clock[0] += 200_000_000L; preview.accept(toggle("minecraft:second"));
-        check(audio.starts == 2 && audio.stops == 1, "switch uses one channel");
+        check(audio.starts == 3 && audio.stops == stopsBeforeSwitch + 1, "switch uses one channel");
         clock[0] += 200_000_000L; preview.accept(toggle("minecraft:missing"));
         check(audio.active && audio.id.equals("minecraft:second"), "invalid id preserves current preview");
-        check(receipts.getLast().get("state").getAsString().equals("error"), "error receipt");
+        check(receipts.getLast().get("state").getAsString().equals("playing") && receipts.getLast().has("error"), "error receipt preserves the active playback state");
         preview.accept(toggle("minecraft:second")); preview.tick(); check(audio.paused, "paused tick stays paused");
         preview.stop(); check(!audio.active, "page close stops its preview");
         clock[0] += 200_000_000L; preview.accept(toggle("minecraft:third")); audio.active = false;
         for (int i = 0; i < 21; i++) preview.tick();
         check(receipts.getLast().get("state").getAsString().equals("stopped"), "natural completion resets controls");
         preview.accept(null);
-        System.out.println("PASS sound preview: single channel, pause/resume without restart, invalid ID isolation, page close, completion.");
+        System.out.println("PASS sound preview: single channel, restart after pause, invalid ID isolation, page close, completion.");
     }
 }

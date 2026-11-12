@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.world;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.*;
 import dev.rinorsi.editor.*;
 import java.util.*;
@@ -69,7 +71,7 @@ public final class DoubleChestEdit {
             var a=new JsonArray();var b=new JsonArray();var seen=new HashSet<Integer>();
             for(var value:StackCodec.object(request,"container").getAsJsonArray("slots")){
                 var row=value.getAsJsonObject().deepCopy();int slot=StackCodec.integer(row,"slot",0,53);
-                if(!seen.add(slot))EditorSessions.fail("invalid_request","容器槽位重复");
+                if(!seen.add(slot))EditorSessions.fail("invalid_request",EditorI18n.tr("cadeditor.message.doublechestedit.44aec1f72a"));
                 row.addProperty("slot",slot%27);((slot<27)==first(target.blockState())?a:b).add(row);
             }
             var ca=new JsonObject();ca.add("slots",a);own.add("container",ca);var cb=new JsonObject();cb.add("slots",b);other.add("container",cb);
@@ -79,7 +81,7 @@ public final class DoubleChestEdit {
         try{secondary=WorldMergePlan.prepareSingle(target.partner,base.getCompound(PARTNER).orElseThrow(),undo==null?null:undo.getCompound(PARTNER).orElseThrow(),other);}
         catch(WorldMerge.Conflict conflict){var paths=new ArrayList<List<String>>();for(var path:conflict.paths){var p=new ArrayList<String>();p.add("container");p.add("double");p.add("partner");p.addAll(path);paths.add(p);}throw new WorldMerge.Conflict(paths,conflict.stale);}
         if(!connected(target.blockPos,primary.blockState(),target.partner.blockPos,secondary.blockState())||first(primary.blockState())!=first(target.blockState()))throw changed();
-        if(secondary.nbt().toString().length()>WorldNbt.MAX_SNBT)EditorSessions.fail("payload_too_large","另一半箱子 NBT 超出上限");
+        if(secondary.nbt().toString().length()>WorldNbt.MAX_SNBT)EditorSessions.fail("payload_too_large",EditorI18n.tr("cadeditor.message.doublechestedit.8939f0e71d"));
         return new WorldMergePlan(primary.nbt(),primary.blockState(),secondary.nbt());
     }
     public static JsonObject preview(WorldTarget target,WorldMergePlan plan,JsonObject slot,boolean undo){

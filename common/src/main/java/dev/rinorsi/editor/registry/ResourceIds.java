@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.registry;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.JsonArray;
 import net.minecraft.server.packs.resources.ResourceManager;
 
@@ -19,7 +21,7 @@ public final class ResourceIds {
             case "profile_texture" -> "textures/entity/player";
             case "profile_cape", "profile_elytra" -> "textures/entity";
             case "item_model" -> "items";
-            default -> throw new IllegalArgumentException("未知资源列表: " + name);
+            default -> throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.resourceids.e3aa6965c2", (name)));
         };
         JsonArray rows = new JsonArray();
         resources.listResources(prefix, id -> {

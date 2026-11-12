@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.world;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import dev.rinorsi.editor.platform.Platform;
 import com.google.gson.*;
 import dev.rinorsi.editor.*;
@@ -33,7 +35,7 @@ public final class WorldEditor {
         if (!kind.equals("block") && !kind.equals("entity")) return false;
         String id = ""; String op = "";
         try {
-            id = StackCodec.string(request, "requestId"); if (id.length() > 80) throw new IllegalArgumentException("requestId 过长");
+            id = StackCodec.string(request, "requestId"); if (id.length() > 80) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.playerextendededitor.7a2ee1fdbd"));
             op = StackCodec.string(request, "op");
             if (op.equals("close")) { SESSIONS.close(player.getUUID(), slot); return true; }
             if(kind.equals("entity")&&slot.has("player")&&slot.get("player").getAsString().equals("offline")){
@@ -51,19 +53,19 @@ public final class WorldEditor {
                 var reply = result("opened", id); reply.add("world", snapshot); checkSize(reply);
                 var opened=SESSIONS.open(player.getUUID(), canonical, current,target.entity!=null && !(target.entity instanceof net.minecraft.world.entity.player.Player)?target.entity.position():null);snapshot.addProperty("revision",opened.revision);replySink.accept(reply); return true;
             }
-            if (!op.equals("apply") && !op.equals("undo")) EditorSessions.fail("invalid_request", "未知世界编辑操作");
+            if (!op.equals("apply") && !op.equals("undo")) EditorSessions.fail("invalid_request", EditorI18n.tr("cadeditor.message.worldeditor.d48029939c"));
             if (request.has("views_snbt") && (!request.has("views") || target.entity != null))
-                EditorSessions.fail("invalid_request", "带类型视图数据只能随方块字段提交");
+                EditorSessions.fail("invalid_request", EditorI18n.tr("cadeditor.message.worldeditor.f2320c767b"));
             if(target.entity instanceof ServerPlayer && (request.has("snbt")||request.has("container")||request.has("views")||request.has("block_state")||request.has("block_type")||request.has("riding")))
-                EditorSessions.fail("protected_field","玩家仅支持 entity.player 规范化编辑，不能写入原始NBT、方块字段或骑乘关系");
+                EditorSessions.fail("protected_field",EditorI18n.tr("cadeditor.message.worldeditor.e8707a4539"));
             SESSIONS.rateLimit(player.getUUID());
             var beforeSession = target.sessionData(); var before = target.entity!=null?EntitySessionData.data(beforeSession):BlockSessionData.data(beforeSession);
             var state = SESSIONS.require(player.getUUID(), slot, StackCodec.string(request, "revision"), beforeSession);
             if (request.has("vault_template")) request = dev.rinorsi.editor.vault.VaultTemplateApply.expand(target, state, request);
-            if(target.entity instanceof ServerPlayer && request.has("riding"))EditorSessions.fail("protected_field","玩家不支持 riding 编辑");
+            if(target.entity instanceof ServerPlayer && request.has("riding"))EditorSessions.fail("protected_field",EditorI18n.tr("cadeditor.message.worldeditor.69c2de3688"));
             if (request.has("riding")) {
                 if (target.entity == null || !op.equals("apply") || request.has("snbt") || request.has("entity") || request.has("container") || request.has("views") || request.has("block_state") || request.has("block_type"))
-                    EditorSessions.fail("invalid_request","riding 必须单独提交为实体 apply");
+                    EditorSessions.fail("invalid_request",EditorI18n.tr("cadeditor.message.worldeditor.3e91ade730"));
                 final String replyId=id;
                 EntityRiding.apply(player,target.entity,StackCodec.object(request,"riding"),passenger->{
                     var preview=result("saved",replyId);preview.add("world",EntityRiding.previewAddition(target.snapshot(state.slot,false),passenger,target.level.registryAccess()));checkSize(preview);
@@ -73,9 +75,9 @@ public final class WorldEditor {
                 LOG.info("[CAD-Editor-World] audit player={} op=riding target={} before={} after={}",player.getUUID(),slot,WorldNbt.revision(beforeSession),WorldNbt.revision(state.baseline));
                 replySink.accept(reply);return true;
             }
-            if (target.entity == null && request.has("entity")) EditorSessions.fail("invalid_request","方块不接受实体编辑区段");
-            if(target.entity!=null&&(request.has("block_state")||request.has("views")||request.has("container")||request.has("block_type")))EditorSessions.fail("invalid_request","实体不接受方块字段");
-            if(request.has("updateNeighbors")&&(!request.get("updateNeighbors").isJsonPrimitive()||!request.getAsJsonPrimitive("updateNeighbors").isBoolean()))EditorSessions.fail("invalid_request","updateNeighbors 必须为布尔值");
+            if (target.entity == null && request.has("entity")) EditorSessions.fail("invalid_request",EditorI18n.tr("cadeditor.message.worldeditor.c0d44d6772"));
+            if(target.entity!=null&&(request.has("block_state")||request.has("views")||request.has("container")||request.has("block_type")))EditorSessions.fail("invalid_request",EditorI18n.tr("cadeditor.message.worldeditor.0feeb1a7ed"));
+            if(request.has("updateNeighbors")&&(!request.get("updateNeighbors").isJsonPrimitive()||!request.getAsJsonPrimitive("updateNeighbors").isBoolean()))EditorSessions.fail("invalid_request",EditorI18n.tr("cadeditor.message.worldeditor.8d3b2b7009"));
             boolean updateNeighbors=!request.has("updateNeighbors")||request.get("updateNeighbors").getAsBoolean();
             var plan=WorldMergePlan.prepare(target,state.baseline,op.equals("undo")?state.preimage():null,request);
             var prepared=plan.nbt();
@@ -83,7 +85,7 @@ public final class WorldEditor {
             target.checkCommandPrivileges(player,prepared);
             plan=target.withSessionReturn(plan);prepared=plan.nbt();
             // Loaders that silently ignore unknown/invalid values must not report a successful edit.
-            if (prepared.toString().length() > WorldNbt.MAX_SNBT) EditorSessions.fail("payload_too_large", "修改后的 NBT 超出上限");
+            if (prepared.toString().length() > WorldNbt.MAX_SNBT) EditorSessions.fail("payload_too_large", EditorI18n.tr("cadeditor.message.worldeditor.13cb0da854"));
             var preview = result("saved",id); preview.add("world",DoubleChestEdit.preview(target,plan,state.slot,!op.equals("undo"))); checkSize(preview);
             final String replyId=id;final boolean undoing=op.equals("undo");
             var capturedAfter=new net.minecraft.nbt.CompoundTag[1];var capturedReply=new JsonObject[1];var capturedWorld=new JsonObject[1];
@@ -103,7 +105,7 @@ public final class WorldEditor {
             if (!(e instanceof IllegalArgumentException)) dev.rinorsi.editor.EditorDiagnostics.failure("world.request", "op=" + op + " request=" + id, e);
             String code = e instanceof WorldEditError error?error.code:e instanceof WorldMerge.Conflict ? "target_changed" : e instanceof EditorSessions.Failure f ? f.code : e instanceof dev.rinorsi.editor.vault.VaultStore.Failure f ? f.code : "invalid_request";
             LOG.warn("[CAD-Editor-World] denied player={} op={} request={} code={} target={} reason={}", player.getUUID(), op, id, code, slot, e.getMessage());
-            var reply = result("rejected", id); reply.addProperty("code", code); String reason = e.getMessage() == null ? "世界编辑失败" : e.getMessage();
+            var reply = result("rejected", id); reply.addProperty("code", code); String reason = e.getMessage() == null ? EditorI18n.tr("cadeditor.message.worldeditor.ca5fd19405") : e.getMessage();
             reply.addProperty("reason", reason.substring(0, Math.min(1200, reason.length())));WorldEditError.annotate(reply,e);replySink.accept(reply);
         }
         return true;

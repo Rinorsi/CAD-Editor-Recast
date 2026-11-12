@@ -55,7 +55,7 @@ function xRow(o) {
 }
 /* 删除不依赖展开区，也不触发展开或排序。 */
 function kDelete(fn, label) {
-  var b = h('div', { class: 'k-mini del', role: 'button', tabindex: '0', title: label || '删除' }, [uiIcon('trash', 12)]);
+  var b = h('div', { class: 'k-mini del', role: 'button', tabindex: '0', title: label || I18n.t("cadeditor.ui.common.delete") }, [uiIcon('trash', 12)]);
   b.addEventListener('mousedown', function (e) { e.stopPropagation(); });
   activate(b, function (e) { if (e) e.stopPropagation(); fn(); });
   return b;
@@ -112,7 +112,7 @@ function xNum(o) {
   if (o.round) v = +(+v).toFixed(4);
   var sub = o.sub, row;
   if (sub === undefined && o.subOf) sub = o.subOf(v);
-  if (!sub && o.range && o.min !== undefined && o.max !== undefined) sub = '范围 ' + o.min + ' ~ ' + o.max;
+  if (!sub && o.range && o.min !== undefined && o.max !== undefined) sub = I18n.t("cadeditor.ui.forms.33319365b1", (o.min), (o.max));
   var q = { min: o.min, max: o.max, softMin: o.softMin, softMax: o.softMax, step: o.step || 1, dec: o.dec, preservePrecision: o.preservePrecision, unit: o.unit, presets: o.presets, warnMax: o.warnMax, warnWhy: o.warnWhy, warnText: o.warnText, warnDetail: o.warnDetail,
     noSlider: o.noSlider !== undefined ? o.noSlider : o.softMax === undefined, validate: o.validate, limitWhy: o.limitWhy,
     onChange: function (x) { o.onChange(x); if (o.subOf && row) { var s = row.querySelector('.s'); if (s) { s.textContent = o.subOf(x); setTip(s, s.textContent); } } } };
@@ -176,7 +176,7 @@ function xList(cfg) {
       if (cfg.context) onContext(rowEl, function () { return cfg.context(it, i); });
       list.appendChild(rowEl);
     });
-    if (!items.length && cfg.empty !== '') list.appendChild(xEmpty(cfg.empty || '暂无条目'));
+    if (!items.length && cfg.empty !== '') list.appendChild(xEmpty(cfg.empty || I18n.t("cadeditor.ui.world.590fdddd01")));
   }
   api = { el: box, draw: draw, select: function (i) { selected = i; if (i >= 0) page.page = Math.floor(i / 24); draw(); }, selected: function () { return selected; } };
   box.appendChild(list); box.appendChild(pager);
@@ -187,5 +187,5 @@ function xList(cfg) {
 }
 /* 展开区底部：左边一句提示，右边红色删除 */
 function xFoot(hint, onDelete, label) {
-  return h('div', { class: 'x2f' }, [h('span', { class: 'k-sub', text: hint || '' }), kBtn(label || '删除', onDelete, { cls: 'dng', icon: 'trash' })]);
+  return h('div', { class: 'x2f' }, [h('span', { class: 'k-sub', text: hint || '' }), kBtn(label || I18n.t("cadeditor.ui.common.delete"), onDelete, { cls: 'dng', icon: 'trash' })]);
 }

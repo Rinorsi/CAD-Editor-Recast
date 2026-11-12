@@ -47,21 +47,21 @@ public final class StackCodec {
     public static ItemStack decode(JsonObject edit, RegistryAccess registries) {
         String id = string(edit, "id");
         Identifier itemId = Identifier.tryParse(id);
-        if (itemId == null || !BuiltInRegistries.ITEM.containsKey(itemId)) fail("物品 ID 不存在：" + id);
+        if (itemId == null || !BuiltInRegistries.ITEM.containsKey(itemId)) fail(EditorI18n.tr("cadeditor.message.stackcodec.b792ab06a7", (id)));
         int count = integer(edit, "count", 1, 99);
         JsonObject comps = object(edit, "comps");
         JsonObject removed = object(edit, "removed");
-        if (comps.size() + removed.size() > 256) fail("组件数量超过 256 项");
+        if (comps.size() + removed.size() > 256) fail(EditorI18n.tr("cadeditor.message.stackcodec.5d54767f85"));
         JsonObject patch = new JsonObject();
         for (var entry : comps.entrySet()) {
             String key = componentId(entry.getKey());
-            if (patch.has(key)) fail("重复组件：" + key);
+            if (patch.has(key)) fail(EditorI18n.tr("cadeditor.message.stackcodec.d5d0bbb3c8", (key)));
             patch.add(key, entry.getValue());
         }
         for (var entry : removed.entrySet()) {
             String key = componentId(entry.getKey());
-            if (!entry.getValue().equals(new com.google.gson.JsonPrimitive(1))) fail("移除组件的值必须为 1");
-            if (patch.has(key)) fail("组件不能同时设置和移除：" + key);
+            if (!entry.getValue().equals(new com.google.gson.JsonPrimitive(1))) fail(EditorI18n.tr("cadeditor.message.stackcodec.26f8819f77"));
+            if (patch.has(key)) fail(EditorI18n.tr("cadeditor.message.stackcodec.fad66eee18", (key)));
             patch.add("!" + key, new JsonObject());
         }
         JsonObject serialized = new JsonObject();
@@ -84,8 +84,8 @@ public final class StackCodec {
             }
             for (var entry : formats.entrySet()) {
                 String key = componentId(entry.getKey());
-                if (!entry.getValue().isJsonPrimitive() || !entry.getValue().getAsString().equals("snbt")) fail("未知组件格式：" + entry.getKey());
-                if (!comps.has(entry.getKey())) fail("格式标记没有对应组件：" + entry.getKey());
+                if (!entry.getValue().isJsonPrimitive() || !entry.getValue().getAsString().equals("snbt")) fail(EditorI18n.tr("cadeditor.message.stackcodec.e04104f0da", (entry.getKey())));
+                if (!comps.has(entry.getKey())) fail(EditorI18n.tr("cadeditor.message.stackcodec.1b2c50a05f", (entry.getKey())));
                 ComponentValidation.type(key);
                 nbtPatch.put(key, ComponentValidation.parseSnbt(string(comps, entry.getKey()), MAX_COMPONENT_SNBT_CHARS));
             }
@@ -103,7 +103,7 @@ public final class StackCodec {
         if (blockData == null || blockData.type() != net.minecraft.world.level.block.entity.BlockEntityTypes.TRIAL_SPAWNER
                 || registries.lookup(net.minecraft.core.registries.Registries.TRIAL_SPAWNER_CONFIG).isPresent())
             dev.rinorsi.editor.registry.SpawnerData.validate(next, registries);
-        if (next.isEmpty() || count > next.getMaxStackSize()) fail("数量超出该物品的最大堆叠");
+        if (next.isEmpty() || count > next.getMaxStackSize()) fail(EditorI18n.tr("cadeditor.message.stackcodec.62b8b41f9a"));
         return next;
     }
 
@@ -151,7 +151,7 @@ public final class StackCodec {
             // matching typed sidecar there too; exact numeric edits use explicit SNBT.
             return samePageJson(type.codec().encodeStart(registries.createSerializationContext(JsonOps.INSTANCE), typed).getOrThrow(), json)
                     ? type.codec().encodeStart(nbt, typed).getOrThrow() : null;
-        } catch (RuntimeException e) { throw new IllegalArgumentException("组件 SNBT 快照无效", e); }
+        } catch (RuntimeException e) { throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.stackcodec.7e15a34875"), e); }
     }
     /** JsonOps can contain NaN/Infinity JsonPrimitives, but those are not valid JSON
      * wire values. The exact NBT sidecar restores these null projections on read. */
@@ -208,24 +208,24 @@ public final class StackCodec {
     private static String componentId(String key) {
         String full = key.indexOf(':') < 0 ? "minecraft:" + key : key;
         Identifier id = Identifier.tryParse(full);
-        if (id == null || !BuiltInRegistries.DATA_COMPONENT_TYPE.containsKey(id)) fail("未知组件：" + key);
+        if (id == null || !BuiltInRegistries.DATA_COMPONENT_TYPE.containsKey(id)) fail(EditorI18n.tr("cadeditor.message.componentvalidation.9026297c8a", (key)));
         return full;
     }
     private static String shortId(String id) { return id.startsWith("minecraft:") ? id.substring(10) : id; }
     public static JsonObject object(JsonObject o, String key) {
-        if (!o.has(key) || !o.get(key).isJsonObject()) fail("缺少对象字段：" + key);
+        if (!o.has(key) || !o.get(key).isJsonObject()) fail(EditorI18n.tr("cadeditor.message.stackcodec.1b6dd48506", (key)));
         return o.getAsJsonObject(key);
     }
     public static String string(JsonObject o, String key) {
         JsonElement v = o.get(key);
-        if (v == null || !v.isJsonPrimitive() || !v.getAsJsonPrimitive().isString()) fail("缺少文本字段：" + key);
+        if (v == null || !v.isJsonPrimitive() || !v.getAsJsonPrimitive().isString()) fail(EditorI18n.tr("cadeditor.message.stackcodec.372b828248", (key)));
         return v.getAsString();
     }
     public static int integer(JsonObject o, String key, int min, int max) {
         JsonElement v = o.get(key);
-        if (v == null || !v.isJsonPrimitive() || !v.getAsJsonPrimitive().isNumber()) fail("字段必须是整数：" + key);
+        if (v == null || !v.isJsonPrimitive() || !v.getAsJsonPrimitive().isNumber()) fail(EditorI18n.tr("cadeditor.message.stackcodec.316b3d97f4", (key)));
         double n = v.getAsDouble();
-        if (!Double.isFinite(n) || n != Math.rint(n) || n < min || n > max) fail("字段超出范围：" + key + "（" + min + "–" + max + "）");
+        if (!Double.isFinite(n) || n != Math.rint(n) || n < min || n > max) fail(EditorI18n.tr("cadeditor.message.stackcodec.17bddb25f9", (key), (min), (max)));
         return (int) n;
     }
     public static void fail(String message) { throw new IllegalArgumentException(message); }

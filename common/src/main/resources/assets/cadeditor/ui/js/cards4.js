@@ -17,19 +17,19 @@ AUTO_BODY.note_block_sound = function (card, cid, v) {
 /* ---- 乐器 / 唱片 ---- */
 AUTO_BODY.instrument = function (card, cid, v) {
   if (typeof v !== 'string') { card.body.appendChild(renderComponentForm(cid, v, function (nv) { autoPut(cid, nv); }, Store.doc())); return; }
-  var s = kRegSelect({ reg: 'instrument', value: v, title: '选择乐器', onChange: function (x) { if (x) autoPut(cid, x); } });
+  var s = kRegSelect({ reg: 'instrument', value: v, title: I18n.t("cadeditor.ui.cards4.55ef062702"), onChange: function (x) { if (x) autoPut(cid, x); } });
   headCtl(card, s.el);
 };
 AUTO_BODY.jukebox_playable = function (card, cid, v) {
   var obj = v && typeof v === 'object' && typeof v.song === 'string';
   if (!obj && typeof v !== 'string') { card.body.appendChild(renderComponentForm(cid, v, function (nv) { autoPut(cid, nv); }, Store.doc())); return; }
-  var s = kRegSelect({ reg: 'jukebox_song', value: obj ? v.song : v, title: '选择唱片曲目', onChange: function (x) { if (!x) return; autoPut(cid, obj ? Object.assign(clone(v), { song: x }) : x); } });
+  var s = kRegSelect({ reg: 'jukebox_song', value: obj ? v.song : v, title: I18n.t("cadeditor.ui.cards4.b61d1ac440"), onChange: function (x) { if (!x) return; autoPut(cid, obj ? Object.assign(clone(v), { song: x }) : x); } });
   headCtl(card, s.el);
 };
 
 /* ---- 提示框样式：资源包提供的背景/边框，没有候选时直接输入 ID ---- */
 AUTO_BODY.tooltip_style = function (card, cid, v) {
-  var s = kRegSelect({ reg: 'tooltip_style', value: typeof v === 'string' ? v : '', title: '选择提示框样式', empty: '（未选择）', onChange: function (x) { if (x) autoPut(cid, x); } });
+  var s = kRegSelect({ reg: 'tooltip_style', value: typeof v === 'string' ? v : '', title: I18n.t("cadeditor.ui.cards4.2cd32a3982"), empty: I18n.t("cadeditor.ui.banner.3c5045c728"), onChange: function (x) { if (x) autoPut(cid, x); } });
   headCtl(card, s.el);
 };
 
@@ -41,34 +41,34 @@ AUTO_BODY.item_name = function (card, cid, v) {
   function isTr(x) { return isObj(x) && typeof x.translate === "string" && Object.keys(x).every(function (k) { return k === "translate" || k === "with" || k === "fallback"; }) && (x.with === undefined || (Array.isArray(x.with) && x.with.every(function (a) { return typeof a === "string"; }))); }
   function modeOf(x) { if (x === undefined || typeof x === "string") return "text"; if (isTr(x)) return "tr"; if (typeof tcSimple === "function" && tcSimple(x)) return "text"; return "raw"; }
   var mode = modeOf(v), body = h("div", { class: "tc-body" });
-  var modes = kSeg([{ v: "text", label: "文字" }, { v: "tr", label: "翻译键" }, { v: "raw", label: "高级 SNBT" }], mode, function (m) {
+  var modes = kSeg([{ v: "text", label: I18n.t("cadeditor.ui.cards4.14b69bd6ee") }, { v: "tr", label: I18n.t("cadeditor.ui.cards4.4971fddb5c") }, { v: "raw", label: I18n.t("cadeditor.ui.cards4.740e3a1f62") }], mode, function (m) {
     if (m === mode) return;
     if (m === "tr") v = isTr(v) ? v : { translate: defKey };
     else if (m === "text") v = (typeof v === "string" || (typeof tcSimple === "function" && tcSimple(v))) ? v : "";
     mode = m; if (v !== "" && !(m === 'tr' && !v.translate)) autoPut(cid, v); draw();
   });
-  card.body.appendChild(fieldRow("写法", modes.el));
+  card.body.appendChild(fieldRow(I18n.t("cadeditor.ui.cards4.cbe3e4300e"), modes.el));
   card.body.appendChild(body);
   function draw() {
     clear(body);
     if (mode === "text") {
-      var t = kRich(v === undefined ? "" : v, { placeholder: "输入基础名称", def: { color: itemTone(), italic: false, placeholder: nameOfItem(d.id) }, onChange: function (nv, empty) { if (!empty) { v = nv; autoPut(cid, nv); } } });
+      var t = kRich(v === undefined ? "" : v, { placeholder: I18n.t("cadeditor.ui.cards4.dfb8a24a1b"), def: { color: itemTone(), italic: false, placeholder: nameOfItem(d.id) }, onChange: function (nv, empty) { if (!empty) { v = nv; autoPut(cid, nv); } } });
       body.appendChild(t.el);
     } else if (mode === "tr") {
       var key = isTr(v) ? v.translate : defKey, args = isTr(v) && v.with ? v.with.slice() : [];
       function put() { if (!key) return; var o = { translate: key }; if (args.length) o.with = args.slice(); v = o; autoPut(cid, o); }
-      body.appendChild(fieldRow("翻译键", kInput(key, function (x) { key = x; put(); }, { placeholder: defKey || '手动填写翻译键' }), "游戏按玩家当前语言显示这个键对应的文字；" + (defKey ? '当前原型的翻译键是 ' + defKey : '尚未取得原型翻译键，保留原值并可手动填写')));
+      body.appendChild(fieldRow(I18n.t("cadeditor.ui.cards4.4971fddb5c"), kInput(key, function (x) { key = x; put(); }, { placeholder: defKey || I18n.t("cadeditor.ui.cards4.3645aa7358") }), I18n.t("cadeditor.ui.cards4.9ab21d7585", (defKey ? I18n.t("cadeditor.ui.cards4.93d7429df9", (defKey)) : I18n.t("cadeditor.ui.cards4.1b79851c30")))));
       var list = h("div", { class: "k-sortlist" });
       var drawArgs = function () {
         clear(list);
         args.forEach(function (a, n) {
-          var rm = h("div", { class: "k-mini del", text: "×", title: "删除" }); activate(rm, function () { args.splice(n, 1); put(); drawArgs(); });
-          list.appendChild(h("div", { class: "k-lrow" }, [h("span", { class: "ix", text: "%" + (n + 1) + "$s" }), h("div", { class: "grow" }, [kInput(a, function (x) { args[n] = x; put(); }, { placeholder: "参数" })]), rm]));
+          var rm = h("div", { class: "k-mini del", text: "×", title: I18n.t("cadeditor.ui.common.delete") }); activate(rm, function () { args.splice(n, 1); put(); drawArgs(); });
+          list.appendChild(h("div", { class: "k-lrow" }, [h("span", { class: "ix", text: "%" + (n + 1) + "$s" }), h("div", { class: "grow" }, [kInput(a, function (x) { args[n] = x; put(); }, { placeholder: I18n.t("cadeditor.ui.cards4.9634fb0832") })]), rm]));
         });
-        if (!args.length) list.appendChild(h("div", { class: "k-empty", text: "没有参数" }));
+        if (!args.length) list.appendChild(h("div", { class: "k-empty", text: I18n.t("cadeditor.ui.cards4.444e4bf50b") }));
       };
-      var add = h("div", { class: "k-add" }, [uiIcon("plus", 12), "添加参数"]); activate(add, function () { args.push(""); put(); drawArgs(); });
-      drawArgs(); body.appendChild(fieldRow("文字参数", h("div", {}, [list, add]), "替换翻译里的 %s"));
+      var add = h("div", { class: "k-add" }, [uiIcon("plus", 12), I18n.t("cadeditor.ui.cards4.e90e7274bf")]); activate(add, function () { args.push(""); put(); drawArgs(); });
+      drawArgs(); body.appendChild(fieldRow(I18n.t("cadeditor.ui.cards4.46da3c4fac"), h("div", {}, [list, add]), I18n.t("cadeditor.ui.cards4.617a3315e6")));
     } else {
       var code = kCode({ value: toSnbt(v === undefined ? "" : v, null, true), height: 180, onInput: function (t, err, parsed) { if (err) return; try { var pv = parsed; v = pv; autoPut(cid, pv); } catch (e) {} } });
       body.appendChild(code.el);
@@ -89,20 +89,20 @@ AUTO_BODY.custom_model_data = function (card, cid, v) {
   var d = Store.doc(), mid = d.comps.item_model !== undefined ? String(d.comps.item_model) : d.id;
   var hints = Reg.hintsOf(Reg.full(mid));
   var top = h("div", { class: "cmd-hints" });
-  if (hints === null) top.appendChild(kHint(Reg.live() ? "正在读取这个物品的模型定义…" : "未连接游戏，无法读取模型定义；可以直接填下面的原始数组。"));
-  else if (!hints.length) top.appendChild(kHint("这个物品的模型定义里没有用到自定义模型数据（或没有找到模型文件），所以现在填什么都不会改变外观。需要时可以在下面直接填写。"));
+  if (hints === null) top.appendChild(kHint(Reg.live() ? I18n.t("cadeditor.ui.cards4.2f299dd975") : I18n.t("cadeditor.ui.cards4.57feef0c4d")));
+  else if (!hints.length) top.appendChild(kHint(I18n.t("cadeditor.ui.cards4.23e03ccfef")));
   else {
-    top.appendChild(kHint("这个物品的模型会根据下面这些值切换外观："));
+    top.appendChild(kHint(I18n.t("cadeditor.ui.cards4.e4336f27c9")));
     hints.forEach(function (hn) {
       var idx = hn.index || 0, row = h("div", { class: "fld" });
-      var lab = { flag: "开关 #" + idx, range: "数字 #" + idx, select: "文字 #" + idx, color: "颜色 #" + idx }[hn.kind] || (hn.kind + " #" + idx);
+      var lab = { flag: I18n.t("cadeditor.ui.cards4.fe7e2db8b6", (idx)), range: I18n.t("cadeditor.ui.cards4.56c8dd4fe0", (idx)), select: I18n.t("cadeditor.ui.cards4.7f5779eb09", (idx)), color: I18n.t("cadeditor.ui.cards4.91c1098d5c", (idx)) }[hn.kind] || (hn.kind + " #" + idx);
       row.appendChild(h("div", { class: "fl", title: hn.kind + " index " + idx }, [h("div", { class: "fk", text: lab })]));
       var ctl = h("div", { class: "fc" });
       if (hn.kind === "flag") ctl.appendChild(kToggle(!!m.flags[idx], function (on) { setAt("flags", idx, on, false); }, "").el);
       else if (hn.kind === "range") {
         var cur = typeof m.floats[idx] === "number" ? m.floats[idx] : 0, box = h("div", { class: "cmd-rg" });
         box.appendChild(kNumber(cur, { min: -1e9, max: 1e9, step: 1, dec: 4, noSlider: true, onChange: function (nv) { setAt("floats", idx, nv, 0); } }).el);
-        if (hn.thresholds && hn.thresholds.length) { var pr = h("div", { class: "k-chips" }); hn.thresholds.forEach(function (t) { var ch = h("div", { class: "k-chip", text: "≥ " + fmtNum(t), title: "模型在数值达到 " + fmtNum(t) + " 时切换" }); activate(ch, function () { setAt("floats", idx, t, 0); }); pr.appendChild(ch); }); box.appendChild(pr); }
+        if (hn.thresholds && hn.thresholds.length) { var pr = h("div", { class: "k-chips" }); hn.thresholds.forEach(function (t) { var ch = h("div", { class: "k-chip", text: "≥ " + fmtNum(t), title: I18n.t("cadeditor.ui.cards4.ad211b1e8d", (fmtNum(t))) }); activate(ch, function () { setAt("floats", idx, t, 0); }); pr.appendChild(ch); }); box.appendChild(pr); }
         ctl.appendChild(box);
       } else if (hn.kind === "select") {
         var cs = h("div", { class: "k-chips" }), curS = m.strings[idx];
@@ -120,19 +120,19 @@ AUTO_BODY.custom_model_data = function (card, cid, v) {
     function draw() {
       clear(list);
       m[key].forEach(function (val, i) {
-        var rm = h("div", { class: "k-mini del", text: "×", title: "删除" }); activate(rm, function () { m[key].splice(i, 1); put(); draw(); });
+        var rm = h("div", { class: "k-mini del", text: "×", title: I18n.t("cadeditor.ui.common.delete") }); activate(rm, function () { m[key].splice(i, 1); put(); draw(); });
         list.appendChild(h("div", { class: "k-lrow" }, [h("span", { class: "ix", text: "#" + i }), h("div", { class: "grow" }, [makeCtl(val, function (nv) { m[key][i] = nv; put(); })]), rm]));
       });
-      if (!m[key].length) list.appendChild(h("div", { class: "k-empty", text: "空" }));
+      if (!m[key].length) list.appendChild(h("div", { class: "k-empty", text: I18n.t("cadeditor.ui.cards4.2f8267a89a") }));
     }
-    var add = kBtn("添加", function () { m[key].push(def()); put(); draw(); }, { icon: "plus" });
+    var add = kBtn(I18n.t("cadeditor.ui.cards3.7a8a11ead5"), function () { m[key].push(def()); put(); draw(); }, { icon: "plus" });
     draw(); raw.appendChild(h("div", { class: "l6-h" }, [h("span", { text: title }), add])); raw.appendChild(list);
   }
-  group("floats", "数字", function (val, set) { return kNumber(+val, { min: -1e9, max: 1e9, step: 0.1, dec: 4, noSlider: true, onChange: set }).el; }, function () { return 0; });
-  group("flags", "开关", function (val, set) { return kToggle(!!val, set, "").el; }, function () { return false; });
-  group("strings", "文字", function (val, set) { return kInput(String(val), set, { placeholder: "文字" }); }, function () { return ""; });
-  group("colors", "颜色", function (val, set) { return kColor(toInt(val), set, {}).el; }, function () { return 0xFFFFFF; });
-  var open = false, head = h("div", { class: "cmd-head" }, [uiIcon("forward", 10), h("span", { text: "原始数组（高级）" })]);
+  group("floats", I18n.t("cadeditor.ui.cards4.c16ec9274e"), function (val, set) { return kNumber(+val, { min: -1e9, max: 1e9, step: 0.1, dec: 4, noSlider: true, onChange: set }).el; }, function () { return 0; });
+  group("flags", I18n.t("cadeditor.ui.cards4.92d9be0a0e"), function (val, set) { return kToggle(!!val, set, "").el; }, function () { return false; });
+  group("strings", I18n.t("cadeditor.ui.cards4.14b69bd6ee"), function (val, set) { return kInput(String(val), set, { placeholder: I18n.t("cadeditor.ui.cards4.14b69bd6ee") }); }, function () { return ""; });
+  group("colors", I18n.t("cadeditor.ui.cards4.070a8016fc"), function (val, set) { return kColor(toInt(val), set, {}).el; }, function () { return 0xFFFFFF; });
+  var open = false, head = h("div", { class: "cmd-head" }, [uiIcon("forward", 10), h("span", { text: I18n.t("cadeditor.ui.cards4.2d15318ead") })]);
   raw.style.display = "none";
   activate(head, function () { open = !open; raw.style.display = open ? "" : "none"; head.firstChild.src = "oriel:textures/icons/" + (open ? "down" : "forward") + ".png"; });
   card.body.appendChild(head); card.body.appendChild(raw);

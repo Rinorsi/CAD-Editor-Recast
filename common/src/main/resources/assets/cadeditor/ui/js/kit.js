@@ -46,7 +46,7 @@ function kSearchBox(input, onSearch) {
   function go() { last = input.value; onSearch(input.value); }
   input.addEventListener('input', function () { if (input.value === '' && last !== '') go(); });
   input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); if (e.stopPropagation) e.stopPropagation(); go(); } });
-  var btn = h('div', { class: 'k-btn k-sbtn', title: '搜索（也可以按回车）' }, [uiIcon('search', 12), h('span', { text: '搜索' })]);
+  var btn = h('div', { class: 'k-btn k-sbtn', title: I18n.t("cadeditor.ui.kit.9bae0d8ea9") }, [uiIcon('search', 12), h('span', { text: I18n.t("cadeditor.ui.common.search") })]);
   activate(btn, go);
   return { el: h('div', { class: 'k-sbox' }, [input, btn]), input: input, go: go };
 }
@@ -114,9 +114,9 @@ function kListPage(total, state, bar, redraw) {
   var size = 24, pages = Math.max(1, Math.ceil(total / size));
   state.page = Math.max(0, Math.min(pages - 1, state.page || 0)); clear(bar);
   if (pages > 1) {
-    bar.appendChild(kBtn('上一页', function () { state.page = Math.max(0, state.page - 1); redraw(); }, { cls:'sm' }));
-    bar.appendChild(h('span', { class:'k-sub', text:(state.page + 1) + ' / ' + pages + ' · ' + total + ' 项' }));
-    bar.appendChild(kBtn('下一页', function () { state.page = Math.min(pages - 1, state.page + 1); redraw(); }, { cls:'sm' }));
+    bar.appendChild(kBtn(I18n.t("cadeditor.ui.kit.c9b9ae7a61"), function () { state.page = Math.max(0, state.page - 1); redraw(); }, { cls:'sm' }));
+    bar.appendChild(h('span', { class:'k-sub', text:I18n.t("cadeditor.ui.kit.71b3ff3546", (state.page + 1), (pages), (total)) }));
+    bar.appendChild(kBtn(I18n.t("cadeditor.ui.kit.8a8542f696"), function () { state.page = Math.min(pages - 1, state.page + 1); redraw(); }, { cls:'sm' }));
   }
   return { start:state.page * size, end:Math.min(total, (state.page + 1) * size) };
 }
@@ -176,7 +176,7 @@ var ItemHistory = {
 /* 物品选择弹出：搜索 + 图标网格 */
 function pickItem(anchor, onPick, o) {
   o = o || {};
-  var q = h('input', { class: 'k-input', type: 'text', placeholder: o.placeholder || '搜索物品，如「钻石」「sword」', spellcheck: 'false' });
+  var q = h('input', { class: 'k-input', type: 'text', placeholder: o.placeholder || I18n.t("cadeditor.ui.kit.09016de425"), spellcheck: 'false' });
   var grid = h('div', { class: 'k-pgrid' }), hint = h('div', { class: 'k-phint' }), cancel = null, revision = 0;
   /* 候选来自游戏实时注册表（含模组物品）；没有宿主时才用内置清单。原版物品用短 ID，模组物品用完整 ID。
      搜索按时间片分批（kFilterSliced）：一千多个物品的拼音匹配不能在一次脚本入口里做完，否则会被引擎停页 */
@@ -192,8 +192,8 @@ function pickItem(anchor, onPick, o) {
       })(list[i]);
     }
     var custom = s && /^[a-z0-9_.\-]+:[a-z0-9_.\/\-]+$/.test(s) && src.indexOf(shortId(s)) < 0;
-    if (custom) { var cu = h('div', { class: 'k-add', text: '使用自定义 ID：' + s }); cu.addEventListener('mousedown', function (e) { e.preventDefault(); kPopClose(); onPick(shortId(s)); }); grid.appendChild(cu); }
-    hint.textContent = total ? '共 ' + total + ' 个' : (!Reg.preview() && !Reg.list('items') && !Reg.isLazy('item') ? '正在读取游戏物品，可以手动输入完整 ID' : '没有匹配的物品；可以手动输入完整 ID');
+    if (custom) { var cu = h('div', { class: 'k-add', text: I18n.t("cadeditor.ui.kit.f3c59d1da3", (s)) }); cu.addEventListener('mousedown', function (e) { e.preventDefault(); kPopClose(); onPick(shortId(s)); }); grid.appendChild(cu); }
+    hint.textContent = total ? I18n.t("cadeditor.ui.kit.867fbfd634", (total)) : (!Reg.preview() && !Reg.list('items') && !Reg.isLazy('item') ? I18n.t("cadeditor.ui.kit.898e1940b6") : I18n.t("cadeditor.ui.kit.fe1a8e7687"));
   }
   function history() {
     clear(grid); ItemHistory.init();
@@ -204,11 +204,11 @@ function pickItem(anchor, onPick, o) {
       c.addEventListener('mousedown', function (ev) {
         ev.preventDefault();
         try { var st = o.onStack ? ItemHistory.wire(entry) : null; kPopClose(); if (st) o.onStack(st); else onPick(shortId(entry.id)); }
-        catch (error) { if (typeof EditorDiag !== 'undefined') EditorDiag.error('history.take', error); toast('历史物品读取失败', 'error'); }
+        catch (error) { if (typeof EditorDiag !== 'undefined') EditorDiag.error('history.take', error); toast(I18n.t("cadeditor.ui.kit.8b5a88e099"), 'error'); }
       });
       grid.appendChild(c);
     });
-    hint.textContent = rows.length ? '最近编辑 · ' + rows.length + ' 件' : '暂无编辑历史，输入名称或 ID 搜索';
+    hint.textContent = rows.length ? I18n.t("cadeditor.ui.kit.1c5c07072f", (rows.length)) : I18n.t("cadeditor.ui.kit.634f636c2f");
   }
   function paint() {
     if (cancel) { cancel(); cancel = null; }
@@ -222,7 +222,7 @@ function pickItem(anchor, onPick, o) {
     if (ilk || !o.filter) {
       if (HostSearch.query({ view: 'item-picker', kind: ilk || 'items', query: s, limit: 56 }, function (r) {
         if (!current()) return;
-        if (r.fallback) { if (!ilk) local(); else { show([], s, src); hint.textContent = '游戏未返回结果，可输入完整 ID'; } return; }
+        if (r.fallback) { if (!ilk) local(); else { show([], s, src); hint.textContent = I18n.t("cadeditor.ui.kit.b0bfd9369f"); } return; }
         if (ilk) Reg.noteRows(ilk, r.entries);
         var ids = (r.entries || []).map(function (e) { return Reg.isMod(Reg.full(e.id)) ? e.id : shortId(e.id); });
         if (o.filter) ids = ids.filter(function (id) { return o.filter(id); });
@@ -236,8 +236,8 @@ function pickItem(anchor, onPick, o) {
   onKey(q, { Escape: function () { kPopClose(); } });
   var foot = h('div', { class: 'k-pfoot k-item-foot' }, [hint]);
   if (o.onStack) {
-    foot.appendChild(kBtn('所有物品', function () { kPopClose(); openRegPick({ reg: 'item', title: '选择物品', onPick: onPick, onStack: o.onStack }); }, { icon: 'grid' }));
-    foot.appendChild(kBtn('保险库', function () { kPopClose(); openVault({ pick: function (stack, entry) { o.onStack(stack, entry); } }); }, { icon: 'chest', title: '从保险库取一件（带着它的全部自定义组件）' }));
+    foot.appendChild(kBtn(I18n.t("cadeditor.ui.kit.7207789fd2"), function () { kPopClose(); openRegPick({ reg: 'item', title: I18n.t("cadeditor.ui.kit.662f204e9e"), onPick: onPick, onStack: o.onStack }); }, { icon: 'grid' }));
+    foot.appendChild(kBtn(I18n.t("cadeditor.ui.common.vault"), function () { kPopClose(); openVault({ pick: function (stack, entry) { o.onStack(stack, entry); } }); }, { icon: 'chest', title: I18n.t("cadeditor.ui.kit.0ac50e085c") }));
   }
   if (o.reset) foot.appendChild(kBtn(o.reset.label, function () { kPopClose(); o.reset.fn(); }, { icon: 'undo' }));
   var box = h('div', { class: 'k-pickbox' }, [sbox.el, grid, foot]);
@@ -249,14 +249,14 @@ function pickItem(anchor, onPick, o) {
    o.manual = { label, parse(text)→值（不合法抛错） }：搜索框兼做手动输入，按回车时没有完全匹配的条目就把输入的值写入 */
 function pickFrom(anchor, entries, onPick, o) {
   o = o || {};
-  var q = h('input', { class: 'k-input', type: 'text', placeholder: o.placeholder || (o.manual ? '搜索，或输入后按回车直接写入' : '搜索…'), spellcheck: 'false' });
+  var q = h('input', { class: 'k-input', type: 'text', placeholder: o.placeholder || (o.manual ? I18n.t("cadeditor.ui.kit.8bc781e64f") : I18n.t("cadeditor.ui.kit.a249f60ce7")), spellcheck: 'false' });
   var list = h('div', { class: 'k-plist' }), err = h('div', { class: 'k-numerr' });
   function pick(e) { kPopClose(); onPick(e); }
   function paint() {
     clear(list); err.textContent = '';
     var s = q.value.trim().toLowerCase(), n = 0;
     if (o.manual && s) {
-      var mr = h('div', { class: 'k-prow k-pman' }, [h('div', { class: 'tx' }, [h('div', { class: 'z', text: '回车写入「' + q.value.trim() + '」' }), h('div', { class: 's', text: o.manual.label || '列表里没有的值也可以' })])]);
+      var mr = h('div', { class: 'k-prow k-pman' }, [h('div', { class: 'tx' }, [h('div', { class: 'z', text: I18n.t("cadeditor.ui.kit.1c8db3a979", (q.value.trim())) }), h('div', { class: 's', text: o.manual.label || I18n.t("cadeditor.ui.forms.42f10f553c") })])]);
       mr.addEventListener('mousedown', function (ev) { ev.preventDefault(); manual(); });
       list.appendChild(mr);
     }
@@ -267,7 +267,7 @@ function pickFrom(anchor, entries, onPick, o) {
       row.addEventListener('mousedown', function (ev) { ev.preventDefault(); pick(e); });
       list.appendChild(row);
     });
-    if (!n && !(o.manual && s)) list.appendChild(h('div', { class: 'k-phint', text: '没有匹配项' }));
+    if (!n && !(o.manual && s)) list.appendChild(h('div', { class: 'k-phint', text: I18n.t("cadeditor.ui.kit.8151e8704a") }));
   }
   function manual() {
     var t = q.value.trim(); if (!t) return;
@@ -371,7 +371,7 @@ function kStepper(input, o) {
   o = o || {};
   input.classList.add('k-numin');
   function button(dir, text) {
-    var b = h('div', { class: 'k-step', text: text, title: (dir < 0 ? '减少' : '增加') + '（Shift 加速）' });
+    var b = h('div', { class: 'k-step', text: text, title: I18n.t("cadeditor.ui.kit.061353100e", (dir < 0 ? I18n.t("cadeditor.ui.kit.43c9f2ba74") : I18n.t("cadeditor.ui.kit.bce53fe72c"))) });
     activate(b, function (e) { o.onStep(dir, e); });
     return b;
   }
@@ -384,10 +384,10 @@ function kNumber(value, o) {
   var smax0 = o.softMax !== undefined ? o.softMax : (max !== undefined && max < 1e6 ? max : smin + 100);
   var wrap = h('div', { class: 'k-num' }), cur = value === undefined ? undefined : nbtNumberValue(value), smax = smax0, ustep = step, editing = false;
   var input = h('input', { class: 'k-input k-numin' + (o.big ? ' big' : ''), type: 'text', spellcheck: 'false' });
-  function emptyText() { return (typeof o.placeholder === 'function' ? o.placeholder() : o.placeholder) || '未设置'; }
+  function emptyText() { return (typeof o.placeholder === 'function' ? o.placeholder() : o.placeholder) || I18n.t("cadeditor.ui.common.unset"); }
   var err = h('div', { class: 'k-numerr' }), warn = h('div', { class: 'k-numwarn' });
   var warningDetail = '';
-  if (o.warnText) { warn.classList.add('link'); setTip(warn, '点击查看说明'); activate(warn, function () { if (warningDetail) kPopover(warn, kHint(warningDetail, 'note'), { width: 360 }); }); }
+  if (o.warnText) { warn.classList.add('link'); setTip(warn, I18n.t("cadeditor.ui.kit.4dd759bcd6")); activate(warn, function () { if (warningDetail) kPopover(warn, kHint(warningDetail, 'note'), { width: 360 }); }); }
   var track = h('div', { class: 'k-slider', tabindex: '0' }, [h('div', { class: 'tr' }), h('div', { class: 'fl' }), h('div', { class: 'th' })]);
   var fl = track.children[1], th = track.children[2];
   var big = h('span', { class: 'k-big' });
@@ -401,18 +401,18 @@ function kNumber(value, o) {
   }
   function range() { smax = smax0; ustep = step; if (cur > smax0) { smax = niceCeil(cur * 1.25); ustep = Math.max(step, Math.pow(10, Math.floor(Math.log(smax) / Math.LN10) - 2)); } }
   function paintSlider() {
-    if (!isFinite(cur)) { fl.style.width = '0%'; th.style.left = '0%'; track.classList.remove('over'); setTip(track, cur === undefined ? '默认值读取中，可直接输入或选择数值' : '特殊浮点值不对应滑块位置；拖动可重新设置有限数字'); return; }
+    if (!isFinite(cur)) { fl.style.width = '0%'; th.style.left = '0%'; track.classList.remove('over'); setTip(track, cur === undefined ? I18n.t("cadeditor.ui.kit.6d23f42fb7") : I18n.t("cadeditor.ui.kit.df36219a30")); return; }
     range();
     var t = smax > smin ? Math.max(0, Math.min(1, (cur - smin) / (smax - smin))) : 0;
     fl.style.width = (t * 100) + '%'; th.style.left = (t * 100) + '%';
     track.classList.toggle('over', cur > smax0);
-    setTip(track, cur > smax0 ? '数值已超出常规滑块范围，滑块已自动放大到 ' + fmtInt(smax) + '，也可直接在输入框修改' : '');
+    setTip(track, cur > smax0 ? I18n.t("cadeditor.ui.kit.af5118a294", (fmtInt(smax))) : '');
   }
   function paintWarn() {
     if (!isFinite(cur)) { warn.textContent = ''; warn.style.display = 'none'; big.textContent = ''; big.style.display = 'none'; return; }
     var w = '';
-    if (o.warnMax !== undefined && cur > o.warnMax) w = '超过原版上限 ' + fmtNum(o.warnMax) + (o.warnWhy ? '（' + o.warnWhy + '）' : '') + '：原版游戏可能忽略或拒绝；安装了解除上限的模组才有效';
-    else if (o.warnMin !== undefined && cur < o.warnMin) w = '低于原版下限 ' + fmtNum(o.warnMin) + (o.warnWhy ? '（' + o.warnWhy + '）' : '') + '：原版游戏可能忽略或拒绝';
+    if (o.warnMax !== undefined && cur > o.warnMax) w = I18n.t("cadeditor.ui.kit.8c467945b5", (fmtNum(o.warnMax)), (o.warnWhy ? '（' + o.warnWhy + '）' : ''));
+    else if (o.warnMin !== undefined && cur < o.warnMin) w = I18n.t("cadeditor.ui.kit.e453c9b2bb", (fmtNum(o.warnMin)), (o.warnWhy ? '（' + o.warnWhy + '）' : ''));
     warningDetail = w ? (o.warnDetail || w) : '';
     warn.textContent = w && o.warnText ? o.warnText : w; warn.style.display = w ? 'block' : 'none';
     var b = bigText(cur); big.textContent = b && !o.unitBig ? '≈ ' + b : ''; big.style.display = b ? '' : 'none';
@@ -420,16 +420,16 @@ function kNumber(value, o) {
   function paint(keepInput) {
     if (!keepInput) { input.value = cur === undefined ? '' : !isFinite(cur) ? numLabel(cur) : o.preservePrecision ? String(cur) : fmtNum(cur); editing = false; err.style.display = 'none'; input.classList.remove('bad'); }
     input.setAttribute('placeholder', emptyText());
-    setTip(input, cur === undefined ? emptyText() + '，可直接输入' : '');
+    setTip(input, cur === undefined ? I18n.t("cadeditor.ui.kit.4ca128a837", (emptyText())) : '');
     setTimeout(function () { centerInput(input); }, 0); if (!o.noSlider) paintSlider(); paintWarn();
   }
   function commit(v, key) { if (isFinite(v) && (!o.preservePrecision || key === 'drag')) v = round(v); if (!ok(v)) { showErr(v); return; } if (o.validate) { var why = o.validate(v); if (why) { input.classList.add('bad'); err.style.display = ''; err.textContent = why; return; } } cur = v; paint(); if (o.onChange) o.onChange(isFinite(cur) ? cur : nbtSpecialScalar(cur, specialSchema().nbtType), key); }
   function showErr(v) {
     input.classList.add('bad'); err.style.display = ''; clear(err);
     var sc = specialSchema();
-    var msg = typeof v !== 'number' ? '请输入数字或明确的 NaN / Infinity / -Infinity' : !isFinite(v) ? (o.special ? (!sc || !sc.live ? '正在读取此字段的游戏 Codec；输入已保留，读取后可重新确认' : '此字段的游戏 Codec 不接受 ' + fmtNum(v) + '，输入已保留，未写入草稿') : '请输入有限数字；此字段不支持 NaN / Infinity') : (max !== undefined && v > max ? '最大只能是 ' + String(max) : '最小只能是 ' + String(min));
+    var msg = typeof v !== 'number' ? I18n.t("cadeditor.ui.kit.d2f4c35cb5") : !isFinite(v) ? (o.special ? (!sc || !sc.live ? I18n.t("cadeditor.ui.kit.d9f0c65e80") : I18n.t("cadeditor.ui.kit.1c3c035848", (fmtNum(v)))) : I18n.t("cadeditor.ui.kit.7832cab41d")) : (max !== undefined && v > max ? I18n.t("cadeditor.ui.kit.8cb4e2e900", (String(max))) : I18n.t("cadeditor.ui.kit.edeb59ae0a", (String(min))));
     err.appendChild(document.createTextNode(msg + (o.limitWhy ? '（' + o.limitWhy + '）' : '') + ' '));
-    if (typeof v === 'number' && isFinite(v)) { var fix = h('span', { class: 'fix', text: '改为' + (v > max ? '上限' : '下限') }); fix.addEventListener('click', function () { commit(v > max ? max : min, 'fix'); }); err.appendChild(fix); }
+    if (typeof v === 'number' && isFinite(v)) { var fix = h('span', { class: 'fix', text: I18n.t("cadeditor.ui.kit.0116361fd1", (v > max ? I18n.t("cadeditor.ui.kit.8e7ddbeee3") : I18n.t("cadeditor.ui.kit.2c3f8d6ce4"))) }); fix.addEventListener('click', function () { commit(v > max ? max : min, 'fix'); }); err.appendChild(fix); }
   }
   function fromEvent(e) {
     var r = track.getBoundingClientRect(), t = Math.max(0, Math.min(1, (e.clientX - r.left) / Math.max(1, r.width)));
@@ -442,7 +442,7 @@ function kNumber(value, o) {
     var up = function () { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); };
     document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
   });
-  function nudge(dir, e) { var from = editing ? readInput() : cur; if (from === undefined) { err.style.display = ''; err.textContent = '请先输入数值'; return; } if (from === null) { showErr(null); return; } if (!isFinite(from)) { err.style.display = ''; err.textContent = numLabel(from) + ' 不能逐步增减；可输入普通数字或拖动滑块'; return; } var mult = e && e.shiftKey ? 10 : 1; commit(from + dir * ustep * mult, 'step'); }
+  function nudge(dir, e) { var from = editing ? readInput() : cur; if (from === undefined) { err.style.display = ''; err.textContent = I18n.t("cadeditor.ui.forms.e376cba1c3"); return; } if (from === null) { showErr(null); return; } if (!isFinite(from)) { err.style.display = ''; err.textContent = I18n.t("cadeditor.ui.kit.01532c4811", (numLabel(from))); return; } var mult = e && e.shiftKey ? 10 : 1; commit(from + dir * ustep * mult, 'step'); }
   onKey(track, { ArrowRight: function (e) { nudge(1, e); }, ArrowUp: function (e) { nudge(1, e); }, ArrowLeft: function (e) { nudge(-1, e); }, ArrowDown: function (e) { nudge(-1, e); } });
   function readInput() { var t = input.value.trim().replace(/[,，\s]/g, ''); if (t === '') return undefined;
     if (/^[+\-−]?∞$/.test(t)) return t.charAt(0) === '-' || t.charAt(0) === '−' ? -Infinity : Infinity;
@@ -504,7 +504,7 @@ function kColor(value, onChange, o) {
     activate(s, function () { set(DYE_RGB[k]); }); pal.appendChild(s);
   });
   input.addEventListener('change', function () { var t = input.value.trim(); if (/^#?[0-9a-fA-F]{6}$/.test(t)) set(parseInt(t.replace('#', ''), 16)); else if (t === '' && o.allowNone) set(null); else paint(); });
-  wrap.appendChild(h('div', { class: 'k-colorrow' }, [chip, input, o.allowNone ? (function () { var b = h('div', { class: 'k-mini', text: '无' }); activate(b, function () { set(null); }); return b; })() : null]));
+  wrap.appendChild(h('div', { class: 'k-colorrow' }, [chip, input, o.allowNone ? (function () { var b = h('div', { class: 'k-mini', text: I18n.t("cadeditor.ui.common.none") }); activate(b, function () { set(null); }); return b; })() : null]));
   wrap.appendChild(pal);
   paint();
   return { el: wrap, set: function (v) { cur = typeof v === 'number' ? (v & 0xFFFFFF) : null; paint(); } };
@@ -530,12 +530,13 @@ function kBtn(label, onClick, o) {
 }
 
 /* 复制到剪贴板。宿主能写就直接写；写不了就弹一个窗口说明现在不能直接复制，文字放在里面，可以手动选中复制 */
-function copyText(text, what) {
-  if (Prefs.hostClip && typeof oriel !== 'undefined' && oriel.send) { oriel.send('clipboard', { text: text }); toast('已复制' + (what || ''), 'ok'); return true; }
+function copyText(text, what, language) {
+  if (language) return I18n.withLanguage(language, function () { return copyText(text, what); });
+  if (Prefs.hostClip && typeof oriel !== 'undefined' && oriel.send) { oriel.send('clipboard', { text: text }); toast(I18n.t("cadeditor.ui.kit.79169bb0e2", (what || '')), 'ok'); return true; }
   var long = text.length > 90 || text.indexOf(String.fromCharCode(10)) >= 0;
   var box = long ? h('textarea', { class: 'ed-snbt', spellcheck: 'false', style: 'height:220px;min-height:220px;' }) : h('input', { class: 'k-input', type: 'text', spellcheck: 'false' });
   box.value = text;
-  openModal(modalShell('复制' + (what || ''), '', [h('div', { class: 'k-sub', text: '现在不能直接复制到剪贴板。请在下面选中内容，按 Ctrl+C 手动复制。' }), box], [h('div', { class: 'grow' }), kBtn('完成', closeModal, { cls: 'pri' })]), true);
+  openModal(modalShell(I18n.t("cadeditor.ui.kit.0a0c8d5014", (what || '')), '', [h('div', { class: 'k-sub', text: I18n.t("cadeditor.ui.kit.4e33f8900f") }), box], [h('div', { class: 'grow' }), kBtn(I18n.t("cadeditor.ui.common.done"), closeModal, { cls: 'pri' })]), true);
   setTimeout(function () { if (box.focus) box.focus(); if (box.select) box.select(); }, 0);
   return false;
 }
@@ -546,14 +547,14 @@ function copyText(text, what) {
 /* 这些组件在卡片头部带一个开关：开 = 物品有这项功能，关 = 没有 */
 var TOGGLABLE = { max_damage: 1, enchantable: 1, weapon: 1, use_cooldown: 1, tool: 1, equippable: 1, food: 1, consumable: 1, death_protection: 1, written_book_content: 1, writable_book_content: 1, use_remainder: 1 };
 function kCard(spec, ctx) {
-  var badge = h('span', { class: 'k-badge', text: '自定义', title: '这一项和物品原版默认值不同' });
-  var reset = h('div', { class: 'k-reset', text: '恢复默认', title: '放弃这里的修改，使用物品原本的值' });
+  var badge = h('span', { class: 'k-badge', text: I18n.t("cadeditor.ui.kit.4eafa9e925"), title: I18n.t("cadeditor.ui.kit.913f80fc27") });
+  var reset = h('div', { class: 'k-reset', text: I18n.t("cadeditor.ui.common.reset"), title: I18n.t("cadeditor.ui.detail.89622d521d") });
   var iconEl = typeof spec.icon === 'string' ? uiIcon(spec.icon, 16) : (spec.icon || null);
   var valEl = h('div', { class: 'k-cval' });
-  var chev = h('div', { class: 'k-chev', title: '折叠 / 展开' }, [uiIcon('down', 10)]);
+  var chev = h('div', { class: 'k-chev', title: I18n.t("cadeditor.ui.kit.7e5d87ea1b") }, [uiIcon('down', 10)]);
   var sumEl = h('div', { class: 'k-csum' });
   var tg = spec.toggle !== undefined ? spec.toggle : (spec.comps && spec.comps.length === 1 && TOGGLABLE[spec.comps[0]] ? true : false);
-  var sw = tg ? h('div', { class: 'k-sw2', role: 'switch', title: '开 / 关这项功能' }, [h('i', {})]) : h('span', { class: 'k-swph' });
+  var sw = tg ? h('div', { class: 'k-sw2', role: 'switch', title: I18n.t("cadeditor.ui.kit.1b912026f4") }, [h('i', {})]) : h('span', { class: 'k-swph' });
   var head = h('div', { class: 'k-chead' }, [
     h('div', { class: 'k-cico' }, [iconEl]),
     h('div', { class: 'k-ctx' }, [h('div', { class: 'k-ctitle' }, [spec.title, badge]), spec.desc ? h('div', { class: 'k-cdesc', text: spec.desc }) : null]),
@@ -585,7 +586,7 @@ function kCard(spec, ctx) {
       if (!on) { ctx.disable(c0); return; }
       if (ctx.modified(c0) && intentOf(Store.doc(), c0) === 'remove') ctx.reset(c0);
       else if (card.make) card.make();
-      else ctx.enable(c0, defaultFor(CIDX[c0].schema), '启用 ' + CIDX[c0].name);
+      else ctx.enable(c0, defaultFor(CIDX[c0].schema), I18n.t("cadeditor.ui.kit.e96fada457", (CIDX[c0].name)));
     });
     el.classList.toggle('off', !isOn());
   }

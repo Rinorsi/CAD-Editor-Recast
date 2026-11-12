@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.client;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import dev.rinorsi.editor.platform.Platform;
 import dev.rinorsi.editor.platform.ClientPlatform;
 import com.google.gson.*;
@@ -49,8 +51,8 @@ public final class WorldEditorClient {
                 String id = pending != null ? pending : opening; opening = null; pending = null;
                 EditorWriteLog.warning("client.world.timeout",id,"outcome=unknown permission_denial_not_proven=true reason=no_matching_receipt");
                 openingOwner=null;openingPreset=null;
-                if(owner!=null)EditorPageHost.notice(owner,"服务器未确认目标切换；草稿已保留，请重新读取目标核对");
-                else reject(id, "request_timeout", "服务器未确认世界编辑结果；保留草稿，请重新读取目标核对");
+                if(owner!=null)EditorPageHost.notice(owner,EditorI18n.tr("cadeditor.message.worldeditorclient.588122d05d"));
+                else reject(id, "request_timeout", EditorI18n.tr("cadeditor.message.worldeditorclient.af595b7eb2"));
             }
         });
         ClientPlatform.get().onDisconnect(mc -> { if(selfCommands!=null)selfCommands.cancel();selfCommands=null; PlayerExtendedClient.clear(); screen = null; binding = null; presetPage=null; opening = null; openingOwner=null; openingPreset=null; abandonedOpens.clear(); pending = null; queued = null; queuedPos=null; });
@@ -97,7 +99,7 @@ public final class WorldEditorClient {
         try {
             if (!ClientPlatform.get().canSend(EditorPackets.Request.TYPE)) {
                 if(kind.equals("player")&&pos==null){openCommandSelf(mc,null);return;}
-                throw new EditorSessions.Failure("UNAVAILABLE", "服务器未安装物品工坊；命令后端只支持自身玩家");
+                throw new EditorSessions.Failure("UNAVAILABLE", EditorI18n.tr("cadeditor.message.worldeditorclient.6ddbd7ca26"));
             }
             var target = new JsonObject(); target.addProperty("dim", mc.level.dimension().identifier().toString());
             var picked = editorHit(mc);
@@ -107,11 +109,11 @@ public final class WorldEditorClient {
             else if (kind.equals("block")) {
                 if (pos != null) for (var entry : pos.entrySet()) target.add(entry.getKey(), entry.getValue());
                 else {
-                    if (!(mc.hitResult instanceof BlockHitResult hit) || hit.getType() == HitResult.Type.MISS) throw new IllegalArgumentException("请将准星对准已放置的方块");
+                    if (!(mc.hitResult instanceof BlockHitResult hit) || hit.getType() == HitResult.Type.MISS) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.worldeditorclient.ce682d6607"));
                     var p = hit.getBlockPos(); target.addProperty("x",p.getX()); target.addProperty("y",p.getY()); target.addProperty("z",p.getZ());
                 }
             } else {
-                if (!(picked instanceof EntityHitResult hit)) throw new IllegalArgumentException("请将准星对准实体或玩家");
+                if (!(picked instanceof EntityHitResult hit)) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.worldeditorclient.8ccb5b3ed7"));
                 target.addProperty("uuid", hit.getEntity().getStringUUID()); target.addProperty("id", hit.getEntity().getId());
                 if(hit.getEntity() instanceof net.minecraft.world.entity.player.Player)target.addProperty("player","online");
             }
@@ -153,11 +155,11 @@ public final class WorldEditorClient {
     private static void openFromPage(OrielScreen owner,JsonElement value){
         if(Minecraft.getInstance().gui.screen()!=owner)return;
         try{
-            var mc=Minecraft.getInstance();if(mc.player==null||mc.level==null)throw new IllegalArgumentException("当前未进入世界");
-            if(opening!=null||pending!=null||PlayerExtendedClient.busy())throw new IllegalArgumentException("上一笔编辑尚未收到回执，请稍后切换玩家");
+            var mc=Minecraft.getInstance();if(mc.player==null||mc.level==null)throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.worldeditorclient.b889ddd197"));
+            if(opening!=null||pending!=null||PlayerExtendedClient.busy())throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.worldeditorclient.065dc65a1e"));
             var selector=value.getAsJsonObject();
             if(selector.size()==1&&selector.has("apply_preset")){
-                if(!ClientPlatform.get().canSend(EditorPackets.Request.TYPE))throw new IllegalArgumentException("套用玩家预设需要服务端安装物品工坊；客户端单装暂不支持整份预设套用");
+                if(!ClientPlatform.get().canSend(EditorPackets.Request.TYPE))throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.worldeditorclient.f95bcddda9"));
                 var source=dev.rinorsi.editor.registry.VaultChannel.openPlayerPreset(StackCodec.string(selector,"apply_preset")).world();
                 var entry=new JsonObject();entry.add("id",source.getAsJsonObject("player").get("vault_id"));entry.add("name",source.getAsJsonObject("player").get("name"));entry.add("sections",source.getAsJsonObject("player").get("sections"));
                 var self=new JsonObject();self.addProperty("self",true);
@@ -173,10 +175,10 @@ public final class WorldEditorClient {
             if(!ClientPlatform.get().canSend(EditorPackets.Request.TYPE)){
                 var target=WorldPageTarget.playerSlot(selector,mc.level.dimension().identifier().toString());
                 if("self".equals(StackCodec.string(target,"player"))){openCommandSelf(mc,owner);return;}
-                throw new IllegalArgumentException("服务器未安装物品工坊；命令后端只支持自身玩家");
+                throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.worldeditorclient.6ddbd7ca26"));
             }
             beginOpen(WorldPageTarget.playerSlot(value.getAsJsonObject(),mc.level.dimension().identifier().toString()),owner);
-        }catch(RuntimeException e){EditorWriteLog.failure("client.world.navigation_failure",opening,"phase=open_from_page",e);EditorPageHost.notice(owner,"无法打开玩家数据："+e.getMessage());}
+        }catch(RuntimeException e){EditorWriteLog.failure("client.world.navigation_failure",opening,"phase=open_from_page",e);EditorPageHost.notice(owner,EditorI18n.tr("cadeditor.message.worldeditorclient.4b0fba67d8", (e.getMessage())));}
     }
     private static void closeTarget(JsonObject target){if(Minecraft.getInstance().getConnection()!=null&&ClientPlatform.get().canSend(EditorPackets.Request.TYPE)){var close=request("close","world-close-"+UUID.randomUUID());close.add("slot",target);send(close);}}
     public static boolean receive(JsonObject result) {
@@ -236,12 +238,12 @@ public final class WorldEditorClient {
             var edit = value.getAsJsonObject(); id = StackCodec.string(edit,"requestId");
             EditorWriteLog.event("client.world.apply",id,"backend="+(presetPage!=null?"local_preset":selfCommands!=null?"vanilla_self":"editor_server")+" undo="+undo+" pending="+(pending!=null)+" binding="+(binding!=null));
             if(selfCommands!=null&&presetPage==null&&!selfDocumentCurrent())throw new IllegalArgumentException(selfCommands.documentReason());
-            if (pending != null||opening!=null) throw new IllegalArgumentException("上一笔世界编辑或目标切换尚未收到回执");
-            if(binding==null)throw new IllegalArgumentException("世界编辑会话已关闭");
+            if (pending != null||opening!=null) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.worldeditorclient.f6db18f2e1"));
+            if(binding==null)throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.worldeditorclient.3d821ba61b"));
             var request=binding.bind(edit,undo);
             pending = id;reserved=true;deadline = System.nanoTime() + 10_000_000_000L;
             if(presetPage!=null)receive(presetPage.apply(request));else if(selfCommands!=null)selfCommands.apply(Minecraft.getInstance(),request,WorldEditorClient::receive);else send(request);
-        } catch (RuntimeException e) {EditorWriteLog.failure("client.world.apply_failure",id,"reserved="+reserved+" backend="+(selfCommands!=null?"vanilla_self":"other"),e);if(reserved&&id.equals(pending)){pending=null;if(selfCommands!=null)selfCommands.cancel();}reject(id,e instanceof EditorSessions.Failure f?f.code:e instanceof dev.rinorsi.editor.vault.VaultStore.Failure f?f.code:"invalid_request","玩家或世界数据保存失败："+e.getMessage()); }
+        } catch (RuntimeException e) {EditorWriteLog.failure("client.world.apply_failure",id,"reserved="+reserved+" backend="+(selfCommands!=null?"vanilla_self":"other"),e);if(reserved&&id.equals(pending)){pending=null;if(selfCommands!=null)selfCommands.cancel();}reject(id,e instanceof EditorSessions.Failure f?f.code:e instanceof dev.rinorsi.editor.vault.VaultStore.Failure f?f.code:"invalid_request",EditorI18n.tr("cadeditor.message.worldeditorclient.53656e74f1", (e.getMessage()))); }
     }
     private static JsonObject request(String op, String id) { var r = new JsonObject(); r.addProperty("op",op); r.addProperty("requestId",id); return r; }
     private static void send(JsonObject request) { ClientPlatform.get().send(new EditorPackets.Request(dev.rinorsi.editor.world.WorldWire.encode(request))); }

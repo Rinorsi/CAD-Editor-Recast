@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.registry;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.JsonObject;
 import dev.oriel.mod.client.DocumentDriver;
 import dev.rinorsi.editor.ComponentValidation;
@@ -21,7 +23,7 @@ final class ComponentValidationChannel {
                 if (request.toString().length() > 8192 || ++rate[1] > 20 || mc.level == null) {
                     result = new JsonObject(); result.addProperty("ok", false);
                     if (request.has("requestId") && request.get("requestId").isJsonPrimitive()) result.add("requestId", request.get("requestId"));
-                    result.addProperty("error", mc.level == null ? "已经离开世界" : "校验请求超过大小或频率限制，请稍后重试");
+                    result.addProperty("error", mc.level == null ? EditorI18n.tr("cadeditor.message.componentschemachannel.380c513b2e") : EditorI18n.tr("cadeditor.message.componentschemachannel.e2b443bea4"));
                 } else result = ComponentValidation.validate(request, mc.level.registryAccess());
                 driver.patchJson("validate_component.result", result.toString());
             });

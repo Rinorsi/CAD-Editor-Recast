@@ -21,20 +21,20 @@ AUTO_BODY.banner_patterns = function (card, cid, v) {
     arr.forEach(function (layer, i) {
       var pat = typeof layer.pattern === 'string' ? layer.pattern : '';
       var pick = pat || !layer.pattern
-        ? kRegSelect({ reg: 'banner_pattern', value: pat, title: '选择图案', empty: '（未选择）', onChange: function (x) { layer.pattern = x; put(); draw(); } }).el
-        : h('span', { class: 'bn-raw', text: '自定义图案（原样保留）' });
+        ? kRegSelect({ reg: 'banner_pattern', value: pat, title: I18n.t("cadeditor.ui.banner.26e3a0d4b0"), empty: I18n.t("cadeditor.ui.banner.3c5045c728"), onChange: function (x) { layer.pattern = x; put(); draw(); } }).el
+        : h('span', { class: 'bn-raw', text: I18n.t("cadeditor.ui.banner.cc9ec83d61") });
       var color = dyeButton(typeof layer.color === 'string' ? layer.color : 'white', function (x) { layer.color = x; put(); draw(); });
       var ops = h('div', { class: 'bn-ops' }, [
-        kBtn('', function () { move(i, i - 1); }, { icon: 'up', title: '上移（更靠下层）' }),
-        kBtn('', function () { move(i, i + 1); }, { icon: 'down', title: '下移（更靠上层）' }),
-        kBtn('', function () { arr.splice(i, 1); put(); draw(); }, { icon: 'trash', title: '删除这一层' })]);
+        kBtn('', function () { move(i, i - 1); }, { icon: 'up', title: I18n.t("cadeditor.ui.banner.b495f7f6b7") }),
+        kBtn('', function () { move(i, i + 1); }, { icon: 'down', title: I18n.t("cadeditor.ui.banner.e2797ecebb") }),
+        kBtn('', function () { arr.splice(i, 1); put(); draw(); }, { icon: 'trash', title: I18n.t("cadeditor.ui.banner.fa3013af50") })]);
       if (i === 0) ops.children[0].classList.add('dis'); if (i === arr.length - 1) ops.children[1].classList.add('dis');
-      list.appendChild(h('div', { class: 'bn-row' }, [h('span', { class: 'bn-ix', text: String(i + 1), title: '编号越大，盖得越靠上' }), h('div', { class: 'bn-pat' }, [pick]), color, ops]));
+      list.appendChild(h('div', { class: 'bn-row' }, [h('span', { class: 'bn-ix', text: String(i + 1), title: I18n.t("cadeditor.ui.banner.1c0950a414") }), h('div', { class: 'bn-pat' }, [pick]), color, ops]));
     });
-    if (!arr.length) list.appendChild(h('div', { class: 'world-empty', text: '还没有图案层，旗帜保持纯色。' }));
+    if (!arr.length) list.appendChild(h('div', { class: 'world-empty', text: I18n.t("cadeditor.ui.banner.9317705574") }));
   }
-  var add = kBtn('添加图案层', function () {
-    openRegPick({ reg: 'banner_pattern', title: '选择图案', onPick: function (id) { arr.push({ pattern: id, color: 'white' }); put(); draw(); } });
+  var add = kBtn(I18n.t("cadeditor.ui.banner.dce9903ee5"), function () {
+    openRegPick({ reg: 'banner_pattern', title: I18n.t("cadeditor.ui.banner.26e3a0d4b0"), onPick: function (id) { arr.push({ pattern: id, color: 'white' }); put(); draw(); } });
   }, { icon: 'plus' });
   card.body.appendChild(h('div', { class: 'bn-wrap' }, [h('div', { class: 'bn-side' }, [prev, add]), list])); draw();
 

@@ -15,18 +15,18 @@ WORLD_DETAIL.forEach(function (cid) { DETAIL_AUTO[cid] = 1; });
 function detailShort(f) { return f.d ? f.d.split(/[，；;：:（(]/)[0] : f.k; }
 /* 一行摘要：从值里挑几项最能说明“现在是什么样”的 */
 function detailSummary(cid, v) {
-  var c = CIDX[cid]; if (!c || !c.schema || c.schema.t !== 'obj' || !isObj(v)) return Array.isArray(v) ? v.length + ' 项' : '';
+  var c = CIDX[cid]; if (!c || !c.schema || c.schema.t !== 'obj' || !isObj(v)) return Array.isArray(v) ? I18n.t("cadeditor.ui.cards2.a9ab3a5f38", (v.length)) : '';
   var spec = SPEC_FORMS[cid], parts = [];
   c.schema.f.forEach(function (f) {
     if (parts.length >= 4 || v[f.k] === undefined) return;
     var ov = spec && spec.over && spec.over[f.k] || {}, lab = ov.label || detailShort(f), x = v[f.k];
-    if (Array.isArray(x)) parts.push(lab + ' ' + x.length + ' 项');
+    if (Array.isArray(x)) parts.push(I18n.t("cadeditor.ui.detail.dce2fd328c", (lab), (x.length)));
     else if (typeof x === 'boolean') { if (x) parts.push(lab); }
     else if (typeof x === 'number') parts.push(lab + ' ' + fmtNum(x) + (ov.unit ? ov.unit : ''));
     else if (typeof x === 'string') parts.push(lab + (x.length < 20 ? '：' + (x.indexOf(':') > 0 ? shortId(x) : x) : ''));
-    else if (isObj(x)) parts.push(lab + '（' + Object.keys(x).length + ' 项）');
+    else if (isObj(x)) parts.push(I18n.t("cadeditor.ui.detail.0513c9b39d", (lab), (Object.keys(x).length)));
   });
-  return parts.length ? parts.join(' · ') : '全部使用默认值';
+  return parts.length ? parts.join(' · ') : I18n.t("cadeditor.ui.detail.12b1ffc7a8");
 }
 
 /* 目录：说明书里的分段；没有说明书时，标量字段归“基础”，对象 / 列表字段各占一段 */
@@ -38,11 +38,11 @@ function detailSections(cid) {
     var cur = null;
     sp.order.forEach(function (e) {
       if (typeof e !== 'string') { cur = { id: 's' + out.length, label: e.sec, keys: [] }; out.push(cur); }
-      else { if (!cur) { cur = { id: 's0', label: '基础', keys: [] }; out.push(cur); } cur.keys.push(e); }
+      else { if (!cur) { cur = { id: 's0', label: I18n.t("cadeditor.ui.detail.89e5e14c8d"), keys: [] }; out.push(cur); } cur.keys.push(e); }
     });
     var used = {}; out.forEach(function (s) { s.keys.forEach(function (k) { used[k] = 1; }); });
     var rest = sc.f.filter(function (f) { return !used[f.k]; }).map(function (f) { return f.k; });
-    if (rest.length) out.push({ id: 'rest', label: '其他', keys: rest });
+    if (rest.length) out.push({ id: 'rest', label: I18n.t("cadeditor.ui.detail.d2909f1647"), keys: rest });
     return out;
   }
   var basic = [];
@@ -50,7 +50,7 @@ function detailSections(cid) {
     var t = f.s && f.s.t, big = t === 'obj' || t === 'arr' || t === 'map' || t === 'dunion' || (t === 'union' && f.s.a && f.s.a.some(function (a) { return a.t === 'arr' || a.t === 'obj'; }));
     if (big) out.push({ id: 'f' + f.k, label: detailShort(f), keys: [f.k] }); else basic.push(f.k);
   });
-  if (basic.length) out.unshift({ id: 'basic', label: '基础', keys: basic });
+  if (basic.length) out.unshift({ id: 'basic', label: I18n.t("cadeditor.ui.detail.89e5e14c8d"), keys: basic });
   return out;
 }
 
@@ -63,7 +63,7 @@ function openDetail(o) {
   if (!secs.some(function (s) { return s.id === UI.detailSel; })) UI.detailSel = secs[0].id;
   if (!useCard) Reg.formStatus(cid);
   var nav = h('div', { class: 'detail-tabs' }), main = h('div', { class: 'advmain', id: 'detailmain' });
-  var rst = h('div', { class: 'k-btn det-reset', title: '放弃这里的修改，使用物品原本的值' }, [h('span', { text: '恢复默认' })]);
+  var rst = h('div', { class: 'k-btn det-reset', title: I18n.t("cadeditor.ui.detail.89622d521d") }, [h('span', { text: I18n.t("cadeditor.ui.common.reset") })]);
   activate(rst, function () { var cs = o.cid ? [o.cid] : []; if (o.key && !cs.length) cs = cardComps(o.key); cs.forEach(function (c) { Ctx.reset(c); }); if (WORLD_DETAIL.indexOf(cid) >= 0 && !Ctx.has(cid)) closeModal(); });
   var win = modalShell({ icon: o.icon || 'edit', title: title, sub: nameOfItem(Store.doc().id), actions: [rst], id: 'detailwin',
     cls: 'advwin detailwin' + (secs.length > 1 ? ' hasnav' : '') + (WORLD_DETAIL.indexOf(cid) >= 0 ? ' worldwin' : '') + (cid === 'banner_patterns' ? ' bannerwin' : ''),
@@ -103,6 +103,6 @@ function detailize(card, o) {
   function on() { return always || (!!cid && Ctx.has(cid)); }
   function paint() { card.el.classList.toggle('det-on', on()); if (sum) sum.textContent = ''; }
   card.live.push(paint); paint();
-  if (chev) { setTip(chev, '在独立窗口中编辑'); chev.classList.remove('up'); chev.classList.add('det'); clear(chev); chev.appendChild(uiIcon('external', 14)); card.el.classList.add('det-card'); }
+  if (chev) { setTip(chev, I18n.t("cadeditor.ui.detail.7f4eac30a9")); chev.classList.remove('up'); chev.classList.add('det'); clear(chev); chev.appendChild(uiIcon('external', 14)); card.el.classList.add('det-card'); }
   card.onHead = function (e) { if (!on()) return false; openDetail(o); return true; };
 }

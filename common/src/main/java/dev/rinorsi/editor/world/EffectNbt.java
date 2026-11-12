@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.world;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import java.util.*;
 import net.minecraft.nbt.*;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -19,18 +21,18 @@ final class EffectNbt {
     private static Map<String, CompoundTag> canonical(Tag input) {
         var result = new TreeMap<String, CompoundTag>();
         if (input == null) return result;
-        if (!(input instanceof ListTag list)) throw new IllegalArgumentException("效果必须为列表");
+        if (!(input instanceof ListTag list)) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.effectnbt.dea31ad481"));
         for (Tag value : list) {
-            if (!(value instanceof CompoundTag raw)) throw new IllegalArgumentException("效果必须为复合数据");
+            if (!(value instanceof CompoundTag raw)) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.effectnbt.351fb13bac"));
             checkNumbers(raw);
             var effect = MobEffectInstance.CODEC.parse(NbtOps.INSTANCE, raw).getOrThrow();
             var encoded = (CompoundTag) MobEffectInstance.CODEC.encodeStart(NbtOps.INSTANCE, effect).getOrThrow();
             // Do not accept constructor clamping as a representation-only normalization.
-            if (raw.contains("amplifier") && ((NumericTag)raw.get("amplifier")).intValue() != effect.getAmplifier()) throw new IllegalArgumentException("效果等级被原版截断");
-            if (raw.contains("duration") && ((NumericTag)raw.get("duration")).intValue() != effect.getDuration()) throw new IllegalArgumentException("效果时长被原版截断");
+            if (raw.contains("amplifier") && ((NumericTag)raw.get("amplifier")).intValue() != effect.getAmplifier()) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.effectnbt.2a0c57e8c8"));
+            if (raw.contains("duration") && ((NumericTag)raw.get("duration")).intValue() != effect.getDuration()) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.effectnbt.8cdbc30e0f"));
             retainUnknown(raw, encoded);
             String id = encoded.getString("id").orElseThrow();
-            if (result.putIfAbsent(id, encoded) != null) throw new IllegalArgumentException("效果ID重复：" + id);
+            if (result.putIfAbsent(id, encoded) != null) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.effectnbt.a4a4b480a3", (id)));
         }
         return result;
     }
@@ -39,11 +41,11 @@ final class EffectNbt {
         for (String key : List.of("amplifier", "duration", "ambient", "show_particles", "show_icon")) {
             if (!raw.contains(key)) continue;
             if (!(raw.get(key) instanceof NumericTag value) || !Double.isFinite(value.doubleValue()) || value.doubleValue() != value.intValue())
-                throw new IllegalArgumentException("效果字段必须为可保留的整数/布尔：" + key);
+                throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.effectnbt.9d311f526f", (key)));
             if (key.equals("amplifier") && (value.intValue() < MobEffectInstance.MIN_AMPLIFIER || value.intValue() > MobEffectInstance.MAX_AMPLIFIER))
-                throw new IllegalArgumentException("效果等级不能被原版截断");
+                throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.effectnbt.2e327cdaab"));
             if (!key.equals("amplifier") && !key.equals("duration") && value.intValue() != 0 && value.intValue() != 1)
-                throw new IllegalArgumentException("效果布尔字段必须为0或1：" + key);
+                throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.effectnbt.149e22dd4b", (key)));
         }
         raw.getCompound("hidden_effect").ifPresent(EffectNbt::checkNumbers);
     }

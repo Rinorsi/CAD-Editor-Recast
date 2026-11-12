@@ -70,6 +70,7 @@ function create(opts) {
     document: doc, window: win, console, CustomEvent: function CustomEvent(type, init) { this.type = type; this.detail = init && init.detail; },
     requestAnimationFrame(fn) { timers.push({ fn, ms: 16 }); return timers.length; }, cancelAnimationFrame() {},
     setTimeout(fn, ms) { timers.push({ fn, ms: ms || 0 }); return timers.length; }, clearTimeout() {},
+    setInterval(fn, ms) { timers.push({ fn, ms: ms || 0, repeat: true }); return timers.length; }, clearInterval() {},
     oriel: { data: opts.data || {}, send(k, v) { sent.push([k, v]); return true; }, on() {} }
   });
   // 固定时间与随机数：快照要逐字相同

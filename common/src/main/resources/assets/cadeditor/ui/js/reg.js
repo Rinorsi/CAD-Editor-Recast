@@ -16,7 +16,7 @@ var RegWire = {
   },
   fail: function (id, reason) {
     var p = this.pending[id]; if (!p) return;
-    var error = '实体数据传输失败：' + reason;
+    var error = I18n.t("cadeditor.ui.reg.46d018a3ef", (reason));
     if (typeof EditorDiag !== 'undefined') EditorDiag.error('registry.fragments', new Error(error + ' name=' + p.name + ' id=' + (p.id || '') + ' requestId=' + id + ' transfer=' + (p.transfer || 'none')));
     // Before the first frame there is no host counter; never invent one or reuse the world epoch.
     try { Reg.ingest('registry.' + p.name, {version:1, name:p.name, id:p.id, requestId:id, generation:p.generation, worldGeneration:p.world, entries:[], offset:0, total:0, done:true, error:error}); }
@@ -25,8 +25,8 @@ var RegWire = {
   request: function (name, id) {
     var token = this.nonce + '-' + (++this.sequence), world = Reg.meta && String(Reg.meta.generation);
     var p = this.pending[token] = { name:name, id:id, world:world };
-    if (Object.keys(this.pending).length > 64) { this.fail(token, '并发请求超过64'); return; }
-    p.timer = setTimeout(function () { RegWire.fail(token, '30秒内未收到完整响应（可能缺少分片）'); }, 30000);
+    if (Object.keys(this.pending).length > 64) { this.fail(token, I18n.t("cadeditor.ui.reg.12419e0cd2")); return; }
+    p.timer = setTimeout(function () { RegWire.fail(token, I18n.t("cadeditor.ui.reg.b6e9c5fbe4")); }, 30000);
     var request = {name:name, requestId:token}; if (id !== undefined) request.id = id;
     try { oriel.send('registry', request); } catch (e) { this.fail(token, String(e.message || e)); }
   },
@@ -46,27 +46,27 @@ var RegWire = {
     if (!p) return null;
     try {
       function integer(n,min,max){return typeof n==='number' && Number.isInteger(n) && n>=min && n<=max;}
-      if (!Reg.meta || !this.entity(name) || v.name!==name || p.name!==name || p.id!==v.id || p.world!==String(v.worldGeneration)) throw Error('请求/实体/世界关联不符');
-      if (v.encoding!=='registry-json-fragments-v1' || typeof v.transferId!=='string' || !/^[A-Za-z0-9_-]{1,80}$/.test(v.transferId) || typeof v.generation!=='string' || v.generation.length>80) throw Error('分片协议或批次标识无效');
-      if (!integer(v.responseChars,1,2097152) || !integer(v.fragmentCount,1,256) || !integer(v.fragmentIndex,0,v.fragmentCount-1) || !integer(v.fragmentOffset,0,v.responseChars-1) || !integer(v.total,0,16384) || v.offset!==0 || v.done!==true || !Array.isArray(v.entries) || v.entries.length) throw Error('分片长度/数量/信封无效');
-      if (typeof v.payload!=='string' || !v.payload.length || v.fragmentOffset+v.payload.length>v.responseChars || typeof v.checksum!=='string' || !/^[0-9a-f]{8}$/.test(v.checksum) || JSON.stringify(v).length>24000) throw Error('分片内容或页长无效');
-      if (p.transfer && p.transfer!==v.transferId) throw Error('同一请求收到不同传输批次');
+      if (!Reg.meta || !this.entity(name) || v.name!==name || p.name!==name || p.id!==v.id || p.world!==String(v.worldGeneration)) throw Error(I18n.t("cadeditor.ui.reg.27419405de"));
+      if (v.encoding!=='registry-json-fragments-v1' || typeof v.transferId!=='string' || !/^[A-Za-z0-9_-]{1,80}$/.test(v.transferId) || typeof v.generation!=='string' || v.generation.length>80) throw Error(I18n.t("cadeditor.ui.reg.b516ebbd9c"));
+      if (!integer(v.responseChars,1,2097152) || !integer(v.fragmentCount,1,256) || !integer(v.fragmentIndex,0,v.fragmentCount-1) || !integer(v.fragmentOffset,0,v.responseChars-1) || !integer(v.total,0,16384) || v.offset!==0 || v.done!==true || !Array.isArray(v.entries) || v.entries.length) throw Error(I18n.t("cadeditor.ui.reg.b5ecf943c1"));
+      if (typeof v.payload!=='string' || !v.payload.length || v.fragmentOffset+v.payload.length>v.responseChars || typeof v.checksum!=='string' || !/^[0-9a-f]{8}$/.test(v.checksum) || JSON.stringify(v).length>24000) throw Error(I18n.t("cadeditor.ui.reg.8e9a337514"));
+      if (p.transfer && p.transfer!==v.transferId) throw Error(I18n.t("cadeditor.ui.reg.12a33f9a38"));
       var a=this.active[v.transferId], sig=this.signature(v,true);
       if (!a) {
-        if (Object.keys(this.active).length>=8 || this.reserved+v.responseChars>4194304) throw Error('分片缓存超过8批或4Mi字符预算');
+        if (Object.keys(this.active).length>=8 || this.reserved+v.responseChars>4194304) throw Error(I18n.t("cadeditor.ui.reg.b8a87477cf"));
         p.transfer=v.transferId; p.generation=v.generation;
         a=this.active[v.transferId]={token:token, size:v.responseChars, count:v.fragmentCount, checksum:v.checksum, signature:sig, parts:[], offsets:[], received:0, chars:0, wire:0}; this.reserved+=a.size;
       }
-      if (a.token!==token || a.size!==v.responseChars || a.count!==v.fragmentCount || a.checksum!==v.checksum || a.signature!==sig) throw Error('同批分片信封冲突');
+      if (a.token!==token || a.size!==v.responseChars || a.count!==v.fragmentCount || a.checksum!==v.checksum || a.signature!==sig) throw Error(I18n.t("cadeditor.ui.reg.a952e02752"));
       var i=v.fragmentIndex;
-      if (a.parts[i]!==undefined) { if(a.parts[i]!==v.payload || a.offsets[i]!==v.fragmentOffset) throw Error('重复分片冲突'); return null; }
-      if(a.chars+v.payload.length>a.size || a.wire+JSON.stringify(v).length>4194304) throw Error('分片总长度超限');
+      if (a.parts[i]!==undefined) { if(a.parts[i]!==v.payload || a.offsets[i]!==v.fragmentOffset) throw Error(I18n.t("cadeditor.ui.reg.463cfdc12a")); return null; }
+      if(a.chars+v.payload.length>a.size || a.wire+JSON.stringify(v).length>4194304) throw Error(I18n.t("cadeditor.ui.reg.1ddb571c5f"));
       a.parts[i]=v.payload; a.offsets[i]=v.fragmentOffset; a.chars+=v.payload.length; a.wire+=JSON.stringify(v).length; a.received++;
       if (a.received!==a.count) return null;
-      var offset=0; for(i=0;i<a.count;i++){if(a.offsets[i]!==offset)throw Error('分片偏移不连续');offset+=a.parts[i].length;}
-      var text=a.parts.join(''); if(offset!==a.size || this.checksum(text)!==a.checksum) throw Error('完整长度或校验和不符');
+      var offset=0; for(i=0;i<a.count;i++){if(a.offsets[i]!==offset)throw Error(I18n.t("cadeditor.ui.reg.ee7de67b4a"));offset+=a.parts[i].length;}
+      var text=a.parts.join(''); if(offset!==a.size || this.checksum(text)!==a.checksum) throw Error(I18n.t("cadeditor.ui.reg.45d9bb90f7"));
       var out=JSON.parse(text);
-      if(!out || out.version!==1 || this.signature(out,false)!==a.signature || !Array.isArray(out.entries) || out.entries.length!==out.total) throw Error('完整响应与分片信封不符');
+      if(!out || out.version!==1 || this.signature(out,false)!==a.signature || !Array.isArray(out.entries) || out.entries.length!==out.total) throw Error(I18n.t("cadeditor.ui.reg.929520fef7"));
       this.finish(token); return out;
     } catch(e) { this.fail(token, String(e.message || e)); return null; }
   }
@@ -166,7 +166,7 @@ var Reg = {
     for (var i = 0; i < ents.length; i++) k.entries[off + i] = ents[i];
     k.total = val.total || k.total; if (val.done) { k.done = true; delete this.cache[kind]; }
     if (kind === 'data_component_types' && typeof registerLiveComps === 'function') registerLiveComps(val.entries);
-    if (val.availability === 'unavailable') k.unavail = String(val.reason || '服务器没有向客户端同步完整列表');   /* 远程服务器上的战利品表 / 配方等：空是“拿不到”，不是“没有” */
+    if (val.availability === 'unavailable') k.unavail = String(val.reason || I18n.t("cadeditor.ui.reg.dca7243c5c"));   /* 远程服务器上的战利品表 / 配方等：空是“拿不到”，不是“没有” */
     if (val.error) k.error = String(val.error);
     this.fire(kind);
   },
@@ -353,7 +353,7 @@ var Reg = {
     if (!r || r.gen !== v.generation) r = this.rel[k] = { gen: v.generation, list: [], done: false };
     var off = v.offset || 0, ents = v.entries || [];
     for (var i = 0; i < ents.length; i++) r.list[off + i] = ents[i];
-    if (v.error || v.availability === 'unavailable') r.error = String(v.error || v.reason || '关系数据不可用');
+    if (v.error || v.availability === 'unavailable') r.error = String(v.error || v.reason || I18n.t("cadeditor.ui.reg.c7b6506f79"));
     if (v.done) { r.done = true; delete this.cache.enchantments; this.fire('enchantments'); }
   },
   relOf: function (e, field) {
@@ -444,8 +444,8 @@ var Reg = {
     st = this.formFacts[id] = {pending:!this.preview(),error:null};
     if (!st.pending) return st;
     try {
-      if (oriel.send('registry', {name:'component_schema:' + id}) === false) throw new Error('宿主未接受默认值请求');
-      st.timer = setTimeout(function () { if (Reg.formFacts[id] !== st || !st.pending) return; st.pending = false; st.error = '默认值读取超时'; if (typeof EditorDiag !== 'undefined') EditorDiag.warn('registry.defaults.timeout', id); Reg.fire('component_schema'); }, 10000);
+      if (oriel.send('registry', {name:'component_schema:' + id}) === false) throw new Error(I18n.t("cadeditor.ui.reg.211fa836ee"));
+      st.timer = setTimeout(function () { if (Reg.formFacts[id] !== st || !st.pending) return; st.pending = false; st.error = I18n.t("cadeditor.ui.reg.a802c2b730"); if (typeof EditorDiag !== 'undefined') EditorDiag.warn('registry.defaults.timeout', id); Reg.fire('component_schema'); }, 10000);
     } catch (e) { st.pending = false; st.error = String(e.message || e); if (typeof EditorDiag !== 'undefined') EditorDiag.error('registry.defaults.request', e); }
     return st;
   },
@@ -492,8 +492,8 @@ var Reg = {
     st = this.numericFacts[id] = {pending:true,error:null};
     if (this.preview()) { st.pending = false; return st; }
     try {
-      if (oriel.send('registry', {name:'component_schema:' + id,rangesOnly:true}) === false) throw new Error('宿主未接受字段信息请求');
-      st.timer = setTimeout(function () { if (Reg.numericFacts[id] !== st || !st.pending) return; st.pending = false; st.error = '读取字段信息超时；应用时仍由游戏校验'; if (typeof EditorDiag !== 'undefined') EditorDiag.warn('registry.numeric.timeout', id); Reg.fire('component_schema'); }, 10000);
+      if (oriel.send('registry', {name:'component_schema:' + id,rangesOnly:true}) === false) throw new Error(I18n.t("cadeditor.ui.reg.da8f3fecfc"));
+      st.timer = setTimeout(function () { if (Reg.numericFacts[id] !== st || !st.pending) return; st.pending = false; st.error = I18n.t("cadeditor.ui.reg.cfac5d93d2"); if (typeof EditorDiag !== 'undefined') EditorDiag.warn('registry.numeric.timeout', id); Reg.fire('component_schema'); }, 10000);
     } catch (e) { st.pending = false; st.error = String(e.message || e); if (typeof EditorDiag !== 'undefined') EditorDiag.error('registry.numeric.request', e); }
     return st;
   },
@@ -524,7 +524,7 @@ var Reg = {
     var live = this.list('mob_effects'), out;
     if (!live && !this.preview()) this.table('mob_effects');
     if (live) out = live.map(function (e) { return { full: e.id, name: e.name || e.id, cat: e.category || 'neutral', color: e.color, instant: !!e.instant, desc: '', live: true }; });
-    else out = (this.preview() ? EDATA.effects || [] : []).map(function (e) { return { full: Reg.full(e.id), name: e.name, cat: e.kind === '正面' ? 'beneficial' : e.kind === '负面' ? 'harmful' : 'neutral', desc: e.desc || '', live: false }; });
+    else out = (this.preview() ? EDATA.effects || [] : []).map(function (e) { return { full: Reg.full(e.id), name: e.name, cat: e.kind === I18n.t("cadeditor.ui.picker.740f5e8102") ? 'beneficial' : e.kind === I18n.t("cadeditor.ui.picker.10db0d86d9") ? 'harmful' : 'neutral', desc: e.desc || '', live: false }; });
     return (this.cache.mob_effects = out);
   },
   soundLabel: function (e) { return e.name && e.name !== e.id ? e.name : (e.subtitle || e.name || e.id); },

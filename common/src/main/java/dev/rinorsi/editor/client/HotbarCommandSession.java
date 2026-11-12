@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.client;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import dev.rinorsi.editor.EditorSessions;
 
 /** Client state machine, no prediction, chat parsing, retries or permission assumptions. */
@@ -29,14 +31,14 @@ public final class HotbarCommandSession {
     public boolean confirmed() { return confirmed; }
 
     public void begin(Context current, String id, String nextFingerprint, long now) {
-        if (blocked) EditorSessions.fail("session_stale", "本次会话已失效或结果未知，请关闭后重新读取物品；草稿已保留");
-        if (pending()) EditorSessions.fail("request_pending", "上一笔修改尚未得到服务器同步，请勿重复提交");
+        if (blocked) EditorSessions.fail("session_stale", EditorI18n.tr("cadeditor.message.hotbarcommandsession.90ee286b2a"));
+        if (pending()) EditorSessions.fail("request_pending", EditorI18n.tr("cadeditor.message.hotbarcommandsession.5b35683db0"));
         if (!sameContext(current) || !baseline.equals(current.fingerprint())) {
             blocked = true;
-            EditorSessions.fail("item_changed", "连接、世界、会话或原物品已改变，请重新打开；草稿已保留");
+            EditorSessions.fail("item_changed", EditorI18n.tr("cadeditor.message.hotbarcommandsession.dd7db924d2"));
         }
-        if (baseline.equals(nextFingerprint)) EditorSessions.fail("no_changes", "物品没有变化，无需发送命令");
-        if (id == null || id.isBlank()) EditorSessions.fail("invalid_request", "修改请求缺少有效标识");
+        if (baseline.equals(nextFingerprint)) EditorSessions.fail("no_changes", EditorI18n.tr("cadeditor.message.hotbarcommandsession.16469d6ec0"));
+        if (id == null || id.isBlank()) EditorSessions.fail("invalid_request", EditorI18n.tr("cadeditor.message.hotbarcommandsession.24ee5e8844"));
         requestId = id;
         confirmed = false;
         expected = nextFingerprint;

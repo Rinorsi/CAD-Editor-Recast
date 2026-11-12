@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.client;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -22,14 +24,14 @@ final class EditorSeekableSoundStream implements AudioStream {
             encoded.put(bytes).flip();
             var error = stack.mallocInt(1);
             decoder = STBVorbis.stb_vorbis_open_memory(encoded, error, null);
-            if (decoder == 0) throw new IOException("无法读取音频，Ogg代码=" + error.get(0));
+            if (decoder == 0) throw new IOException(EditorI18n.tr("cadeditor.message.editorseekablesoundstream.291939767a", (error.get(0))));
             var info = STBVorbis.stb_vorbis_get_info(decoder, STBVorbisInfo.malloc(stack));
             if (info.channels() < 1 || info.channels() > 2 || info.sample_rate() <= 0)
-                throw new IOException("试听跳转不支持该音频格式");
+                throw new IOException(EditorI18n.tr("cadeditor.message.editorseekablesoundstream.c3be4689db"));
             format = new AudioFormat(info.sample_rate(), 16, info.channels(), true, false);
             double sample = seconds * info.sample_rate();
             if (sample > Integer.MAX_VALUE || !STBVorbis.stb_vorbis_seek(decoder, (int) sample))
-                throw new IOException("无法跳转到音频的指定位置");
+                throw new IOException(EditorI18n.tr("cadeditor.message.editorseekablesoundstream.177ff033d7"));
         } catch (IOException | RuntimeException | Error error) {
             close(); throw error;
         }
@@ -38,7 +40,7 @@ final class EditorSeekableSoundStream implements AudioStream {
     @Override public AudioFormat getFormat() { return format; }
 
     @Override public ByteBuffer read(int expectedSize) throws IOException {
-        if (decoder == 0) throw new IOException("试听音频已关闭");
+        if (decoder == 0) throw new IOException(EditorI18n.tr("cadeditor.message.editorseekablesoundstream.59b4c898a4"));
         // SoundBuffer transfers the PCM to OpenAL without freeing native allocations;
         // a GC-owned direct buffer follows the vanilla AudioStream ownership contract.
         ByteBuffer pcm = ByteBuffer.allocateDirect(expectedSize).order(ByteOrder.LITTLE_ENDIAN);

@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.world;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.*;
 import com.mojang.serialization.*;
 import dev.rinorsi.editor.EditorSessions;
@@ -70,15 +72,15 @@ public final class BlockViews {
             if(!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber())throw new IllegalArgumentException();
             var number=value.getAsBigDecimal();
             if(number.compareTo(java.math.BigDecimal.valueOf(min))<0 || number.compareTo(java.math.BigDecimal.valueOf(max))>0 || number.stripTrailingZeros().scale()>0)throw new IllegalArgumentException();
-        } catch(RuntimeException e) {throw new EditorSessions.Failure("invalid_nbt","字段必须为 "+min+" 至 "+max+" 的整数");}
+        } catch(RuntimeException e) {throw new EditorSessions.Failure("invalid_nbt",EditorI18n.tr("cadeditor.message.blockviews.d97cd46d21", (min), (max)));}
     }
     private static void requireSignSide(JsonElement value,RegistryAccess access) {
-        if(!value.isJsonObject())throw new EditorSessions.Failure("invalid_nbt","标牌每面必须是对象");
+        if(!value.isJsonObject())throw new EditorSessions.Failure("invalid_nbt",EditorI18n.tr("cadeditor.message.blockviews.7fe70368e1"));
         for(var entry:value.getAsJsonObject().entrySet()) {
-            if(!Set.of("messages","filtered_messages","color","has_glowing_text").contains(entry.getKey()))throw new EditorSessions.Failure("invalid_nbt","未知标牌字段："+entry.getKey());
-            if(entry.getKey().equals("has_glowing_text") && (!entry.getValue().isJsonPrimitive() || !entry.getValue().getAsJsonPrimitive().isBoolean()))throw new EditorSessions.Failure("invalid_nbt","has_glowing_text 必须为布尔");
+            if(!Set.of("messages","filtered_messages","color","has_glowing_text").contains(entry.getKey()))throw new EditorSessions.Failure("invalid_nbt",EditorI18n.tr("cadeditor.message.blockviews.f149b672a1", (entry.getKey())));
+            if(entry.getKey().equals("has_glowing_text") && (!entry.getValue().isJsonPrimitive() || !entry.getValue().getAsJsonPrimitive().isBoolean()))throw new EditorSessions.Failure("invalid_nbt",EditorI18n.tr("cadeditor.message.blockviews.77e86510c6"));
             if(entry.getKey().equals("messages") || entry.getKey().equals("filtered_messages")) {
-                if(!entry.getValue().isJsonArray() || entry.getValue().getAsJsonArray().size()!=SignText.LINES)throw new EditorSessions.Failure("invalid_nbt","标牌必须恰好有 "+SignText.LINES+" 行");
+                if(!entry.getValue().isJsonArray() || entry.getValue().getAsJsonArray().size()!=SignText.LINES)throw new EditorSessions.Failure("invalid_nbt",EditorI18n.tr("cadeditor.message.blockviews.ae8ead4cb8", (SignText.LINES)));
                 for(var line:entry.getValue().getAsJsonArray())encode(net.minecraft.network.chat.ComponentSerialization.CODEC,line,access);
             }
         }
@@ -89,7 +91,7 @@ public final class BlockViews {
         for(var entry:json.getAsJsonObject().entrySet()) {
             if(entry.getKey().equals("color")) {
                 if(!entry.getValue().isJsonPrimitive() || java.util.Arrays.stream(net.minecraft.world.item.DyeColor.values()).noneMatch(c -> c.getName().equals(entry.getValue().getAsString())))
-                    throw new EditorSessions.Failure("invalid_nbt","颜色不在原版 DyeColor 枚举中："+entry.getValue());
+                    throw new EditorSessions.Failure("invalid_nbt",EditorI18n.tr("cadeditor.message.blockviews.0bbb11ca46", (entry.getValue())));
             } else if(!entry.getKey().equals("messages") && !entry.getKey().equals("filtered_messages")) requireColors(entry.getValue());
         }
     }
@@ -222,15 +224,15 @@ public final class BlockViews {
     public static CompoundTag apply(BlockEntity block,CompoundTag nbt,JsonObject edits,JsonObject typed,RegistryAccess access) {
         for (var group : typed.entrySet()) {
             if (!edits.has(group.getKey()) || !edits.get(group.getKey()).isJsonObject() || !group.getValue().isJsonObject())
-                throw new EditorSessions.Failure("invalid_request", "带类型数据缺少对应视图：" + group.getKey());
+                throw new EditorSessions.Failure("invalid_request", EditorI18n.tr("cadeditor.message.blockviews.3805f36d25", (group.getKey())));
             for (var entry : group.getValue().getAsJsonObject().entrySet()) {
                 if (!edits.getAsJsonObject(group.getKey()).has(entry.getKey()) || !entry.getValue().isJsonPrimitive() || !entry.getValue().getAsJsonPrimitive().isString())
-                    throw new EditorSessions.Failure("invalid_request", "带类型数据必须对应已提交字段并为 SNBT 文本：" + entry.getKey());
+                    throw new EditorSessions.Failure("invalid_request", EditorI18n.tr("cadeditor.message.blockviews.40387cc540", (entry.getKey())));
             }
         }
         if (edits.has("generic")) {
-            if (!typed.isEmpty()) throw new EditorSessions.Failure("invalid_request", "通用视图已有独立的 SNBT 协议");
-            if (hasSpecialized(block) || edits.size() != 1) throw new IllegalArgumentException("已有专用视图，或不能混合通用与专用字段");
+            if (!typed.isEmpty()) throw new EditorSessions.Failure("invalid_request", EditorI18n.tr("cadeditor.message.blockviews.f58f640af6"));
+            if (hasSpecialized(block) || edits.size() != 1) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.blockviews.3a19cb1854"));
             var next = GenericSchema.apply("block_entity",net.minecraft.core.registries.BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(block.getType()).toString(),nbt,edits.getAsJsonObject("generic"),access);
             GenericSchema.requireRetained(next,GenericSchema.saveBlock(WorldTarget.copyBlock(block,next,access),access));
             return next;
@@ -238,54 +240,54 @@ public final class BlockViews {
         var result = nbt.copy();var groups=fields(block);
         for(var group:edits.entrySet()) {
             var allowed=groups.get(group.getKey());
-            if(allowed==null || !group.getValue().isJsonObject()) throw new EditorSessions.Failure("invalid_request","目标不支持字段视图："+group.getKey());
+            if(allowed==null || !group.getValue().isJsonObject()) throw new EditorSessions.Failure("invalid_request",EditorI18n.tr("cadeditor.message.blockviews.ef82263e17", (group.getKey())));
             for(var entry:group.getValue().getAsJsonObject().entrySet()) {
-                var field=allowed.stream().filter(f->f.key.equals(entry.getKey())).findFirst().orElseThrow(()->new EditorSessions.Failure("invalid_request","未知视图字段："+entry.getKey()));
+                var field=allowed.stream().filter(f->f.key.equals(entry.getKey())).findFirst().orElseThrow(()->new EditorSessions.Failure("invalid_request",EditorI18n.tr("cadeditor.message.blockviews.a22f1312c8", (entry.getKey()))));
                 var json=entry.getValue();
                 Tag typedValue = null;
                 if (typed.has(group.getKey()) && typed.getAsJsonObject(group.getKey()).has(field.key)) {
-                    if (!typedWire(field)) throw new EditorSessions.Failure("invalid_request", "字段不接受带类型传输：" + field.key);
+                    if (!typedWire(field)) throw new EditorSessions.Failure("invalid_request", EditorI18n.tr("cadeditor.message.blockviews.411da34de9", (field.key)));
                     typedValue = canonicalTyped(field.codec, WorldNbt.parseValue(typed.getAsJsonObject(group.getKey()).get(field.key).getAsString()), access);
                     // SNBT is authoritative. Run ALL normal permission/range/loader guards
                     // against its actual decoded value, never an unrelated JSON projection.
                     json = decode(field.codec, typedValue, access);
                 }
-                if(block instanceof VaultBlockEntity && field.key.equals("server_data.rewarded_players"))throw new EditorSessions.Failure("invalid_request","已奖励玩家列表只读");
-                if(block instanceof BeaconBlockEntity && field.key.equals("Levels"))throw new EditorSessions.Failure("invalid_request","信标等级由金字塔计算，只读");
+                if(block instanceof VaultBlockEntity && field.key.equals("server_data.rewarded_players"))throw new EditorSessions.Failure("invalid_request",EditorI18n.tr("cadeditor.message.blockviews.3634244ef5"));
+                if(block instanceof BeaconBlockEntity && field.key.equals("Levels"))throw new EditorSessions.Failure("invalid_request",EditorI18n.tr("cadeditor.message.blockviews.9b73a911f2"));
                 if(block instanceof BeaconBlockEntity && (field.key.equals("primary_effect") || field.key.equals("secondary_effect")) && !json.isJsonNull()) {
                     var effect=net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.holderByNameCodec().parse(access.createSerializationContext(JsonOps.INSTANCE),json).getOrThrow(s->new EditorSessions.Failure("invalid_nbt",s));
-                    if(BeaconBlockEntity.BEACON_EFFECTS.stream().flatMap(List::stream).noneMatch(effect::equals))throw new EditorSessions.Failure("invalid_nbt","不是原版信标允许的效果");
+                    if(BeaconBlockEntity.BEACON_EFFECTS.stream().flatMap(List::stream).noneMatch(effect::equals))throw new EditorSessions.Failure("invalid_nbt",EditorI18n.tr("cadeditor.message.blockviews.234879c2b2"));
                 }
                 if(json.isJsonNull()) {
                     if(nullable(field)) {put(result,field,null);continue;}
-                    throw new EditorSessions.Failure("invalid_nbt","此字段不允许清空："+field.key);
+                    throw new EditorSessions.Failure("invalid_nbt",EditorI18n.tr("cadeditor.message.blockviews.b7aaa17174", (field.key)));
                 }
                 // Sign sides accept a partial object; unedited lines/filtered messages remain intact.
                 if(field.codec==SignText.CODEC)requireSignSide(json,access);
-                if(field.codec==Codec.DOUBLE && (!json.isJsonPrimitive() || !json.getAsJsonPrimitive().isNumber() || !Double.isFinite(json.getAsDouble())))throw new EditorSessions.Failure("invalid_nbt","必须为有限 double");
+                if(field.codec==Codec.DOUBLE && (!json.isJsonPrimitive() || !json.getAsJsonPrimitive().isNumber() || !Double.isFinite(json.getAsDouble())))throw new EditorSessions.Failure("invalid_nbt",EditorI18n.tr("cadeditor.message.blockviews.eb46565f5e"));
                 if(field.codec==net.minecraft.util.ExtraCodecs.NON_NEGATIVE_INT)requireInteger(json,0,Integer.MAX_VALUE);
                 if(field.codec==Codec.LONG)requireInteger(json,Long.MIN_VALUE,Long.MAX_VALUE);
-                if(field.codec==Codec.FLOAT && (!json.isJsonPrimitive() || !json.getAsJsonPrimitive().isNumber() || !Float.isFinite(json.getAsFloat())))throw new EditorSessions.Failure("invalid_nbt","必须为有限 float");
-                if(field.codec==Codec.STRING && (!json.isJsonPrimitive() || !json.getAsJsonPrimitive().isString()))throw new EditorSessions.Failure("invalid_nbt","必须为字符串");
-                if(field.codec==BlockPos.CODEC) {if(!json.isJsonArray() || json.getAsJsonArray().size()!=3)throw new EditorSessions.Failure("invalid_nbt","坐标必须为三个整数");for(var coordinate:json.getAsJsonArray())requireInteger(coordinate,Integer.MIN_VALUE,Integer.MAX_VALUE);}
+                if(field.codec==Codec.FLOAT && (!json.isJsonPrimitive() || !json.getAsJsonPrimitive().isNumber() || !Float.isFinite(json.getAsFloat())))throw new EditorSessions.Failure("invalid_nbt",EditorI18n.tr("cadeditor.message.blockviews.2dbc50d358"));
+                if(field.codec==Codec.STRING && (!json.isJsonPrimitive() || !json.getAsJsonPrimitive().isString()))throw new EditorSessions.Failure("invalid_nbt",EditorI18n.tr("cadeditor.message.blockviews.5fe8f75e3b"));
+                if(field.codec==BlockPos.CODEC) {if(!json.isJsonArray() || json.getAsJsonArray().size()!=3)throw new EditorSessions.Failure("invalid_nbt",EditorI18n.tr("cadeditor.message.blockviews.07cc158401"));for(var coordinate:json.getAsJsonArray())requireInteger(coordinate,Integer.MIN_VALUE,Integer.MAX_VALUE);}
                 if(block instanceof StructureBlockEntity && (field.key.startsWith("pos") || field.key.startsWith("size")))requireInteger(json,field.key.startsWith("pos") ? -StructureBlockEntity.MAX_OFFSET_PER_AXIS : 0,field.key.startsWith("pos") ? StructureBlockEntity.MAX_OFFSET_PER_AXIS : StructureBlockEntity.MAX_SIZE_PER_AXIS);
                 if(field.codec==Codec.SHORT)requireInteger(json,Short.MIN_VALUE,Short.MAX_VALUE);
                 if(field.codec==Codec.BYTE)requireInteger(json,Byte.MIN_VALUE,Byte.MAX_VALUE);
                 if(field.codec==Codec.INT)requireInteger(json,Integer.MIN_VALUE,Integer.MAX_VALUE);
                 if(block instanceof ChiseledBookShelfBlockEntity && field.key.equals("last_interacted_slot"))requireInteger(json,-1,WorldTarget.inventory(block).size()-1);
-                if((field.codec==Codec.BOOL || field.codec==CRAFTER_TRIGGERED) && (!json.isJsonPrimitive() || !json.getAsJsonPrimitive().isBoolean()))throw new EditorSessions.Failure("invalid_nbt","布尔字段不能使用字符串或数字");
+                if((field.codec==Codec.BOOL || field.codec==CRAFTER_TRIGGERED) && (!json.isJsonPrimitive() || !json.getAsJsonPrimitive().isBoolean()))throw new EditorSessions.Failure("invalid_nbt",EditorI18n.tr("cadeditor.message.blockviews.8edef46d42"));
                 if(block instanceof CrafterBlockEntity && field.key.equals("disabled_slots")) {
-                    if(!json.isJsonArray())throw new EditorSessions.Failure("invalid_nbt","禁用槽位必须为数组");
+                    if(!json.isJsonArray())throw new EditorSessions.Failure("invalid_nbt",EditorI18n.tr("cadeditor.message.blockviews.bd47ea67d0"));
                     var crafter=(CrafterBlockEntity)WorldTarget.copyBlock(block,result,access);var slots=new TreeSet<Integer>();
                     for(var slot:json.getAsJsonArray()) {
                         requireInteger(slot,0,crafter.getContainerSize()-1);int index=slot.getAsInt();
-                        if(!slots.add(index) || !crafter.getItem(index).isEmpty())throw new EditorSessions.Failure("invalid_nbt","禁用槽位必须唯一且为空");
+                        if(!slots.add(index) || !crafter.getItem(index).isEmpty())throw new EditorSessions.Failure("invalid_nbt",EditorI18n.tr("cadeditor.message.blockviews.8edffbf11b"));
                     }
                     var sorted=new JsonArray();slots.forEach(sorted::add);json=sorted;
                 }
                 if(field.codec==Codec.INT_STREAM && !(block instanceof CrafterBlockEntity)) {
                     var original=get(result,field);
-                    if(!json.isJsonArray() || (original instanceof IntArrayTag array && array.getAsIntArray().length!=json.getAsJsonArray().size()))throw new EditorSessions.Failure("invalid_nbt","进度数组长度必须与实际营火一致");
+                    if(!json.isJsonArray() || (original instanceof IntArrayTag array && array.getAsIntArray().length!=json.getAsJsonArray().size()))throw new EditorSessions.Failure("invalid_nbt",EditorI18n.tr("cadeditor.message.blockviews.5190721c12"));
                     for(var element:json.getAsJsonArray())requireInteger(element,Integer.MIN_VALUE,Integer.MAX_VALUE);
                 }
                 if(field.codec==SignText.CODEC && json.isJsonObject() && get(result,field)!=null) {
@@ -299,7 +301,7 @@ public final class BlockViews {
                 if(block instanceof TheEndGatewayBlockEntity && field.key.equals("ExactTeleport") && !json.getAsBoolean())encoded=null;
                 if(block instanceof JukeboxBlockEntity && field.key.equals("RecordItem") && encoded!=null) {
                     ItemStack next=ItemStack.CODEC.parse(access.createSerializationContext(NbtOps.INSTANCE),encoded).getOrThrow();
-                    if(!next.isEmpty()&&!next.has(DataComponents.JUKEBOX_PLAYABLE))throw new EditorSessions.Failure("invalid_nbt","此物品缺少 minecraft:jukebox_playable");
+                    if(!next.isEmpty()&&!next.has(DataComponents.JUKEBOX_PLAYABLE))throw new EditorSessions.Failure("invalid_nbt",EditorI18n.tr("cadeditor.ui.worldview.9c81f8c837"));
                 }
                 put(result,field,encoded);
             }
@@ -316,7 +318,7 @@ public final class BlockViews {
             for(var field:groups.get("vault")) {
                 if(!field.key.startsWith("config."))continue;
                 var expected=changes.has(field.key) && changes.get(field.key).isJsonNull() ? null : effectiveTag(baseline,result,field,access);
-                if(!Objects.equals(expected,effectiveTag(copy,saved,field,access)))throw new EditorSessions.Failure("invalid_nbt","原版宝库加载器未保留配置："+field.key);
+                if(!Objects.equals(expected,effectiveTag(copy,saved,field,access)))throw new EditorSessions.Failure("invalid_nbt",EditorI18n.tr("cadeditor.message.blockviews.f2ca6a81a9", (field.key)));
             }
             for(var field:groups.get("vault"))if(changes.has(field.key))put(result,field,get(saved,field));
         }
@@ -325,7 +327,7 @@ public final class BlockViews {
     public static void requireUnwaxed(BlockEntity block,CompoundTag before,CompoundTag after) {
         if(block instanceof SignBlockEntity && before.getBoolean("is_waxed").orElse(false) && after.getBoolean("is_waxed").orElse(false)
             && (!Objects.equals(before.get("front_text"),after.get("front_text")) || !Objects.equals(before.get("back_text"),after.get("back_text"))))
-            throw new EditorSessions.Failure("sign_waxed","标牌已涂蜡；修改文字须在同一笔请求中设置 is_waxed:false");
+            throw new EditorSessions.Failure("sign_waxed",EditorI18n.tr("cadeditor.message.blockviews.b33520c5fd"));
     }
     /** Content-derived flags change only when content changes; standalone state edits stay explicit. */
     public static net.minecraft.world.level.block.state.BlockState contentState(BlockEntity source,CompoundTag before,CompoundTag after,net.minecraft.world.level.block.state.BlockState state,RegistryAccess access) {

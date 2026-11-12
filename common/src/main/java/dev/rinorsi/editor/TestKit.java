@@ -71,29 +71,29 @@ public final class TestKit {
                 for (String key : keys) {
                     var type = BuiltInRegistries.DATA_COMPONENT_TYPE.getValue(Identifier.withDefaultNamespace(key));
                     if (type == null || type.isTransient() || !nonDefault(stack, base, type, registries))
-                        throw new IllegalArgumentException("不是非默认持久样例：" + key);
+                        throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.testkit.affbff0490", (key)));
                 }
-                markTree(stack, "测" + number + "·" + title, 0);
+                markTree(stack, EditorI18n.tr("cadeditor.message.testkit.186a5be89d", (number), (title)), 0);
                 roundTrip(stack, registries);
                 out.add(new Specimen(number, title, Set.copyOf(keys), stack)); covered.addAll(keys);
-            } catch (RuntimeException error) { failures.add("测" + number + " " + keys + ": " + error.getMessage()); }
+            } catch (RuntimeException error) { failures.add(EditorI18n.tr("cadeditor.message.testkit.e97cc13da4", (number), (keys), (error.getMessage()))); }
         }
-        if (!failures.isEmpty()) throw new IllegalArgumentException("测试道具自检失败（未发放）：\n" + String.join("\n", failures));
+        if (!failures.isEmpty()) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.testkit.3ca8a351f5", (String.join("\n", failures))));
         //? if >=26.2 {
         for (String key : new java.util.TreeSet<>(expectedComponents())) {
             if (covered.contains(key)) continue;
             var type = BuiltInRegistries.DATA_COMPONENT_TYPE.getValue(Identifier.withDefaultNamespace(key));
             var stack = dev.rinorsi.editor.registry.ComponentSamples.nonDefault(type, registries);
             int number = out.size() + 1;
-            markTree(stack, "测" + number + "·" + key, 0); roundTrip(stack, registries);
+            markTree(stack, EditorI18n.tr("cadeditor.message.testkit.186a5be89d", (number), (key)), 0); roundTrip(stack, registries);
             out.add(new Specimen(number, key, Set.of(key), stack)); covered.add(key);
         }
         //?}
-        if (!covered.equals(expectedComponents())) throw new IllegalStateException("运行版本组件覆盖清单不一致，未发放");
+        if (!covered.equals(expectedComponents())) throw new IllegalStateException(EditorI18n.tr("cadeditor.message.testkit.251bde4be1"));
         if (includeModded) {
             try { addModded(out, registries); }
             catch (RuntimeException error) {
-                throw new IllegalArgumentException("模组内容样例自检失败（ItemStack/enchantments/potion_contents，未发放）：" + error.getMessage(), error);
+                throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.testkit.aef5f23c79", (error.getMessage())), error);
             }
         }
         return List.copyOf(out);
@@ -130,12 +130,12 @@ public final class TestKit {
         data.add("components", components);
         var stack = ItemStack.CODEC.parse(registries.createSerializationContext(JsonOps.INSTANCE), data).getOrThrow();
         int number = out.size() + 1;
-        markTree(stack, "测" + number + "·模组内容", 0); roundTrip(stack, registries);
-        out.add(new Specimen(number, "模组内容（实时注册表）", Set.of(), stack));
+        markTree(stack, EditorI18n.tr("cadeditor.message.testkit.b3ece8b067", (number)), 0); roundTrip(stack, registries);
+        out.add(new Specimen(number, EditorI18n.tr("cadeditor.message.testkit.822864b0f6"), Set.of(), stack));
     }
 
     static void markTree(ItemStack stack, String name, int depth) {
-        if (depth > 16) throw new IllegalArgumentException("测试道具嵌套过深");
+        if (depth > 16) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.testkit.5e377c7f6c"));
         stack.set(DataComponents.CUSTOM_NAME, Component.literal(name));
         var lore = new ArrayList<>(stack.getOrDefault(DataComponents.LORE, ItemLore.EMPTY).lines());
         lore.removeIf(line -> line.getString().equals(MARKER)); lore.add(Component.literal(MARKER));
@@ -143,13 +143,13 @@ public final class TestKit {
         var container = stack.get(DataComponents.CONTAINER);
         if (container != null) {
             var children = dev.rinorsi.editor.ContainerCopies.copies(container).toList();
-            for (var child : children) if (!child.isEmpty() && !owned(child)) markTree(child, name + "·内含", depth + 1);
+            for (var child : children) if (!child.isEmpty() && !owned(child)) markTree(child, EditorI18n.tr("cadeditor.message.testkit.60c1dee576", (name)), depth + 1);
             stack.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(children));
         }
         var bundle = stack.get(DataComponents.BUNDLE_CONTENTS);
         if (bundle != null) {
             var children = dev.rinorsi.editor.ContainerCopies.copies(bundle).toList();
-            children.forEach(child -> { if (!owned(child)) markTree(child, name + "·内含", depth + 1); });
+            children.forEach(child -> { if (!owned(child)) markTree(child, EditorI18n.tr("cadeditor.message.testkit.60c1dee576", (name)), depth + 1); });
             stack.set(DataComponents.BUNDLE_CONTENTS, new BundleContents(children.stream().map(ItemStackTemplate::fromNonEmptyStack).toList()));
         }
     }
@@ -166,6 +166,6 @@ public final class TestKit {
         // Some vanilla component payloads contain direct holders without value-based equals.
         // Compare the full typed persisted representation, not Java holder object identity.
         if (!encoded.equals(ItemStack.CODEC.encodeStart(ops, decoded).getOrThrow()))
-            throw new IllegalStateException("原版ItemStack Codec类型保真NBT往返不相等");
+            throw new IllegalStateException(EditorI18n.tr("cadeditor.message.testkit.26d3369a82"));
     }
 }

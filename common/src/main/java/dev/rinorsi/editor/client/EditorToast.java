@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.client;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.JsonObject;
 import dev.oriel.mod.client.OrielHud;
 import java.util.Locale;
@@ -72,7 +74,7 @@ public final class EditorToast {
 
         void show(Level level, String text) {
             Level actual = level == null ? Level.INFO : level;
-            String message = text == null ? "操作未完成" : text;
+            String message = text == null ? EditorI18n.tr("cadeditor.message.editortoast.79be13bdf0") : text;
             if (!registered && registrationFailure == null) initialize();
             if (!registered) {
                 fallback(actual, message, registrationFailure);
@@ -82,7 +84,7 @@ public final class EditorToast {
                 var data = new JsonObject();
                 data.addProperty("text", message);
                 data.addProperty("level", actual.name().toLowerCase(Locale.ROOT));
-                data.addProperty("title", "物品工坊");
+                data.addProperty("title", EditorI18n.tr("cadeditor.ui.screens.75bc6c2d23"));
                 data.addProperty("seq", ++sequence);
                 if (!hud.isShown()) hud.show();
                 hud.scale(scalePreference.getAsInt());
@@ -105,7 +107,7 @@ public final class EditorToast {
                 case ERROR -> ChatFormatting.RED;
             };
             chat.accept(Component.empty()
-                    .append(Component.literal("[物品工坊] ").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD))
+                    .append(Component.literal(EditorI18n.tr("cadeditor.message.editortoast.ee643c825a")).withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD))
                     .append(Component.literal(text).withStyle(color)));
         }
     }

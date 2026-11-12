@@ -60,7 +60,7 @@ var EditorInventorySessionStale = false;
 function receiveInventorySession(state) {
   if (!state || !state.stale) return;
   EditorInventorySessionStale = true;
-  EditorInventoryCapability = state.reason || '页面已重载，请关闭后重新读取物品；草稿已保留';
+  EditorInventoryCapability = state.reason || I18n.t("cadeditor.ui.app.b04ffcb0e9");
   if (Store.docs.length) drawFooter();
   toast(EditorInventoryCapability, 'warn', 'inventory-session');
 }
@@ -71,17 +71,17 @@ function receiveEditorResult(result) {
   if (result.status === 'sent' && result.confirmed === false) {
     // Vanilla creative slots have no positive acknowledgement. Keep the draft/base intact.
     if (typeof Drafts !== 'undefined') Drafts.submitted(p.doc, p, result.fingerprint);
-    toast(result.reason || '已提交创造模式修改，尚无服务器保存确认；草稿已保留，请核对背包', 'warn');
+    toast(result.reason || I18n.t("cadeditor.ui.app.636b3d146d"), 'warn');
     return;
   }
   if (result.status !== 'saved') {
     if (typeof Drafts !== 'undefined') Drafts.unresolved(p.doc, result.status === 'unknown' || result.code === 'request_timeout' || result.code === 'payload_too_large');
     /* 按回执类型给出下一步；无论哪种，草稿都还在界面里 */
-    var next = { session_lost: '没有覆盖任何东西，草稿还在。请更新客户端和服务端到同一版本后重试。', item_changed: '物品在你编辑期间被改动或移走了，没有覆盖。草稿还在：可以复制配置，重新读取物品后再套用。', slot_invalid: '槽位已不可用（容器关了或槽位变了）。草稿还在。', not_allowed: '当前没有写入权限。草稿还在。', payload_too_large: '回执过大，可能已经保存。请重新读取物品核对，不要盲目重发。', request_timeout: '等待游戏回执超时，结果未知。请先核对物品再决定是否重发。' }[result.code];
-    toast(result.reason ? result.reason + (next ? String.fromCharCode(10) + next : '') : '修改没有成功，草稿已保留', 'error'); return;
+    var next = { session_lost: I18n.t("cadeditor.ui.app.db562f680b"), item_changed: I18n.t("cadeditor.ui.app.1749068321"), slot_invalid: I18n.t("cadeditor.ui.app.8116886f0f"), not_allowed: I18n.t("cadeditor.ui.app.654d81849e"), payload_too_large: I18n.t("cadeditor.ui.app.5909d2b556"), request_timeout: I18n.t("cadeditor.ui.app.7100e10475") }[result.code];
+    toast(result.reason ? result.reason + (next ? String.fromCharCode(10) + next : '') : I18n.t("cadeditor.ui.app.46c54eacf7"), 'error'); return;
   }
   var st = result.item;
-  if (!st || !st.id || !st.comps || !st.removed) { if (typeof Drafts !== 'undefined') Drafts.unresolved(p.doc, true); toast('写回回执缺少物品快照，请关闭后重新读取', 'error'); return; }
+  if (!st || !st.id || !st.comps || !st.removed) { if (typeof Drafts !== 'undefined') Drafts.unresolved(p.doc, true); toast(I18n.t("cadeditor.ui.app.761da2fa93"), 'error'); return; }
   var d = p.doc, unchanged = snapOf(d) === p.snap;
   var savedComps = nbtHydrate(st.comps, st.component_snbt || {});
   if (unchanged) { d.id = st.id; d.count = st.count; d.comps = savedComps; d.removed = clone(st.removed); }
@@ -90,7 +90,7 @@ function receiveEditorResult(result) {
   if (typeof ItemHistory !== 'undefined') { ItemHistory.note(d, unchanged ? d.base : snapOf(d)); ItemHistory.flush(); }
   if (typeof Drafts !== 'undefined') Drafts.saved(d, p); // matching confirmed version clears now; later edits persist immediately
   if (Store.doc() === d) rebuild();
-  toast(unchanged ? '服务器已确认物品修改' : '服务器已确认上次提交；后续修改仍保留在草稿中', 'ok');
+  toast(unchanged ? I18n.t("cadeditor.ui.app.3e78195347") : I18n.t("cadeditor.ui.app.7d0ced875f"), 'ok');
 }
 /* 独立保险库：不是编辑某件物品，只开保险库窗口；收起编辑器外壳，关掉窗口就回到原界面 */
 function enterVaultMode() {
@@ -132,7 +132,7 @@ function redrawRegistryPage(kinds) {
 }
 /* 打开时游戏数据（组件表等）还在陆续送来，页面会一次次重画。数据没到齐就盖一层加载动画，到齐了淡出；已经到过的世界里再打开不会出现 */
 /* 列表里的一行加载提示：数据还在读时代替空白 */
-function kLoadingRow(text) { return h('div', { class: 'ed-loadrow' }, [h('div', { class: 'ed-load-dots' }, [h('i'), h('i'), h('i')]), h('span', { text: text || '正在读取…' })]); }
+function kLoadingRow(text) { return h('div', { class: 'ed-loadrow' }, [h('div', { class: 'ed-load-dots' }, [h('i'), h('i'), h('i')]), h('span', { text: text || I18n.t("cadeditor.ui.app.86b6d0d630") })]); }
 var EditorLoading = {
   schemaGen: null, el: null, timer: null, started: 0, lastTouch: 0, sent: 0, readyAt: 0,
   /* 物品自己的数据到齐：组件表到了，并且这件物品的默认值、类型信息也到了（没到时页面是「物品 / 方块」的通用样子） */
@@ -152,7 +152,7 @@ var EditorLoading = {
   arm: function () { this.lastTouch = Date.now(); this.sent = 0; },
   mount: function () {
     var win = $('win');
-    if (!this.el) this.el = h('div', { class: 'ed-loading' }, [h('div', { class: 'ed-load-dots' }, [h('i'), h('i'), h('i')]), h('div', { class: 'ed-load-text', text: '正在读取游戏数据…' })]);
+    if (!this.el) this.el = h('div', { class: 'ed-loading' }, [h('div', { class: 'ed-load-dots' }, [h('i'), h('i'), h('i')]), h('div', { class: 'ed-load-text', text: I18n.t("cadeditor.ui.app.e69c5ad91f") })]);
     if (win && !this.el.parentNode) win.appendChild(this.el);
     this.el.classList.remove('out');
   },

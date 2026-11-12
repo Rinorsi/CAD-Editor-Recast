@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.world;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.*;
 import com.mojang.serialization.Codec;
 import dev.rinorsi.editor.EditorSessions;
@@ -23,27 +25,27 @@ public final class GenericSchema {
         return switch (kind) {
             case "entity" -> BuiltInRegistries.ENTITY_TYPE.keySet().stream().map(Object::toString).sorted().toList();
             case "block_entity" -> BuiltInRegistries.BLOCK_ENTITY_TYPE.keySet().stream().map(Object::toString).sorted().toList();
-            default -> throw new IllegalArgumentException("kind 必须是 entity 或 block_entity");
+            default -> throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.genericschema.c57ea73e84"));
         };
     }
     public static JsonObject template(String kind, String id, Level level) {
         try {
             var key = Identifier.parse(id);
             if (kind.equals("entity")) {
-                var type = BuiltInRegistries.ENTITY_TYPE.getOptional(key).orElseThrow(() -> new IllegalArgumentException("未知实体类型"));
+                var type = BuiltInRegistries.ENTITY_TYPE.getOptional(key).orElseThrow(() -> new IllegalArgumentException(EditorI18n.tr("cadeditor.message.genericschema.587ad066fd")));
                 var entity = type.create(level, EntitySpawnReason.LOAD);
-                if (entity == null) throw new IllegalArgumentException("实体工厂没有返回默认实例");
+                if (entity == null) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.genericschema.89364c7dca"));
                 var nbt = WorldTarget.saveEntity(entity, level.registryAccess());
                 return describe(kind, id, nbt, level.registryAccess(), specialized(entity, nbt, level.registryAccess()));
             }
-            if (!kind.equals("block_entity")) throw new IllegalArgumentException("未知 schema 类型");
-            var type = BuiltInRegistries.BLOCK_ENTITY_TYPE.getOptional(key).orElseThrow(() -> new IllegalArgumentException("未知方块实体类型"));
+            if (!kind.equals("block_entity")) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.genericschema.0521e8e309"));
+            var type = BuiltInRegistries.BLOCK_ENTITY_TYPE.getOptional(key).orElseThrow(() -> new IllegalArgumentException(EditorI18n.tr("cadeditor.message.genericschema.0947c8d9c2")));
             var state = BuiltInRegistries.BLOCK.stream().map(b -> b.defaultBlockState()).filter(type::isValid).findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException("没有可用的默认方块状态"));
+                    .orElseThrow(() -> new IllegalArgumentException(EditorI18n.tr("cadeditor.message.genericschema.d9161b1206")));
             var block = type.create(BlockPos.ZERO, state);
-            if (block == null) throw new IllegalArgumentException("方块实体工厂没有返回默认实例");
+            if (block == null) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.genericschema.c3a64b7df0"));
             return describe(kind, id, saveBlock(block,level.registryAccess()), level.registryAccess(), BlockViews.hasSpecialized(block));
-        } catch (RuntimeException error) { return unavailable(kind, id, "默认实例创建或保存失败："+String.valueOf(error.getMessage())); }
+        } catch (RuntimeException error) { return unavailable(kind, id, EditorI18n.tr("cadeditor.message.genericschema.df319d257d", (String.valueOf(error.getMessage())))); }
     }
     public static JsonObject unavailable(String kind, String id, String reason) {
         var out = header(kind,id,false); out.addProperty("available",false);
@@ -54,7 +56,7 @@ public final class GenericSchema {
         var problems=new net.minecraft.util.ProblemReporter.Collector();
         var output=net.minecraft.world.level.storage.TagValueOutput.createWithContext(problems,access);
         block.saveWithFullMetadata(output);
-        if(!problems.isEmpty())throw new IllegalArgumentException("方块实体序列化失败："+problems.getReport());
+        if(!problems.isEmpty())throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.genericschema.5a707ccf2a", (problems.getReport())));
         return output.buildResult();
     }
     private static JsonObject header(String kind, String id, boolean specialized) {
@@ -62,14 +64,14 @@ public final class GenericSchema {
         out.addProperty("id",id); out.addProperty("source","runtime_nbt_shape");
         out.addProperty("available",true); out.addProperty("specialized",specialized);
         out.addProperty("editable",specialized ? "readonly" : "structured"); out.add("fields",new JsonObject());
-        if (specialized) out.addProperty("editable_reason","使用已有专用视图");
+        if (specialized) out.addProperty("editable_reason",EditorI18n.tr("cadeditor.message.genericschema.697561ee9e"));
         return out;
     }
     public static JsonObject describe(String kind, String id, CompoundTag nbt, RegistryAccess access, boolean specialized) {
         var out = header(kind,id,specialized);
         if (specialized) return out;
         String snbt=nbt.toString();
-        if(snbt.length()>MAX_SCHEMA_CHARS || nbt.size()>MAX_NODES) return unavailable(kind,id,"NBT 结构超过推断预算，请在数据页编辑");
+        if(snbt.length()>MAX_SCHEMA_CHARS || nbt.size()>MAX_NODES) return unavailable(kind,id,EditorI18n.tr("cadeditor.message.genericschema.378ae08a00"));
         out.addProperty("default_snbt",snbt);
         var inspector = new Inspector(access); var fields = out.getAsJsonObject("fields");
         for (String key : new TreeSet<>(nbt.keySet())) {
@@ -77,11 +79,11 @@ public final class GenericSchema {
             var changed = nbt.copy(); changed.remove(key);
             // Reuse the existing world identity guard rather than maintaining another field table.
             try { WorldNbt.protect(nbt,changed,kind.equals("entity")); }
-            catch (EditorSessions.Failure protectedField) { fallback(field,"readonly","身份、位置或关联字段受保护"); }
+            catch (EditorSessions.Failure protectedField) { fallback(field,"readonly",EditorI18n.tr("cadeditor.message.genericschema.bf306456a1")); }
             fields.add(key,field);
         }
         // A single oversized mod must not break enumeration or the world snapshot.
-        if (out.toString().length() > MAX_SCHEMA_CHARS) return unavailable(kind,id,"NBT 结构超过单条预算，请在数据页编辑");
+        if (out.toString().length() > MAX_SCHEMA_CHARS) return unavailable(kind,id,EditorI18n.tr("cadeditor.message.genericschema.8e5e7743ac"));
         return out;
     }
     public static boolean specialized(Entity entity, CompoundTag saved, RegistryAccess access) {
@@ -101,24 +103,24 @@ public final class GenericSchema {
     }
     public static CompoundTag apply(String kind, String id, CompoundTag base, JsonObject edits, RegistryAccess access) {
         var schema = describe(kind,id,base,access,false);
-        if (!schema.get("available").getAsBoolean()) throw new IllegalArgumentException("该类型只能在数据页编辑");
+        if (!schema.get("available").getAsBoolean()) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.genericschema.e938110747"));
         var fields = schema.getAsJsonObject("fields"); var next = base.copy();
         for (var edit : edits.entrySet()) {
             String key = edit.getKey(); var field = fields.getAsJsonObject(key);
             if (field == null || !field.get("editable").getAsString().equals("structured"))
-                throw new IllegalArgumentException("该字段只能在数据页编辑或受保护：" + key);
+                throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.genericschema.15a75436a9", (key)));
             if (!edit.getValue().isJsonPrimitive() || !edit.getValue().getAsJsonPrimitive().isString())
-                throw new IllegalArgumentException("通用字段必须为 SNBT 字符串");
+                throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.genericschema.91a0843ea0"));
             // Parse exactly one bounded SNBT value; a wrapper would accept injected duplicate keys.
             Tag value = dev.rinorsi.editor.ComponentValidation.parseSnbt(edit.getValue().getAsString());
-            if (value == null || value.getId() != base.get(key).getId()) throw new IllegalArgumentException("不可改变 NBT 保存类型：" + key);
+            if (value == null || value.getId() != base.get(key).getId()) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.genericschema.579f83cd16", (key)));
             next.put(key,value.copy());
         }
         WorldNbt.protect(base,next,kind.equals("entity")); return next;
     }
     public static void requireRetained(CompoundTag requested, CompoundTag saved) {
         for (String key : requested.keySet()) if (!Objects.equals(requested.get(key),saved.get(key)))
-            throw new EditorSessions.Failure("invalid_nbt","加载保存会丢失或改变字段类型，请在数据页检查：" + key);
+            throw new EditorSessions.Failure("invalid_nbt",EditorI18n.tr("cadeditor.message.genericschema.947e126403", (key)));
     }
     public static boolean hasEdits(JsonObject request) {
         return (request.has("views") && dev.rinorsi.editor.StackCodec.object(request,"views").has("generic"))
@@ -168,9 +170,9 @@ public final class GenericSchema {
             out.addProperty("default_snbt",value.toString()); out.addProperty("nullable",false);
             out.addProperty("editable","structured"); out.addProperty("read_only",false);
             out.addProperty("authority","runtime_nbt_shape_and_detached_loader");
-            if (++nodes > MAX_NODES || depth > MAX_DEPTH) fallback(out,"snbt_only","结构超过推断预算，这个字段只能在数据页编辑");
+            if (++nodes > MAX_NODES || depth > MAX_DEPTH) fallback(out,"snbt_only",EditorI18n.tr("cadeditor.message.genericschema.d7fdf823df"));
             else if (value instanceof ByteTag b && (b.byteValue() == 0 || b.byteValue() == 1)) {
-                fallback(out,"snbt_only","单个 byte 样本不能证明布尔语义，这个字段只能在数据页编辑");
+                fallback(out,"snbt_only",EditorI18n.tr("cadeditor.message.genericschema.d1d209563c"));
             } else if (value instanceof ByteTag || value instanceof ShortTag || value instanceof IntTag || value instanceof LongTag) type = "integer";
             else if (value instanceof FloatTag || value instanceof DoubleTag) type = "number";
             else if (value instanceof StringTag s) {
@@ -189,13 +191,13 @@ public final class GenericSchema {
                     for (String key : new TreeSet<>(compound.keySet())) { if(nodes>=MAX_NODES)break;var nested = new ArrayList<>(path); nested.add(key); children.add(key,field(compound.get(key),nested,depth+1)); }
                     out.add("fields",children);out.addProperty("fields_complete",children.size()==compound.size());
                 }
-                fallback(out,"snbt_only","复合字段须保留全部未知键及类型，这个字段只能在数据页编辑");
+                fallback(out,"snbt_only",EditorI18n.tr("cadeditor.message.genericschema.ca6527bd5d"));
             } else if (value instanceof ListTag list) {
                 type = "array"; var elements = new JsonArray();
                 for (int i=0;i<list.size() && nodes<MAX_NODES;i++) { var nested=new ArrayList<>(path);nested.add(Integer.toString(i));elements.add(field(list.get(i),nested,depth+1)); }
                 out.add("elements",elements);out.addProperty("elements_complete",elements.size()==list.size());out.addProperty("length",list.size());
-                fallback(out,"snbt_only","样本不能证明未来列表项的结构，这个字段只能在数据页编辑");
-            } else fallback(out,"snbt_only","NBT 数组或未知类型，这个字段只能在数据页编辑");
+                fallback(out,"snbt_only",EditorI18n.tr("cadeditor.message.genericschema.6b20793af4"));
+            } else fallback(out,"snbt_only",EditorI18n.tr("cadeditor.message.genericschema.d5ec4d0619"));
             out.addProperty("type",type); out.addProperty("kind",type); return out;
         }
         private <T> boolean exact(Codec<T> codec, Tag value) {

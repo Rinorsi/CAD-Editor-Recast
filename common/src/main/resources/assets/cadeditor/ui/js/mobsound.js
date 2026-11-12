@@ -1,6 +1,6 @@
 /* 生物叫声试听：叫声 / 受伤 / 死亡。声音 ID 来自游戏里这个生物默认实例的真实声音方法（entity_info.sounds），
    试听走和物品声音组件同一条宿主通道（SoundPreview）。entity_info 还没到时先放一个空容器，到了再统一填。 */
-var MOB_SOUND_KINDS = [['ambient', '叫声'], ['hurt', '受伤'], ['death', '死亡']];
+var MOB_SOUND_KINDS = [['ambient', I18n.t("cadeditor.ui.labels.f24b87656c")], ['hurt', I18n.t("cadeditor.ui.mobsound.d15e59749f")], ['death', I18n.t("cadeditor.ui.mobsound.82d3130fa5")]];
 function mobSoundFill(box) {
   var id = box.getAttribute('data-ent'), info = id ? Reg.entityInfo(id) : false, s = info && info.sounds;
   clear(box);

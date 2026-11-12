@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.client;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.*;
 import dev.rinorsi.editor.*;
 import dev.rinorsi.editor.world.WorldEditSessions;
@@ -13,7 +15,7 @@ public final class WorldPageTarget {
         if(message.size()==1&&message.has("self")&&message.get("self").isJsonPrimitive()&&message.getAsJsonPrimitive("self").isBoolean()&&message.get("self").getAsBoolean())slot.addProperty("player","self");
         else if(message.size()==1&&message.has("uuid")) {slot.addProperty("player","online");slot.addProperty("uuid",UUID.fromString(StackCodec.string(message,"uuid")).toString());}
         else if(message.size()==2&&message.has("uuid")&&message.has("offline")&&message.get("offline").isJsonPrimitive()&&message.getAsJsonPrimitive("offline").isBoolean()&&message.get("offline").getAsBoolean()){slot.addProperty("player","offline");slot.addProperty("uuid",UUID.fromString(StackCodec.string(message,"uuid")).toString());}
-        else throw new IllegalArgumentException("请选择玩家 UUID（离线时带 offline:true），或使用 self:true 返回自己");
+        else throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.worldpagetarget.b548316a38"));
         return slot;
     }
     public record Binding(JsonObject slot,String revision) {
@@ -22,7 +24,7 @@ public final class WorldPageTarget {
         public static Binding opened(JsonObject world){return new Binding(StackCodec.object(world,"slot"),StackCodec.string(world,"revision"));}
         public JsonObject bind(JsonObject edit,boolean undo) {
             var supplied=StackCodec.object(edit,"slot");
-            if(!WorldEditSessions.sameTarget(slot,supplied)||!Objects.equals(slot.get("token"),supplied.get("token")))throw new IllegalArgumentException("页面目标与当前编辑目标不一致，请重新读取");
+            if(!WorldEditSessions.sameTarget(slot,supplied)||!Objects.equals(slot.get("token"),supplied.get("token")))throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.worldpagetarget.9bbb09830b"));
             var request=edit.deepCopy();request.addProperty("op",undo?"undo":"apply");request.add("slot",slot.deepCopy());request.addProperty("revision",revision);return request;
         }
     }

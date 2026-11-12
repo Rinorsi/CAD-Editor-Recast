@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.world;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.*;
 import java.util.*;
 import net.minecraft.nbt.*;
@@ -13,7 +15,7 @@ public final class WorldMerge {
         public final List<List<String>> paths;
         public final String stale;
         Conflict(List<List<String>> paths){this(paths,null);}
-        Conflict(List<List<String>> paths,String stale){super(stale==null?"你修改的字段在编辑期间也发生了变化，请重新读取并比较："+paths:"目标身份已变化，请重新打开："+paths);this.paths=List.copyOf(paths);this.stale=stale;}
+        Conflict(List<List<String>> paths,String stale){super(stale==null?EditorI18n.tr("cadeditor.message.worldmerge.19e6a4f046", (paths)):EditorI18n.tr("cadeditor.message.worldmerge.5aead203e6", (paths)));this.paths=List.copyOf(paths);this.stale=stale;}
         public JsonArray json(){var rows=new JsonArray();for(var path:paths){var row=new JsonObject();var parts=new JsonArray();path.forEach(parts::add);row.add("path",parts);rows.add(row);}return rows;}
     }
     public static CompoundTag merge(CompoundTag base,CompoundTag mine,CompoundTag current){

@@ -41,9 +41,9 @@ function registerLiveComps(entries) {
     if (!e || !e.id) return;
     var id = shortId(e.id); if (CIDX[id]) return;
     var ns = e.id.indexOf(':') > 0 ? e.id.split(':')[0] : 'minecraft';
-    if (!EDATA.cats.some(function (k) { return k.id === 'live'; })) EDATA.cats.push({ id: 'live', name: '游戏新增', icon: 'grid' });
+    if (!EDATA.cats.some(function (k) { return k.id === 'live'; })) EDATA.cats.push({ id: 'live', name: I18n.t("cadeditor.ui.core.1a44af9043"), icon: 'grid' });
     var c = { id: id, name: e.name && e.name !== e.id ? e.name : humanId(id.indexOf(':') > 0 ? id.split(':')[1] : id), cat: 'live', live: true,
-      desc: (ns === 'minecraft' ? '游戏里有、编辑器还没有专用表单的组件' : '来自模组 ' + ns + ' 的组件') + '；用 SNBT 编辑，改完交给游戏校验',
+      desc: I18n.t("cadeditor.ui.core.15ad6834bf", (ns === 'minecraft' ? I18n.t("cadeditor.ui.core.216abdc422") : I18n.t("cadeditor.ui.core.9e6b56ff11", (ns)))),
       schema: { t: 'raw' } };
     EDATA.comps.push(c); CIDX[id] = c; added++;
   });
@@ -126,13 +126,13 @@ function SnbtReader(text) {
         var c = text.charAt(i++);
         if (c === BS) { var d = text.charAt(i++); out += d === 'n' ? NLC : d === 't' ? TABC : d; } else out += c;
       }
-      if (text.charAt(i) !== q) self.fail('字符串未闭合');
+      if (text.charAt(i) !== q) self.fail(I18n.t("cadeditor.ui.core.c2d2bd6540"));
       i++; return out;
     },
     bare: function () {
       var s = i;
       while (i < n && /[A-Za-z0-9_\-.+]/.test(text.charAt(i))) i++;
-      if (s === i) self.fail('此处需要一个值');
+      if (s === i) self.fail(I18n.t("cadeditor.ui.core.988351d357"));
       return text.substring(s, i);
     },
     key: function () { self.ws(); var c = text.charAt(i); return (c === '"' || c === "'") ? self.str() : self.bare(); },
@@ -154,11 +154,11 @@ function SnbtReader(text) {
       if (text.charAt(i) === '}') { i++; return o; }
       for (;;) {
         var k = self.key(); self.ws();
-        if (text.charAt(i) !== ':') self.fail('键后面需要冒号');
+        if (text.charAt(i) !== ':') self.fail(I18n.t("cadeditor.ui.core.f0f1d361b7"));
         i++; o[k] = self.value(); self.ws();
         var c = text.charAt(i++);
         if (c === '}') return o;
-        if (c !== ',') { i--; self.fail('需要逗号或右花括号'); }
+        if (c !== ',') { i--; self.fail(I18n.t("cadeditor.ui.core.b1203f8b20")); }
       }
     },
     list: function () {
@@ -170,7 +170,7 @@ function SnbtReader(text) {
         a.push(self.value()); self.ws();
         var c = text.charAt(i++);
         if (c === ']') return a;
-        if (c !== ',') { i--; self.fail('需要逗号或右方括号'); }
+        if (c !== ',') { i--; self.fail(I18n.t("cadeditor.ui.core.900a179806")); }
       }
     },
   };
@@ -192,7 +192,7 @@ function parseStackString(text) {
   r.ws();
   var s = 0, idStart = r.pos();
   var idm = /^[a-z0-9_.\-]+(?::[a-z0-9_.\-\/]+)?/.exec(t.substring(idStart));
-  if (!idm) r.fail('找不到物品 ID');
+  if (!idm) r.fail(I18n.t("cadeditor.ui.core.201bc555bd"));
   for (var k = 0; k < idm[0].length; k++) r.next();
   var out = { id: fullId(idm[0]), count: 1, comps: {}, removed: {}, snbt: {} };
   function componentKey() {
@@ -209,7 +209,7 @@ function parseStackString(text) {
       if (r.peek() === '!') { r.next(); nbtOwn(out.removed, componentKey(), 1); }
       else {
         var key = componentKey(); r.ws();
-        if (r.next() !== '=') { r.fail('组件名后面需要 ='); }
+        if (r.next() !== '=') { r.fail(I18n.t("cadeditor.ui.core.9bdbf9dace")); }
         var start = r.pos(); r.value();
         var raw = t.substring(start, r.pos());
         nbtOwn(out.snbt, key, raw); nbtOwn(out.comps, key, parseSnbt(raw));
@@ -217,13 +217,13 @@ function parseStackString(text) {
       r.ws();
       var c = r.next();
       if (c === ']') break;
-      if (c !== ',') r.fail('需要逗号或右方括号');
+      if (c !== ',') r.fail(I18n.t("cadeditor.ui.core.900a179806"));
     }
   }
   r.ws();
   var cm = /^\d+/.exec(t.substring(r.pos()));
   if (cm) { out.count = parseInt(cm[0], 10); for (var j = 0; j < cm[0].length; j++) r.next(); }
-  if (!r.end()) r.fail('末尾有多余内容');
+  if (!r.end()) r.fail(I18n.t("cadeditor.ui.core.8406ba1e44"));
   return out;
 }
 
@@ -279,7 +279,7 @@ function makeDoc(spec) {
   d.comps = nbtHydrate(d.comps, d.snbt);
   d.base = snapOf(d);
   if (typeof spec.nativeBaseline === 'string') d.nativeBaseline = spec.nativeBaseline;
-  d.hist = [{ label: '打开', snap: d.base, t: 0 }];
+  d.hist = [{ label: I18n.t("cadeditor.ui.core.c771248e51"), snap: d.base, t: 0 }];
   d.hi = 0;
   return d;
 }
@@ -332,7 +332,7 @@ function historySnapshot(d, index) {
   if (pos < 0 || pos > index) {
     pos = index; while (pos > 0 && typeof d.hist[pos].snap !== 'string') pos--;
     text = d.hist[pos].snap;
-    if (typeof text !== 'string') throw new Error('撤销历史缺少起始快照');
+    if (typeof text !== 'string') throw new Error(I18n.t("cadeditor.ui.core.7580e80a80"));
   }
   while (pos < index) { var entry = d.hist[++pos]; text = typeof entry.snap === 'string' ? entry.snap : textPatchAll(text, entry.changes); }
   HIST_CACHE.set(d, { index:index, entry:d.hist[index], text:text }); return text;
@@ -409,28 +409,28 @@ var Store = (function () {
     set: function (cid, value, o) {
       o = o || {};
       var d = doc(); nbtPut(d.comps, cid, value); delete d.removed[cid];
-      push(o.label || ('修改 ' + (CIDX[cid] ? CIDX[cid].name : cid)), o.key, o.structural, cid);
+      push(o.label || (I18n.t("cadeditor.ui.core.2ee88f54be", (CIDX[cid] ? CIDX[cid].name : cid))), o.key, o.structural, cid);
     },
     inherit: function (cid, o) {
       o = o || {};
       var d = doc(); delete d.comps[cid]; delete d.removed[cid];
-      push(o.label || ('继承 ' + (CIDX[cid] ? CIDX[cid].name : cid)), o.key || null, o.structural === undefined ? true : o.structural, cid);
+      push(o.label || (I18n.t("cadeditor.ui.core.71aa157044", (CIDX[cid] ? CIDX[cid].name : cid))), o.key || null, o.structural === undefined ? true : o.structural, cid);
     },
     remove: function (cid, o) {
       o = o || {};
       var d = doc(); delete d.comps[cid]; d.removed[cid] = 1;
-      push(o.label || ('移除 ' + (CIDX[cid] ? CIDX[cid].name : cid)), o.key || null, o.structural === undefined ? true : o.structural, cid);
+      push(o.label || (I18n.t("cadeditor.ui.core.fc8c501995", (CIDX[cid] ? CIDX[cid].name : cid))), o.key || null, o.structural === undefined ? true : o.structural, cid);
     },
-    setCount: function (n) { var d = doc(); d.count = n; push('数量 ' + n, 'count', false, '#count'); },
+    setCount: function (n) { var d = doc(); d.count = n; push(I18n.t("cadeditor.ui.core.2da5ce7045", (n)), 'count', false, '#count'); },
     setLinked: function (values, label) {
       var d = doc(), comps = clone(d.comps), removed = clone(d.removed);
       Object.keys(values).forEach(function (cid) { nbtPut(comps, cid, values[cid]); delete removed[cid]; });
-      d.comps = comps; d.removed = removed; push(label || '联动修改', null, false, null, Object.keys(values));
+      d.comps = comps; d.removed = removed; push(label || I18n.t("cadeditor.ui.core.8790274228"), null, false, null, Object.keys(values));
     },
-    setItem: function (id) { var d = doc(); d.id = id; push('更换物品 ' + shortId(id), null, true, null); },
+    setItem: function (id) { var d = doc(); d.id = id; push(I18n.t("cadeditor.ui.core.e67f56e0a4", (shortId(id))), null, true, null); },
     replace: function (comps, removed, label) {
       var d = doc(); d.comps = clone(comps); d.removed = clone(removed || {});
-      push(label || '批量修改', null, true, null);
+      push(label || I18n.t("cadeditor.ui.core.8f98ede913"), null, true, null);
     },
     /* 把当前物品的某个组件（含继承 / 移除意图）复制到另一个打开的物品；to 为下标或 "all" */
     copyComp: function (cid, to, label) {
@@ -440,7 +440,7 @@ var Store = (function () {
         if (src.removed[cid]) { delete d.comps[cid]; d.removed[cid] = 1; }
         else if (src.comps[cid] !== undefined) { nbtPut(d.comps, cid, parseSnbt(nbtComponentText(src, cid))); delete d.removed[cid]; }
         else { delete d.comps[cid]; delete d.removed[cid]; }
-        if (histPush(d, label || ('复制组件 ' + cid), null, [cid])) n++;
+        if (histPush(d, label || (I18n.t("cadeditor.ui.core.cd68bc1d39", (cid))), null, [cid])) n++;
       });
       emit({ type: 'docs', structural: true });
       return n;
@@ -451,33 +451,33 @@ var Store = (function () {
     canUndo: function () { return doc().hi > 0; },
     canRedo: function () { var d = doc(); return d.hi < d.hist.length - 1; },
     markSaved: function () { var d = doc(); d.base = snapOf(d); emit({ type: 'saved', structural: false }); },
-    revertAll: function () { var d = doc(), o = nbtReadSnapshot(d.base); d.id = o.id; d.count = o.count; d.comps = o.comps; d.removed = o.removed; push('还原全部修改', null, true, null); },
+    revertAll: function () { var d = doc(), o = nbtReadSnapshot(d.base); d.id = o.id; d.count = o.count; d.comps = o.comps; d.removed = o.removed; push(I18n.t("cadeditor.ui.core.78e03d0b58"), null, true, null); },
   };
 })();
 
 /* 联动只使用当前游戏提供的属性范围和实际修饰符，不删除装备/效果修饰符。 */
 function linkedAttributeValue(def, row, base) {
-  if (!def || !isFinite(def.min) || !isFinite(def.max)) throw new Error('尚未取得游戏属性范围，不能自动提高上限');
+  if (!def || !isFinite(def.min) || !isFinite(def.max)) throw new Error(I18n.t("cadeditor.ui.core.8f298d3374"));
   var mods = (row.modifiers || []).concat(def.transientModifiers || []), seen = {}, add = [], scale = [], total = [];
   mods.forEach(function (m) {
     var amount = nbtNumberValue(m.amount);
-    if (!isFinite(amount) || seen[m.id]) throw new Error('属性修饰符无法可靠计算，请先在属性页检查');
+    if (!isFinite(amount) || seen[m.id]) throw new Error(I18n.t("cadeditor.ui.core.c4a4bab10c"));
     seen[m.id] = true;
     if (m.operation === 'add_value') add.push(amount);
     else if (m.operation === 'add_multiplied_base') scale.push(amount);
     else if (m.operation === 'add_multiplied_total') total.push(amount);
-    else throw new Error('不认识此属性修饰符的运算方式，未修改上限');
+    else throw new Error(I18n.t("cadeditor.ui.core.45bad89006"));
   });
   var b = base; add.forEach(function (v) { b += v; });
   var value = b; scale.forEach(function (v) { value += b * v; }); total.forEach(function (v) { value *= 1 + v; });
-  if (!isFinite(value)) throw new Error('属性运算结果不是有限数，未修改上限');
+  if (!isFinite(value)) throw new Error(I18n.t("cadeditor.ui.core.84c9aa2201"));
   return Math.max(def.min, Math.min(def.max, value));
 }
 function linkedAttributePlan(def, row, requested) {
-  if (!row || !isFinite(row.base) || !isFinite(requested) || requested < 0) throw new Error('属性或当前值无效，未修改上限');
+  if (!row || !isFinite(row.base) || !isFinite(requested) || requested < 0) throw new Error(I18n.t("cadeditor.ui.core.eb061004b4"));
   var before = linkedAttributeValue(def, row, row.base), target = Math.max(requested, Math.fround(requested));
   if (target <= before) return { base: row.base, before: before, effective: before, changed: false };
-  if (row.base > def.max || linkedAttributeValue(def, row, def.max) < target) throw new Error('保留现有修饰符时无法达到此值；游戏属性上限为 ' + fmtNum(def.max));
+  if (row.base > def.max || linkedAttributeValue(def, row, def.max) < target) throw new Error(I18n.t("cadeditor.ui.core.8f3f44b7d8", (fmtNum(def.max))));
   var lo = Math.max(def.min, row.base), hi = def.max;
   for (var i = 0; i < 80; i++) { var mid = lo + (hi - lo) / 2; if (mid === lo || mid === hi) break; if (linkedAttributeValue(def, row, mid) >= target) hi = mid; else lo = mid; }
   return { base: hi, before: before, effective: linkedAttributeValue(def, row, hi), changed: true };
@@ -533,7 +533,7 @@ function commandNumberIssue(d) {
     // Avoid another full parse of ordinary/large components on the command page.
     if (text.indexOf('NaN') < 0 && text.indexOf('Infinity') < 0) continue;
     var hit = find(nbtParse(text), '');
-    if (hit) return { level:'warn', cid:cid, path:hit.path, msg:'原版指令不支持 ∞ / NaN，请通过编辑器修改。' };
+    if (hit) return { level:'warn', cid:cid, path:hit.path, msg:I18n.t("cadeditor.ui.core.744a6a9f87") };
   }
   return null;
 }
@@ -548,11 +548,11 @@ function stackString(d) {
   return fullId(d.id) + (parts.length ? '[' + parts.join(',') + ']' : '');
 }
 var CMD_MODES = [
-  { id: 'give', name: '给予物品', tpl: function (sel, st, n) { return '/give ' + sel + ' ' + st + (n > 1 ? ' ' + n : ''); } },
-  { id: 'main', name: '替换主手', tpl: function (sel, st, n) { return '/item replace entity ' + sel + ' weapon.mainhand with ' + st + (n > 1 ? ' ' + n : ''); } },
-  { id: 'off', name: '替换副手', tpl: function (sel, st, n) { return '/item replace entity ' + sel + ' weapon.offhand with ' + st + (n > 1 ? ' ' + n : ''); } },
-  { id: 'hotbar', name: '替换快捷栏全部', tpl: function (sel, st, n) { return '/item replace entity ' + sel + ' hotbar.* with ' + st + (n > 1 ? ' ' + n : ''); } },
-  { id: 'head', name: '替换头部', tpl: function (sel, st, n) { return '/item replace entity ' + sel + ' armor.head with ' + st + (n > 1 ? ' ' + n : ''); } },
+  { id: 'give', name: I18n.t("cadeditor.ui.core.96dba047ce"), tpl: function (sel, st, n) { return '/give ' + sel + ' ' + st + (n > 1 ? ' ' + n : ''); } },
+  { id: 'main', name: I18n.t("cadeditor.ui.core.30354b71a6"), tpl: function (sel, st, n) { return '/item replace entity ' + sel + ' weapon.mainhand with ' + st + (n > 1 ? ' ' + n : ''); } },
+  { id: 'off', name: I18n.t("cadeditor.ui.core.092ad13cff"), tpl: function (sel, st, n) { return '/item replace entity ' + sel + ' weapon.offhand with ' + st + (n > 1 ? ' ' + n : ''); } },
+  { id: 'hotbar', name: I18n.t("cadeditor.ui.core.40e41d86e8"), tpl: function (sel, st, n) { return '/item replace entity ' + sel + ' hotbar.* with ' + st + (n > 1 ? ' ' + n : ''); } },
+  { id: 'head', name: I18n.t("cadeditor.ui.core.a52f7e6f9a"), tpl: function (sel, st, n) { return '/item replace entity ' + sel + ' armor.head with ' + st + (n > 1 ? ' ' + n : ''); } },
 ];
 function buildCommand(d, modeId, sel) {
   var m = CMD_MODES[0];
@@ -614,51 +614,51 @@ function validateValue(sc, v, path, out, cid) {
   if (!sc) return;
   switch (sc.t) {
     case 'int': case 'num':
-      if (typeof v !== 'number' && !(typeof nbtMeta === 'function' && nbtMeta(v) && nbtMeta(v).scalar)) { add('error', '需要数字'); break; }
+      if (typeof v !== 'number' && !(typeof nbtMeta === 'function' && nbtMeta(v) && nbtMeta(v).scalar)) { add('error', I18n.t("cadeditor.ui.core.721f26d653")); break; }
       var numeric = typeof v === 'number' ? v : typeof nbtMeta === 'function' && nbtMeta(v) && nbtMeta(v).scalar ? nbtNumberValue(v) : NaN;
       if (!isFinite(numeric) && sc.t === 'num' && !sc.live && typeof Reg !== 'undefined' && !Reg.preview()) {
         var status = Reg.numericStatus(cid);
-        add(status.error ? 'warn' : 'info', status.error ? '字段校验信息读取失败：' + status.error : status.pending ? '正在读取游戏字段校验信息，暂不判断此特殊值是否受支持' : '游戏未提供此字段的数值结构；保留原值，应用时由游戏校验');
+        add(status.error ? 'warn' : 'info', status.error ? I18n.t("cadeditor.ui.core.9b49128ee9", (status.error)) : status.pending ? I18n.t("cadeditor.ui.core.9216a734f1") : I18n.t("cadeditor.ui.core.8bfe831b4f"));
         break;
       }
-      if (isNaN(numeric) && !(sc.t === 'num' && sc.allowNaN)) { add('error', '需要数字'); break; }
-      if (numeric === Infinity && !sc.allowPositiveInfinity) { add('error', '这个字段不接受 +Infinity'); break; }
-      if (numeric === -Infinity && !sc.allowNegativeInfinity) { add('error', '这个字段不接受 -Infinity'); break; }
-      if (sc.t === 'int' && !Number.isInteger(numeric)) add('error', '需要整数');
+      if (isNaN(numeric) && !(sc.t === 'num' && sc.allowNaN)) { add('error', I18n.t("cadeditor.ui.core.721f26d653")); break; }
+      if (numeric === Infinity && !sc.allowPositiveInfinity) { add('error', I18n.t("cadeditor.ui.core.99111b0a46")); break; }
+      if (numeric === -Infinity && !sc.allowNegativeInfinity) { add('error', I18n.t("cadeditor.ui.core.8fc0bc4b4f")); break; }
+      if (sc.t === 'int' && !Number.isInteger(numeric)) add('error', I18n.t("cadeditor.ui.core.d02e678f1c"));
       if (!isFinite(numeric)) break; /* Actual Codec probes decide special values; finite UI bounds do not override them. */
-      if (sc.min !== undefined && numeric < sc.min) add('error', '不能小于 ' + sc.min);
-      else if (sc.minEx && numeric <= sc.min) add('error', '必须大于 ' + sc.min);
-      if (sc.max !== undefined && numeric > sc.max) add('error', '不能大于 ' + sc.max);
+      if (sc.min !== undefined && numeric < sc.min) add('error', I18n.t("cadeditor.ui.core.cd04629b4e", (sc.min)));
+      else if (sc.minEx && numeric <= sc.min) add('error', I18n.t("cadeditor.ui.core.3c7e02e035", (sc.min)));
+      if (sc.max !== undefined && numeric > sc.max) add('error', I18n.t("cadeditor.ui.core.6a0c534acf", (sc.max)));
       break;
     case 'str':
-      if (typeof v !== 'string') { add('error', '需要文本'); break; }
-      if (sc.en && sc.en.indexOf(v) < 0 && !(typeof liveEnumHas === 'function' && liveEnumHas(cid, path, v))) add('error', '不是有效选项：' + v);
+      if (typeof v !== 'string') { add('error', I18n.t("cadeditor.ui.core.e5ed01807b")); break; }
+      if (sc.en && sc.en.indexOf(v) < 0 && !(typeof liveEnumHas === 'function' && liveEnumHas(cid, path, v))) add('error', I18n.t("cadeditor.ui.core.7d233e4aba", (v)));
       /* 注册表引用不能是空的：空串到游戏里会变成“minecraft:”，整件物品被拒绝 */
-      if (sc.reg && (v === '' || v === 'minecraft:' || v === '#')) { add('error', '还没有选择（这一项不能留空）'); break; }
-      if (sc.reg && !sc.tag && typeof Reg !== 'undefined' && !Reg.preview() && Reg.entryState(sc.reg, v) === false) add('warn', '实时注册表没有此 ID：' + v + '（保留手动输入，由游戏校验）');
+      if (sc.reg && (v === '' || v === 'minecraft:' || v === '#')) { add('error', I18n.t("cadeditor.ui.core.5559f2b633")); break; }
+      if (sc.reg && !sc.tag && typeof Reg !== 'undefined' && !Reg.preview() && Reg.entryState(sc.reg, v) === false) add('warn', I18n.t("cadeditor.ui.core.20ffee95c3", (v)));
       break;
     case 'obj':
-      if (!isObj(v)) { add('error', '需要对象'); break; }
+      if (!isObj(v)) { add('error', I18n.t("cadeditor.ui.core.51c3240600")); break; }
       sc.f.forEach(function (f) {
-        if (v[f.k] === undefined) { if (f.r && f.df === undefined) add('error', '缺少必填字段 ' + f.k); }
+        if (v[f.k] === undefined) { if (f.r && f.df === undefined) add('error', I18n.t("cadeditor.ui.core.e56b6173c1", (f.k))); }
         else validateValue(f.s, v[f.k], path + '.' + f.k, out, cid);
       });
       break;
     case 'arr':
-      if (!Array.isArray(v)) { add('error', '需要列表'); break; }
-      if (sc.max !== undefined && v.length > sc.max) add('error', '最多 ' + sc.max + ' 项');
-      if (sc.min !== undefined && v.length < sc.min) add('error', '至少 ' + sc.min + ' 项');
+      if (!Array.isArray(v)) { add('error', I18n.t("cadeditor.ui.core.bcd73324fa")); break; }
+      if (sc.max !== undefined && v.length > sc.max) add('error', I18n.t("cadeditor.ui.core.657e9aa82e", (sc.max)));
+      if (sc.min !== undefined && v.length < sc.min) add('error', I18n.t("cadeditor.ui.core.7831cd54ae", (sc.min)));
       v.forEach(function (x, i) { validateValue(sc.i, x, path + '[' + i + ']', out, cid); });
       break;
     case 'map':
-      if (!isObj(v)) { add('error', '需要映射'); break; }
+      if (!isObj(v)) { add('error', I18n.t("cadeditor.ui.core.3508aa673d")); break; }
       Object.keys(v).forEach(function (k) { validateValue(sc.k, k, path + '{' + k + '}', out, cid); validateValue(sc.v, v[k], path + '.' + k, out, cid); });
       break;
     case 'dunion':
-      if (!isObj(v)) { add('error', '需要对象'); break; }
+      if (!isObj(v)) { add('error', I18n.t("cadeditor.ui.core.51c3240600")); break; }
       if (!sc.br[v[sc.disc]]) {
-        if (typeof Reg === 'undefined' || Reg.preview()) add('error', '未知类型 ' + v[sc.disc]);
-        else if (!Reg.variantOptions(sc).some(function (e) { return e.v === v[sc.disc]; })) add('warn', '类型元信息尚未确认：' + v[sc.disc] + '（保留手动输入，由游戏校验）');
+        if (typeof Reg === 'undefined' || Reg.preview()) add('error', I18n.t("cadeditor.ui.core.c0be91c3de", (v[sc.disc])));
+        else if (!Reg.variantOptions(sc).some(function (e) { return e.v === v[sc.disc]; })) add('warn', I18n.t("cadeditor.ui.core.e600af6918", (v[sc.disc])));
       } else validateValue(sc.br[v[sc.disc]], v, path, out, cid);
       break;
     default: break;
@@ -666,11 +666,11 @@ function validateValue(sc, v, path, out, cid) {
 }
 function validateDoc(d) {
   var out = [], eff = effectiveView(d);
-  if (!knownItem(d.id) && (typeof Reg === 'undefined' || Reg.preview() || Reg.entryState('item', d.id) === false)) out.push({ level: 'warn', cid: null, path: '', msg: '游戏当前注册表里没有物品 ' + d.id + '（保留原 ID，由游戏校验）' });
+  if (!knownItem(d.id) && (typeof Reg === 'undefined' || Reg.preview() || Reg.entryState('item', d.id) === false)) out.push({ level: 'warn', cid: null, path: '', msg: I18n.t("cadeditor.ui.core.4864b5c019", (d.id)) });
   Object.keys(d.comps).forEach(function (cid) {
     var c = CIDX[cid];
-    if (!c) { out.push({ level: 'warn', cid: cid, path: '', msg: '编辑器暂无此组件的表单：' + cid + '（保留原值，由游戏校验）' }); return; }
-    if (nbtComponentText(d, cid).length > 32768) { out.push({ level:'info', cid:cid, path:'', msg:'内容较大，应用时由游戏校验' }); return; }
+    if (!c) { out.push({ level: 'warn', cid: cid, path: '', msg: I18n.t("cadeditor.ui.core.0ef33d4c27", (cid)) }); return; }
+    if (nbtComponentText(d, cid).length > 32768) { out.push({ level:'info', cid:cid, path:'', msg:I18n.t("cadeditor.ui.core.c2b57cab70") }); return; }
     var checks = docCache(d).checks, saved = checks[cid];
     if (!saved || saved.schema !== c.schema) { var problems = []; validateValue(c.schema, d.comps[cid], '', problems, cid); saved = checks[cid] = {schema:c.schema, problems:problems}; }
     saved.problems.forEach(function (problem) { out.push(problem); });
@@ -679,19 +679,19 @@ function validateDoc(d) {
   if (typeof stackPreviewProblems === 'function') stackPreviewProblems(d, out);
   /* 跨组件规则 */
   var maxd = eff.max_damage, dmg = eff.damage;
-  if (typeof dmg === 'number' && typeof maxd === 'number' && dmg >= maxd) out.push({ level: 'warn', cid: 'damage', path: '', msg: '已损耗耐久不小于最大耐久，物品会立刻损坏' });
+  if (typeof dmg === 'number' && typeof maxd === 'number' && dmg >= maxd) out.push({ level: 'warn', cid: 'damage', path: '', msg: I18n.t("cadeditor.ui.core.15b6b22aa7") });
   var maxs = typeof eff.max_stack_size === 'number' ? eff.max_stack_size : null;
-  if (maxs !== null && d.count > maxs) out.push({ level: 'error', cid: '#count', path: '', msg: '数量 ' + d.count + ' 超过最大堆叠 ' + maxs });
-  if (typeof maxd === 'number' && maxd > 0 && maxs > 1) out.push({ level: 'warn', cid: 'max_damage', path: '', msg: '可损坏物品的最大堆叠应为 1' });
+  if (maxs !== null && d.count > maxs) out.push({ level: 'error', cid: '#count', path: '', msg: I18n.t("cadeditor.ui.core.b603a3ffd6", (d.count), (maxs)) });
+  if (typeof maxd === 'number' && maxd > 0 && maxs > 1) out.push({ level: 'warn', cid: 'max_damage', path: '', msg: I18n.t("cadeditor.ui.core.b1f9c3c92d") });
   ['enchantments', 'stored_enchantments'].forEach(function (cid) {
     var m = eff[cid]; if (!isObj(m)) return;
     var ids = Object.keys(m).map(Reg.full);
     ids.forEach(function (id) {
       var e = Reg.enchant(id); if (!e) return;
       var lv = m[Object.keys(m).filter(function (k) { return Reg.full(k) === id; })[0]];
-      if (e.max !== null && lv > e.max) out.push({ level: 'info', cid: cid, path: id, msg: e.name + ' ' + lv + ' 级超过自然上限 ' + e.max + '（命令可写，但不是自然获得）' });
-      ids.forEach(function (x) { if (ids.indexOf(x) > ids.indexOf(id) && Reg.enchantConflict(e, x) === true) out.push({ level: 'warn', cid: cid, path: id, msg: e.name + ' 与 ' + (Reg.nameOf('enchantments', x) || x) + ' 互斥（原版附魔台/铁砧不会同时出现）' }); });
-      if (cid === 'enchantments' && Reg.enchantFits(e, d.id) === false) out.push({ level: 'info', cid: cid, path: id, msg: e.name + ' 通常不适用于 ' + shortId(d.id) + '（仍可写入，效果取决于附魔本身）' });
+      if (e.max !== null && lv > e.max) out.push({ level: 'info', cid: cid, path: id, msg: I18n.t("cadeditor.ui.core.361c0b47b1", (e.name), (lv), (e.max)) });
+      ids.forEach(function (x) { if (ids.indexOf(x) > ids.indexOf(id) && Reg.enchantConflict(e, x) === true) out.push({ level: 'warn', cid: cid, path: id, msg: I18n.t("cadeditor.ui.core.64277285c9", (e.name), (Reg.nameOf('enchantments', x) || x)) }); });
+      if (cid === 'enchantments' && Reg.enchantFits(e, d.id) === false) out.push({ level: 'info', cid: cid, path: id, msg: I18n.t("cadeditor.ui.core.5751db2abb", (e.name), (shortId(d.id))) });
     });
   });
   return out;

@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.client;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.*;
 import dev.rinorsi.editor.StackCodec;
 import dev.rinorsi.editor.EditorWriteLog;
@@ -40,7 +42,7 @@ final class SelfPlayerCommands {
         }
     }
     void bindDocument(java.util.function.Supplier<Object> current){
-        if(documentBinding!=null)throw new IllegalStateException("自身命令会话不能迁移到其他页面");
+        if(documentBinding!=null)throw new IllegalStateException(EditorI18n.tr("cadeditor.message.selfplayercommands.0b26cbf442"));
         currentDocument=current;documentBinding=new DocumentBinding(current.get());
     }
     boolean documentCurrent(){
@@ -48,7 +50,7 @@ final class SelfPlayerCommands {
         cancel();return false;
     }
     boolean documentStale(){return documentBinding!=null&&documentBinding.stale;}
-    String documentReason(){return sent?"页面已重载，命令已发送，结果未知；旧回读已废弃。请关闭后重新读取自身玩家核对，不能继续提交此页":"页面已重载，旧查询已停止，未发送修改。请关闭后重新读取自身玩家，不能继续提交此页";}
+    String documentReason(){return sent?EditorI18n.tr("cadeditor.message.selfplayercommands.6b6c166813"):EditorI18n.tr("cadeditor.message.selfplayercommands.c4a0ceea74");}
 
     SelfPlayerCommands(Minecraft mc) {
         connection=mc.getConnection(); player=mc.player; level=mc.level;
@@ -105,26 +107,26 @@ final class SelfPlayerCommands {
         permissionContext=permissions(mc);
         EditorWriteLog.event("client.self.capabilities",null,permissionContext+" editable="+fields+" read_only="+fields.isEmpty()
                 +" blocker="+(!queryAvailable(mc)?"data_get_entity_not_advertised":fields.isEmpty()?"supported_write_commands_not_advertised":"none"));
-        caps.addProperty("reason",fields.isEmpty()?"没有可用的自身玩家命令权限或权威查询权限；当前只能查看同步数据、编辑本地草稿。":"服务器未安装 Editor：支持命令树授权的游戏模式、等级、本级经验点数、同维度位置及单个可同步属性基础值；每次一条命令；提交前后均查询服务器确认。其他字段只保留本地草稿，不能混入提交。");
+        caps.addProperty("reason",fields.isEmpty()?EditorI18n.tr("cadeditor.message.selfplayercommands.87bd2f572f"):EditorI18n.tr("cadeditor.message.selfplayercommands.63ad816596"));
         world.add("capabilities",caps);if(baseline==null)baseline=snapshot.deepCopy();return world;
     }
     void apply(Minecraft mc,JsonObject request,Consumer<JsonObject> done) {
         permissionContext=permissions(mc);
         EditorWriteLog.event("client.self.preflight",StackCodec.string(request,"requestId"),permissionContext);
         if(!documentCurrent())throw new IllegalArgumentException(documentReason());
-        if(operation!=null)throw new IllegalArgumentException("上一笔自身玩家命令尚未确认");
-        if(!connected(mc))throw new IllegalArgumentException("世界或连接已改变，请重新打开自身玩家");
-        if(!queryAvailable(mc))throw new IllegalArgumentException("缺少原版命令或权威查询权限；草稿已保留");
-        for(String key:request.keySet())if(!Set.of("op","requestId","revision","slot","entity").contains(key))throw new IllegalArgumentException("纯客户端不支持此玩家字段");
-        if(!"apply".equals(StackCodec.string(request,"op")))throw new IllegalArgumentException("命令后端不支持撤销，请重新读取后编辑");
-        var entity=StackCodec.object(request,"entity");if(entity.size()!=1)throw new IllegalArgumentException("仅允许自身玩家字段");
+        if(operation!=null)throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.selfplayercommands.b9bb1c0a4e"));
+        if(!connected(mc))throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.selfplayercommands.daf3849b3e"));
+        if(!queryAvailable(mc))throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.selfplayercommands.4dee3e86b7"));
+        for(String key:request.keySet())if(!Set.of("op","requestId","revision","slot","entity").contains(key))throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.selfplayercommands.860f358d31"));
+        if(!"apply".equals(StackCodec.string(request,"op")))throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.selfplayercommands.395ce5cd28"));
+        var entity=StackCodec.object(request,"entity");if(entity.size()!=1)throw new IllegalArgumentException(EditorI18n.tr("cadeditor.ui.worldplayer.63b77c37b6"));
         var patch=StackCodec.object(entity,"player");
         var plan=SelfPlayerCommandPlan.create(mc,baseline,patch);
         operation=StackCodec.string(request,"requestId");completion=done;sent=false;queries=0;replies=0;deadline=System.nanoTime()+8_000_000_000L;
         log("query.begin","phase=before command_kind="+patch.keySet().iterator().next());
         String id=operation;
         query(mc,id,tag->{
-            if(tag==null||!plan.before().test(tag)){finish("rejected","target_changed","服务器数据与页面不同，未发送修改；请重新读取，草稿已保留",null);return;}
+            if(tag==null||!plan.before().test(tag)){finish("rejected","target_changed",EditorI18n.tr("cadeditor.message.selfplayercommands.da8ac74104"),null);return;}
             // One command only. The query response is correlated by vanilla transaction id.
             sent=true;mc.getConnection().sendCommand(plan.command());
             log("command.sent","phase=after");
@@ -141,7 +143,7 @@ final class SelfPlayerCommands {
                 }
                 var world=world(mc);var values=world.getAsJsonObject("views").getAsJsonObject("player").getAsJsonObject("value");
                 plan.project().accept(values,actual);
-                baseline=values.deepCopy();finish("saved","command_confirmed","服务器已回读确认",world);
+                baseline=values.deepCopy();finish("saved","command_confirmed",EditorI18n.tr("cadeditor.message.selfplayercommands.1f3a93d10c"),world);
             });
     }
     private void query(Minecraft mc,String id,Consumer<CompoundTag> callback){
@@ -155,18 +157,18 @@ final class SelfPlayerCommands {
             nextStep=()->{
             if(!documentCurrent())return;
             if(!Objects.equals(operation,id))return;
-            if(!connected(mc)){finish("rejected","connection_changed","连接或世界已改变；结果未知，草稿已保留",null);return;}
-            try{callback.accept(tag);}catch(RuntimeException e){logFailure("query.callback_failure",e);finish("rejected","command_unconfirmed","查询或命令中断；草稿已保留，请重新读取核对",null);}
+            if(!connected(mc)){finish("rejected","connection_changed",EditorI18n.tr("cadeditor.message.selfplayercommands.ded429c38c"),null);return;}
+            try{callback.accept(tag);}catch(RuntimeException e){logFailure("query.callback_failure",e);finish("rejected","command_unconfirmed",EditorI18n.tr("cadeditor.message.selfplayercommands.a3080fef23"),null);}
             };
         });
     }
     void tick(Minecraft mc){
         if(!documentCurrent())return;
-        if(operation!=null&&(!connected(mc)||System.nanoTime()>deadline))finish("rejected","command_unconfirmed",sent?"命令已发送但未收到权威回读；结果未知，草稿已保留，请重新打开核对":"未收到权威查询或权限已失效，没有发送修改；草稿已保留",null);
+        if(operation!=null&&(!connected(mc)||System.nanoTime()>deadline))finish("rejected","command_unconfirmed",sent?EditorI18n.tr("cadeditor.message.selfplayercommands.57755f3268"):EditorI18n.tr("cadeditor.message.selfplayercommands.e5a61460ae"),null);
         var step=nextStep;nextStep=null;if(step!=null)step.run();
         if(operation!=null&&readback!=null&&System.nanoTime()>=readbackAt){
             var retry=readback;readback=null;
-            try{retry.run();}catch(RuntimeException e){logFailure("query.retry_failure",e);finish("rejected","command_unconfirmed","命令已发送但回读中断，结果未知；请关闭后重新读取核对",null);}
+            try{retry.run();}catch(RuntimeException e){logFailure("query.retry_failure",e);finish("rejected","command_unconfirmed",EditorI18n.tr("cadeditor.message.selfplayercommands.a25beda412"),null);}
         }
     }
     void cancel(){if(operation!=null)log("cancel","outcome="+(sent?"unknown":"not_sent")+" reason=session_cancelled_or_document_changed");operation=null;completion=null;nextStep=null;readback=null;}

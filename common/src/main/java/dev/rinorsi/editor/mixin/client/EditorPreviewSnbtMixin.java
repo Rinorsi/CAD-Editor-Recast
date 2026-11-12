@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.mixin.client;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.JsonObject;
 import dev.oriel.mod.client.DocumentDriver;
 import dev.oriel.mod.client.OrielScreen;
@@ -31,7 +33,7 @@ public abstract class EditorPreviewSnbtMixin {
         try {
             // A preview contains several components; each component still has its own Apply budget.
             var parsed = ComponentValidation.parseSnbt(text, 1_048_576);
-            if (!(parsed instanceof CompoundTag compound)) throw new IllegalArgumentException("预览组件需要复合对象");
+            if (!(parsed instanceof CompoundTag compound)) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.editorpreviewsnbtmixin.0acf5e4a9a"));
             result.setReturnValue(compound);
         } catch (RuntimeException error) {
             EditorDiagnostics.failure("preview.snbt", what, error);

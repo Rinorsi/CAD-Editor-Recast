@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.world;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import dev.rinorsi.editor.EditorSessions;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -14,22 +16,22 @@ public final class WorldNbt {
     public static CompoundTag parse(String text) {
         var tag = parseValue(text);
         if (tag instanceof CompoundTag compound) return compound;
-        throw new EditorSessions.Failure("invalid_nbt", "世界目标数据必须为 compound");
+        throw new EditorSessions.Failure("invalid_nbt", EditorI18n.tr("cadeditor.message.worldnbt.ff3135c963"));
     }
     /** Same size/depth gate for typed values of normalized, allowlisted fields. */
     public static Tag parseValue(String text) {
-        if (text.length() > MAX_SNBT) EditorSessions.fail("payload_too_large", "世界目标 SNBT 超过 1 Mi 字符");
+        if (text.length() > MAX_SNBT) EditorSessions.fail("payload_too_large", EditorI18n.tr("cadeditor.message.worldnbt.7168d25bff"));
         try {
             var tag = TagParser.create(NbtOps.INSTANCE).parseFully(text);
             checkDepth(tag, 0);
             return tag;
         } catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
-            EditorSessions.fail("invalid_nbt", "SNBT 无效：" + e.getMessage());
+            EditorSessions.fail("invalid_nbt", EditorI18n.tr("cadeditor.message.worldnbt.701a40ffe2", (e.getMessage())));
         }
-        throw new EditorSessions.Failure("invalid_nbt", "SNBT 无效");
+        throw new EditorSessions.Failure("invalid_nbt", EditorI18n.tr("cadeditor.message.worldnbt.8cc394bbac"));
     }
     private static void checkDepth(Tag tag, int depth) {
-        if (depth > 32) EditorSessions.fail("invalid_nbt", "NBT 嵌套超过 32 层");
+        if (depth > 32) EditorSessions.fail("invalid_nbt", EditorI18n.tr("cadeditor.message.worldnbt.e678ecdbbd"));
         if (tag instanceof CompoundTag c) for (String key : c.keySet()) checkDepth(c.get(key), depth + 1);
         else if (tag instanceof ListTag l) for (Tag child : l) checkDepth(child, depth + 1);
     }
@@ -56,19 +58,19 @@ public final class WorldNbt {
         Set<String> keys = entity ? Set.of("id", "UUID", "Pos", "Rotation", "Dimension", "Passengers", "RootVehicle", "Leash", "leash", "PortalCooldown", "TileX", "TileY", "TileZ", "block_pos", "Facing", "facing", "SleepingX", "SleepingY", "SleepingZ")
                 : Set.of("id", "x", "y", "z", "keepPacked");
         for (String key : keys) if (!Objects.equals(before.get(key), after.get(key)))
-            EditorSessions.fail("protected_field", "不可修改世界目标的身份、位置或关联字段：" + key);
+            EditorSessions.fail("protected_field", EditorI18n.tr("cadeditor.message.worldnbt.a7415b6070", (key)));
     }
     /** Legacy content-fingerprint assertion for probes. World session authorization uses the
      * frozen State.revision generation and must never compare this against a live save. */
     public static void requireRevision(String baseline, CompoundTag current) {
         if (baseline == null || !baseline.equals(revision(current)))
-            EditorSessions.fail("target_changed", "目标在编辑期间已变化；请重新读取后比较，草稿已保留");
+            EditorSessions.fail("target_changed", EditorI18n.tr("cadeditor.message.worldnbt.9adf3a212c"));
     }
     public static void requireEditedFieldsRetained(CompoundTag before, CompoundTag requested, CompoundTag prepared) {
         var keys = new java.util.HashSet<>(requested.keySet()); keys.addAll(before.keySet());
         for (String key : keys) if (!Objects.equals(before.get(key), requested.get(key)) && !editedFieldRetained(key, requested.get(key), prepared.get(key))
                 && !(key.equals("attributes") && EntityVolatile.entity(requested) && attributeOrderRetained(requested.get(key),prepared.get(key))))
-            EditorSessions.fail("invalid_nbt", "原版加载器未保留修改的字段：" + key);
+            EditorSessions.fail("invalid_nbt", EditorI18n.tr("cadeditor.message.worldnbt.11f68b8904", (key)));
     }
     /** Native AttributeMap saves in map iteration order. Ignore only row order: IDs must be
      * unique and every row (including numeric tag types, modifiers and unknown keys) stays exact.

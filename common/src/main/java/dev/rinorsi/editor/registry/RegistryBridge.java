@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.registry;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import dev.rinorsi.editor.platform.Platform;
 import dev.rinorsi.editor.platform.ClientPlatform;
 import com.google.gson.JsonArray;
@@ -168,8 +170,8 @@ public final class RegistryBridge {
     }
     private static RegistrySnapshot snapshot() {
         var mc = Minecraft.getInstance();
-        if (!mc.isSameThread()) throw new IllegalStateException("注册表只能在客户端线程读取");
-        if (mc.level == null) throw new IllegalStateException("已经离开世界");
+        if (!mc.isSameThread()) throw new IllegalStateException(EditorI18n.tr("cadeditor.message.registrybridge.ab3a81a4e7"));
+        if (mc.level == null) throw new IllegalStateException(EditorI18n.tr("cadeditor.message.componentschemachannel.380c513b2e"));
         return new RegistrySnapshot(mc.level.registryAccess(), id -> {
             var events = mc.getSoundManager().getSoundEvent(id);
             return events == null ? null : events.getSubtitle();
@@ -252,7 +254,7 @@ public final class RegistryBridge {
     }
     private static void entityRequest(DocumentDriver driver, JsonObject request, String raw) {
         var mc = Minecraft.getInstance();
-        if (!mc.isSameThread()) throw new IllegalStateException("实体注册表只能在客户端线程读取");
+        if (!mc.isSameThread()) throw new IllegalStateException(EditorI18n.tr("cadeditor.message.registrybridge.b27cbfe88e"));
         State state = DOCUMENTS.get(driver);
         if (state == null || driver.document() == null || mc.level == null || world != mc.level || warmup == null
                 || observedReload != RELOAD.get() || language != net.minecraft.locale.Language.getInstance()) return;
@@ -315,7 +317,7 @@ public final class RegistryBridge {
             if (request.has("id")) context.add("id", request.get("id"));
             try {
                 var mc = Minecraft.getInstance();
-                if (mc.level == null) throw new IllegalArgumentException("已经离开世界");
+                if (mc.level == null) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.componentschemachannel.380c513b2e"));
                 Identifier only = raw.equals("item_meta_one") ? Identifier.parse(dev.rinorsi.editor.StackCodec.string(request, "id")) : null;
                 var entries = ItemMetadata.entries(mc.level.registryAccess(), only);
                 queuePages(driver, "registry." + raw, RegistryPages.split(raw, Long.toString(GENERATION.get()), entries, context).stream().map(Object::toString).toList(), context);
@@ -412,13 +414,13 @@ public final class RegistryBridge {
         try {
             if (raw.equals("block_properties") && request.has("id")) {
                 if (!request.get("id").isJsonPrimitive() || !request.getAsJsonPrimitive("id").isString())
-                    throw new IllegalArgumentException("方块 ID 必须是字符串");
+                    throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.registrybridge.9294c58050"));
                 context.add("id", request.get("id")); only = Identifier.parse(request.get("id").getAsString());
             }
             String cacheKey = "supplement:" + raw + ":" + context;
             if (!RESOURCE_CACHE.containsKey(cacheKey)) {
                 if (RESOURCE_CACHE.values().stream().filter(f -> !f.isDone()).count() >= 8)
-                    throw new IllegalArgumentException("注册表索引繁忙，请稍后重试");
+                    throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.registrybridge.8aa7982a2b"));
                 if (RESOURCE_CACHE.size() >= 64) RESOURCE_CACHE.entrySet().stream().filter(e -> e.getValue().isDone())
                         .map(Map.Entry::getKey).findFirst().ifPresent(RESOURCE_CACHE::remove);
                 var result = RegistrySupplement.read(mc, raw, only);
@@ -450,7 +452,7 @@ public final class RegistryBridge {
         if (raw.equals("item_model_hints")) {
             if (!request.has("id") || !request.get("id").isJsonPrimitive() || !request.getAsJsonPrimitive("id").isString()) return;
             context.add("id", request.get("id")); model = Identifier.tryParse(request.get("id").getAsString());
-            if (model == null) { JsonObject error = RegistryPages.split(raw, generation, new JsonArray(), context).getFirst(); error.addProperty("error", "无效模型id"); queuePages(driver, "registry." + raw, java.util.List.of(error.toString()), context); return; }
+            if (model == null) { JsonObject error = RegistryPages.split(raw, generation, new JsonArray(), context).getFirst(); error.addProperty("error", EditorI18n.tr("cadeditor.message.registrybridge.b87d7ac748")); queuePages(driver, "registry." + raw, java.util.List.of(error.toString()), context); return; }
             var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getOptional(model);
             if (item.isPresent()) {
                 var component = item.get().components().get(net.minecraft.core.component.DataComponents.ITEM_MODEL);
@@ -459,7 +461,7 @@ public final class RegistryBridge {
         }
         String cacheKey = raw + ":" + context; Identifier resolvedModel = model;
         if (!RESOURCE_CACHE.containsKey(cacheKey) && RESOURCE_CACHE.values().stream().filter(f -> !f.isDone()).count() >= 8) {
-            JsonObject error = RegistryPages.split(raw, generation, new JsonArray(), context).getFirst(); error.addProperty("error", "资源索引繁忙，请稍后重试"); queuePages(driver, "registry." + raw, java.util.List.of(error.toString()), context); return;
+            JsonObject error = RegistryPages.split(raw, generation, new JsonArray(), context).getFirst(); error.addProperty("error", EditorI18n.tr("cadeditor.message.registrybridge.52b654053c")); queuePages(driver, "registry." + raw, java.util.List.of(error.toString()), context); return;
         }
         if (!RESOURCE_CACHE.containsKey(cacheKey) && RESOURCE_CACHE.size() >= 64) RESOURCE_CACHE.entrySet().stream().filter(e -> e.getValue().isDone()).map(Map.Entry::getKey).findFirst().ifPresent(RESOURCE_CACHE::remove);
         var future = RESOURCE_CACHE.computeIfAbsent(cacheKey, key -> RegistryWarmup.async(() -> {
@@ -476,7 +478,7 @@ public final class RegistryBridge {
             return java.util.List.copyOf(pages);
         }).exceptionally(error -> {
             dev.rinorsi.editor.EditorDiagnostics.warning("registry.resource_task", raw + " generation=" + generation, error);
-            JsonObject page = RegistryPages.split(raw, generation, new JsonArray(), context).getFirst(); page.addProperty("error", "资源索引队列繁忙，请稍后重试"); return java.util.List.of(page.toString());
+            JsonObject page = RegistryPages.split(raw, generation, new JsonArray(), context).getFirst(); page.addProperty("error", EditorI18n.tr("cadeditor.message.registrybridge.00b3740c69")); return java.util.List.of(page.toString());
         }));
         Object document = driver.document();
         future.thenAccept(pages -> mc.execute(() -> {

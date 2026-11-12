@@ -25,7 +25,7 @@ function weDirtyText() {
 function weDirty() { return (typeof pxDirtyCount === 'function' && pxDirtyCount() > 0) || weDirtyText() || Object.keys(WE.slots).length > 0 || (typeof weViewsDirty === 'function' && weViewsDirty()) || (typeof evDirty === 'function' && evDirty()); }
 function weName() {
   var w = WE.w;
-  if (w.player) return (w.player.name || '玩家') + (w.player.self ? '（你）' : '');
+  if (w.player) return (w.player.name || I18n.t("cadeditor.ui.vaultworld.991e63fe29")) + (w.player.self ? I18n.t("cadeditor.ui.worldedit.4bb17ff691") : '');
   if (w.kind === 'block') { var bid = shortId(w.block || w.type); return Reg.nameOf2('block', w.block || w.type) || nameOfItem(bid) || humanId(bid); }
   return entityName(w.type);
 }
@@ -43,34 +43,34 @@ function weOpen(world, saved) {
 function weTabs() {
   var w = WE.w, t = [], noBE = w.kind === 'block' && w.has_block_entity === false;
   if (w.kind === 'block' && weViewGroups().length) { var vi = weViewTabInfo(); t.push({ id: 'view', label: vi.label, icon: vi.icon }); }
-  if (!noBE && w.container && w.container.slots) t.push({ id: 'container', label: '容器', icon: 'chest' });
-  if (!noBE && w.kind === 'block' && (w.type === 'minecraft:mob_spawner' || w.type === 'minecraft:trial_spawner')) t.push({ id: 'spawner', label: '刷怪设置', icon: 'paw' });
-  if (w.kind === 'block' && (weStateSchema().length || weTypeSchema().length > 1)) t.push({ id: 'state', label: '方块状态', icon: 'sliders' });
+  if (!noBE && w.container && w.container.slots) t.push({ id: 'container', label: I18n.t("cadeditor.ui.pages.6d23f04b26"), icon: 'chest' });
+  if (!noBE && w.kind === 'block' && (w.type === 'minecraft:mob_spawner' || w.type === 'minecraft:trial_spawner')) t.push({ id: 'spawner', label: I18n.t("cadeditor.ui.pages.c9a4b1a5a5"), icon: 'paw' });
+  if (w.kind === 'block' && (weStateSchema().length || weTypeSchema().length > 1)) t.push({ id: 'state', label: I18n.t("cadeditor.ui.rules.a528d413f7"), icon: 'sliders' });
   if (noBE) return t;
   if (w.kind === 'entity' && w.player) {
-    var pl = w.player, pt = [{ id: 'pinv', label: '背包', icon: 'backpack' }, { id: 'pender', label: '末影箱', icon: 'chest' }, { id: 'pstat', label: '状态', icon: 'heart' }, { id: 'pabil', label: '能力', icon: 'wind' }, { id: 'pattr', label: '属性与效果', icon: 'sliders' }];
+    var pl = w.player, pt = [{ id: 'pinv', label: I18n.t("cadeditor.ui.labels.015845346a"), icon: 'backpack' }, { id: 'pender', label: I18n.t("cadeditor.ui.labels.d7fe02211b"), icon: 'chest' }, { id: 'pstat', label: I18n.t("cadeditor.ui.worldedit.6320b4a872"), icon: 'heart' }, { id: 'pabil', label: I18n.t("cadeditor.ui.worldedit.5c5374dd95"), icon: 'wind' }, { id: 'pattr', label: I18n.t("cadeditor.ui.worldedit.ba2a555e94"), icon: 'sliders' }];
     if (pl.preset) return pt.filter(function (x) { return x.id === 'pinv' || x.id === 'pender' || x.id === 'pattr'; });   // 保险库预设：只有预设里有的东西
     if (pl.offline) return pt;   // 离线玩家：位置 / 配方 / 成就 / 统计要在线才有意义
-    pt.push({ id: 'ppos', label: '位置与重生', icon: 'compass' }, { id: 'prec', label: '配方', icon: 'book' });
-    if (pl.self) pt.push({ id: 'padv', label: '成就', icon: 'trophy' });   // 成就只能改自己的，别人的页面没有这一页
-    pt.push({ id: 'pstats', label: '统计', icon: 'scroll' });
-    if (pl.self) pt.push({ id: 'poff', label: '存档玩家', icon: 'users' });   // 名单放在自己的页面里
+    pt.push({ id: 'ppos', label: I18n.t("cadeditor.ui.worldedit.65f03b7a23"), icon: 'compass' }, { id: 'prec', label: I18n.t("cadeditor.ui.worldedit.f25ff1efa2"), icon: 'book' });
+    if (pl.self) pt.push({ id: 'padv', label: I18n.t("cadeditor.ui.worldedit.52b0e1703d"), icon: 'trophy' });   // 成就只能改自己的，别人的页面没有这一页
+    pt.push({ id: 'pstats', label: I18n.t("cadeditor.ui.worldedit.89abe8c6ac"), icon: 'scroll' });
+    if (pl.self) pt.push({ id: 'poff', label: I18n.t("cadeditor.ui.worldedit.7d9c25abe0"), icon: 'users' });   // 名单放在自己的页面里
     return pt;
   }
   if (w.kind === 'entity') {
-    if (evGroup('pose')) t.push({ id: 'pose', label: '姿势', icon: 'user' });
-    if (evGroup('item_frame')) t.push({ id: 'frame', label: '展示框', icon: 'image' });
-    if (evGroup('painting')) t.push({ id: 'painting', label: '画', icon: 'image' });
-    if (evGroup('display')) t.push({ id: 'display', label: '展示', icon: 'cube' });
-    if (evGroup('trades')) t.push({ id: 'trades', label: '交易', icon: 'coins' });
+    if (evGroup('pose')) t.push({ id: 'pose', label: I18n.t("cadeditor.ui.worldedit.94049dba4d"), icon: 'user' });
+    if (evGroup('item_frame')) t.push({ id: 'frame', label: I18n.t("cadeditor.ui.worldedit.69dee9b158"), icon: 'image' });
+    if (evGroup('painting')) t.push({ id: 'painting', label: I18n.t("cadeditor.ui.worldedit.de9f18b00a"), icon: 'image' });
+    if (evGroup('display')) t.push({ id: 'display', label: I18n.t("cadeditor.ui.worldedit.c742537502"), icon: 'cube' });
+    if (evGroup('trades')) t.push({ id: 'trades', label: I18n.t("cadeditor.ui.worldedit.919ddbbd91"), icon: 'coins' });
     if (evSimpleGroups().length) { var si = evSimpleTabInfo(); t.push({ id: 'ents', label: si.label, icon: si.icon }); }
-    if (evHasRelations()) t.push({ id: 'relations', label: '关系', icon: 'users' });
-    t.push({ id: 'entity', label: '属性', icon: 'paw' });
-    if (evGroup('riding')) t.push({ id: 'riding', label: '乘客', icon: 'users' });
-    if (evGroup('generic')) t.push({ id: 'gents', label: '其他设置', icon: 'sliders' });
+    if (evHasRelations()) t.push({ id: 'relations', label: I18n.t("cadeditor.ui.worldedit.253aaff19a"), icon: 'users' });
+    t.push({ id: 'entity', label: I18n.t("cadeditor.ui.eschema.86de52d178"), icon: 'paw' });
+    if (evGroup('riding')) t.push({ id: 'riding', label: I18n.t("cadeditor.ui.worldedit.54df03d398"), icon: 'users' });
+    if (evGroup('generic')) t.push({ id: 'gents', label: I18n.t("cadeditor.ui.worldedit.863edfe5ac"), icon: 'sliders' });
   }
-  if (w.kind === 'block' && weViews().generic && weViews().generic.value) t.push({ id: 'gview', label: '其他设置', icon: 'sliders' });
-  t.push({ id: 'data', label: '数据', icon: 'code' });
+  if (w.kind === 'block' && weViews().generic && weViews().generic.value) t.push({ id: 'gview', label: I18n.t("cadeditor.ui.worldedit.863edfe5ac"), icon: 'sliders' });
+  t.push({ id: 'data', label: I18n.t("cadeditor.ui.labels.5440f7424f"), icon: 'code' });
   return t;
 }
 function weRender() {
@@ -81,23 +81,23 @@ function weRender() {
 function drawWorldTop() {
   var bar = clear($('topbar')), w = WE.w;
   if (w.player && !w.player.self) {   // 正在看别的玩家：左上角一键回到自己的数据
-    var back = kBtn('返回自己', function () { if (typeof oriel !== 'undefined' && oriel.send) oriel.send('open_world', { self: true }); }, { icon: 'back', title: '回到你自己的编辑页' });
+    var back = kBtn(I18n.t("cadeditor.ui.worldedit.70faf0ec73"), function () { if (typeof oriel !== 'undefined' && oriel.send) oriel.send('open_world', { self: true }); }, { icon: 'back', title: I18n.t("cadeditor.ui.worldedit.26e3c1a3ce") });
     back.style.marginRight = '6px'; bar.appendChild(back);
   }
-  edTopHead(bar, { icon: w.kind === 'block' ? itemIcon(shortId(w.block || w.type), 22) : w.player ? itemIcon('player_head', 22) : entityIcon(w.type, 22), title: weName(), crumb: w.kind === 'block' ? '方块' : w.player ? (w.player.preset ? '玩家预设' : w.player.offline ? '离线玩家' : '玩家') : '实体' });
-  var un = h('div', { class: 'k-ibtn' + (w.canUndo ? '' : ' dis'), title: '撤销上一次写入游戏的修改' }, [uiIcon('undo', 14)]);
+  edTopHead(bar, { icon: w.kind === 'block' ? itemIcon(shortId(w.block || w.type), 22) : w.player ? itemIcon('player_head', 22) : entityIcon(w.type, 22), title: weName(), crumb: w.kind === 'block' ? I18n.t("cadeditor.ui.picker.2753766d18") : w.player ? (w.player.preset ? I18n.t("cadeditor.ui.vault.d4f6dca6d8") : w.player.offline ? I18n.t("cadeditor.ui.worldedit.e0b611fd8c") : I18n.t("cadeditor.ui.vaultworld.991e63fe29")) : I18n.t("cadeditor.ui.picker.eb4308300e") });
+  var un = h('div', { class: 'k-ibtn' + (w.canUndo ? '' : ' dis'), title: I18n.t("cadeditor.ui.worldedit.cba28b7504") }, [uiIcon('undo', 14)]);
   activate(un, function () { if (WE.w.canUndo) weUndo(); });
   bar.appendChild(un);
-  var vb = h('div', { class: 'k-ibtn', title: '保险库：把物品存起来，或取出放进槽位' }, [uiIcon('chest', 14)]); activate(vb, function () { openVault(); });
-  var th = h('div', { class: 'k-ibtn', title: '设置' }, [uiIcon('sliders', 14)]); activate(th, openSettings);
+  var vb = h('div', { class: 'k-ibtn', title: I18n.t("cadeditor.ui.worldedit.0d82f86d77") }, [uiIcon('chest', 14)]); activate(vb, function () { openVault(); });
+  var th = h('div', { class: 'k-ibtn', title: I18n.t("cadeditor.ui.common.settings") }, [uiIcon('sliders', 14)]); activate(th, openSettings);
   bar.appendChild(vb); bar.appendChild(th);
   var n = weDirty(), cnt = weChangeCount();
   var restricted = (typeof wpCommandProblems === 'function' && wpCommandProblems().length > 0) || (typeof weViewProblems === 'function' && weViewProblems().length > 0);
   var copyInventory = w.player && !w.player.self && !w.player.preset && WE.tab === 'pinv';
-  if (copyInventory) bar.appendChild(edApplyBtn({ label: '套用此玩家的背包', icon: 'download', dirty: !VW_COPY_PENDING && !WE.pending, tip: '把这位玩家的背包套用到自己身上；覆盖前检查备份并确认', tipOff: '正在处理，请等待回执', onClick: vwPlayerBackpackToSelf }));
-  if (!copyInventory || n) bar.appendChild(edApplyBtn({ dirty: n && !restricted, count: cnt, tip: '写入游戏', tipOff: restricted ? '含受限草稿，请先查看下方修改提示' : '还没有修改', onClick: weApply }));
+  if (copyInventory) bar.appendChild(edApplyBtn({ label: I18n.t("cadeditor.ui.worldedit.cc137a3e9e"), icon: 'download', dirty: !VW_COPY_PENDING && !WE.pending, tip: I18n.t("cadeditor.ui.worldedit.c6ea55bb29"), tipOff: I18n.t("cadeditor.ui.worldedit.0c378458a8"), onClick: vwPlayerBackpackToSelf }));
+  if (!copyInventory || n) bar.appendChild(edApplyBtn({ dirty: n && !restricted, count: cnt, tip: I18n.t("cadeditor.ui.worldedit.a02c9f49a9"), tipOff: restricted ? I18n.t("cadeditor.ui.worldedit.b9ca24639d") : I18n.t("cadeditor.ui.screens.a10fdff631"), onClick: weApply }));
   bar.appendChild(edMaxBtn());
-  bar.appendChild(edCloseBtn('关闭', closeEditor));
+  bar.appendChild(edCloseBtn(I18n.t("cadeditor.ui.common.close"), closeEditor));
 }
 /* 改了任何草稿之后：顶栏的「应用修改」计数和撤销、底栏的「有未应用的修改」一起刷新 */
 function weMarkDirty() { drawWorldTop(); drawWorldFoot(); if (typeof WorldDrafts !== 'undefined') WorldDrafts.touch(); }
@@ -107,13 +107,13 @@ function drawWorldFoot() {
   if (typeof weViewProblems === 'function') errors = errors.concat(weViewProblems());
   if (typeof wpCommandNote === 'function' && wpCommandNote()) errors.push(wpCommandNote());
   f.classList.toggle('has-problem', errors.length > 0);
-  f.appendChild(edFootChg(weDirty(), '有未应用的修改', '没有未应用的修改'));
-  if (typeof pxDirtyCount === 'function' && pxDirtyCount() > 0) { var dis = h('span', { class: 'it link', text: '放弃玩家页的修改', title: '放弃位置 / 重生点 / 配方 / 成就 / 统计里还没应用的修改' }); activate(dis, function () { pxDiscard(); }); f.appendChild(dis); }
-  if (WE.draftConflict) f.appendChild(kBtn('查看恢复内容', function () { WorldDrafts.compare(); }, { icon: 'clock' }));
+  f.appendChild(edFootChg(weDirty(), I18n.t("cadeditor.ui.worldedit.339d020f01"), I18n.t("cadeditor.ui.worldedit.ef90ed3b1a")));
+  if (typeof pxDirtyCount === 'function' && pxDirtyCount() > 0) { var dis = h('span', { class: 'it link', text: I18n.t("cadeditor.ui.worldedit.968651c310"), title: I18n.t("cadeditor.ui.worldedit.63ac19dae3") }); activate(dis, function () { pxDiscard(); }); f.appendChild(dis); }
+  if (WE.draftConflict) f.appendChild(kBtn(I18n.t("cadeditor.ui.worldedit.4d587a2092"), function () { WorldDrafts.compare(); }, { icon: 'clock' }));
   f.appendChild(h('div', { class: 'grow' }));
-  f.appendChild(h('span', { class: 'it', title: '这个目标在世界里的位置', text: weWhere() }));
+  f.appendChild(h('span', { class: 'it', title: I18n.t("cadeditor.ui.worldedit.da05e409f6"), text: weWhere() }));
   errors.forEach(function (message) {
-    var line = h('span', { class: 'it bad pcl foot-problem', title: '点击查看完整错误' }, [uiIcon('close', 12), h('span', { class: 'message', text: message })]);
+    var line = h('span', { class: 'it bad pcl foot-problem', title: I18n.t("cadeditor.ui.worldedit.c098411cf8") }, [uiIcon('close', 12), h('span', { class: 'message', text: message })]);
     activate(line, function () { openProblems(line, [{level:'error',cid:null,path:'',msg:message}]); }); f.appendChild(line);
   });
 }
@@ -140,7 +140,7 @@ function weTabBody(body) {
   if (typeof wpCommandCaps === 'function' && wpCommandCaps()) {
     body.appendChild(kHint(wpCommandNote()));
     if (['pender', 'prec', 'padv', 'pstats', 'poff'].indexOf(WE.tab) >= 0) {
-      body.appendChild(xEmpty(WE.tab === 'pattr' ? '客户端无法完整读取永久属性修饰符和隐藏效果链；此页当前需要服务端 Editor，不能用不完整数据覆盖。' : '此页当前尚未提供命令编辑和权威读取，需要服务端 Editor；未请求服务端数据。')); weTools(); return;
+      body.appendChild(xEmpty(WE.tab === 'pattr' ? I18n.t("cadeditor.ui.worldedit.b63944f63f") : I18n.t("cadeditor.ui.worldedit.e3f039d9cd"))); weTools(); return;
     }
   }
   if (typeof weDndReset === 'function') weDndReset();
@@ -181,7 +181,7 @@ function weTools() {
   t.appendChild(h('span', { class: 'ed-tools-t', text: tab ? tab.label : '' })); t.appendChild(h('div', { class: 'grow' }));
   if (WE.toolsExtra) WE.toolsExtra.forEach(function (n) { t.appendChild(n); });
   crumbLast = ''; crumbBind($('edbody'), null); setTimeout(updateCrumb, 0);
-  var all = h('div', { class: 'k-mini', title: '折叠 / 展开本页全部卡片' }, [uiIcon('layers', 14)]);
+  var all = h('div', { class: 'k-mini', title: I18n.t("cadeditor.ui.screens.f2843ff52e") }, [uiIcon('layers', 14)]);
   activate(all, function () { var collapse = cards.some(function (c) { return !c.classList.contains('collapsed'); }); cards.forEach(function (c) { if (c._card) c._card.setCollapsed(collapse); }); });
   t.appendChild(all);
 }
@@ -196,11 +196,11 @@ function weSlotStack(i) {
 }
 function weContainerTab(body) {
   var c = WE.w.container, n = c.size, cols = n <= 5 ? n : n <= 9 ? 3 : 9;
-  if (c.unresolved_loot) { body.appendChild(xEmpty('这个容器里的战利品还没有生成（第一次打开时才会生成）。请先在游戏里打开一次，再回来编辑。')); return; }
-  body.appendChild(xSec('chest', '里面的物品', n + ' 格' + (c.double ? '，两个箱子合起来' : '')));
+  if (c.unresolved_loot) { body.appendChild(xEmpty(I18n.t("cadeditor.ui.worldedit.e58dad2837"))); return; }
+  body.appendChild(xSec('chest', I18n.t("cadeditor.ui.cards3.c6447c0254"), I18n.t("cadeditor.ui.worldedit.65e3c852c7", (n), (c.double ? I18n.t("cadeditor.ui.worldedit.a9cd05fb9d") : ''))));
 
   var ix = []; for (var i = 0; i < n; i++) ix.push(i);
-  body.appendChild(kSlotGrid({ tight: true, indices: ix, cols: cols, stackOf: weSlotStack, titleOf: function (i) { return '格子 ' + (i + 1); },
+  body.appendChild(kSlotGrid({ tight: true, indices: ix, cols: cols, stackOf: weSlotStack, titleOf: function (i) { return I18n.t("cadeditor.ui.slots.1748b1d05d", (i + 1)); },
     set: function (i, st) { if (st.empty && weOrigEmpty(i)) delete WE.slots[i]; else WE.slots[i] = st; weMarkDirty(); } }));
 }
 function weOrigEmpty(i) { var s = WE.w.container.slots.filter(function (x) { return x.slot === i; })[0]; return !s || s.stack.empty; }
@@ -225,18 +225,18 @@ function weSpawnerTab(body) {
 /* ---------- 实体：变种、常用开关、装备（eschema.js，数据来自游戏的 entity_schema）；其余字段在「数据」页 ---------- */
 function weEntityTab(body) {
   weObj();
-  body.appendChild(esEntityHeader({ id: WE.w.type, sub: shortId(WE.w.type) + ' · 放置好的生物不能换类型',
+  body.appendChild(esEntityHeader({ id: WE.w.type, sub: I18n.t("cadeditor.ui.worldedit.d7784e8e0e", (shortId(WE.w.type))),
     snbtText: function () { var t = WE.text; try { t = nbtPrint(nbtParse(WE.text), false); } catch (e) {} return t; },
     onApplyVault: function (snbt) {
       var o = vaultEntityObj(snbt), cur = weObj();
-      if (o.id && Reg.full(o.id) !== Reg.full(WE.w.type)) { toast('类型不同：这是 ' + entityName(o.id) + '，这里是 ' + weName() + '。放置好的生物不能换类型。', 'warn'); return; }
+      if (o.id && Reg.full(o.id) !== Reg.full(WE.w.type)) { toast(I18n.t("cadeditor.ui.worldedit.773cc98e7b", (entityName(o.id)), (weName())), 'warn'); return; }
       Object.keys(o).forEach(function (k) { if (k !== 'id') nbtPut(cur, k, nbtTake(o, k)); });
       WE.obj = cur; wePut(); weRedrawBody();
     } }));
   body.appendChild(esPanel({ type: WE.w.type, get: function () { return WE.obj; }, set: function (o) { WE.obj = o; wePut(); } }));
   var motion = weObj().Motion;
   if (Array.isArray(motion) && motion.length === 3) {
-    body.appendChild(xSec('wind', '速度', '每轴 −10～10 格/刻'));
+    body.appendChild(xSec('wind', I18n.t("cadeditor.ui.cards2.0e14d148b4"), I18n.t("cadeditor.ui.worldedit.4aae75c2cf")));
     body.appendChild(kVector(motion, { min: -10, max: 10, step: 0.1, dec: 3, preservePrecision: true, onChange: function (i, v) {
       var obj = weObj(), next = nbtClone(obj.Motion); nbtSetTyped(next, i, v, 'd'); nbtPut(obj, 'Motion', next); wePut();
     } }).el);
@@ -245,54 +245,54 @@ function weEntityTab(body) {
 
 /* ---------- 数据：完整 SNBT（带类型），改完点应用 ---------- */
 function weDataTab(body) {
-  if (weTabs().length === 1) body.appendChild(kHint('这个' + (WE.w.kind === 'block' ? '方块' : '实体') + '没有可视化的设置，可以在下面直接改带类型的数据（SNBT）。'));
-  body.appendChild(xSec('code', '完整数据', '带类型的 SNBT'));
+  if (weTabs().length === 1) body.appendChild(kHint(I18n.t("cadeditor.ui.worldedit.11e9bf5354", (WE.w.kind === 'block' ? I18n.t("cadeditor.ui.picker.2753766d18") : I18n.t("cadeditor.ui.picker.eb4308300e")))));
+  body.appendChild(xSec('code', I18n.t("cadeditor.ui.worldedit.46b81b9f77"), I18n.t("cadeditor.ui.worldedit.d2cb89ec10")));
   var code = kCode({ value: WE.text, height: 360, validate: function (t) { nbtParse(t); }, onText: function (t) { WE.text = t; WE.obj = null; }, onInput: function (t) {
     WE.text = t; WE.err = ''; WE.obj = null; weMarkDirty();
   } });
   body.appendChild(code.el);
-  body.appendChild(kBtn('放弃这里的修改', function () { WE.text = nbtPrint(nbtParse(WE.w.snbt), true); WE.obj = null; weRender(); }, { icon: 'undo' }));
+  body.appendChild(kBtn(I18n.t("cadeditor.ui.worldedit.15060564b7"), function () { WE.text = nbtPrint(nbtParse(WE.w.snbt), true); WE.obj = null; weRender(); }, { icon: 'undo' }));
 }
 
 /* ---------- 应用 / 撤销 / 回执 ---------- */
 function weApply() {
   flushPendingCode();
   if (typeof weViewProblems === 'function' && weViewProblems().length) { drawWorldFoot(); return; }
-  if (WE.pending) { toast('上一笔修改还没有回执', 'info', 'we-wait'); return; }
+  if (WE.pending) { toast(I18n.t("cadeditor.ui.vaultworld.53871cb811"), 'info', 'we-wait'); return; }
   if (typeof wpCommandProblems === 'function' && wpCommandProblems().length) { toast(wpCommandNote(), 'warn', 'self-capabilities'); return; }
   if (Date.now() - (WE.lastSendAt || 0) < 650) return;   // 服务器 500ms 限流：连点不重复提交
   var pxv = typeof pxDirtyViews === 'function' ? pxDirtyViews() : [];
   if (pxv.length) {   // 玩家页的位置 / 重生点 / 配方 / 成就 / 统计各走自己的协议，先应用这些
     pxApplyAll();
-    if (weChangeCount() - pxDirtyCount() > 0) toast('其余修改请在这些应用完成后再点一次「应用修改」', 'info', 'we-px');
+    if (weChangeCount() - pxDirtyCount() > 0) toast(I18n.t("cadeditor.ui.worldedit.752b0e748c"), 'info', 'we-px');
     return;
   }
   var w = WE.w, msg = { requestId: 'w-' + Date.now() + '-' + (++WE.seq), slot: clone(w.slot) };
   if (weDirtyText()) {
-    try { msg.snbt = nbtPrint(nbtParse(WE.text), false); } catch (e) { toast('SNBT 有误，没有提交：' + (e.message || e), 'error'); return; }
+    try { msg.snbt = nbtPrint(nbtParse(WE.text), false); } catch (e) { toast(I18n.t("cadeditor.ui.worldedit.639916891d", (e.message || e)), 'error'); return; }
   }
   var cs = Object.keys(WE.slots).map(function (k) { return { slot: Number(k), stack: WE.slots[k] }; });
   if (cs.length) msg.container = { slots: cs };
   if (typeof weViewsMsg === 'function') weViewsMsg(msg);
   if (typeof evMsg === 'function') evMsg(msg);
   if (typeof wpCommandMessage === 'function') wpCommandMessage(msg);
-  if (!msg.snbt && !msg.container && !msg.entity && !msg.views && !msg.block_state && !msg.block_type) { toast('还没有修改', 'info'); return; }
-  weSend('apply', msg, '已提交给游戏，等待回执…');
+  if (!msg.snbt && !msg.container && !msg.entity && !msg.views && !msg.block_state && !msg.block_type) { toast(I18n.t("cadeditor.ui.screens.a10fdff631"), 'info'); return; }
+  weSend('apply', msg, I18n.t("cadeditor.ui.worldedit.c34df32374"));
 }
 function weUndo() {
   if (WE.pending) return;
-  weSend('undo', { requestId: 'w-' + Date.now() + '-' + (++WE.seq), slot: clone(WE.w.slot) }, '正在撤销…');
+  weSend('undo', { requestId: 'w-' + Date.now() + '-' + (++WE.seq), slot: clone(WE.w.slot) }, I18n.t("cadeditor.ui.worldedit.d32f69ae73"));
 }
 function weSend(op, msg, note, draftSnapshot) {
   var sent = (typeof oriel !== 'undefined' && oriel.send) ? oriel.send(op, msg) : false;
-  if (!sent) { toast('宿主没有接受提交（未连接或限流）；修改已保留', 'error'); return; }
+  if (!sent) { toast(I18n.t("cadeditor.ui.worldedit.2cad51fbc8"), 'error'); return; }
   WE.lastSendAt = Date.now(); WE.pending = msg.requestId; WE.lastMsg = { op: op, msg: msg, note: note }; toast(note, 'info', 'we-pending');
   if (typeof WorldDrafts !== 'undefined') { WorldDrafts.beforeSend(msg.requestId, draftSnapshot); WE.lastMsg.draftSnapshot = WorldDrafts.flight; }
   if (typeof wpCommandBegin === 'function') wpCommandBegin(msg.requestId);
   clearTimeout(WE.timer);
-  WE.timer = setTimeout(function () { if (WE.pending === msg.requestId) { if (typeof wpCommandFinishEdits === 'function') wpCommandFinishEdits(msg.requestId); WE.pending = null; WE.draftUnknown = true; if (typeof WorldDrafts !== 'undefined') WorldDrafts.flush(); toast('10 秒没有收到回执，结果未知；请关闭后重新打开核对', 'error'); } }, 12000);
+  WE.timer = setTimeout(function () { if (WE.pending === msg.requestId) { if (typeof wpCommandFinishEdits === 'function') wpCommandFinishEdits(msg.requestId); WE.pending = null; WE.draftUnknown = true; if (typeof WorldDrafts !== 'undefined') WorldDrafts.flush(); toast(I18n.t("cadeditor.ui.worldedit.4dd77f5be8"), 'error'); } }, 12000);
 }
-var WE_CODE = { target_changed: '你改的内容和游戏在你编辑期间的改动撞在了同一个字段上，没有覆盖。没动过的字段（计时、进度、位置……）不会造成冲突；请重新打开，在最新数据上再改一次。', session_lost: '编辑会话已失效，请关闭后重新打开。', not_allowed: '没有权限。', out_of_reach: '离得太远了，走近一点。', chunk_unloaded: '所在区块没有加载。', protected_area: '这里受保护，不能修改。', invalid_nbt: '数据没有通过游戏的校验。', slot_invalid: '这个格子放不下这个物品。', unsupported_target: '这个目标暂时不能这样编辑。', rate_limited: '操作太快了，稍等一下。', payload_too_large: '数据太大。' };
+var WE_CODE = { target_changed: I18n.t("cadeditor.ui.worldedit.e87d8ec90c"), session_lost: I18n.t("cadeditor.ui.worldedit.6d4e2e505b"), not_allowed: I18n.t("cadeditor.ui.worldedit.8c5972aced"), out_of_reach: I18n.t("cadeditor.ui.worldedit.9594d28c09"), chunk_unloaded: I18n.t("cadeditor.ui.worldedit.bd74fb4cbc"), protected_area: I18n.t("cadeditor.ui.worldedit.0cba158bc4"), invalid_nbt: I18n.t("cadeditor.ui.worldedit.dbdb8112df"), slot_invalid: I18n.t("cadeditor.ui.worldedit.0ebd697970"), unsupported_target: I18n.t("cadeditor.ui.worldedit.8355d95afc"), rate_limited: I18n.t("cadeditor.ui.worldedit.869e3ad230"), payload_too_large: I18n.t("cadeditor.ui.worldedit.30f2add4fd") };
 function weResult(r) {
   if (!r || r.requestId !== WE.pending) return;
   if (typeof wpCommandFinishEdits === 'function') wpCommandFinishEdits(r.requestId, r.status === 'saved');
@@ -305,15 +305,15 @@ function weResult(r) {
       setTimeout(function () { if (WE.pending || !weActive()) return; var m2 = clone(lm.msg); m2.requestId = 'w-' + Date.now() + '-' + (++WE.seq); lm.msg = m2; weSend(lm.op, m2, lm.note, lm.draftSnapshot); WE.lastMsg.tries = lm.tries; }, wait);
       return;
     }
-    var hint = r.code === 'invalid_nbt' && r.reason ? r.reason : WE_CODE[r.code]; WE.err = r.reason || r.code || '失败';
+    var hint = r.code === 'invalid_nbt' && r.reason ? r.reason : WE_CODE[r.code]; WE.err = r.reason || r.code || I18n.t("cadeditor.ui.worldedit.28384d7afd");
     if (typeof WorldDrafts !== 'undefined') WorldDrafts.flush();
     /* 服务器会说明是哪种“变了”：页面数据太旧 / 目标换了 / 会话失效 / 字段真的撞了（conflicts） */
-    if (r.code === 'target_changed' && !(Array.isArray(r.conflicts) && r.conflicts.length)) hint = r.stale === 'identity' ? '目标已经不是你打开时的那个了（被替换、换了类型或换了实体）。请重新打开。' : r.stale === 'client_revision' ? '你的页面数据已经过期（上一次保存的回执还没到，或目标已被别处改过）。请关闭后重新打开再改。' : r.stale === 'session' ? '编辑会话已经失效。请关闭后重新打开。' : hint;
-    var cf = Array.isArray(r.conflicts) && r.conflicts.length ? String.fromCharCode(10) + '冲突的字段：' + r.conflicts.slice(0, 6).map(function (c) { return (c.path || []).join('.'); }).join('；') + (r.conflicts.length > 6 ? ' 等 ' + r.conflicts.length + ' 处' : '') : '';
-    WE.err = (hint || r.reason || r.code || '修改没有成功') + cf;
+    if (r.code === 'target_changed' && !(Array.isArray(r.conflicts) && r.conflicts.length)) hint = r.stale === 'identity' ? I18n.t("cadeditor.ui.worldedit.cc18715dd0") : r.stale === 'client_revision' ? I18n.t("cadeditor.ui.worldedit.521e2bccca") : r.stale === 'session' ? I18n.t("cadeditor.ui.worldedit.f2c4e0fd9a") : hint;
+    var cf = Array.isArray(r.conflicts) && r.conflicts.length ? I18n.t("cadeditor.ui.worldedit.230a2d836b", (String.fromCharCode(10)), (r.conflicts.slice(0, 6).map(function (c) { return (c.path || []).join('.'); }).join('；')), (r.conflicts.length > 6 ? I18n.t("cadeditor.ui.worldedit.68e744b287", (r.conflicts.length)) : '')) : '';
+    WE.err = (hint || r.reason || r.code || I18n.t("cadeditor.ui.worldedit.f1b2ed6f2b")) + cf;
     toast(WE.err, 'error', 'we-error'); drawWorldFoot(); return;
   }
-  WE.lastMsg = null; toast('游戏已确认修改', 'ok', 'we-ok');
+  WE.lastMsg = null; toast(I18n.t("cadeditor.ui.worldedit.d483ff6531"), 'ok', 'we-ok');
   if (typeof WorldDrafts !== 'undefined') WorldDrafts.flush();
 }
 function weSaved(world) {
@@ -362,9 +362,9 @@ Reg.on(function (kind, kinds) { if (weActive() && (WE.tab === 'entity' || WE.tab
 var WE_DIM = Labels.dim;
 function weWhere() {
   var w = WE.w, s = w.slot || {}, dim = s.dim ? (WE_DIM[s.dim] || s.dim) : '';
-  if (w.kind === 'block') return '位置 ' + s.x + ' ' + s.y + ' ' + s.z + (dim ? ' · ' + dim : '');
+  if (w.kind === 'block') return I18n.t("cadeditor.ui.worldedit.d5abde4147", (s.x), (s.y), (s.z), (dim ? ' · ' + dim : ''));
   var p = w.nbt && Array.isArray(w.nbt.Pos) ? w.nbt.Pos.map(function (v) { return Math.round(Number(v)); }) : null;
-  return (p ? '位置 ' + p.join(' ') : shortId(w.type)) + (dim ? ' · ' + dim : '');
+  return (p ? I18n.t("cadeditor.ui.worldedit.8d360ec95d", (p.join(' '))) : shortId(w.type)) + (dim ? ' · ' + dim : '');
 }
 function weChangeCount() {
   var n = (weDirtyText() ? 1 : 0) + Object.keys(WE.slots).length + (typeof wpSlotsDirty === 'function' ? wpSlotsDirty() : 0) + (typeof pxDirtyCount === 'function' ? pxDirtyCount() : 0);
@@ -409,23 +409,23 @@ function weHero() {
   }
   else if (isPlayer) vis = entView ? heroEntity(w.type, {}, oldEnt, psrc) : itemIcon('player_head', 48);
   else if (dropped) vis = weDroppedPreview(dropped, view);
-  else vis = entView ? heroEntity(w.type, weObj(), oldEnt) : entityIcon(w.type, 48);
+  else vis = entView ? heroEntity(w.type, weHeroData(), oldEnt) : entityIcon(w.type, 48);
   var open = UI.stageOpen !== false;
   hero.appendChild(edStageHead({ open: open, view: view, can3d: can3d, showView: !isPlayer || !!psrc, entView: entView, redraw: weHero,
-    segTitle: isBlock || dropped ? '2D 图标 / 3D 模型' : '2D 图标 / 3D 生物' }));
+    segTitle: isBlock || dropped ? I18n.t("cadeditor.ui.worldedit.cdf4af93af") : I18n.t("cadeditor.ui.worldedit.bf2c5b3208") }));
   if (open) hero.appendChild(h('div', { class: 'ed-stage' + (entView ? ' ent' : '') }, [h('div', { class: 'plate' }), vis]));
   hero.appendChild(h('div', { class: 'ed-name' + (weName().length > 6 ? ' sm' : ''), text: weName() }));
-  hero.appendChild(h('div', { class: 'ed-tags' }, [h('span', { class: 'k-tag', text: isBlock ? '方块' : isPlayer ? '玩家' : '实体' }), h('span', { class: 'k-tag dim', text: shortId(w.type) })]));
+  hero.appendChild(h('div', { class: 'ed-tags' }, [h('span', { class: 'k-tag', text: isBlock ? I18n.t("cadeditor.ui.picker.2753766d18") : isPlayer ? I18n.t("cadeditor.ui.vaultworld.991e63fe29") : I18n.t("cadeditor.ui.picker.eb4308300e") }), h('span', { class: 'k-tag dim', text: shortId(w.type) })]));
   var snd = !isBlock && !isPlayer && typeof mobSoundRow === 'function' ? mobSoundRow(w.type) : null; if (snd) hero.appendChild(snd);
   var vwa = typeof vwActions === 'function' ? vwActions() : null; if (vwa) hero.appendChild(vwa);
   var stats = h('div', { class: 'ed-stats' });
   function stat(l, v, property) { stats.appendChild(h('div', { class: 'k-stat', 'data-block-prop':property }, [h('span', { class: 'sl', text: l }), h('b', { text: String(v) })])); }
   if (isBlock) weStateSchema().forEach(function (p) { stat(wePropName(p.name), wePropVal(weStateCur(p)), p.name); });
-  else if (isPlayer) { var pv = evVal('player'); if (typeof pv.Health === 'number') stat('生命', fmtNum(pv.Health)); if (pv.food && typeof pv.food.foodLevel === 'number') stat('饥饿', pv.food.foodLevel); if (pv.experience) stat('等级', pv.experience.XpLevel); if (pv.playerGameType) stat('模式', WP_MODE[pv.playerGameType] || pv.playerGameType); }
-  else if (w.nbt && typeof w.nbt.Health === 'number') stat('生命', fmtNum(w.nbt.Health));
+  else if (isPlayer) { var pv = evVal('player'); if (typeof pv.Health === 'number') stat(I18n.t("cadeditor.ui.worldedit.45bc77bc1c"), fmtNum(pv.Health)); if (pv.food && typeof pv.food.foodLevel === 'number') stat(I18n.t("cadeditor.ui.worldedit.78905cde67"), pv.food.foodLevel); if (pv.experience) stat(I18n.t("cadeditor.ui.labels.3377171738"), pv.experience.XpLevel); if (pv.playerGameType) stat(I18n.t("cadeditor.ui.labels.47a270081a"), WP_MODE[pv.playerGameType] || pv.playerGameType); }
+  else if (w.nbt && typeof w.nbt.Health === 'number') stat(I18n.t("cadeditor.ui.worldedit.45bc77bc1c"), fmtNum(w.nbt.Health));
   var sOpen = UI.statsOpen !== false;
   if (stats.children.length) {
-    hero.appendChild(edStatsHead(isBlock ? '方块状态' : '属性', sOpen));
+    hero.appendChild(edStatsHead(isBlock ? I18n.t("cadeditor.ui.rules.a528d413f7") : I18n.t("cadeditor.ui.eschema.86de52d178"), sOpen));
     if (sOpen) hero.appendChild(stats);
   }
   hero.scrollTop = scrollTop;
@@ -435,6 +435,14 @@ function weHeadComponents(profile) {
   if (!arguments.length) profile = weVal('skull', 'minecraft:profile');
   var comps = {}; if (profile !== undefined && profile !== null) nbtPut(comps, 'minecraft:profile', profile);
   return nbtMerge(comps, null);
+}
+/* 左侧 3D 预览用的数据：盔甲架把正在编辑的姿势与外观开关一并带上 */
+function weHeroData() {
+  var o = weObj();
+  if (!WE.w || WE.w.type !== 'minecraft:armor_stand' || typeof evStandAttr !== 'function') return o;
+  var c = {}; Object.keys(o).forEach(function (k) { c[k] = o[k]; });
+  c.__cad_stand = evStandAttr();
+  return c;
 }
 function weHeroLive(profile) {
   var hero = $('hero'); if (!hero || !WE.w) return;
@@ -454,5 +462,5 @@ function weHeroLive(profile) {
   var head = hero.querySelector('.we-head-preview');
   if (head) { head.setAttribute('components', arguments.length ? weHeadComponents(profile) : weHeadComponents()); return; }
   var el = hero.querySelector('.k-ent');
-  if (el && !WE.w.player) { try { heroEntity(WE.w.type, weObj(), el); } catch (e) { if (typeof EditorDiag !== 'undefined') EditorDiag.error('preview.entity.update', e); } }
+  if (el && !WE.w.player) { try { heroEntity(WE.w.type, weHeroData(), el); } catch (e) { if (typeof EditorDiag !== 'undefined') EditorDiag.error('preview.entity.update', e); } }
 }

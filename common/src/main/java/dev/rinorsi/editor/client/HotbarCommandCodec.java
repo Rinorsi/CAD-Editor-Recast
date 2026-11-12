@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.client;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import dev.rinorsi.editor.ComponentPatches;
 import dev.rinorsi.editor.EditorSessions;
 import dev.rinorsi.editor.EditorWriteLog;
@@ -28,7 +30,7 @@ public final class HotbarCommandCodec {
                 new net.minecraft.world.ItemStackWithSlot(index, original.isEmpty() ? next : original)).getOrThrow();
         // The guard is parsed as vanilla SNBT too. Never drop it to work around
         // an original stack whose numeric values cannot be expressed in a command.
-        if (!original.isEmpty()) requireCommandNumbers(item, "原物品");
+        if (!original.isEmpty()) requireCommandNumbers(item, EditorI18n.tr("cadeditor.message.hotbarcommandcodec.59b503b625"));
         item.putInt("count", original.isEmpty() ? next.getCount() : original.getCount());
         var inventory = new ListTag();
         inventory.add(item);
@@ -38,9 +40,9 @@ public final class HotbarCommandCodec {
         for (var entry : ComponentPatches.entries(next.getComponentsPatch())) {
             var id = BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(entry.getKey());
             if (id == null || entry.getKey().codec() == null)
-                EditorSessions.fail("unsupported_component", "该组件不能通过原版命令保存，请使用服务端模组");
+                EditorSessions.fail("unsupported_component", EditorI18n.tr("cadeditor.message.hotbarcommandcodec.19276a4028"));
             if (entry.getValue().isEmpty()) components.add("!" + id);
-            else components.add(id + "=" + encode(entry.getKey(), entry.getValue().get(), registries, "新物品." + id));
+            else components.add(id + "=" + encode(entry.getKey(), entry.getValue().get(), registries, EditorI18n.tr("cadeditor.message.hotbarcommandcodec.d2d1082df2", (id))));
         }
         // Vanilla NBT predicates are partial matches, not a full-stack compare-and-swap.
         // This server-side guard supplements the strict client baseline check.
@@ -56,7 +58,7 @@ public final class HotbarCommandCodec {
     }
 
     public static void requireSlot(int index) {
-        if (index < 0 || index > 35) EditorSessions.fail("slot_invalid", "命令写回仅支持自己的普通背包 0..35；主手绑定打开时的槽位");
+        if (index < 0 || index > 35) EditorSessions.fail("slot_invalid", EditorI18n.tr("cadeditor.message.hotbarcommandcodec.679ce1f882"));
     }
 
     public static String slotName(int index) {
@@ -66,33 +68,33 @@ public final class HotbarCommandCodec {
 
     public static int emptySlot(String region, int requested, java.util.function.IntPredicate empty) {
         if (!region.equals("inventory") && !region.equals("hotbar"))
-            EditorSessions.fail("unsupported_slot", "取出仅支持自己的普通背包或快捷栏空槽");
+            EditorSessions.fail("unsupported_slot", EditorI18n.tr("cadeditor.message.hotbarcommandcodec.ed57369f81"));
         if (requested >= 0) {
             requireSlot(requested);
-            if (!empty.test(requested)) EditorSessions.fail("slot_changed", "指定槽位已被占用，没有覆盖原物品");
+            if (!empty.test(requested)) EditorSessions.fail("slot_changed", EditorI18n.tr("cadeditor.message.hotbarcommandcodec.503bbf077b"));
             return requested;
         }
         int from = region.equals("hotbar") ? 0 : 9, to = region.equals("hotbar") ? 9 : 36;
         for (int i = from; i < to; i++) if (empty.test(i)) return i;
-        EditorSessions.fail("inventory_full", "目标区域没有空槽位，没有覆盖原物品");
+        EditorSessions.fail("inventory_full", EditorI18n.tr("cadeditor.message.hotbarcommandcodec.c891bc9f22"));
         return -1;
     }
 
     static void requireLength(String command) {
         if (command.length() > 32767 || command.getBytes(StandardCharsets.UTF_8).length > 32767 * 3)
-            EditorSessions.fail("command_too_long", "物品数据超过原版命令长度上限，请使用服务端模组；草稿已保留");
+            EditorSessions.fail("command_too_long", EditorI18n.tr("cadeditor.message.hotbarcommandcodec.7dc92dfefd"));
         for (int i = 0; i < command.length(); i++) {
             if (!net.minecraft.util.StringUtil.isAllowedChatCharacter(command.charAt(i)))
-                EditorSessions.fail("invalid_request", "物品数据包含原版命令传输不支持的字符，请使用服务端模组；草稿已保留");
+                EditorSessions.fail("invalid_request", EditorI18n.tr("cadeditor.message.hotbarcommandcodec.07338fcb11"));
         }
     }
 
     private static void validate(ItemStack stack) {
         if (stack.isEmpty() || stack.getCount() < 1 || stack.getCount() > 99 || stack.getCount() > stack.getMaxStackSize())
-            EditorSessions.fail("invalid_request", "物品数量超出合法范围");
+            EditorSessions.fail("invalid_request", EditorI18n.tr("cadeditor.message.hotbarcommandcodec.d9cbc0fba2"));
         ItemStack.validateStrict(stack).getOrThrow();
         if (ComponentPatches.entries(stack.getComponentsPatch()).size() > 256)
-            EditorSessions.fail("invalid_request", "组件数量超过 256 项");
+            EditorSessions.fail("invalid_request", EditorI18n.tr("cadeditor.message.stackcodec.5d54767f85"));
     }
 
     private static void requireCommandNumbers(Tag tag, String path) {
@@ -103,7 +105,7 @@ public final class HotbarCommandCodec {
             special = Double.isNaN(value.value()) ? "NaN" : value.value() < 0 ? "−∞" : "∞";
         if (special != null) {
             EditorWriteLog.warning("client.command.unsupported_number", null, "field=" + path + " value=" + special);
-            EditorSessions.fail("command_special_number", "原版指令不支持 ∞ / NaN，请通过编辑器修改。");
+            EditorSessions.fail("command_special_number", EditorI18n.tr("cadeditor.ui.core.744a6a9f87"));
         }
         if (tag instanceof CompoundTag compound) {
             for (String key : compound.keySet()) requireCommandNumbers(compound.get(key), path + "." + key);

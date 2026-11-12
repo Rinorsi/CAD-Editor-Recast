@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.registry;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import dev.rinorsi.editor.platform.Platform;
 import dev.rinorsi.editor.platform.ClientPlatform;
 import com.google.gson.*;
@@ -45,8 +47,8 @@ public final class VaultChannel {
 
   public static PlayerPresetPage openPlayerPreset(String id) {
     var level=Minecraft.getInstance().level;
-    if(level==null)throw new VaultStore.Failure("UNAVAILABLE","请进入世界后编辑玩家预设");
-    if(store==null||!store.isDone())throw new VaultStore.Failure("NOT_READY","保险库仍在加载，请稍后重试");
+    if(level==null)throw new VaultStore.Failure("UNAVAILABLE",EditorI18n.tr("cadeditor.message.vaultchannel.1e6858f7a7"));
+    if(store==null||!store.isDone())throw new VaultStore.Failure("NOT_READY",EditorI18n.tr("cadeditor.message.vaultchannel.77bbfeebd6"));
     return new PlayerPresetPage(store.join(),validator(),level,id);
   }
 
@@ -79,7 +81,7 @@ public final class VaultChannel {
                       Platform.get().configDir().resolve("cadeditor/vault.json"));
                   if (!loaded.flushNow())
                     System.getLogger(VaultChannel.class.getName())
-                        .log(System.Logger.Level.WARNING, "全局保险库初始化存在尚未落盘数据");
+                        .log(System.Logger.Level.WARNING, EditorI18n.tr("cadeditor.message.vaultchannel.2cdf9a0e53"));
                   return loaded;
                 } catch (Exception e) {
                   throw new CompletionException(e);
@@ -93,7 +95,7 @@ public final class VaultChannel {
               VaultStore.awaitReady(store, VaultStore.FLUSH_TIMEOUT_MS).close();
             } catch (RuntimeException failure) {
               System.getLogger(VaultChannel.class.getName())
-                  .log(System.Logger.Level.WARNING, "保险库退出保存失败：" + failure);
+                  .log(System.Logger.Level.WARNING, EditorI18n.tr("cadeditor.message.vaultchannel.90763b9225", (failure)));
             }
           });
     }
@@ -123,17 +125,17 @@ public final class VaultChannel {
     String id = "", op = "";
     try {
       if (message == null || !message.isJsonObject() || message.toString().length() > 8192)
-        throw new VaultStore.Failure("BAD_REQUEST", "请求最多8192字符");
+        throw new VaultStore.Failure("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultchannel.e6ce84f295"));
       VaultStore.checkDepth(message);
       JsonObject r = message.getAsJsonObject();
       id = VaultStore.text(r, "requestId", "", 128);
       op = VaultStore.text(r, "op", "", 32);
       String view = VaultStore.text(r, "view", "vault", 128);
       if (id.isEmpty() || view.isEmpty())
-        throw new VaultStore.Failure("BAD_REQUEST", "缺少 requestId 或 view");
+        throw new VaultStore.Failure("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultchannel.00d6e92761"));
       if (op.equals("list")) {
         if (!s.lists.containsKey(view) && s.lists.size() >= 8)
-          throw new VaultStore.Failure("BUSY", "最多8个固定view");
+          throw new VaultStore.Failure("BUSY", EditorI18n.tr("cadeditor.message.vaultchannel.784414df8b"));
         s.lists.put(view, null);
       }
       long second = System.nanoTime() / 1_000_000_000L;
@@ -141,11 +143,11 @@ public final class VaultChannel {
         s.second = second;
         s.requests = 0;
       }
-      if (++s.requests > 20) throw new VaultStore.Failure("BUSY", "每秒最多20次保险库请求");
+      if (++s.requests > 20) throw new VaultStore.Failure("BUSY", EditorI18n.tr("cadeditor.message.vaultchannel.a86b6f0d78"));
       if (store == null || !store.isDone())
-        throw new VaultStore.Failure("NOT_READY", "正在加载本地保险库，请在250毫秒后重试；当前结果不代表空库");
+        throw new VaultStore.Failure("NOT_READY", EditorI18n.tr("cadeditor.message.vaultchannel.90e81d129d"));
       if (store.isCompletedExceptionally())
-        throw new VaultStore.Failure("STORAGE_FAILED", "保险库加载失败");
+        throw new VaultStore.Failure("STORAGE_FAILED", EditorI18n.tr("cadeditor.message.vaultchannel.2fa4652c2b"));
       if (op.equals("list")) {
         s.lists.put(view, r.deepCopy());
         return;
@@ -167,7 +169,7 @@ public final class VaultChannel {
       var level = mc.level;
       activeValidator =
           stack -> {
-            if (level == null) throw new VaultStore.Failure("UNAVAILABLE", "未进入世界，暂时无法解析物品组件");
+            if (level == null) throw new VaultStore.Failure("UNAVAILABLE", EditorI18n.tr("cadeditor.message.vaultchannel.2c0c46dd7e"));
             return VaultStacks.validate(stack, level.registryAccess());
           };
     }
@@ -181,7 +183,7 @@ public final class VaultChannel {
       return VaultStore.awaitReady(store, VaultStore.FLUSH_TIMEOUT_MS).flushNow();
     } catch (RuntimeException failure) {
       System.getLogger(VaultChannel.class.getName())
-          .log(System.Logger.Level.WARNING, "保险库flush失败：" + failure);
+          .log(System.Logger.Level.WARNING, EditorI18n.tr("cadeditor.message.vaultchannel.0a361b29f1", (failure)));
       return false;
     }
   }
@@ -205,8 +207,8 @@ public final class VaultChannel {
         var result = new JsonObject();
         result.addProperty("path", "command"); result.addProperty("confirmed", saved);
         result.addProperty("status", saved ? "saved" : "unknown"); result.addProperty("inventoryIndex", command.index());
-        giveReply(pending, saved, saved ? "ok" : "request_timeout", saved ? "服务器已同步确认放入自己的背包第" + (command.index()+1) + "格"
-                : "取出结果未知或槽位已改变；保险库已保留，请核对背包，勿重复取出", result);
+        giveReply(pending, saved, saved ? "ok" : "request_timeout", saved ? EditorI18n.tr("cadeditor.message.vaultchannel.47308ec79e", ((command.index()+1)))
+                : EditorI18n.tr("cadeditor.message.vaultchannel.05afecb6c0"), result);
         continue;
       }
       if (mc.getConnection() != pending.connection || System.nanoTime() > pending.deadline) {
@@ -215,7 +217,7 @@ public final class VaultChannel {
         if (mc.getConnection() != pending.connection) GIVES.remove(entry.getKey());
         else GIVES.put(entry.getKey(), new PendingGive(pending.driver, pending.document, pending.connection, pending.pageId, pending.entryId, Long.MAX_VALUE));
         giveReply(pending, false, mc.getConnection() != pending.connection ? "not_connected" : "request_timeout",
-                mc.getConnection() != pending.connection ? "连接已断开，请核对背包后重试" : "未收到取出回执，结果未知；请先核对背包，勿重复点击", null);
+                mc.getConnection() != pending.connection ? EditorI18n.tr("cadeditor.message.vaultchannel.2c8a931b1a") : EditorI18n.tr("cadeditor.message.vaultchannel.3ede1ebc73"), null);
       }
     }
     for (var entry : List.copyOf(STATES.entrySet())) {
@@ -253,11 +255,11 @@ public final class VaultChannel {
         s.upload = new StringBuilder();
         s.uploadToken = UUID.randomUUID().toString();
       } else if (!token.equals(s.uploadToken) || s.upload == null || now >= s.uploadUntil)
-        throw new VaultStore.Failure("UPLOAD_EXPIRED", "上传已过期");
+        throw new VaultStore.Failure("UPLOAD_EXPIRED", EditorI18n.tr("cadeditor.message.vaultchannel.932f6e603e"));
       if (s.upload.length() + chunk.length() > VaultStore.MAX_FILE_BYTES) {
         s.upload = null;
         s.uploadToken = null;
-        throw new VaultStore.Failure("FILE_LIMIT", "上传最多64Mi字符，解析后最多64MiB");
+        throw new VaultStore.Failure("FILE_LIMIT", EditorI18n.tr("cadeditor.message.vaultchannel.10abeeda52"));
       }
       s.upload.append(chunk);
       s.uploadUntil = now + 30000;
@@ -272,11 +274,11 @@ public final class VaultChannel {
     } else if (op.equals("give")) {
       String pageId = VaultStore.text(r, "requestId", "", 128);
       if (s.giveReplies.containsKey(pageId)) { driver.patch("vault.result", s.giveReplies.get(pageId)); return; }
-      if (s.giveReplies.size() >= 4096) throw new VaultStore.Failure("rate_limited", "本页面取出请求过多，请重新打开页面");
+      if (s.giveReplies.size() >= 4096) throw new VaultStore.Failure("rate_limited", EditorI18n.tr("cadeditor.message.vaultchannel.2d418a923e"));
       String entryId = VaultStore.text(r, "id", "", 36);
       for (var pending : GIVES.values()) if (pending.connection == Minecraft.getInstance().getConnection() && ((pending.driver == driver && pending.pageId.equals(pageId)) || pending.entryId.equals(entryId))) {
         if (pending.driver == driver && pending.pageId.equals(pageId)) return;
-        throw new VaultStore.Failure("request_pending", "同一条目的取出正在等待服务端回执，请勿重复点击");
+        throw new VaultStore.Failure("request_pending", EditorI18n.tr("cadeditor.message.vaultchannel.70961da8d2"));
       }
       result = give(driver, r);
       if (result == null) return;
@@ -284,12 +286,12 @@ public final class VaultChannel {
     } else {
       if (r.has("uploadToken")) {
         if (!Set.of("save", "import", "preview", "has_backup").contains(op))
-          throw new VaultStore.Failure("BAD_REQUEST", "上传仅支持 save/import/preview/has_backup");
+          throw new VaultStore.Failure("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultchannel.9f3920e9ed"));
         String token = VaultStore.text(r, "uploadToken", "", 36);
         if (!token.equals(s.uploadToken)
             || s.upload == null
             || System.currentTimeMillis() >= s.uploadUntil)
-          throw new VaultStore.Failure("UPLOAD_EXPIRED", "上传已过期");
+          throw new VaultStore.Failure("UPLOAD_EXPIRED", EditorI18n.tr("cadeditor.message.vaultchannel.932f6e603e"));
         JsonObject payload = VaultStore.parse(s.upload.toString());
         r = r.deepCopy();
         if (op.equals("has_backup") || op.equals("preview") || (op.equals("save") && VaultTemplates.supported(VaultStore.text(r, "kind", "item", 16)))) {
@@ -307,13 +309,13 @@ public final class VaultChannel {
       if (op.equals("save")
           && VaultStore.text(r, "kind", "item", 16).equals("item")
           && Minecraft.getInstance().level == null)
-        throw new VaultStore.Failure("UNAVAILABLE", "保存需要进入世界以严格验证组件");
+        throw new VaultStore.Failure("UNAVAILABLE", EditorI18n.tr("cadeditor.message.vaultchannel.eefca0ae68"));
       result = store.join().execute(r, validator());
     }
     var mc = Minecraft.getInstance();
-    result.addProperty("giveCapability", mc.player != null && mc.player.isCreative() ? "创造模式取出到自己背包空槽，等待服务端处理"
-            : ClientPlatform.get().canSend(EditorPackets.Request.TYPE) ? "取出需要服务器授权；仅放入自己的普通背包空槽，不覆盖物品"
-            : ClientInventoryCommands.capabilityHint(mc) + "；取出仅放入所选区域空槽，不覆盖物品");
+    result.addProperty("giveCapability", mc.player != null && mc.player.isCreative() ? EditorI18n.tr("cadeditor.message.vaultchannel.7b0b726287")
+            : ClientPlatform.get().canSend(EditorPackets.Request.TYPE) ? EditorI18n.tr("cadeditor.message.vaultchannel.11f3dc9f62")
+            : EditorI18n.tr("cadeditor.message.vaultchannel.4f99cbd8d3", (ClientInventoryCommands.capabilityHint(mc))));
     driver.patchJson("vault.result", result.toString());
   }
 
@@ -321,12 +323,12 @@ public final class VaultChannel {
     store.join().stack(VaultStore.text(r, "id", "", 36)); // Reject entity kind before permission/connection checks.
     var mc = Minecraft.getInstance();
     if (mc.player == null || mc.level == null || mc.getConnection() == null)
-      throw new VaultStore.Failure("UNAVAILABLE", "当前未进入世界");
+      throw new VaultStore.Failure("UNAVAILABLE", EditorI18n.tr("cadeditor.message.worldeditorclient.b889ddd197"));
     if (InventoryWrites.givePath(mc.player.isCreative(), ClientPlatform.get().canSend(EditorPackets.Request.TYPE)) != InventoryWrites.GivePath.CREATIVE) {
       if (!ClientPlatform.get().canSend(EditorPackets.Request.TYPE))
         return commandGive(driver, r);
       var request = new JsonObject();
-      if (GIVES.size() >= 8) throw new VaultStore.Failure("request_pending", "最多同时等待8笔取出回执，请先核对背包");
+      if (GIVES.size() >= 8) throw new VaultStore.Failure("request_pending", EditorI18n.tr("cadeditor.message.vaultchannel.a1e35f5d7c"));
       String networkId = "vault-give-" + UUID.randomUUID();
       request.addProperty("op", "vault_give"); request.addProperty("requestId", networkId);
       request.add("stack", store.join().stack(VaultStore.text(r, "id", "", 36)));
@@ -342,12 +344,12 @@ public final class VaultChannel {
     }
     String target = VaultStore.text(r, "slot", "inventory", 16);
     if (target.equals("cursor"))
-      throw new VaultStore.Failure("UNSUPPORTED_SLOT", "没有安全的原版光标写回路径，请使用背包或快捷栏");
+      throw new VaultStore.Failure("UNSUPPORTED_SLOT", EditorI18n.tr("cadeditor.message.vaultchannel.1d9e7f6996"));
     if (!Set.of("inventory", "hotbar").contains(target))
-      throw new VaultStore.Failure("BAD_REQUEST", "slot 无效");
+      throw new VaultStore.Failure("BAD_REQUEST", EditorI18n.tr("cadeditor.message.vaultchannel.783e2a3538"));
     // Never overwrite an item or write into a currently open container.
     if (mc.player.containerMenu != mc.player.inventoryMenu)
-      throw new VaultStore.Failure("NOT_ALLOWED", "请先关闭容器界面");
+      throw new VaultStore.Failure("NOT_ALLOWED", EditorI18n.tr("cadeditor.message.vaultchannel.c40c191d3c"));
     JsonObject wire = store.join().stack(VaultStore.text(r, "id", "", 36));
     net.minecraft.world.item.ItemStack stack;
     try {
@@ -358,7 +360,7 @@ public final class VaultChannel {
     refreshReservations();
     int requestedIndex = r.has("inventoryIndex") ? StackCodec.integer(r, "inventoryIndex", 0, 35) : -1;
     if (requestedIndex >= 0 && !mc.player.getInventory().getItem(requestedIndex).isEmpty())
-      throw new VaultStore.Failure("slot_changed", "指定槽位已被占用，没有覆盖原物品");
+      throw new VaultStore.Failure("slot_changed", EditorI18n.tr("cadeditor.message.hotbarcommandcodec.503bbf077b"));
     int from = target.equals("hotbar") ? 0 : 9, to = target.equals("hotbar") ? 9 : 36;
     var slot =
         mc.player.inventoryMenu.slots.stream()
@@ -371,7 +373,7 @@ public final class VaultChannel {
                         && !reservedSlots.contains(v.getContainerSlot())
                         && !v.hasItem())
             .findFirst()
-            .orElseThrow(() -> new VaultStore.Failure("INVENTORY_FULL", "目标区域没有空槽位"));
+            .orElseThrow(() -> new VaultStore.Failure("INVENTORY_FULL", EditorI18n.tr("cadeditor.message.vaultchannel.b5a980f10b")));
     mc.player.connection.send(new ServerboundSetCreativeModeSlotPacket(slot.index, stack));
     // Creative inventory ignores ordinary server refreshes: update the owned client inventory too.
     mc.player.getInventory().setItem(slot.getContainerSlot(), stack.copy());
@@ -389,7 +391,7 @@ public final class VaultChannel {
     out.addProperty("creativeSlot", slot.index);
     out.addProperty("code", "ok"); out.addProperty("path", "creative");
     var item = new JsonObject(); item.addProperty("id", wire.get("id").getAsString()); item.addProperty("count", stack.getCount()); out.add("item", item);
-    out.addProperty("reason", slot.getContainerSlot() < 9 ? "已放进快捷栏第"+(slot.getContainerSlot()+1)+"格（客户端已显示，待服务端处理）" : "已放进背包第"+(slot.getContainerSlot()-8)+"格（槽位"+slot.getContainerSlot()+"，客户端已显示，待服务端处理）");
+    out.addProperty("reason", slot.getContainerSlot() < 9 ? EditorI18n.tr("cadeditor.message.vaultchannel.fa0ac6c787", ((slot.getContainerSlot()+1))) : EditorI18n.tr("cadeditor.message.vaultchannel.0902df3b9c", ((slot.getContainerSlot()-8)), (slot.getContainerSlot())));
     EditorToast.show(EditorToast.Level.OK, out.get("reason").getAsString());
     return out;
   }
@@ -398,7 +400,7 @@ public final class VaultChannel {
     var mc = Minecraft.getInstance();
     ClientInventoryCommands.requireAvailable(mc);
     if (mc.player.containerMenu != mc.player.inventoryMenu)
-      throw new VaultStore.Failure("NOT_ALLOWED", "请先关闭容器界面；仅支持自己的普通背包空槽");
+      throw new VaultStore.Failure("NOT_ALLOWED", EditorI18n.tr("cadeditor.message.vaultchannel.c6d229a0dc"));
     String region = VaultStore.text(r, "slot", "inventory", 16);
     int requested = r.has("inventoryIndex") ? StackCodec.integer(r, "inventoryIndex", 0, 35) : -1;
     int index = HotbarCommandCodec.emptySlot(region, requested, i -> mc.player.getInventory().getItem(i).isEmpty());
@@ -407,7 +409,7 @@ public final class VaultChannel {
     var session = new HotbarCommandSession(index, ClientInventoryCommands.context(mc, index));
     String id = "vault-command-" + UUID.randomUUID();
     String pageId = VaultStore.text(r, "requestId", "", 128);
-    if (GIVES.size() >= 8) throw new VaultStore.Failure("request_pending", "请先核对尚未确认的取出结果");
+    if (GIVES.size() >= 8) throw new VaultStore.Failure("request_pending", EditorI18n.tr("cadeditor.message.vaultchannel.62bda3b894"));
     GIVES.put(id, new PendingGive(driver, driver.document(), mc.getConnection(), pageId, VaultStore.text(r, "id", "", 36), Long.MAX_VALUE));
     COMMAND_GIVES.put(id, session);
     try { ClientInventoryCommands.send(mc, session, pageId, net.minecraft.world.item.ItemStack.EMPTY, next); }
@@ -422,7 +424,7 @@ public final class VaultChannel {
     if (pending == null) return true;
     boolean ok = result.has("ok") && result.get("ok").getAsBoolean();
     giveReply(pending, ok, result.has("code") ? result.get("code").getAsString() : "invalid_request",
-            result.has("reason") ? result.get("reason").getAsString() : "保险库取出失败", result);
+            result.has("reason") ? result.get("reason").getAsString() : EditorI18n.tr("cadeditor.message.vaultchannel.a8494c27de"), result);
     return true;
   }
 

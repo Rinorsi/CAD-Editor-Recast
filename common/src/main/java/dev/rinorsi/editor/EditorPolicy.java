@@ -19,23 +19,23 @@ public record EditorPolicy(int permissionLevel, boolean creativeOnly) {
             int level = StackCodec.integer(json, "permissionLevel", 0, 4);
             var creative = json.get("creativeOnly");
             if (creative == null || !creative.isJsonPrimitive() || !creative.getAsJsonPrimitive().isBoolean())
-                throw new IllegalArgumentException("creativeOnly 必须为布尔值");
+                throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.editorpolicy.9c44841abe"));
             return new EditorPolicy(level, creative.getAsBoolean());
         } catch (IOException | RuntimeException e) {
-            throw new IllegalStateException("无法读取 " + path + "：" + e.getMessage(), e);
+            throw new IllegalStateException(EditorI18n.tr("cadeditor.message.editorpolicy.01457f1736", (path), (e.getMessage())), e);
         }
     }
     public void require(ServerPlayer player) {
         boolean permitted = gameMaster(player);
         if (!allows(player.isCreative(), permitted))
-            EditorSessions.fail("permission_denied", "需要游戏管理员命令权限（OP或单人开启作弊）；无权限时仅保留创造模式写回");
+            EditorSessions.fail("permission_denied", EditorI18n.tr("cadeditor.message.editorpolicy.67483b7e29"));
     }
     public static boolean gameMaster(ServerPlayer player) {
         return player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
     }
     public void requirePlayerEdit(ServerPlayer player) {
         if (!gameMaster(player))
-            EditorSessions.fail("player_forbidden", "编辑玩家需要原版游戏管理员权限（OP或单人开启作弊）");
+            EditorSessions.fail("player_forbidden", EditorI18n.tr("cadeditor.message.editorpolicy.5c90d38c41"));
         require(player);
     }
     // Legacy config keys remain readable; they cannot deny a game-master based on game mode.

@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.client;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.blaze3d.audio.Channel;
@@ -34,7 +36,7 @@ public final class EditorSoundPreview {
         void stop();
         default Progress progress() { return new Progress(0, 0, false); }
         default boolean seekable() { return false; }
-        default void seek(double seconds, boolean paused) { throw new IllegalArgumentException("当前声音无法跳转"); }
+        default void seek(double seconds, boolean paused) { throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.editorsoundpreview.aa5d96bf53")); }
         default String failure() { return null; }
         default String progressError() { return null; }
     }
@@ -48,15 +50,15 @@ public final class EditorSoundPreview {
             if (action.equals("stop")) { stop(); return; }
             String next = request.has("id") ? request.get("id").getAsString() : id;
             Identifier key = Identifier.tryParse(next);
-            if (key == null || next.length() > 256) throw new IllegalArgumentException("无效的声音 ID");
+            if (key == null || next.length() > 256) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.editorsoundpreview.575b195a2f"));
             if (action.equals("seek")) {
-                if (!current || !next.equals(id) || !audio.seekable()) throw new IllegalArgumentException("声音尚未就绪或已结束，暂不能跳转");
+                if (!current || !next.equals(id) || !audio.seekable()) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.editorsoundpreview.fa7439a168"));
                 double position = request.has("position") ? request.get("position").getAsDouble() : Double.NaN;
-                if (!Double.isFinite(position) || position < 0) throw new IllegalArgumentException("无效的试听进度");
+                if (!Double.isFinite(position) || position < 0) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.editorsoundpreview.554f5dc87a"));
                 audio.seek(Math.clamp(position, 0, Math.max(0, audio.progress().duration() - 0.001)), paused);
                 return;
             }
-            if (!action.equals("toggle") && !action.equals("play")) throw new IllegalArgumentException("未知试听操作");
+            if (!action.equals("toggle") && !action.equals("play")) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.editorsoundpreview.9d1eebde6f"));
             if (action.equals("toggle") && current && next.equals(id) && audio.active() && !paused) {
                 paused = true; audio.pause(true);
                 publish("paused", null);
@@ -66,13 +68,13 @@ public final class EditorSoundPreview {
             if (!paused && lastStart != 0 && now - lastStart < 125_000_000L) { publish(current ? "playing" : "stopped", null); return; }
             float volume = number(request, "volume", next.equals(id) ? this.volume : 1, 0, 1);
             float pitch = number(request, "pitch", next.equals(id) ? this.pitch : 1, 0.5F, 2);
-            if (!audio.contains(key)) throw new IllegalArgumentException("游戏没有这个声音事件：" + next);
+            if (!audio.contains(key)) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.editorsoundpreview.ca3cbaa0bd", (next)));
             stop();
             id = next; paused = false; age = 0; lastStart = now;
             this.volume = volume; this.pitch = pitch;
             current = audio.start(key, volume, pitch);
             if (!current) {
-                fail(audio.failure() == null ? "声音引擎未能启动试听，详情见日志" : audio.failure());
+                fail(audio.failure() == null ? EditorI18n.tr("cadeditor.message.editorsoundpreview.53d3696897") : audio.failure());
             } else publish("playing", null);
         } catch (RuntimeException error) {
             dev.rinorsi.editor.EditorDiagnostics.warning("sound.preview", "sound=" + (request.has("id") ? request.get("id") : id), error);
@@ -83,7 +85,7 @@ public final class EditorSoundPreview {
 
     private static float number(JsonObject request, String key, float fallback, float min, float max) {
         float value = request.has(key) ? request.get(key).getAsFloat() : fallback;
-        if (!Float.isFinite(value)) throw new IllegalArgumentException("无效的试听参数");
+        if (!Float.isFinite(value)) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.editorsoundpreview.4bcb2bf2d0"));
         return Math.clamp(value, min, max);
     }
 
@@ -150,13 +152,13 @@ public final class EditorSoundPreview {
             var result = manager.play(next.instance);
             var sound = next.instance.getSound();
             if (sound == net.minecraft.client.sounds.SoundManager.INTENTIONALLY_EMPTY_SOUND)
-                next.failure = "此声音事件被资源包设为静音，没有可播放内容";
+                next.failure = EditorI18n.tr("cadeditor.message.editorsoundpreview.7c23a43a30");
             else if (sound == net.minecraft.client.sounds.SoundManager.EMPTY_SOUND)
-                next.failure = "此声音事件没有可播放内容（空声音事件）";
+                next.failure = EditorI18n.tr("cadeditor.message.editorsoundpreview.a906c5a95a");
             else if (result == SoundEngine.PlayResult.NOT_STARTED) {
                 next.failure = volume == 0 || client.options.getFinalSoundSourceVolume(SoundSource.UI) == 0
-                        ? "试听音量或客户端主音量/界面音量为零"
-                        : "声音引擎未就绪或没有可用试听通道，详情见日志";
+                        ? EditorI18n.tr("cadeditor.message.editorsoundpreview.8cad328c3d")
+                        : EditorI18n.tr("cadeditor.message.editorsoundpreview.cccb1309aa");
             }
             if (sound != null) next.context += " resource=" + sound.getPath();
             if (next.failure != null) {
@@ -166,7 +168,7 @@ public final class EditorSoundPreview {
             if (sound != null) {
                 var resource = client.getResourceManager().getResource(sound.getPath());
                 if (resource.isEmpty()) {
-                    next.failure = "找不到声音资源：" + sound.getPath();
+                    next.failure = EditorI18n.tr("cadeditor.message.editorsoundpreview.5aca4ff84c", (sound.getPath()));
                     dev.rinorsi.editor.EditorDiagnostics.warning("sound.preview.resource", next.context, new IllegalStateException(next.failure));
                     return false;
                 }
@@ -181,7 +183,7 @@ public final class EditorSoundPreview {
             var s = session;
             if (s == null) return null;
             if (s.failure == null && !s.progress.ready() && System.nanoTime() - s.loadingAt > 10_000_000_000L) {
-                s.failure = "声音加载超过10秒仍未开始，请查看日志中的资源读取或解码错误";
+                s.failure = EditorI18n.tr("cadeditor.message.editorsoundpreview.0eb3e9b7b0");
                 dev.rinorsi.editor.EditorDiagnostics.warning("sound.preview.load", s.context, new IllegalStateException(s.failure));
             }
             return s.failure;
@@ -208,9 +210,9 @@ public final class EditorSoundPreview {
         }
         public void seek(double seconds, boolean paused) {
             var s = session;
-            if (s == null || !seekable()) throw new IllegalArgumentException("音频尚未加载完成，暂不能跳转");
+            if (s == null || !seekable()) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.editorsoundpreview.be79e2de1f"));
             var handle = Minecraft.getInstance().getSoundManager().soundEngine.instanceToChannel.get(s.instance);
-            if (handle == null || handle.isStopped()) throw new IllegalArgumentException("声音已结束，请重新播放");
+            if (handle == null || handle.isStopped()) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.editorsoundpreview.360e390430"));
             int version = ++s.seekVersion;
             s.paused = paused;
             handle.execute(channel -> {
@@ -240,12 +242,12 @@ public final class EditorSoundPreview {
                         org.lwjgl.openal.AL10.alSourcef(source, org.lwjgl.openal.AL11.AL_SEC_OFFSET, (float) seconds);
                     }
                     int error = org.lwjgl.openal.AL10.alGetError();
-                    if (error != org.lwjgl.openal.AL10.AL_NO_ERROR) throw new IllegalStateException("OpenAL跳转失败，代码=" + error);
+                    if (error != org.lwjgl.openal.AL10.AL_NO_ERROR) throw new IllegalStateException(EditorI18n.tr("cadeditor.message.editorsoundpreview.1084d4fcf3", (error)));
                     s.elapsed = seconds; s.sampledAt = System.nanoTime(); s.wasPlaying = !s.paused;
                     s.progress = new Progress(seconds, s.progress.duration(), true);
                 } catch (java.io.IOException | RuntimeException error) {
                     dev.rinorsi.editor.EditorDiagnostics.warning("sound.preview.seek", s.context + " position=" + seconds, error);
-                    if (session == s) s.failure = "试听跳转失败，详情见日志";
+                    if (session == s) s.failure = EditorI18n.tr("cadeditor.message.editorsoundpreview.36c05629c4");
                 } finally { if (replacement != null) replacement.close(); }
             });
         }

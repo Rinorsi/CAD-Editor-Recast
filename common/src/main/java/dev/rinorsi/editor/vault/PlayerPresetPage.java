@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.vault;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.*;
 import dev.rinorsi.editor.*;
 import dev.rinorsi.editor.world.*;
@@ -35,14 +37,14 @@ public final class PlayerPresetPage {
         return PlayerWorldEdit.snapshot(p,PlayerWorldEdit.save(p),slot,metadata,revision);
     }
     public JsonObject apply(JsonObject request){
-        if(!StackCodec.string(request,"op").equals("apply"))EditorSessions.fail("undo_unavailable","预设编辑不支持撤销");
-        if(!world.get("revision").equals(request.get("revision"))||!slot.equals(request.get("slot")))EditorSessions.fail("session_lost","预设编辑会话已变化，请重新打开");
+        if(!StackCodec.string(request,"op").equals("apply"))EditorSessions.fail("undo_unavailable",EditorI18n.tr("cadeditor.message.playerpresetpage.472b3b386d"));
+        if(!world.get("revision").equals(request.get("revision"))||!slot.equals(request.get("slot")))EditorSessions.fail("session_lost",EditorI18n.tr("cadeditor.message.playerpresetpage.0167dc33f1"));
         var fields=StackCodec.object(StackCodec.object(request,"entity"),"player");var sections=entry.getAsJsonObject("template").getAsJsonObject("sections");
         for(var field:fields.entrySet()){
             String key=field.getKey();String section=switch(key){case "ender"->"ender";case "attributes"->"attributes";case "active_effects"->"effects";case "playerGameType"->"game_mode";case "container"->"container";default->"";};
             if(section.equals("container")){
-                for(var raw:field.getValue().getAsJsonObject().getAsJsonArray("slots")){int index=StackCodec.integer(raw.getAsJsonObject(),"slot",0,Integer.MAX_VALUE);if(!sections.has(Inventory.EQUIPMENT_SLOT_MAPPING.containsKey(index)?"equipment":"inventory"))EditorSessions.fail("protected_field","预设没有保存该物品分区");}
-            }else if(section.isEmpty()||!sections.has(section))EditorSessions.fail("protected_field","预设没有保存字段："+key);
+                for(var raw:field.getValue().getAsJsonObject().getAsJsonArray("slots")){int index=StackCodec.integer(raw.getAsJsonObject(),"slot",0,Integer.MAX_VALUE);if(!sections.has(Inventory.EQUIPMENT_SLOT_MAPPING.containsKey(index)?"equipment":"inventory"))EditorSessions.fail("protected_field",EditorI18n.tr("cadeditor.message.playerpresetpage.9cec18362c"));}
+            }else if(section.isEmpty()||!sections.has(section))EditorSessions.fail("protected_field",EditorI18n.tr("cadeditor.message.playerpresetpage.6998652857", (key)));
         }
         var p=materialize(entry.getAsJsonObject("template"));var beforeCapture=capture(p);var data=PlayerWorldEdit.values(p);data.addProperty("Health",0);data.addProperty("AbsorptionAmount",0);
         var prepared=PlayerWorldEdit.prepare(p,PlayerWorldEdit.with(PlayerWorldEdit.save(p),data),request);PlayerWorldEdit.writeDetached(p,prepared);

@@ -2,7 +2,7 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),asse
 const root=path.resolve(__dirname,'..'), base=process.env.EDITOR_BASE_SOURCE_ROOT||root;
 const relative='common/src/main/resources/assets/cadeditor/ui/js';
 const context=vm.createContext({Reg:{on(){}},Labels:{slotEquip:{},mode:{},dim:{}},setTimeout(){},clearTimeout(){},console,clone:x=>JSON.parse(JSON.stringify(x))});
-for(const name of ['data','core','nbt','worldedit','worldview','worldentity','worldplayer']){const candidate=path.join(root,relative,name+'.js');vm.runInContext(fs.readFileSync(fs.existsSync(candidate)?candidate:path.join(base,relative,name+'.js'),'utf8'),context);}
+for(const name of ['data','i18n-catalogs','i18n','core','nbt','worldedit','worldview','worldentity','worldplayer']){const candidate=path.join(root,relative,name+'.js');vm.runInContext(fs.readFileSync(fs.existsSync(candidate)?candidate:path.join(base,relative,name+'.js'),'utf8'),context);}
 const c=context;let sends=0,controls=[];c.toast=()=>{};c.weDirtyText=()=>false;c.weRender=()=>{};c.drawWorldTop=()=>{};c.drawWorldFoot=()=>{};
 c.oriel={send(){sends++;return true;}};c.xNum=o=>{controls.push(o);return o;};c.xSec=()=>({});c.kHint=t=>({text:t});c.xText=o=>o;c.h=()=>({});c.kSeg=()=>({el:{}});c.fmtNum=x=>x;c.fullId=x=>x.includes(':')?x:'minecraft:'+x;
 const all=['playerGameType','experience.XpLevel','experience.XpP','commandPosition','attributes.base'];

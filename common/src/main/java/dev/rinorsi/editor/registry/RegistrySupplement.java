@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.registry;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import dev.rinorsi.editor.platform.Platform;
 import dev.rinorsi.editor.platform.ClientPlatform;
 import com.google.gson.JsonArray;
@@ -28,7 +30,7 @@ public final class RegistrySupplement {
             while (!CAPTURES.isEmpty() && System.nanoTime() - start < 350_000) {
                 Capture capture = CAPTURES.peek();
                 if (capture.world() != mc.level) {
-                    CAPTURES.remove(); capture.future().completeExceptionally(new IllegalStateException("已经离开世界")); continue;
+                    CAPTURES.remove(); capture.future().completeExceptionally(new IllegalStateException(EditorI18n.tr("cadeditor.message.componentschemachannel.380c513b2e"))); continue;
                 }
                 try {
                     if (capture.rows().hasNext()) capture.captured().add(capture.rows().next());
@@ -49,7 +51,7 @@ public final class RegistrySupplement {
     public static CompletableFuture<Result> read(Minecraft mc, String raw, Identifier only) {
         if (raw.equals("block_properties")) {
             if (only != null && BuiltInRegistries.BLOCK.getOptional(only).isEmpty())
-                throw new IllegalArgumentException("未知方块: " + only);
+                throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.registrysupplement.591c26d33f", (only)));
             var rows = BuiltInRegistries.BLOCK.entrySet().stream()
                     .filter(entry -> only == null || only.equals(entry.getKey().identifier()))
                     .map(entry -> blockRow(entry.getKey().identifier(), entry.getValue())).iterator();
@@ -103,14 +105,14 @@ public final class RegistrySupplement {
     }
     static Result unavailable(JsonArray patternRows) {
         JsonObject context = context("remote_server", false);
-        context.addProperty("reason", patternRows == null ? "服务器未向客户端同步完整列表，请手动输入 ID"
-                : "服务器未同步纹饰配方与模板关联，请手动输入模板物品 ID");
+        context.addProperty("reason", patternRows == null ? EditorI18n.tr("cadeditor.message.registrysupplement.b8147db9dd")
+                : EditorI18n.tr("cadeditor.message.registrysupplement.bb984fbba0"));
         return new Result(patternRows == null ? new JsonArray() : patternRows, context);
     }
     public static JsonArray blockProperties(Identifier only) {
         JsonArray rows = new JsonArray();
         if (only != null && BuiltInRegistries.BLOCK.getOptional(only).isEmpty())
-            throw new IllegalArgumentException("未知方块: " + only);
+            throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.registrysupplement.591c26d33f", (only)));
         BuiltInRegistries.BLOCK.entrySet().stream().filter(e -> only == null || only.equals(e.getKey().identifier()))
                 .sorted(java.util.Comparator.comparing(e -> e.getKey().identifier().toString())).forEach(entry -> {
             rows.add(blockRow(entry.getKey().identifier(), entry.getValue()));

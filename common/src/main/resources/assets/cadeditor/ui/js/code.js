@@ -117,13 +117,13 @@ function kCode(o) {
   var language = o.language || 'snbt', validator = o.validate || (language === 'json' ? function (v) { JSON.parse(v); } : language === 'plain' ? function () {} : null);
   function highlight() {
     try {
-      if (typeof ta.setTextHighlights !== 'function') throw new Error('需要匹配 Oriel 0.15.x 正式依赖');
-      if (ta.setTextHighlights(text, language === 'plain' || text.length > 32768 ? [] : kcRanges(text, language), true) !== true) throw new Error('原生模型拒绝过期文本高亮');
+      if (typeof ta.setTextHighlights !== 'function') throw new Error(I18n.t("cadeditor.ui.code.cff0f2dfd0"));
+      if (ta.setTextHighlights(text, language === 'plain' || text.length > 32768 ? [] : kcRanges(text, language), true) !== true) throw new Error(I18n.t("cadeditor.ui.code.f2f83c740b"));
       nativeError = null;
       root.setAttribute('data-highlight', 'native');
     } catch (e) {
       root.setAttribute('data-highlight', 'failed');
-      if (!nativeError) { nativeError = '原生编辑高亮失败：' + (e.message || e); if (typeof EditorDiag !== 'undefined') EditorDiag.error('code.highlight.api', new Error(nativeError)); }
+      if (!nativeError) { nativeError = I18n.t("cadeditor.ui.code.f11d9db80e", (e.message || e)); if (typeof EditorDiag !== 'undefined') EditorDiag.error('code.highlight.api', new Error(nativeError)); }
     }
   }
   var diagnostic = h('div', { class:'kc-diagnostic' }); diagnostic.style.display = 'none';
@@ -134,11 +134,11 @@ function kCode(o) {
   });
   function paintStatus() {
     status.classList.toggle('bad', !pending && !!err || !!nativeError);
-    diagnostic.textContent = nativeError || (err ? (err.line ? '第 ' + err.line + ' 行第 ' + err.col + ' 列：' : '无法确定错误位置：') + err.message : '');
-    if (nativeError) { status.textContent = '高亮不可用 · 查看原因'; return; }
-    if (pending) { status.textContent = '待检查'; return; }
+    diagnostic.textContent = nativeError || (err ? (err.line ? I18n.t("cadeditor.ui.code.d3913c5519", (err.line), (err.col)) : I18n.t("cadeditor.ui.code.6a0c68fdb2")) + err.message : '');
+    if (nativeError) { status.textContent = I18n.t("cadeditor.ui.code.beb2f7e550"); return; }
+    if (pending) { status.textContent = I18n.t("cadeditor.ui.code.2329bc02cd"); return; }
     if (!text.trim()) { status.textContent = ''; return; }
-    status.textContent = err ? '✗ ' + (err.line ? '第 ' + err.line + ' 行第 ' + err.col + ' 列：' : '') + err.message : '✓ ' + (language === 'json' ? 'JSON' : language === 'plain' ? '文本' : 'SNBT') + ' 有效 · ' + text.split('\n').length + ' 行';
+    status.textContent = err ? '✗ ' + (err.line ? I18n.t("cadeditor.ui.code.d3913c5519", (err.line), (err.col)) : '') + err.message : I18n.t("cadeditor.ui.code.a107e70fb2", (language === 'json' ? 'JSON' : language === 'plain' ? I18n.t("cadeditor.ui.code.dd81861811") : 'SNBT'), (text.split('\n').length));
   }
   function runCheck() {
     if (checkedText !== text) {
@@ -146,7 +146,7 @@ function kCode(o) {
       err = text.trim() ? kcCheck(text, function (v) { parsed = validator ? validator(v) : parseSnbt(v); }) : null;
       checkedText = text;
     }
-    paintStatus(); if (err && !nativeError) status.textContent = '✗ ' + (err.line ? err.line + ':' + err.col + ' · ' : '') + '查看错误'; return err;
+    paintStatus(); if (err && !nativeError) status.textContent = I18n.t("cadeditor.ui.code.6d55bbb14b", (err.line ? err.line + ':' + err.col + ' · ' : '')); return err;
   }
   function set(v, silent) {
     cancelPending();
@@ -154,19 +154,19 @@ function kCode(o) {
     if (!silent && o.onText) o.onText(text);
     if (!silent && o.onInput) o.onInput(text, err, parsed);
   }
-  function act(fn) { return function () { try { fn(); } catch (e) { toast('无法处理：' + (e.message || e), 'warn', 'kc-bad'); } }; }
+  function act(fn) { return function () { try { fn(); } catch (e) { toast(I18n.t("cadeditor.ui.code.533bfcf41f", (e.message || e)), 'warn', 'kc-bad'); } }; }
   function tool(action, label, icon, fn, detail) {
     var button = kBtn('', fn, { icon:icon, cls:'kc-tool', title:label + (detail ? '：' + detail : '') });
     button.setAttribute('aria-label', label); button.setAttribute('data-code-action', action);
     return button;
   }
-  var bFmt = tool('format', '格式化', 'list', act(function () { set(language === 'json' ? JSON.stringify(JSON.parse(text), null, 2) : kcFormat(text, false)); }), '按层级缩进，保留类型后缀');
-  var bCmp = tool('compact', '压缩', 'layers', act(function () { set(language === 'json' ? JSON.stringify(JSON.parse(text)) : kcFormat(text, true)); }), '压成一行');
-  var bCopy = tool('copy', '复制', 'copy', function () { copyText(text, '（' + text.length + ' 字符）'); });
+  var bFmt = tool('format', I18n.t("cadeditor.ui.code.f69273dbbe"), 'list', act(function () { set(language === 'json' ? JSON.stringify(JSON.parse(text), null, 2) : kcFormat(text, false)); }), I18n.t("cadeditor.ui.code.2aafc6dfb1"));
+  var bCmp = tool('compact', I18n.t("cadeditor.ui.code.a22879cda6"), 'layers', act(function () { set(language === 'json' ? JSON.stringify(JSON.parse(text)) : kcFormat(text, true)); }), I18n.t("cadeditor.ui.code.23461a1072"));
+  var bCopy = tool('copy', I18n.t("cadeditor.ui.common.copy"), 'copy', function () { copyText(text, I18n.t("cadeditor.ui.code.7bfb31e7a2", (text.length))); });
   var bar = h('div', { class: 'kc-bar' }, [h('div', { class:'kc-actions' }, o.readonly ? [bCopy] : [bFmt, bCmp, bCopy])]);
-  bar.appendChild(h('div', { class: 'kc-fonts', title: '仅调整 SNBT 字号，不改变全局界面比例或内容' }, [
-    kBtn('A−', function () { changeFont(-1); }, { cls: 'sm', title: '缩小 SNBT 字号' }), fontLabel,
-    kBtn('A+', function () { changeFont(1); }, { cls: 'sm', title: '放大 SNBT 字号' })
+  bar.appendChild(h('div', { class: 'kc-fonts', title: I18n.t("cadeditor.ui.code.e4dcf1a077") }, [
+    kBtn('A−', function () { changeFont(-1); }, { cls: 'sm', title: I18n.t("cadeditor.ui.code.d7b1cbb664") }), fontLabel,
+    kBtn('A+', function () { changeFont(1); }, { cls: 'sm', title: I18n.t("cadeditor.ui.code.7283e9f1c1") })
   ]));
   ta.addEventListener('input', function () {
     text = ta.value;

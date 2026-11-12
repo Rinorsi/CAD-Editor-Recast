@@ -8,7 +8,7 @@ const H = require('./lib/ui-harness.cjs');
 const source = fs.readFileSync(path.join(__dirname, '../common/src/main/java/dev/rinorsi/editor/client/EditorPageController.java'), 'utf8');
 function literals(text) { return [...text.matchAll(/"(?:\\.|[^"\\])*"/g)].map(m => JSON.parse(m[0])).join(''); }
 const save = literals(source.split('evaluateToJson(')[1].split(', "editor-save-state"')[0]);
-const restoreParts = source.split('document.scripts().evaluate(')[1].split(', "editor-restore-state"')[0].split('+ json +');
+const restoreParts = source.split('String result = document.scripts().evaluateToJson(')[1].split(', "editor-restore-state"')[0].split('+ json +');
 assert.equal(restoreParts.length, 2, 'read the production restore expression');
 function restore(h, state) { vm.runInContext(literals(restoreParts[0]) + JSON.stringify(state) + literals(restoreParts[1]), h.c); }
 function setup() {

@@ -20,7 +20,7 @@ function nbtSpecialRaw(v, type) {
 }
 function nbtNumberValue(v) { return typeof v === 'number' ? v : nbtMeta(v) && nbtMeta(v).scalar ? nbtSpecialValue(nbtMeta(v).scalar) : Number(v); }
 function nbtSpecialScalar(v, type) {
-  if (type !== 'f' && type !== 'd') throw new Error('NaN / Infinity 只能写入游戏确认允许的 Float 或 Double 字段');
+  if (type !== 'f' && type !== 'd') throw new Error(I18n.t("cadeditor.ui.nbt.4f1cd92492"));
   return nbtScalar({ k: 'num', t: type, raw: nbtSpecialRaw(v, type), v: v });
 }
 
@@ -28,7 +28,7 @@ function nbtSpecialScalar(v, type) {
 function nbtParse(text) {
   var i = 0, n = text.length, BSL = String.fromCharCode(92);
   var space = /\s*/g, word = /[A-Za-z0-9_.+\-]+/g;
-  function fail(m) { var error = new Error('SNBT 第 ' + (i + 1) + ' 个字符：' + m); error.pos = i; throw error; }
+  function fail(m) { var error = new Error(I18n.t("cadeditor.ui.nbt.10e79e00d8", (i + 1), (m))); error.pos = i; throw error; }
   function ws() { space.lastIndex = i; space.exec(text); i = space.lastIndex; }
   function quoted() {
     var q = text.charAt(i++), parts = [], start = i, scan = q === '"' ? /["\\]/g : /['\\]/g, hit;
@@ -41,11 +41,11 @@ function nbtParse(text) {
       start = i; scan.lastIndex = i;
     }
     i = n;
-    fail('字符串没有结束');
+    fail(I18n.t("cadeditor.ui.nbt.ea938416a6"));
   }
   function bare() {
     word.lastIndex = i; var hit = word.exec(text);
-    if (!hit || hit.index !== i) fail('这里需要一个值');
+    if (!hit || hit.index !== i) fail(I18n.t("cadeditor.ui.nbt.177d0b922c"));
     i = word.lastIndex; return hit[0];
   }
   function classify(tok) {
@@ -77,13 +77,13 @@ function nbtParse(text) {
       ws();
       var c = text.charAt(i), key = (c === '"' || c === "'") ? quoted() : bare();
       ws();
-      if (text.charAt(i++) !== ':') fail('键后面需要冒号');
+      if (text.charAt(i++) !== ':') fail(I18n.t("cadeditor.ui.core.f0f1d361b7"));
       if (!Object.prototype.hasOwnProperty.call(map, key)) keys.push(key);
       map[key] = value();
       ws();
       var d = text.charAt(i++);
       if (d === '}') break;
-      if (d !== ',') fail('需要逗号或右花括号');
+      if (d !== ',') fail(I18n.t("cadeditor.ui.core.b1203f8b20"));
       ws();
       if (text.charAt(i) === '}') { i++; break; }
     }
@@ -101,7 +101,7 @@ function nbtParse(text) {
       ws();
       var d = text.charAt(i++);
       if (d === ']') break;
-      if (d !== ',') fail('需要逗号或右方括号');
+      if (d !== ',') fail(I18n.t("cadeditor.ui.core.900a179806"));
       ws();
       if (text.charAt(i) === ']') { i++; break; }
     }
@@ -109,7 +109,7 @@ function nbtParse(text) {
   }
   var node = value();
   ws();
-  if (i < n) fail('末尾有多余内容');
+  if (i < n) fail(I18n.t("cadeditor.ui.core.8406ba1e44"));
   return node;
 }
 
@@ -197,7 +197,7 @@ function nbtTypeOnly(r) { return { k: 'num', t: r.t, raw: '', v: NaN }; }
 function nbtNum(v, ref) {
   if (!isFinite(v)) {
     var specialType = ref && (ref.t === 'f' || ref.t === 'd' || ref.t === 'd0') ? (ref.t === 'f' ? 'f' : 'd') : null;
-    if (!specialType) throw new Error('NaN / Infinity 必须带 f 或 d 后缀');
+    if (!specialType) throw new Error(I18n.t("cadeditor.ui.nbt.2c32636742"));
     return nbtSpecialRaw(v, specialType);
   }
   if (ref && ref.k === 'num') {
@@ -407,13 +407,13 @@ var Valid = {
     if (text === null) return;
     var st = this.state[cid];
     if (st && st.text === text) return;
-    if (text.length > 7000) { this.state[cid] = { text: text, note: '内容较大，应用时由游戏校验' }; this.fire(); return; }
+    if (text.length > 7000) { this.state[cid] = { text: text, note: I18n.t("cadeditor.ui.core.c2b57cab70") }; this.fire(); return; }
     var id = 'v' + (++this.seq) + '-' + Date.now();
     this.waiting[id] = { cid: cid, text: text };
     this.state[cid] = { text: text, pending: true };
     this.fire();
     var sent = false; try { sent = oriel.send('validate_component', { requestId: id, component: cid, snbt: text }); } catch (e) {}
-    if (!sent) { delete this.waiting[id]; this.state[cid] = { text: text, note: '游戏暂时没有接受校验请求，应用时再校验' }; this.fire(); }
+    if (!sent) { delete this.waiting[id]; this.state[cid] = { text: text, note: I18n.t("cadeditor.ui.nbt.282c0da446") }; this.fire(); }
   },
   /* ---- 逐字段校验（component_validate）：被改过的普通组件，把当前值交给游戏的真实 Codec，错误带字段路径（$.nutrition）。
      自由 NBT 组件仍走上面的 validate_component（SNBT）。结果和当前值对不上（又改了）就不算数。 ---- */
@@ -438,7 +438,7 @@ var Valid = {
     if (nbtNeedsTypedValidation(d, cid)) { delete this.hv[cid]; this.run(cid, d); return; }
     var key; try { key = JSON.stringify(d.comps[cid]); } catch (e) { return; }
     var st = this.hv[cid]; if (st && st.key === key) return;
-    if (key.length > 6000) { this.hv[cid] = { key: key, note: '内容较大，应用时由游戏校验' }; this.fire(); return; }
+    if (key.length > 6000) { this.hv[cid] = { key: key, note: I18n.t("cadeditor.ui.core.c2b57cab70") }; this.fire(); return; }
     var id = 'cv' + (++this.hvSeq) + '-' + Date.now();
     this.hvWait[id] = { cid: cid, key: key };
     this.hv[cid] = { key: key, pending: true };
@@ -450,14 +450,14 @@ var Valid = {
     var w = this.hvWait[res.requestId]; if (!w) return;
     delete this.hvWait[res.requestId];
     if (res.ok) this.hv[w.cid] = { key: w.key, ok: true };
-    else this.hv[w.cid] = { key: w.key, ok: false, errors: (res.errors && res.errors.length) ? res.errors : [{ path: '$', message: String(res.error || '游戏拒绝了这个值') }] };
+    else this.hv[w.cid] = { key: w.key, ok: false, errors: (res.errors && res.errors.length) ? res.errors : [{ path: '$', message: String(res.error || I18n.t("cadeditor.ui.nbt.d3fce53154")) }] };
     this.fire();
   },
   receive: function (res) {
     if (!res || !res.requestId) return;
     var w = this.waiting[res.requestId]; if (!w) return;
     delete this.waiting[res.requestId];
-    this.state[w.cid] = res.ok ? { text: w.text, ok: true } : { text: w.text, ok: false, error: String(res.error || '游戏拒绝了这个值') };
+    this.state[w.cid] = res.ok ? { text: w.text, ok: true } : { text: w.text, ok: false, error: String(res.error || I18n.t("cadeditor.ui.nbt.d3fce53154")) };
     this.fire();
   },
   /* 给 validateDoc 用：校验失败且对应当前内容的，按错误处理 */
@@ -470,7 +470,7 @@ var Valid = {
       var c = typeof CIDX !== 'undefined' ? CIDX[cid] : null;
       st.errors.forEach(function (e) {
         var path = String(e.path || '$'); if (path.charAt(0) === '$') path = path.substring(1); if (path.charAt(0) === '.') path = path.substring(1);
-        out.push({ level: 'error', cid: cid, path: path, msg: (c ? c.name : cid) + (path ? ' · ' + path : '') + '：' + String(e.message || '游戏拒绝了这个值') });
+        out.push({ level: 'error', cid: cid, path: path, msg: (c ? c.name : cid) + (path ? ' · ' + path : '') + '：' + String(e.message || I18n.t("cadeditor.ui.nbt.d3fce53154")) });
       });
     });
     Object.keys(this.state).forEach(function (cid) {
@@ -478,7 +478,7 @@ var Valid = {
       var cur = null; try { cur = me.textOf(d, cid); } catch (e) {}
       if (cur !== st.text) return;
       var c = typeof CIDX !== 'undefined' ? CIDX[cid] : null;
-      out.push({ level: 'error', cid: cid, path: '', msg: (c ? c.name : cid) + '：游戏校验未通过 — ' + st.error });
+      out.push({ level: 'error', cid: cid, path: '', msg: I18n.t("cadeditor.ui.nbt.35c4e8e3ce", (c ? c.name : cid), (st.error)) });
     });
   },
   /* 数据窗口里的小状态行 */
@@ -488,8 +488,8 @@ var Valid = {
       clear(el);
       var st = Valid.state[cid];
       if (!Valid.host() || !st) { el.className = 'vd-badge none'; return; }
-      if (st.pending) { el.className = 'vd-badge wait'; el.appendChild(uiIcon('clock', 12)); el.appendChild(h('span', { text: '正在让游戏校验…' })); return; }
-      if (st.ok) { el.className = 'vd-badge ok'; el.appendChild(uiIcon('check', 12)); el.appendChild(h('span', { text: '游戏校验通过' })); return; }
+      if (st.pending) { el.className = 'vd-badge wait'; el.appendChild(uiIcon('clock', 12)); el.appendChild(h('span', { text: I18n.t("cadeditor.ui.nbt.2a4c6ddc49") })); return; }
+      if (st.ok) { el.className = 'vd-badge ok'; el.appendChild(uiIcon('check', 12)); el.appendChild(h('span', { text: I18n.t("cadeditor.ui.nbt.e8a930dd86") })); return; }
       if (st.ok === false) { el.className = 'vd-badge bad'; el.appendChild(uiIcon('warning', 12)); el.appendChild(h('span', { text: st.error })); return; }
       el.className = 'vd-badge none';
       if (st.note) { el.className = 'vd-badge wait'; el.appendChild(h('span', { text: st.note })); }

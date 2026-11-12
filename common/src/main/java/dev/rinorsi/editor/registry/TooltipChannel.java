@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.registry;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import dev.rinorsi.editor.platform.Platform;
 import dev.rinorsi.editor.platform.ClientPlatform;
 import com.google.gson.*;
@@ -32,16 +34,16 @@ public final class TooltipChannel {
             JsonObject request=value.getAsJsonObject();id=text(request,"requestId",null);String view=text(request,"view","tooltip");
             if(id==null||id.isEmpty()||id.length()>128||view.isEmpty()||view.length()>128)throw new IllegalArgumentException("BAD_REQUEST");
             for(String field:List.of("advanced","cancel"))if(request.has(field)&&(!request.get(field).isJsonPrimitive()||!request.getAsJsonPrimitive(field).isBoolean()))throw new IllegalArgumentException("BAD_REQUEST");
-            if(!state.views.containsKey(view)&&state.views.size()>=8){error(driver,id,"BUSY","最多使用8个固定tooltip view");return;}
+            if(!state.views.containsKey(view)&&state.views.size()>=8){error(driver,id,"BUSY",EditorI18n.tr("cadeditor.message.tooltipchannel.9386931815"));return;}
             long second=System.nanoTime()/1_000_000_000L;if(state.second!=second){state.second=second;state.requests=0;}
             // A newer request cancels the old view even if the new request is rejected by rate limits.
             state.views.put(view,null);
             if(request.has("cancel")&&request.get("cancel").getAsBoolean()){state.views.put(view,new Pending(id,null,false,mc.level,true));return;}
-            if(++state.requests>20){error(driver,id,"BUSY","每秒最多20次tooltip请求，请稍后重试");return;}
-            if(mc.level==null||mc.player==null){error(driver,id,"UNAVAILABLE","当前未进入世界");return;}
+            if(++state.requests>20){error(driver,id,"BUSY",EditorI18n.tr("cadeditor.message.tooltipchannel.cdfcd351d3"));return;}
+            if(mc.level==null||mc.player==null){error(driver,id,"UNAVAILABLE",EditorI18n.tr("cadeditor.message.worldeditorclient.b889ddd197"));return;}
             if(!request.has("stack")||!request.get("stack").isJsonObject())throw new IllegalArgumentException("BAD_REQUEST");
             state.views.put(view,new Pending(id,request.getAsJsonObject("stack").deepCopy(),request.has("advanced")&&request.get("advanced").getAsBoolean(),mc.level,false));
-        }catch(RuntimeException invalid){error(driver,id,"BAD_REQUEST","tooltip请求字段或大小无效");}
+        }catch(RuntimeException invalid){error(driver,id,"BAD_REQUEST",EditorI18n.tr("cadeditor.message.tooltipchannel.e560c94d49"));}
     }
     private static String text(JsonObject request,String name,String fallback){
         if(!request.has(name))return fallback;var value=request.get(name);if(!value.isJsonPrimitive()||!value.getAsJsonPrimitive().isString())throw new IllegalArgumentException("BAD_REQUEST");return value.getAsString();
@@ -56,7 +58,7 @@ public final class TooltipChannel {
                 Object document=state.document;delivered++;
                 // Retain identity while vanilla runs; mod callbacks may enqueue a newer request.
                 if(pending.cancel()){state.views.put(view.getKey(),null);JsonObject result=base(pending.id());result.addProperty("ok",true);result.addProperty("cancelled",true);driver.patch("tooltip.result",result);continue;}
-                if(mc.level==null||mc.player==null||mc.level!=pending.level()){state.views.put(view.getKey(),null);error(driver,pending.id(),"UNAVAILABLE","世界已退出或切换，请重新请求");continue;}
+                if(mc.level==null||mc.player==null||mc.level!=pending.level()){state.views.put(view.getKey(),null);error(driver,pending.id(),"UNAVAILABLE",EditorI18n.tr("cadeditor.message.tooltipchannel.73afbaa667"));continue;}
                 net.minecraft.world.item.ItemStack stack;
                 try{stack=StackCodec.decode(pending.stack(),mc.level.registryAccess());}
                 catch(RuntimeException invalid){if(STATES.get(driver)==state&&driver.document()==document&&state.views.get(view.getKey())==pending){state.views.put(view.getKey(),null);error(driver,pending.id(),"INVALID_STACK",reason(invalid));}continue;}

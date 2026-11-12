@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.registry;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.mojang.serialization.Codec;
@@ -129,15 +131,15 @@ public final class SpawnerData {
         // BaseSpawner has no whole-object Codec: validate the fields its actual save method writes.
         CompoundTag defaults = classicDefaults(lookup);
         for (String key : defaults.keySet()) if (defaults.get(key) instanceof NumericTag && tag.contains(key)) {
-            if (!(tag.get(key) instanceof NumericTag number)) throw new IllegalArgumentException(key + " 必须是整数");
+            if (!(tag.get(key) instanceof NumericTag number)) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.spawnerdata.d16633fc89", (key)));
             double value = number.doubleValue();
             int min = key.equals("Delay") ? -1 : 0;
             if (!Double.isFinite(value) || value != Math.rint(value) || value < min || value > Short.MAX_VALUE)
-                throw new IllegalArgumentException(key + " 超出刷怪笼持久化整数范围");
+                throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.spawnerdata.e70a0aa0ac", (key)));
         }
         int min = tag.getIntOr("MinSpawnDelay", defaults.getIntOr("MinSpawnDelay", 0));
         int max = tag.getIntOr("MaxSpawnDelay", defaults.getIntOr("MaxSpawnDelay", 0));
-        if (max < min) throw new IllegalArgumentException("MaxSpawnDelay 必须不小于 MinSpawnDelay");
+        if (max < min) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.spawnerdata.3eae4d653b"));
     }
     public static void validateTrial(CompoundTag tag, HolderLookup.Provider lookup) {
         var ops = lookup.createSerializationContext(NbtOps.INSTANCE);
@@ -155,12 +157,12 @@ public final class SpawnerData {
         if (tag instanceof CompoundTag data && data.get("entity") instanceof CompoundTag entity) validateEntityId(entity, 0);
     }
     private static void validateEntityId(CompoundTag entity, int depth) {
-        if (depth > 16) throw new IllegalArgumentException("刷怪实体乘客嵌套超过16层");
+        if (depth > 16) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.spawnerdata.3286c388d0"));
         if (entity.contains("id")) {
-            String value = entity.getString("id").orElseThrow(() -> new IllegalArgumentException("刷怪实体 id 必须是字符串"));
+            String value = entity.getString("id").orElseThrow(() -> new IllegalArgumentException(EditorI18n.tr("cadeditor.message.spawnerdata.acaa8b80a5")));
             var id = net.minecraft.resources.Identifier.tryParse(value);
             if (id == null || !net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.containsKey(id))
-                throw new IllegalArgumentException("未知刷怪实体 id: " + value);
+                throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.spawnerdata.9469397c4a", (value)));
         }
         if (entity.get("Passengers") instanceof net.minecraft.nbt.ListTag passengers)
             for (Tag passenger : passengers) if (passenger instanceof CompoundTag child) validateEntityId(child, depth + 1);

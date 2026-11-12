@@ -44,14 +44,14 @@ function combo(o) {
   function paint() {
     clear(btn);
     var e = null; if (cur !== '') opts().forEach(function (x) { if (String(x.v) === cur) e = x; });
-    btn.appendChild(h('span', { text: e ? e.label : (cur || o.placeholder || '请选择') }));
+    btn.appendChild(h('span', { text: e ? e.label : (cur || o.placeholder || I18n.t("cadeditor.ui.cards2.da590a8fe3")) }));
     btn.appendChild(uiIcon('down', 10));
   }
   activate(btn, function () {
     pickFrom(btn, opts(), function (x) {
       if (!o.reset) { cur = String(x.v); paint(); }
       o.onPick(x.v, x.manual ? null : x);
-    }, { width: 260, placeholder: o.placeholder, manual: o.free ? { label: '列表里没有的值也可以', parse: function (t) { return t; } } : null });
+    }, { width: 260, placeholder: o.placeholder, manual: o.free ? { label: I18n.t("cadeditor.ui.forms.42f10f553c"), parse: function (t) { return t; } } : null });
   });
   paint();
   return btn;
@@ -67,7 +67,7 @@ function registryOptions(reg) {
     : reg === 'data_component_type' ? EDATA.comps.map(function (c) { return { v: 'minecraft:' + c.id, label: c.name, sub: c.id }; }) : null;
   return function () { return Reg.options(reg) || (Reg.preview() ? off : null) || []; };
 }
-var REG_HINT = { sound_event: '音效 ID，如 minecraft:entity.generic.eat', block: '方块 ID，如 minecraft:stone', entity_type: '实体 ID', damage_type: '伤害类型 ID', instrument: '乐器 ID', jukebox_song: '唱片歌曲 ID', trim_material: '纹饰材料 ID', trim_pattern: '纹饰图案 ID', banner_pattern: '旗帜图案 ID', recipe: '配方 ID', potion: '药水 ID', loot_table: '战利品表 ID', map_decoration_type: '地图标记类型' };
+var REG_HINT = { sound_event: I18n.t("cadeditor.ui.forms.1e228e2240"), block: I18n.t("cadeditor.ui.forms.217796c2d5"), entity_type: I18n.t("cadeditor.ui.forms.9281431669"), damage_type: I18n.t("cadeditor.ui.forms.2499932092"), instrument: I18n.t("cadeditor.ui.forms.3a192bdba5"), jukebox_song: I18n.t("cadeditor.ui.forms.4bd0959435"), trim_material: I18n.t("cadeditor.ui.forms.a0f6dd0371"), trim_pattern: I18n.t("cadeditor.ui.forms.26aea02e6d"), banner_pattern: I18n.t("cadeditor.ui.forms.db237a4fa6"), recipe: I18n.t("cadeditor.ui.forms.97576ef72f"), potion: I18n.t("cadeditor.ui.forms.a4264aef89"), loot_table: I18n.t("cadeditor.ui.forms.3752496c68"), map_decoration_type: I18n.t("cadeditor.ui.forms.fb22827993") };
 
 /* ---------- 默认值 ---------- */
 function formDefault(f) { return typeof Reg !== 'undefined' ? Reg.fieldDefault(f) : undefined; }
@@ -88,16 +88,16 @@ function defaultFor(sc) {
 }
 function altLabel(a) {
   switch (a.t) {
-    case 'str': return a.tag ? '标签 #' : (a.reg ? 'ID' : '文本');
-    case 'int': case 'num': return '数值'; case 'bool': return '开关'; case 'arr': return '列表'; case 'text': return '文本';
-    default: return '对象';
+    case 'str': return a.tag ? I18n.t("cadeditor.ui.forms.1ae46fb970") : (a.reg ? 'ID' : I18n.t("cadeditor.ui.code.dd81861811"));
+    case 'int': case 'num': return I18n.t("cadeditor.ui.forms.c5500a58e0"); case 'bool': return I18n.t("cadeditor.ui.cards4.92d9be0a0e"); case 'arr': return I18n.t("cadeditor.ui.forms.aedd6814ff"); case 'text': return I18n.t("cadeditor.ui.code.dd81861811");
+    default: return I18n.t("cadeditor.ui.forms.53f92c0639");
   }
 }
 function summarize(sc, v) {
   if (v === null || v === undefined) return '';
   if (typeof v === 'string') return v;
   if (typeof v === 'number' || typeof v === 'boolean') return String(v);
-  if (Array.isArray(v)) return v.length + ' 项';
+  if (Array.isArray(v)) return I18n.t("cadeditor.ui.cards2.a9ab3a5f38", (v.length));
   var ks = Object.keys(v).slice(0, 3).map(function (k) { var x = v[k]; return k + '=' + (isObj(x) || Array.isArray(x) ? '…' : String(x)); });
   return ks.join(' ');
 }
@@ -113,7 +113,7 @@ function wBool(sc, val, commit) {
 function wNum(sc, val, commit, ctx) {
   var isInt = sc.t === 'int';
   var step = ctx && ctx.step ? ctx.step : (isInt ? 1 : 0.1);
-  var input = h('input', { class: 'k-input ed-in ed-numin', type: 'text', value: val === undefined || val === null ? '' : isFinite(nbtNumberValue(val)) ? String(nbtNumberValue(val)) : numLabel(val), placeholder: ctx && ctx.placeholder ? ctx.placeholder : '未设置' });
+  var input = h('input', { class: 'k-input ed-in ed-numin', type: 'text', value: val === undefined || val === null ? '' : isFinite(nbtNumberValue(val)) ? String(nbtNumberValue(val)) : numLabel(val), placeholder: ctx && ctx.placeholder ? ctx.placeholder : I18n.t("cadeditor.ui.common.unset") });
   var wrap = kStepper(input, { cls: 'ed-num', onStep: function (dir, e) { nudge(dir, e.shiftKey); } }), editing = false, pendingDefault = null;
   function clampv(v) { if (sc.min !== undefined && v < sc.min) v = sc.min; if (sc.max !== undefined && v > sc.max) v = sc.max; return v; }
   function allowed(v) { return isFinite(v) || !isInt && sc.live && (isNaN(v) && sc.allowNaN || v === Infinity && sc.allowPositiveInfinity || v === -Infinity && sc.allowNegativeInfinity); }
@@ -134,7 +134,7 @@ function wNum(sc, val, commit, ctx) {
     wrap.classList.toggle('bad', bad);
   }
   function nudge(dir, big) {
-    var n = parse(); if (n === undefined && (val === undefined || val === null)) { toast('请先输入数值', 'info'); return; }
+    var n = parse(); if (n === undefined && (val === undefined || val === null)) { toast(I18n.t("cadeditor.ui.forms.e376cba1c3"), 'info'); return; }
     if (n === undefined || n === null || !isFinite(n)) n = val === undefined ? 0 : nbtNumberValue(val);
     if (!isFinite(n)) n = 0;
     var d = step * (big ? 10 : 1) * dir;
@@ -149,7 +149,7 @@ function wNum(sc, val, commit, ctx) {
   input.addEventListener('change', function () { var n = parse(); if (n === undefined) { if (ctx && ctx.onEmpty) ctx.onEmpty(); } else if (n !== null && allowed(n)) { var c = isFinite(n) ? clampv(isInt ? Math.round(n) : n) : n; if (c !== n) { input.value = fmtNum(c); mark(c); val = c; commit(packed(c), { key: 'num' }); } } });
   onKey(input, { ArrowUp: function (e) { nudge(1, e.shiftKey); }, ArrowDown: function (e) { nudge(-1, e.shiftKey); } });
   wrap.refreshDefault = function (v, placeholder) {
-    input.setAttribute('placeholder', placeholder || '未设置');
+    input.setAttribute('placeholder', placeholder || I18n.t("cadeditor.ui.common.unset"));
     if (editing) return;
     if (document.activeElement === input) { pendingDefault = {value:v,placeholder:placeholder}; return; }
     pendingDefault = null;
@@ -181,15 +181,15 @@ function wStr(sc, val, commit, ctx) {
     /* 候选以游戏里的枚举为准（liveEnumOptions），没到 / 离线才用内置；多于 4 个的可以直接输入（不在列表里的会在问题列表里提示） */
     var opts = liveEnumOptions(CURCID, ctx && ctx.path) || Reg.schemaEnumOptions(sc);
     if (opts.length > 0 && opts.length <= 4) return wSeg(opts, val, function (v) { commit(v, {}); });
-    return combo({ value: val === undefined ? '' : val, options: opts, free: true, placeholder: '选择，或直接输入…', onPick: function (v) { if (v !== '') commit(v, {}); } });
+    return combo({ value: val === undefined ? '' : val, options: opts, free: true, placeholder: I18n.t("cadeditor.ui.forms.5c93380868"), onPick: function (v) { if (v !== '') commit(v, {}); } });
   }
   if (typeof dyeFieldFor === 'function' && dyeFieldFor(CURCID, ctx && ctx.path)) return wDye(val, commit);
   var ropts = sc.reg ? registryOptions(sc.reg) : null;
-  var ph = sc.tag ? '#标签，如 #minecraft:logs' : (sc.reg && REG_HINT[sc.reg]) || (sc.reg ? sc.reg + ' ID' : '');
+  var ph = sc.tag ? I18n.t("cadeditor.ui.forms.99ec841955") : (sc.reg && REG_HINT[sc.reg]) || (sc.reg ? sc.reg + ' ID' : '');
   if (sc.reg && !Reg.preview()) {
     /* 注册表字段：统一的“名称 · ID  [选择…]”，音效字段用带试听的音效选择窗；手输 ID 在选择窗的搜索框里 */
     if (sc.reg === "sound_event") return kSoundField(val === undefined ? "" : val, function (x) { commit(x, {}); }).el;
-    return kRegSelect({ reg: sc.reg, tag: !!sc.tag, value: val === undefined ? "" : String(val), empty: "（未选择）", onChange: function (x) { commit(x, {}); } }).el;
+    return kRegSelect({ reg: sc.reg, tag: !!sc.tag, value: val === undefined ? "" : String(val), empty: I18n.t("cadeditor.ui.banner.3c5045c728"), onChange: function (x) { commit(x, {}); } }).el;
   }
   if (ropts) return combo({ value: val === undefined ? "" : val, options: ropts, free: true, placeholder: ph, onPick: function (v) { commit(v, {}); } });
   var input = h('input', { class: 'ore-field ed-in', type: 'text', value: val === undefined ? '' : val, placeholder: ph || (ctx && ctx.placeholder) || '', spellcheck: 'false' });
@@ -198,7 +198,7 @@ function wStr(sc, val, commit, ctx) {
 }
 
 /* ---------- 文本组件 ---------- */
-var MC_COLORS = [['black', '000000', '黑色'], ['dark_blue', '0000AA', '深蓝'], ['dark_green', '00AA00', '深绿'], ['dark_aqua', '00AAAA', '深青'], ['dark_red', 'AA0000', '深红'], ['dark_purple', 'AA00AA', '深紫'], ['gold', 'FFAA00', '金色'], ['gray', 'AAAAAA', '灰色'], ['dark_gray', '555555', '深灰'], ['blue', '5555FF', '蓝色'], ['green', '55FF55', '绿色'], ['aqua', '55FFFF', '青色'], ['red', 'FF5555', '红色'], ['light_purple', 'FF55FF', '粉紫'], ['yellow', 'FFFF55', '黄色'], ['white', 'FFFFFF', '白色']];
+var MC_COLORS = [['black', '000000', I18n.t("cadeditor.ui.forms.ed7d2c5418")], ['dark_blue', '0000AA', I18n.t("cadeditor.ui.forms.36c43d3207")], ['dark_green', '00AA00', I18n.t("cadeditor.ui.forms.2f01baf38c")], ['dark_aqua', '00AAAA', I18n.t("cadeditor.ui.forms.90784542df")], ['dark_red', 'AA0000', I18n.t("cadeditor.ui.forms.7b60eea357")], ['dark_purple', 'AA00AA', I18n.t("cadeditor.ui.forms.f48bebbe05")], ['gold', 'FFAA00', I18n.t("cadeditor.ui.forms.45cb69888e")], ['gray', 'AAAAAA', I18n.t("cadeditor.ui.forms.051e67d913")], ['dark_gray', '555555', I18n.t("cadeditor.ui.forms.79551187b8")], ['blue', '5555FF', I18n.t("cadeditor.ui.forms.67035e6b7f")], ['green', '55FF55', I18n.t("cadeditor.ui.forms.30c83dc25b")], ['aqua', '55FFFF', I18n.t("cadeditor.ui.forms.d76f2cfec9")], ['red', 'FF5555', I18n.t("cadeditor.ui.forms.789f61dbfc")], ['light_purple', 'FF55FF', I18n.t("cadeditor.ui.forms.442a6a34d2")], ['yellow', 'FFFF55', I18n.t("cadeditor.ui.forms.d451c07d73")], ['white', 'FFFFFF', I18n.t("cadeditor.ui.forms.f56e7eff58")]];
 var MC_HEX = {}; MC_COLORS.forEach(function (c) { MC_HEX[c[0]] = '#' + c[1]; });
 /* 文本颜色：以游戏里的 enum:text_color（ChatFormatting 的颜色）为准，带 rgb；仅浏览器样例预览使用上面内置的 16 色。
    中文名沿用内置表（按 id 对），游戏里多出来的颜色用它自己的名字 */
@@ -238,7 +238,7 @@ function tcHex(c) { if (!c) return null; if (!MC_HEX[c] && /^[a-z_]+$/.test(c)) 
 function tcPreview(el, v, fallbackColor) {
   clear(el);
   var o = tcSimple(v);
-  if (!o) { el.appendChild(h('span', { class: 'tcp', text: '（复杂文本）' })); return; }
+  if (!o) { el.appendChild(h('span', { class: 'tcp', text: I18n.t("cadeditor.ui.forms.a8b19fec0e") })); return; }
   var s = h('span', { class: 'tcp' + (o.bold ? ' b' : '') + (o.italic ? ' i' : '') + (o.underlined ? ' u' : '') + (o.strikethrough ? ' s' : ''), text: o.obfuscated ? o.text.replace(/./g, '▒') : (o.text || ' ') });
   var hex = tcHex(o.color) || fallbackColor;
   if (hex) s.setAttribute('style', 'color:' + hex);
@@ -252,14 +252,14 @@ function wText(sc, val, commit, ctx) {
     ta.value = toSnbt(val, null, true);
     var err = h('div', { class: 'ed-err' });
     ta.addEventListener('change', function () {
-      try { var p = parseSnbtUser(ta.value); err.textContent = ''; commit(p, {}); } catch (e) { err.textContent = '解析失败：' + e.message; }
+      try { var p = parseSnbtUser(ta.value); err.textContent = ''; commit(p, {}); } catch (e) { err.textContent = I18n.t("cadeditor.ui.forms.bb697960a0", (e.message)); }
     });
-    wrap.appendChild(kHint('这是带 translate / extra / 点击事件等的复杂文本，请直接编辑 SNBT。', 'hint'));
+    wrap.appendChild(kHint(I18n.t("cadeditor.ui.forms.ced6d372cf"), 'hint'));
     wrap.appendChild(ta); wrap.appendChild(err);
     return wrap;
   }
   var cur = simple;
-  var input = h('input', { class: 'ore-field ed-in', type: 'text', value: cur.text, placeholder: ctx && ctx.placeholder || '输入文字', spellcheck: 'false' });
+  var input = h('input', { class: 'ore-field ed-in', type: 'text', value: cur.text, placeholder: ctx && ctx.placeholder || I18n.t("cadeditor.ui.forms.7159815dd3"), spellcheck: 'false' });
   var prev = h('div', { class: 'ed-tcprev' });
   var rowC = h('div', { class: 'ed-sw' });
   var colorSwatches = h('div', { class: 'ed-sw' });
@@ -271,7 +271,7 @@ function wText(sc, val, commit, ctx) {
   input.addEventListener('input', function () { cur.text = input.value; emit('tc-text'); });
   function paintSw(keepInput) {
     clear(colorSwatches);
-    var none = h('div', { class: 'swatch none' + (!cur.color ? ' on' : ''), title: '默认颜色' }, [h('i', { text: '⁄' })]);
+    var none = h('div', { class: 'swatch none' + (!cur.color ? ' on' : ''), title: I18n.t("cadeditor.ui.forms.af76608af8") }, [h('i', { text: '⁄' })]);
     activate(none, function () { delete cur.color; paintSw(); emit('tc-color'); });
     colorSwatches.appendChild(none);
     mcColors().forEach(function (c) {
@@ -283,13 +283,13 @@ function wText(sc, val, commit, ctx) {
   }
   function paintStyle() {
     clear(rowS);
-    [['bold', 'B', '粗体', 'b'], ['underlined', 'U', '下划线', 'u'], ['strikethrough', 'S', '删除线', 's'], ['obfuscated', '?', '乱码', 'k']].forEach(function (d) {
+    [['bold', 'B', I18n.t("cadeditor.ui.forms.f6da93ed21"), 'b'], ['underlined', 'U', I18n.t("cadeditor.ui.forms.d3b4a22b47"), 'u'], ['strikethrough', 'S', I18n.t("cadeditor.ui.forms.5b050892a8"), 's'], ['obfuscated', '?', I18n.t("cadeditor.ui.forms.1d33f4ee76"), 'k']].forEach(function (d) {
       var b = h('div', { class: 'ed-sty ' + d[3] + (cur[d[0]] ? ' on' : ''), title: d[2], text: d[1] });
       activate(b, function () { if (cur[d[0]]) delete cur[d[0]]; else cur[d[0]] = true; paintStyle(); emit('tc-style'); });
       rowS.appendChild(b);
     });
-    var it = cur.italic === undefined ? '默认' : (cur.italic ? '斜体' : '非斜体');
-    var ib = h('div', { class: 'ed-sty i' + (cur.italic !== undefined ? ' on' : ''), title: '斜体：默认 → 开 → 关（自定义名称默认斜体）', text: 'I ' + it });
+    var it = cur.italic === undefined ? I18n.t("cadeditor.ui.common.default") : (cur.italic ? I18n.t("cadeditor.ui.forms.217901c51a") : I18n.t("cadeditor.ui.forms.87b4ae588d"));
+    var ib = h('div', { class: 'ed-sty i' + (cur.italic !== undefined ? ' on' : ''), title: I18n.t("cadeditor.ui.forms.7163111826"), text: 'I ' + it });
     activate(ib, function () { if (cur.italic === undefined) cur.italic = true; else if (cur.italic === true) cur.italic = false; else delete cur.italic; paintStyle(); emit('tc-style'); });
     rowS.appendChild(ib);
   }
@@ -297,7 +297,7 @@ function wText(sc, val, commit, ctx) {
   watchColorOptions(mcColors, function () { paintSw(true); });
   if (ctx && ctx.compact) {
     var key = (ctx.openKey || 'tc'), panel = h('div', { class: 'ed-tcpanel' }, [rowC, rowS]);
-    var tg = h('div', { class: 'ed-mini wide', text: '样式', title: '颜色与粗体、斜体等' });
+    var tg = h('div', { class: 'ed-mini wide', text: I18n.t("cadeditor.ui.forms.c8ffbdf157"), title: I18n.t("cadeditor.ui.forms.509831fde3") });
     function sync() { panel.style.display = UIOpen[key] ? 'flex' : 'none'; tg.classList.toggle('act', !!UIOpen[key]); }
     activate(tg, function () { UIOpen[key] = !UIOpen[key]; sync(); });
     sync();
@@ -331,13 +331,13 @@ function wRaw(sc, val, commit) {
   var ta = h('textarea', { class: 'ore-field ed-raw', rows: '4', spellcheck: 'false' });
   ta.value = val === undefined ? '{}' : toSnbt(val, null, true);
   var err = h('div', { class: 'ed-err' });
-  ta.addEventListener('change', function () { try { var p = parseSnbtUser(ta.value); err.textContent = ''; ta.classList.remove('bad'); commit(p, {}); } catch (e) { err.textContent = '解析失败：' + e.message; ta.classList.add('bad'); } });
+  ta.addEventListener('change', function () { try { var p = parseSnbtUser(ta.value); err.textContent = ''; ta.classList.remove('bad'); commit(p, {}); } catch (e) { err.textContent = I18n.t("cadeditor.ui.forms.bb697960a0", (e.message)); ta.classList.add('bad'); } });
   var box = h('div', { class: 'ed-rawbox' }, [ta, err]);
-  if (sc.hint) box.insertBefore(kHint('结构较复杂（' + sc.hint + '），暂以 SNBT 编辑。', 'hint'), ta);
+  if (sc.hint) box.insertBefore(kHint(I18n.t("cadeditor.ui.forms.2ccdb53bfe", (sc.hint)), 'hint'), ta);
   return box;
 }
 
-function wUnit(sc) { return h('div', { class: 'ed-unit' }, [icon('check'), h('span', { text: sc.d || '存在即生效，无需设置参数' })]); }
+function wUnit(sc) { return h('div', { class: 'ed-unit' }, [icon('check'), h('span', { text: sc.d || I18n.t("cadeditor.ui.forms.399f1c9e75") })]); }
 
 function wUnion(sc, val, commit, ctx) {
   if (sc.a.length === 2 && sc.a[0].t === 'int' && sc.a[1].t === 'arr' && sc.a[1].min === 3) return wColor(sc, val, commit);
@@ -360,8 +360,8 @@ function wUnion(sc, val, commit, ctx) {
 function wDunion(sc, val, commit, ctx) {
   val = isObj(val) ? val : defaultFor(sc);
   var box = h('div', { class: 'ed-union' }), body = h('div', { class: 'ed-unionbody' });
-  function draw() { clear(body); if (!val[sc.disc]) { body.appendChild(kHint('先选择当前游戏的类型，或手动填写类型 ID；不会自动采用内置分支。')); return; } body.appendChild(renderNode(sc.br[val[sc.disc]] || { t: 'raw' }, val, function (v, o) { if (isObj(v)) v[sc.disc] = val[sc.disc]; val = v; commit(val, o); }, ctx)); }
-  var seg = combo({ options: function () { return Reg.variantOptions(sc); }, value: val[sc.disc] || '', free: true, placeholder: '选择或手动填写类型 ID', onPick: function (n) { var d = sc.br[n] ? defaultFor(sc.br[n]) : {}; if (!isObj(d)) d = {}; d[sc.disc] = n; val = d; commit(val, {}); draw(); } });
+  function draw() { clear(body); if (!val[sc.disc]) { body.appendChild(kHint(I18n.t("cadeditor.ui.forms.f5737396e9"))); return; } body.appendChild(renderNode(sc.br[val[sc.disc]] || { t: 'raw' }, val, function (v, o) { if (isObj(v)) v[sc.disc] = val[sc.disc]; val = v; commit(val, o); }, ctx)); }
+  var seg = combo({ options: function () { return Reg.variantOptions(sc); }, value: val[sc.disc] || '', free: true, placeholder: I18n.t("cadeditor.ui.forms.dacb491c33"), onPick: function (n) { var d = sc.br[n] ? defaultFor(sc.br[n]) : {}; if (!isObj(d)) d = {}; d[sc.disc] = n; val = d; commit(val, {}); draw(); } });
   box.appendChild(seg); box.appendChild(body); draw();
   return box;
 }
@@ -371,7 +371,7 @@ function fieldLabel(f, ov, quiet) {
   ov = ov || {};
   var full = f.d || f.k, short = ov.label || (f.d ? f.d.split(/[，；;：:（(]/)[0] : f.k) || full, name = short, tip = (ov.hint ? ov.hint + String.fromCharCode(10) : '') + f.k + (f.d && f.d !== f.k && !ov.hint ? String.fromCharCode(10) + f.d : '');
   return h('div', { class: 'fl', title: tip }, [
-    h('div', { class: 'fk' }, [name, f.r && !quiet ? h('b', { class: 'req', text: ' *', title: '必填' }) : null]),
+    h('div', { class: 'fk' }, [name, f.r && !quiet ? h('b', { class: 'req', text: ' *', title: I18n.t("cadeditor.ui.forms.11da9dc442") }) : null]),
   ]);
 }
 /* 组件专用表单的“排版说明书”：字段顺序、分段标题、中文名、提示、单位、步进。没有说明书的字段照通用方式显示 */
@@ -384,7 +384,7 @@ function compactField(f, ov, sc, cur, commit, ctx) {
   var box = h('div', { class: 'compact-field' });
   function redraw() { if (box.parentNode != null) box.parentNode.replaceChild(compactField(f, ov, sc, cur, commit, ctx), box); }
   function reset() { delete cur[f.k]; commit(cur, {}); redraw(); }
-  function resetBtn() { return f.r ? h('div', { class: 'compact-reset-space' }) : kBtn('', reset, { icon: 'refresh', cls: 'compact-reset' + (has ? '' : ' dim'), title: '恢复此项默认值' }); }
+  function resetBtn() { return f.r ? h('div', { class: 'compact-reset-space' }) : kBtn('', reset, { icon: 'refresh', cls: 'compact-reset' + (has ? '' : ' dim'), title: I18n.t("cadeditor.ui.forms.d3f3d2cb33") }); }
   if (sc.t === 'num' || sc.t === 'int') {
     var row = h('div', { class: 'compact-row' }, [fieldLabel(f, ov, true)]);
     var controls = h('div', { class: 'compact-controls' });
@@ -392,9 +392,9 @@ function compactField(f, ov, sc, cur, commit, ctx) {
     var numberChanged = function (v) { save(v, { key: path }); has = true; rst.classList.remove('dim'); };
     var fieldCid = CURCID;
     function placeholder() {
-      if (Reg.fieldDefaultReady(f)) return '未设置';
+      if (Reg.fieldDefaultReady(f)) return I18n.t("cadeditor.ui.common.unset");
       var status = Reg.formStatus(fieldCid);
-      return status.error ? '读取失败' : status.pending ? '读取中' : '未设置';
+      return status.error ? I18n.t("cadeditor.ui.forms.6aa27f14bf") : status.pending ? I18n.t("cadeditor.ui.common.loading") : I18n.t("cadeditor.ui.common.unset");
     }
     var number = special ? {el:wNum(sc, value, numberChanged, { step: ov.step || (sc.t === 'int' ? 1 : 0.1), key: path, placeholder: placeholder() })}
       : codecNumber(value, { min: sc.min, max: sc.max, step: ov.step || (sc.t === 'int' ? 1 : 0.1), preservePrecision: sc.t === 'num', noSlider: true, onChange: numberChanged, placeholder: placeholder });
@@ -417,14 +417,14 @@ function compactField(f, ov, sc, cur, commit, ctx) {
   }
   if (isHolderSet(sc)) {
     var reg = sc.a[0].reg, selected = has ? cur[f.k] : undefined;
-    var label = selected === undefined ? (ov.dtxt || '未设置') : (Array.isArray(selected) ? selected.length + ' 种伤害' : String(selected));
+    var label = selected === undefined ? (ov.dtxt || I18n.t("cadeditor.ui.common.unset")) : (Array.isArray(selected) ? I18n.t("cadeditor.ui.forms.fa4aa71989", (selected.length)) : String(selected));
     var ctl = h('div', { class: 'compact-set-controls' });
     var chosen = h('span', { class: 'compact-set-value', text: label, 'data-tip': label });
     ctl.appendChild(chosen);
-    ctl.appendChild(kBtn('选择…', function () {
-      openTagPicker({ title: '选择伤害类型或标签', tagsReg: reg, entryReg: reg, multi: true, selected: selected === undefined ? [] : (Array.isArray(selected) ? selected : [selected]).map(pickerId), onConfirm: function (ids) {
+    ctl.appendChild(kBtn(I18n.t("cadeditor.ui.forms.4aea6b5ff7"), function () {
+      openTagPicker({ title: I18n.t("cadeditor.ui.forms.d69422a812"), tagsReg: reg, entryReg: reg, multi: true, selected: selected === undefined ? [] : (Array.isArray(selected) ? selected : [selected]).map(pickerId), onConfirm: function (ids) {
         var tags = ids.filter(function (id) { return id.charAt(0) === '#'; });
-        if (tags.length && ids.length > 1) { toast('一个标签和多个伤害类型不能混用，请重新选择', 'warn'); return; }
+        if (tags.length && ids.length > 1) { toast(I18n.t("cadeditor.ui.forms.78388452c9"), 'warn'); return; }
         save(tags.length ? tags[0] : ids); redraw();
       } });
     }));
@@ -444,7 +444,7 @@ function wObj(sc, val, commit, ctx) {
       else out.push({ sec: e.sec });
     });
     var rest = sc.f.filter(function (x) { return !used[x.k]; });
-    if (rest.length && !spec.only) { out.push({ sec: "其他" }); rest.forEach(function (x) { out.push({ f: x }); }); }
+    if (rest.length && !spec.only) { out.push({ sec: I18n.t("cadeditor.ui.detail.d2909f1647") }); rest.forEach(function (x) { out.push({ f: x }); }); }
     return out;
   }
   function draw() {
@@ -469,20 +469,20 @@ function wObj(sc, val, commit, ctx) {
       if (fs2 && fs2.t === "bool") {
         var bon = has ? !!cur[f.k] : !!formDefault(f);
         var btg = kToggle(bon, function (v) { cur[f.k] = v; commit(cur, {}); draw(); }, "");
-        ctl.appendChild(h("div", { class: "ed-unset" }, has ? [] : [h("span", { class: "dv", text: formDefault(f) === undefined ? "未设置（默认值尚未读取）" : "默认 " + (formDefault(f) ? "开" : "关") })]));
+        ctl.appendChild(h("div", { class: "ed-unset" }, has ? [] : [h("span", { class: "dv", text: formDefault(f) === undefined ? I18n.t("cadeditor.ui.forms.1993e0a9d8") : I18n.t("cadeditor.ui.eschema.5564c10bef", (formDefault(f) ? I18n.t("cadeditor.ui.forms.39eae64cfc") : I18n.t("cadeditor.ui.forms.5d0ae622f6"))) })]));
         ctl.appendChild(h("div", { class: "ed-sw" }, [btg.el]));
         row.appendChild(ctl); box.appendChild(row); return;
       }
       var sw = null;
       if (!f.r) {
         sw = kToggle(has, function (on) {
-          if (on) { if (!Reg.fieldDefaultReady(f)) { toast('正在读取此字段的 Codec 默认值；可使用原始编辑手动输入。', 'warn'); draw(); return; } cur[f.k] = formDefault(f) !== undefined ? clone(formDefault(f)) : defaultFor(f.s); } else delete cur[f.k];
+          if (on) { if (!Reg.fieldDefaultReady(f)) { toast(I18n.t("cadeditor.ui.forms.b8cf4b1a45"), 'warn'); draw(); return; } cur[f.k] = formDefault(f) !== undefined ? clone(formDefault(f)) : defaultFor(f.s); } else delete cur[f.k];
           commit(cur, {}); draw();
         }, "");
         row.classList.add("opt");
       }
       if (!has && !f.r) {
-        var dtxt = ov.dtxt || (formDefault(f) !== undefined ? "默认 " + (Array.isArray(formDefault(f)) ? formDefault(f).length + " 项" : isObj(formDefault(f)) ? "一组预设" : String(formDefault(f)) + (ov.unit ? " " + ov.unit : "")) : "未设置");
+        var dtxt = ov.dtxt || (formDefault(f) !== undefined ? I18n.t("cadeditor.ui.eschema.5564c10bef", (Array.isArray(formDefault(f)) ? I18n.t("cadeditor.ui.cards2.a9ab3a5f38", (formDefault(f).length)) : isObj(formDefault(f)) ? I18n.t("cadeditor.ui.forms.e9b08c310d") : String(formDefault(f)) + (ov.unit ? " " + ov.unit : ""))) : I18n.t("cadeditor.ui.common.unset"));
         ctl.appendChild(h("div", { class: "ed-unset", title: formDefault(f) !== undefined && (isObj(formDefault(f)) || Array.isArray(formDefault(f))) ? toSnbt(formDefault(f), null, false) : "" }, [h("span", { class: "dv", text: dtxt })]));
       } else {
         if (!has) cur[f.k] = formDefault(f) !== undefined ? clone(formDefault(f)) : defaultFor(f.s);
@@ -525,9 +525,9 @@ function wArr(sc, val, commit, ctx) {
       var okey = path + i;
       function makeNode() { return renderNode(sc.i, item, function (v, o) { cur[i] = v; commit(cur, o && o.key ? { key: path + i } : o); }, { path: path + i, spec: ctx && ctx.itemSpec }); }
       var tools = h('div', { class: 'ed-it-tools' });
-      if (i > 0) { var up = h('div', { class: 'ed-mini', text: '↑', title: '上移' }); activate(up, function () { var t = cur[i - 1]; cur[i - 1] = cur[i]; cur[i] = t; commit(cur, {}); draw(); }); tools.appendChild(up); }
-      if (i < cur.length - 1) { var dn = h('div', { class: 'ed-mini', text: '↓', title: '下移' }); activate(dn, function () { var t = cur[i + 1]; cur[i + 1] = cur[i]; cur[i] = t; commit(cur, {}); draw(); }); tools.appendChild(dn); }
-      var rm = h('div', { class: 'ed-mini del', text: '×', title: '删除此项' }); activate(rm, function () { cur.splice(i, 1); commit(cur, {}); draw(); });
+      if (i > 0) { var up = h('div', { class: 'ed-mini', text: '↑', title: I18n.t("cadeditor.ui.cards1.f853a70b12") }); activate(up, function () { var t = cur[i - 1]; cur[i - 1] = cur[i]; cur[i] = t; commit(cur, {}); draw(); }); tools.appendChild(up); }
+      if (i < cur.length - 1) { var dn = h('div', { class: 'ed-mini', text: '↓', title: I18n.t("cadeditor.ui.cards1.e75e8b4e5c") }); activate(dn, function () { var t = cur[i + 1]; cur[i + 1] = cur[i]; cur[i] = t; commit(cur, {}); draw(); }); tools.appendChild(dn); }
+      var rm = h('div', { class: 'ed-mini del', text: '×', title: I18n.t("cadeditor.ui.forms.63310bf627") }); activate(rm, function () { cur.splice(i, 1); commit(cur, {}); draw(); });
       tools.appendChild(rm);
       var row;
       if (complex) {
@@ -535,7 +535,7 @@ function wArr(sc, val, commit, ctx) {
         var isOpen = UIOpen[openKey] === true || UIOpen[openKey] !== false && cur.length <= 24;
         row = h('div', { class: 'ed-card' + (isOpen ? ' open' : '') });
         var summary = ctx && ctx.itemSummary ? ctx.itemSummary(item, i) : summarize(sc.i, item);
-        var head = h('div', { class: 'ed-card-h', 'data-tip': summary }, [h('span', { class: 'ix', text: (flat ? '规则 ' : '#') + (i + 1) }), h('span', { class: 'sm', text: flat ? '' : summary }), tools]);
+        var head = h('div', { class: 'ed-card-h', 'data-tip': summary }, [h('span', { class: 'ix', text: (flat ? I18n.t("cadeditor.ui.forms.b1a2813d2b") : '#') + (i + 1) }), h('span', { class: 'sm', text: flat ? '' : summary }), tools]);
         var child = h('div', { class:'ed-card-b' }), mounted = false;
         function mount() { if (!mounted) { child.appendChild(makeNode()); mounted = true; } }
         if (isOpen) mount();
@@ -546,10 +546,10 @@ function wArr(sc, val, commit, ctx) {
       }
       list.appendChild(row);
     });
-    if (!cur.length) list.appendChild(h('div', { class: 'ed-empty', text: '空列表' }));
+    if (!cur.length) list.appendChild(h('div', { class: 'ed-empty', text: I18n.t("cadeditor.ui.forms.c17ab26ba5") }));
   }
   var keyF = keyRegField(sc.i);
-  var add = h('div', { class: 'ed-addbtn' }, [icon('plus'), keyF ? '添加（可多选）' : '添加']);
+  var add = h('div', { class: 'ed-addbtn' }, [icon('plus'), keyF ? I18n.t("cadeditor.ui.forms.07817f48c1") : I18n.t("cadeditor.ui.cards3.7a8a11ead5")]);
   var atMax = function () { return sc.max !== undefined && cur.length >= sc.max; };
   function pushMany(ids, vals, edit) {
     var next = pickerSyncList(cur, ids, function (x) { return keyF.k ? x[keyF.k] : x; }, function (id) {
@@ -565,7 +565,7 @@ function wArr(sc, val, commit, ctx) {
       if (dirty.level) it.amplifier = v.level - 1;
       if (dirty.seconds) it.duration = effectTicksFromSeconds(v.seconds);
     });
-    if (sc.max !== undefined && next.length > sc.max) { toast('最多选择 ' + sc.max + ' 项，原列表未修改', 'warn'); return; }
+    if (sc.max !== undefined && next.length > sc.max) { toast(I18n.t("cadeditor.ui.forms.f044ba6471", (sc.max)), 'warn'); return; }
     cur = next;
     commit(cur, {}); draw();
   }
@@ -576,7 +576,7 @@ function wArr(sc, val, commit, ctx) {
     if (keyF.reg === 'mob_effect') {
       var hasAmp2 = !!keyF.k && sc.i.f.some(function (x) { return x.k === 'amplifier'; }), hasDur2 = !!keyF.k && sc.i.f.some(function (x) { return x.k === 'duration'; });
       openEffectPicker({ present: present, values: values, full: hasAmp2, noParams: !hasDur2 && !hasAmp2, onConfirm: pushMany });
-    } else openRegPick({ reg: keyF.reg, multi: true, selected: present, title: '选择条目', onPickMany: function (ids) { pushMany(ids); } });
+    } else openRegPick({ reg: keyF.reg, multi: true, selected: present, title: I18n.t("cadeditor.ui.forms.153d487fec"), onPickMany: function (ids) { pushMany(ids); } });
   });
   var count;
   if (flat) { count = h('span', { class: 'flat-rules-title' }); box.appendChild(h('div', { class: 'flat-rules-head' }, [count, add])); }
@@ -596,14 +596,14 @@ function wMap(sc, val, commit, ctx) {
       var kin = h('input', { class: 'ore-field ed-in ed-key', type: 'text', value: k, spellcheck: 'false' });
       kin.addEventListener('change', function () { var nk = kin.value.trim(); if (!nk || nk === k) { kin.value = k; return; } var nv = {}; Object.keys(cur).forEach(function (x) { nbtPut(nv, x === k ? nk : x, nbtTake(cur, x)); }); cur = nv; commit(cur, {}); draw(); });
       var node = renderNode(sc.v, cur[k], function (v, o) { cur[k] = v; commit(cur, o && o.key ? { key: (ctx && ctx.path || '') + '{' + k + '}' } : o); }, { path: (ctx && ctx.path || '') + '{' + k + '}' });
-      var rm = h('div', { class: 'ed-mini del', text: '×', title: '删除' }); activate(rm, function () { delete cur[k]; commit(cur, {}); draw(); });
+      var rm = h('div', { class: 'ed-mini del', text: '×', title: I18n.t("cadeditor.ui.common.delete") }); activate(rm, function () { delete cur[k]; commit(cur, {}); draw(); });
       list.appendChild(h('div', { class: 'ed-itrow' }, [kin, h('div', { class: 'grow' }, [node]), rm]));
     });
-    if (!Object.keys(cur).length) list.appendChild(h('div', { class: 'ed-empty', text: '空' }));
+    if (!Object.keys(cur).length) list.appendChild(h('div', { class: 'ed-empty', text: I18n.t("cadeditor.ui.cards4.2f8267a89a") }));
   }
   var addIn = ropts
-    ? combo({ value: '', options: ropts, free: true, reset: true, placeholder: '添加键…', onPick: function (v) { if (v && cur[v] === undefined) { cur[v] = defaultFor(sc.v); commit(cur, {}); draw(); } } })
-    : (function () { var i = h('input', { class: 'ore-field ed-in', type: 'text', placeholder: '新键名，回车添加' }); onKey(i, { Enter: function () { var v = i.value.trim(); if (v && cur[v] === undefined) { cur[v] = defaultFor(sc.v); i.value = ''; commit(cur, {}); draw(); } } }); return i; })();
+    ? combo({ value: '', options: ropts, free: true, reset: true, placeholder: I18n.t("cadeditor.ui.forms.6478cc20ae"), onPick: function (v) { if (v && cur[v] === undefined) { cur[v] = defaultFor(sc.v); commit(cur, {}); draw(); } } })
+    : (function () { var i = h('input', { class: 'ore-field ed-in', type: 'text', placeholder: I18n.t("cadeditor.ui.forms.d893251d1c") }); onKey(i, { Enter: function () { var v = i.value.trim(); if (v && cur[v] === undefined) { cur[v] = defaultFor(sc.v); i.value = ''; commit(cur, {}); draw(); } } }); return i; })();
   box.appendChild(list); box.appendChild(pager); box.appendChild(h('div', { class: 'ed-addrow' }, [icon('plus'), addIn])); draw();
   return box;
 }
@@ -640,36 +640,36 @@ function wEnchants(c, val, commit, ctx) {
     Object.keys(cur).forEach(function (k) {
       var id = shortId(k), e = Reg.enchant(k), lv = cur[k];
       var warn = [];
-      if (!e) warn.push('尚无实时信息，保留原 ID');
+      if (!e) warn.push(I18n.t("cadeditor.ui.forms.aaad5ba23e"));
       else {
-        if (e.max !== null && lv > e.max) warn.push('超过自然上限 ' + e.max);
-        var cf = conflicts(id); if (cf.length) warn.push('与 ' + cf.join('、') + ' 互斥');
+        if (e.max !== null && lv > e.max) warn.push(I18n.t("cadeditor.ui.cards1.174d35cca8", (e.max)));
+        var cf = conflicts(id); if (cf.length) warn.push(I18n.t("cadeditor.ui.forms.a9f724551f", (cf.join('、'))));
       }
       var num = wNum({ t: 'int', min: 1, max: 255 }, lv, function (v) { cur[k] = v; commit(cur, { key: 'ench-' + id }); rom.textContent = roman(v); }, { key: 'ench-' + id });
       var rom = h('span', { class: 'rom', text: roman(lv) });
-      var rm = h('div', { class: 'ed-mini del', text: '×', title: '移除此附魔' }); activate(rm, function () { delete cur[k]; commit(cur, {}); draw(); });
+      var rm = h('div', { class: 'ed-mini del', text: '×', title: I18n.t("cadeditor.ui.forms.cd98d25623") }); activate(rm, function () { delete cur[k]; commit(cur, {}); draw(); });
       var row = h('div', { class: 'ed-enrow' + (warn.length ? ' warn' : '') }, [
         icon('enchant'),
-        h('div', { class: 'nm' }, [h('div', { class: 'z', text: e ? e.name : id }), h('div', { class: 'id', text: Reg.full(k) + (e && e.max !== null ? ' · 自然上限 ' + e.max : '') })]),
+        h('div', { class: 'nm' }, [h('div', { class: 'z', text: e ? e.name : id }), h('div', { class: 'id', text: Reg.full(k) + (e && e.max !== null ? I18n.t("cadeditor.ui.forms.c2de984740", (e.max)) : '') })]),
         num, rom, rm,
       ]);
       if (warn.length) row.appendChild(h('div', { class: 'ed-warnline', text: '⚠ ' + warn.join('；') }));
       list.appendChild(row);
     });
-    if (!Object.keys(cur).length) list.appendChild(h('div', { class: 'ed-empty', text: '没有附魔' }));
+    if (!Object.keys(cur).length) list.appendChild(h('div', { class: 'ed-empty', text: I18n.t("cadeditor.ui.forms.c030185616") }));
   }
-  var opts = function () { return Reg.enchants().map(function (e) { return { v: e.full, label: e.name, sub: e.full + (e.max !== null ? ' · 最高 ' + e.max : ' · 最高等级尚未读取') + (Reg.enchantFits(e, d.id) === true ? ' · 适用' : '') }; }); };
-  var addIn = combo({ value: '', options: opts, free: true, reset: true, placeholder: '搜索或输入附魔 ID…', onPick: function (id) { var key = Reg.full(id); if (id && cur[key] === undefined) { cur[key] = 1; commit(cur, {}); draw(); } } });
+  var opts = function () { return Reg.enchants().map(function (e) { return { v: e.full, label: e.name, sub: e.full + (e.max !== null ? I18n.t("cadeditor.ui.forms.717580fc2e", (e.max)) : I18n.t("cadeditor.ui.forms.ba950a7d1a")) + (Reg.enchantFits(e, d.id) === true ? I18n.t("cadeditor.ui.forms.4d9191dbe1") : '') }; }); };
+  var addIn = combo({ value: '', options: opts, free: true, reset: true, placeholder: I18n.t("cadeditor.ui.forms.de9d5894e4"), onPick: function (id) { var key = Reg.full(id); if (id && cur[key] === undefined) { cur[key] = 1; commit(cur, {}); draw(); } } });
   var tools = h('div', { class: 'ed-row wrap' });
-  var maxb = h('div', { class: 'ed-mini wide', text: '全部设为自然上限' });
+  var maxb = h('div', { class: 'ed-mini wide', text: I18n.t("cadeditor.ui.forms.42304b57ce") });
   activate(maxb, function () { var changed = false; Object.keys(cur).forEach(function (k) { var e = Reg.enchant(k); if (e && e.max !== null && cur[k] !== e.max) { cur[k] = e.max; changed = true; } }); if (!changed) return; commit(cur, {}); draw(); });
-  var clr = h('div', { class: 'ed-mini wide del', text: '清空' });
+  var clr = h('div', { class: 'ed-mini wide del', text: I18n.t("cadeditor.ui.common.clear") });
   activate(clr, function () { cur = {}; commit(cur, {}); draw(); });
-  var apl = h('div', { class: 'ed-mini wide', text: '添加全部适用附魔' });
+  var apl = h('div', { class: 'ed-mini wide', text: I18n.t("cadeditor.ui.forms.5f6789417b") });
   activate(apl, function () { var changed = false; Reg.enchants().forEach(function (e) { if (e.max !== null && e.exclusiveKnown && Reg.enchantFits(e, d.id) === true && cur[e.full] === undefined && Object.keys(cur).every(function (k) { return Reg.enchantConflict(e, k) === false; })) { cur[e.full] = e.max; changed = true; } }); if (!changed) return; commit(cur, {}); draw(); });
   tools.appendChild(maxb); tools.appendChild(apl); tools.appendChild(clr);
   box.appendChild(list); box.appendChild(h('div', { class: 'ed-addrow' }, [icon('plus'), addIn])); box.appendChild(tools);
-  if (!Reg.preview() && !Reg.list('enchantments')) box.appendChild(h('div', { class: 'ed-hint', text: '正在读取实时附魔；可以手动输入 ID 和等级，自动最高/适用操作等待数据。' }));
+  if (!Reg.preview() && !Reg.list('enchantments')) box.appendChild(h('div', { class: 'ed-hint', text: I18n.t("cadeditor.ui.forms.d6ee426150") }));
   draw();
   return box;
 }
@@ -686,27 +686,27 @@ function wAttrMods(c, val, commit, ctx) {
     cur.forEach(function (m, i) {
       var id = shortId(m.type || ''), a = (Reg.list('attributes') || []).filter(function (a) { return a.id === Reg.full(m.type); })[0] || (Reg.preview() ? ATIDX[id] : null);
       var openKey = 'attr' + i, isOpen = UIOpen[openKey] !== false;
-      var rm = h('div', { class: 'ed-mini del', text: '×', title: '删除此修饰器' }); activate(rm, function () { cur.splice(i, 1); commit(cur, {}); draw(); });
+      var rm = h('div', { class: 'ed-mini del', text: '×', title: I18n.t("cadeditor.ui.forms.1a2f334854") }); activate(rm, function () { cur.splice(i, 1); commit(cur, {}); draw(); });
       var amt = typeof m.amount === 'number' ? m.amount : 0;
       var sumTxt = (m.operation === 'add_value' ? (amt >= 0 ? '+' : '') + fmtNum(amt) : (amt >= 0 ? '+' : '') + fmtNum(amt * 100) + '%') + ' · ' + (SLOT_ZH[m.slot || 'any'] || m.slot);
       var card = h('div', { class: 'ed-card' + (isOpen ? ' open' : '') });
-      var head = h('div', { class: 'ed-card-h' }, [icon('sliders'), h('span', { class: 'ttl', text: a ? a.name : (id || '（未选择属性）') }), h('span', { class: 'sm', text: sumTxt }), h('div', { class: 'ed-it-tools' }, [rm])]);
+      var head = h('div', { class: 'ed-card-h' }, [icon('sliders'), h('span', { class: 'ttl', text: a ? a.name : (id || I18n.t("cadeditor.ui.forms.2013a38df7")) }), h('span', { class: 'sm', text: sumTxt }), h('div', { class: 'ed-it-tools' }, [rm])]);
       head.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.ed-it-tools')) return; UIOpen[openKey] = !(UIOpen[openKey] !== false); card.classList.toggle('open'); });
       var body = h('div', { class: 'ed-card-b' });
       function fld(label, note, ctl) { return h('div', { class: 'fld' }, [h('div', { class: 'fl' }, [h('div', { class: 'fk', text: label }), note ? h('div', { class: 'fn', text: note }) : null]), h('div', { class: 'fc' }, [ctl])]); }
-      body.appendChild(fld('属性', 'type', combo({ value: m.type || '', options: registryOptions('attribute'), free: true, placeholder: '选择属性…', onPick: function (v) { m.type = v; commit(cur, {}); draw(); } })));
-      var rangeNote = a ? (typeof a.min === 'number' && typeof a.max === 'number' ? '范围 ' + a.min + ' ~ ' + a.max : '未提供固定范围') : '实时属性信息正在读取';
+      body.appendChild(fld(I18n.t("cadeditor.ui.eschema.86de52d178"), 'type', combo({ value: m.type || '', options: registryOptions('attribute'), free: true, placeholder: I18n.t("cadeditor.ui.forms.99e00cba2f"), onPick: function (v) { m.type = v; commit(cur, {}); draw(); } })));
+      var rangeNote = a ? (typeof a.min === 'number' && typeof a.max === 'number' ? I18n.t("cadeditor.ui.forms.33319365b1", (a.min), (a.max)) : I18n.t("cadeditor.ui.forms.a0af76bdd7")) : I18n.t("cadeditor.ui.forms.90b1ad6948");
       var attributeDefault = a && (typeof a.default === 'number' ? a.default : (Reg.preview() ? a.def : undefined));
-      if (attributeDefault !== undefined) rangeNote += '，属性默认 ' + attributeDefault;
-      body.appendChild(fld('数值', rangeNote, wNum({ t: 'num' }, m.amount, function (v) { m.amount = v; commit(cur, { key: 'attr-amt-' + i }); }, { key: 'attr-amt-' + i, step: m.operation === 'add_value' ? 0.5 : 0.05 })));
-      body.appendChild(fld('运算', 'operation', combo({ options: function () { return Reg.enumOptions('attribute_operation', OPS); }, value: m.operation || '', free: true, onPick: function (v) { m.operation = v; commit(cur, {}); draw(); } })));
-      body.appendChild(fld('生效槽位', 'slot', combo({ value: m.slot || 'any', options: attributeSlotOptions, free: true, placeholder: '读取槽位或手动输入…', onPick: function (v) { m.slot = v; commit(cur, {}); draw(); } })));
-      body.appendChild(fld('修饰器 ID', 'id · 同槽同 ID 不叠加', wStr({ t: 'str' }, m.id || '', function (v) { m.id = v; commit(cur, { key: 'attr-id-' + i }); })));
+      if (attributeDefault !== undefined) rangeNote += I18n.t("cadeditor.ui.forms.e9109191fc", (attributeDefault));
+      body.appendChild(fld(I18n.t("cadeditor.ui.forms.c5500a58e0"), rangeNote, wNum({ t: 'num' }, m.amount, function (v) { m.amount = v; commit(cur, { key: 'attr-amt-' + i }); }, { key: 'attr-amt-' + i, step: m.operation === 'add_value' ? 0.5 : 0.05 })));
+      body.appendChild(fld(I18n.t("cadeditor.ui.forms.3a9da6aa3c"), 'operation', combo({ options: function () { return Reg.enumOptions('attribute_operation', OPS); }, value: m.operation || '', free: true, onPick: function (v) { m.operation = v; commit(cur, {}); draw(); } })));
+      body.appendChild(fld(I18n.t("cadeditor.ui.forms.ffe479dcf4"), 'slot', combo({ value: m.slot || 'any', options: attributeSlotOptions, free: true, placeholder: I18n.t("cadeditor.ui.cards2.9b3b16e5b4"), onPick: function (v) { m.slot = v; commit(cur, {}); draw(); } })));
+      body.appendChild(fld(I18n.t("cadeditor.ui.forms.310d6d777c"), I18n.t("cadeditor.ui.forms.0f55e04747"), wStr({ t: 'str' }, m.id || '', function (v) { m.id = v; commit(cur, { key: 'attr-id-' + i }); })));
       card.appendChild(head); card.appendChild(body); list.appendChild(card);
     });
-    if (!cur.length) list.appendChild(h('div', { class: 'ed-empty', text: '没有属性修饰器（空列表会清除原型自带的修饰器）' }));
+    if (!cur.length) list.appendChild(h('div', { class: 'ed-empty', text: I18n.t("cadeditor.ui.forms.afa66b08d9") }));
   }
-  var addIn = combo({ value: '', options: registryOptions('attribute'), free: true, reset: true, placeholder: '搜索属性并添加…', onPick: function (v) { cur.push({ type: v, id: 'cadeditor:' + shortId(v).replace(/[^a-z0-9_./-]/g, '_') + '_' + (cur.length + 1), amount: 1, operation: 'add_value', slot: 'mainhand' }); commit(cur, {}); draw(); } });
+  var addIn = combo({ value: '', options: registryOptions('attribute'), free: true, reset: true, placeholder: I18n.t("cadeditor.ui.forms.3c2ac231e3"), onPick: function (v) { cur.push({ type: v, id: 'cadeditor:' + shortId(v).replace(/[^a-z0-9_./-]/g, '_') + '_' + (cur.length + 1), amount: 1, operation: 'add_value', slot: 'mainhand' }); commit(cur, {}); draw(); } });
   box.appendChild(list); box.appendChild(h('div', { class: 'ed-addrow' }, [icon('plus'), addIn])); draw();
   return box;
 }
@@ -721,7 +721,7 @@ function wDamage(c, val, commit, ctx) {
   function paint(v) {
     var ratio = typeof maxd === 'number' && maxd > 0 ? Math.max(0, Math.min(1, 1 - v / maxd)) : 1;
     bar.setAttribute('style', '--value:' + ratio);
-    txt.textContent = typeof maxd === 'number' ? '剩余耐久 ' + Math.max(0, maxd - v) + ' / ' + maxd : '此物品没有最大耐久，损耗值不会产生效果';
+    txt.textContent = typeof maxd === 'number' ? I18n.t("cadeditor.ui.forms.3054daafd5", (Math.max(0, maxd - v)), (maxd)) : I18n.t("cadeditor.ui.forms.be2fa2f3a9");
   }
   box.appendChild(wNum({ t: 'int', min: 0, max: 2147483647 }, val, function (v) { paint(v); commit(v, { key: 'damage' }); }, { key: 'damage', step: 1 }));
   box.appendChild(bar); box.appendChild(txt); paint(val || 0);
@@ -734,16 +734,16 @@ function wLore(c, val, commit) {
   function draw() {
     clear(list);
     cur.forEach(function (line, i) {
-      var node = wText({ t: 'text' }, line, function (v, o) { cur[i] = v; commit(cur, { key: 'lore' + i }); }, { placeholder: '第 ' + (i + 1) + ' 行说明', compact: true, openKey: 'lore-style-' + i });
+      var node = wText({ t: 'text' }, line, function (v, o) { cur[i] = v; commit(cur, { key: 'lore' + i }); }, { placeholder: I18n.t("cadeditor.ui.forms.6a9b3a111d", (i + 1)), compact: true, openKey: 'lore-style-' + i });
       var tools = h('div', { class: 'ed-it-tools' });
       if (i > 0) { var up = h('div', { class: 'ed-mini', text: '↑' }); activate(up, function () { var t = cur[i - 1]; cur[i - 1] = cur[i]; cur[i] = t; commit(cur, {}); draw(); }); tools.appendChild(up); }
       if (i < cur.length - 1) { var dn = h('div', { class: 'ed-mini', text: '↓' }); activate(dn, function () { var t = cur[i + 1]; cur[i + 1] = cur[i]; cur[i] = t; commit(cur, {}); draw(); }); tools.appendChild(dn); }
       var rm = h('div', { class: 'ed-mini del', text: '×' }); activate(rm, function () { cur.splice(i, 1); commit(cur, {}); draw(); }); tools.appendChild(rm);
       list.appendChild(h('div', { class: 'ed-itrow top' }, [h('span', { class: 'ix', text: String(i + 1) }), h('div', { class: 'grow' }, [node]), tools]));
     });
-    if (!cur.length) list.appendChild(h('div', { class: 'ed-empty', text: '没有说明行' }));
+    if (!cur.length) list.appendChild(h('div', { class: 'ed-empty', text: I18n.t("cadeditor.ui.forms.22cc35dbb6") }));
   }
-  var add = h('div', { class: 'ed-addbtn' }, [icon('plus'), '添加一行（最多 256 行）']);
+  var add = h('div', { class: 'ed-addbtn' }, [icon('plus'), I18n.t("cadeditor.ui.forms.7a95966028")]);
   activate(add, function () { if (cur.length >= 256) return; cur.push({ text: '', color: 'dark_purple', italic: false }); commit(cur, {}); draw(); });
   box.appendChild(list); box.appendChild(add); draw();
   return box;
@@ -752,8 +752,8 @@ function wLore(c, val, commit) {
 var COMP_WIDGETS = {
   enchantments: wEnchants, stored_enchantments: wEnchants,
   attribute_modifiers: wAttrMods, rarity: wRarity, damage: wDamage, lore: wLore,
-  custom_name: function (c, v, cm) { return wText({ t: 'text' }, v, cm, { placeholder: '自定义名称' }); },
-  item_name: function (c, v, cm) { return wText({ t: 'text' }, v, cm, { placeholder: '基础名称' }); },
+  custom_name: function (c, v, cm) { return wText({ t: 'text' }, v, cm, { placeholder: I18n.t("cadeditor.ui.forms.bf3b4816f1") }); },
+  item_name: function (c, v, cm) { return wText({ t: 'text' }, v, cm, { placeholder: I18n.t("cadeditor.ui.forms.800e576671") }); },
 };
 
 /* 一个组件的完整表单 */
@@ -798,12 +798,12 @@ function wDye(val, commit) {
     palette.appendChild(sw);
   }); }
   paintPalette(); watchColorOptions(dyeList, paintPalette); box.appendChild(palette);
-  box.appendChild(combo({ options: dyeList, value: cur, free: true, placeholder: '选择或手动填写颜色 ID', onPick: function (v) { commit(v, {}); } }));
+  box.appendChild(combo({ options: dyeList, value: cur, free: true, placeholder: I18n.t("cadeditor.ui.forms.896c72987a"), onPick: function (v) { commit(v, {}); } }));
   return box;
 }
 
 /* 音效：简单写法是一个声音 ID；带“固定传播范围”时是 {sound_id, range} 对象。统一成：声音选择（带试听）+ 可选的范围 */
-function wSoundEvent(val, commit) { return soundUnionRow('声音', '', val, function (v) { commit(v === undefined ? '' : v, {}); }); }
+function wSoundEvent(val, commit) { return soundUnionRow(I18n.t("cadeditor.ui.cards3.473400815c"), '', val, function (v) { commit(v === undefined ? '' : v, {}); }); }
 
 /* “单个条目 / #标签 / 条目列表” 三合一（游戏里叫 HolderSet）：用一个标签芯片区代替 ID | 标签# | 列表 的切换。
    规则（游戏数据格式决定）：要么一个 #标签，要么若干条目，不能混用 —— 选了标签就清掉条目，反过来也一样 */
@@ -824,17 +824,17 @@ function wHolderSet(reg, val, commit) {
       var x = h("span", { class: "x", text: " ×" }); x.addEventListener("click", function (ev) { ev.stopPropagation(); list.splice(i, 1); save(); draw(); });
       c.appendChild(x); chips.appendChild(c);
     });
-    var add = h("div", { class: "k-chip" }, [uiIcon("plus", 12), list.length ? "再加" : "添加"]);
+    var add = h("div", { class: "k-chip" }, [uiIcon("plus", 12), list.length ? I18n.t("cadeditor.ui.forms.00c3cea8dd") : I18n.t("cadeditor.ui.cards3.7a8a11ead5")]);
     activate(add, function () {
-      openTagPicker({ title: "选择条目或标签", tagsReg: reg, entryReg: reg, multi: true, selected: list.map(pickerId), entryIcon: function (e) { return refIcon(reg, e.v); }, onConfirm: function (ids) {
+      openTagPicker({ title: I18n.t("cadeditor.ui.forms.b66a0cd68e"), tagsReg: reg, entryReg: reg, multi: true, selected: list.map(pickerId), entryIcon: function (e) { return refIcon(reg, e.v); }, onConfirm: function (ids) {
         var tags = ids.filter(function (x) { return x.charAt(0) === "#"; }), ents = ids.filter(function (x) { return x.charAt(0) !== "#"; });
-        if (tags.length && (ents.length || tags.length > 1)) { toast("这里只能选择一个标签或多个条目；原列表未修改", "warn"); return; }
+        if (tags.length && (ents.length || tags.length > 1)) { toast(I18n.t("cadeditor.ui.forms.1a026ec907"), "warn"); return; }
         list = tags.length ? [tags[0]] : ents;
         save(); draw();
       } });
     });
     chips.appendChild(add);
-    if (!list.length) chips.insertBefore(h("span", { class: "k-sub", text: "（空）  " }), chips.firstChild);
+    if (!list.length) chips.insertBefore(h("span", { class: "k-sub", text: I18n.t("cadeditor.ui.forms.3034ad146a") }), chips.firstChild);
   }
   draw(); box.appendChild(chips);
   return box;
@@ -853,25 +853,25 @@ function soundUnionRow(label, hint, val, set) {
     var snd = kSoundField(id, function (x) { id = x; put(); draw(); });
     var row = fieldRow(label, snd.el, hint);
     var rangeBtn;
-    function rangeCaption() { return range === undefined ? "范围" : fmtNum(range) + " 格"; }
+    function rangeCaption() { return range === undefined ? I18n.t("cadeditor.ui.forms.ae72b532f4") : I18n.t("cadeditor.ui.forms.f7d3429a3e", (fmtNum(range))); }
     if (id) {
       var pr = row.querySelector(".pr-r");
       var choose = pr != null ? pr.querySelector(".k-btn") : null;
-      if (choose != null) setTip(choose, "选择声音");
+      if (choose != null) setTip(choose, I18n.t("cadeditor.ui.forms.6f39fc947d"));
       rangeBtn = kBtn(rangeCaption(), function () { rangeOpen = !rangeOpen; draw(); });
       rangeBtn.classList.add("snd-range-btn");
-      rangeBtn.setAttribute("data-tip", "传播范围：" + (range === undefined ? "自动" : fmtNum(range) + " 格"));
+      rangeBtn.setAttribute("data-tip", I18n.t("cadeditor.ui.forms.ebb482d2b6", (range === undefined ? I18n.t("cadeditor.ui.cards1.7eb336e42c") : I18n.t("cadeditor.ui.forms.f7d3429a3e", (fmtNum(range))))));
       rangeBtn.setAttribute("aria-expanded", String(rangeOpen));
-      var clr = h("div", { class: "k-mini del", text: "×", title: "清除这个声音" });
+      var clr = h("div", { class: "k-mini del", text: "×", title: I18n.t("cadeditor.ui.forms.87e23e0fce") });
       activate(clr, function () { id = ""; range = undefined; extra = {}; rangeOpen = false; put(); draw(); });
       if (pr != null) { pr.appendChild(rangeBtn); pr.appendChild(clr); }
     }
     box.appendChild(row);
     if (id && rangeOpen) {
-      var r = h("div", { class: "snd-range", title: "传播范围" });
+      var r = h("div", { class: "snd-range", title: I18n.t("cadeditor.ui.forms.87c7fe2bd0") });
       var controls = h("div", { class: "snd-range-controls" });
-      controls.appendChild(kSeg([{ v: "auto", label: "自动" }, { v: "fixed", label: "固定" }], range === undefined ? "auto" : "fixed", function (v) { if ((v === "auto") === (range === undefined)) return; range = v === "auto" ? undefined : 16; put(); draw(); }).el);
-      if (range !== undefined) controls.appendChild(kNumber(range, { step: 1, dec: 3, noSlider: true, unit: "格", onChange: function (v) { range = v; rangeBtn.textContent = rangeCaption(); rangeBtn.setAttribute("data-tip", "传播范围：" + fmtNum(range) + " 格"); put(); } }).el);
+      controls.appendChild(kSeg([{ v: "auto", label: I18n.t("cadeditor.ui.cards1.7eb336e42c") }, { v: "fixed", label: I18n.t("cadeditor.ui.forms.d4b3f49cd2") }], range === undefined ? "auto" : "fixed", function (v) { if ((v === "auto") === (range === undefined)) return; range = v === "auto" ? undefined : 16; put(); draw(); }).el);
+      if (range !== undefined) controls.appendChild(kNumber(range, { step: 1, dec: 3, noSlider: true, unit: I18n.t("cadeditor.ui.cards2.06f2f8e0a8"), onChange: function (v) { range = v; rangeBtn.textContent = rangeCaption(); rangeBtn.setAttribute("data-tip", I18n.t("cadeditor.ui.forms.2f21c93aee", (fmtNum(range)))); put(); } }).el);
       r.appendChild(controls);
       box.appendChild(r);
     }

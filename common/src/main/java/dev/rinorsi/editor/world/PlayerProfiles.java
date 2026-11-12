@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.world;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.*;
 import com.mojang.authlib.GameProfile;
 import dev.rinorsi.editor.EditorSessions;
@@ -56,7 +58,7 @@ public final class PlayerProfiles {
                 entries.add(r);
             }
             var value=new JsonObject();value.add("entries",entries);return value;
-        }catch(IOException e){throw new EditorSessions.Failure("offline_io","无法读取存档玩家名单："+e.getMessage());}
+        }catch(IOException e){throw new EditorSessions.Failure("offline_io",EditorI18n.tr("cadeditor.message.playerprofiles.5b646d3123", (e.getMessage())));}
     }
     public static JsonObject summary(ServerPlayer p,String name) {
         var s=new JsonObject();s.addProperty("name",name);s.addProperty("game_mode",p.gameMode().getName());s.addProperty("health",p.getHealth());s.addProperty("food",p.getFoodData().getFoodLevel());s.addProperty("xp_level",p.experienceLevel);
@@ -83,21 +85,21 @@ public final class PlayerProfiles {
         var request=new JsonObject();request.add("world",world);request.add("sections",sections==null?VaultTemplates.allSections():sections);
         var result=new JsonObject();
         try{result.add("template",VaultTemplates.capture("player_preset",request));}
-        catch(VaultStore.Failure e){throw new EditorSessions.Failure("invalid_request","预设分区无效或重复："+e.getMessage());}
+        catch(VaultStore.Failure e){throw new EditorSessions.Failure("invalid_request",EditorI18n.tr("cadeditor.message.playerprofiles.703a58c797", (e.getMessage())));}
         result.add("summary",summary(p,name));return result;
     }
     public static <T> T offline(MinecraftServer server,UUID uuid,Function<ServerPlayer,T> projection) {
-        if(server.getPlayerList().getPlayer(uuid)!=null)PlayerExtendedEditor.fail("player_online","目标玩家已上线，请重新打开在线玩家");
+        if(server.getPlayerList().getPlayer(uuid)!=null)PlayerExtendedEditor.fail("player_online",EditorI18n.tr("cadeditor.message.offlineplayeredit.3e733344c4"));
         // Native PlayerList.loadPlayerData resolves the singleplayer UUID in all supported versions.
         // Read its selected file ourselves: PlayerDataStorage.load creates backups on corrupt reads.
         UUID stored=owner(server,uuid)&&server.getWorldData().getSinglePlayerUUID()!=null?server.getWorldData().getSinglePlayerUUID():uuid;
         return loaded(server,OfflinePlayerEdit.readData(server,stored),projection);
     }
     public static <T> T loaded(MinecraftServer server,CompoundTag data,Function<ServerPlayer,T> projection) {
-        if(!server.isSameThread())PlayerExtendedEditor.fail("invalid_request","玩家档案必须在服务端线程读取");
+        if(!server.isSameThread())PlayerExtendedEditor.fail("invalid_request",EditorI18n.tr("cadeditor.message.playerprofiles.e7712fda4f"));
         var problems=new ProblemReporter.Collector();var input=TagValueInput.create(problems,server.registryAccess(),data.copy());
         var dimension=input.read("Dimension",ResourceKey.codec(Registries.DIMENSION)).orElse(Level.OVERWORLD);
-        var level=server.getLevel(dimension);if(level==null)PlayerExtendedEditor.fail("unknown_dimension","玩家存档维度不在当前服务器中："+dimension.identifier());
+        var level=server.getLevel(dimension);if(level==null)PlayerExtendedEditor.fail("unknown_dimension",EditorI18n.tr("cadeditor.message.playerprofiles.c7d26db8ca", (dimension.identifier())));
         UUID temporary;Path unused;var list=server.getPlayerList();
         do{temporary=UUID.randomUUID();unused=server.getWorldPath(LevelResource.PLAYER_DATA_DIR).resolve(".cadeditor-read-"+temporary);}while(list.stats.containsKey(temporary)||list.advancements.containsKey(temporary)||list.getPlayer(temporary)!=null||Files.exists(unused,LinkOption.NOFOLLOW_LINKS));
         try {
@@ -109,8 +111,8 @@ public final class PlayerProfiles {
             list.advancements.put(temporary,new net.minecraft.server.PlayerAdvancements(server.getFixerUpper(),list,emptyAdvancements(),unused,null));
             player=new ServerPlayer(server,level,new GameProfile(temporary,"ArchiveReader"),ClientInformation.createDefault());
             player.load(input);
-            if(!problems.isEmpty())PlayerExtendedEditor.fail("invalid_nbt","原版玩家加载校验失败："+problems.getReport());
-            }catch(EditorSessions.Failure e){throw e;}catch(RuntimeException e){throw new EditorSessions.Failure("invalid_nbt","原版玩家加载失败："+e.getMessage());}
+            if(!problems.isEmpty())PlayerExtendedEditor.fail("invalid_nbt",EditorI18n.tr("cadeditor.message.playerprofiles.3cf8eebaa2", (problems.getReport())));
+            }catch(EditorSessions.Failure e){throw e;}catch(RuntimeException e){throw new EditorSessions.Failure("invalid_nbt",EditorI18n.tr("cadeditor.message.offlineplayeredit.16c36a9f94", (e.getMessage())));}
             // Projection/validation errors retain their own protocol code; they are not load errors.
             return projection.apply(player);
         }finally {

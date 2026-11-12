@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.client;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.JsonObject;
 import dev.oriel.mod.client.OrielScreen;
 import dev.oriel.mod.client.OrielScreens;
@@ -48,7 +50,7 @@ final class EditorPageHost {
 
     static String lastStage(dev.oriel.mod.client.DocumentDriver driver) {
         var trace = traces.get(driver);
-        return trace == null ? "页面加载（尚未取得具体阶段）" : trace.lastStage();
+        return trace == null ? EditorI18n.tr("cadeditor.message.editorpagehost.1b3a6854e5") : trace.lastStage();
     }
 
     static OrielScreen open(String page, JsonObject data) {
@@ -100,13 +102,23 @@ final class EditorPageHost {
     static void notice(OrielScreen owner, String text) {
         if (owner == null || Minecraft.getInstance().gui.screen() != owner) return;
         var notice = new JsonObject();
-        notice.addProperty("text", text == null ? "无法打开该目标" : text);
+        notice.addProperty("text", text == null ? EditorI18n.tr("cadeditor.message.editorpagehost.e448895192") : text);
         notice.addProperty("kind", "error");
         notice.addProperty("sequence", ++noticeSequence);
         owner.driver().patch("notice", notice);
     }
 
     private static void declare(JsonObject data) {
+        data.addProperty("uiLocale", Minecraft.getInstance().options.languageCode);
+        var translations = new JsonObject();
+        var language = net.minecraft.locale.Language.getInstance();
+        EditorI18n.catalog(EditorI18n.locale()).forEach((key, fallback) -> {
+            if ((key.startsWith("cadeditor.ui.") || key.startsWith("cadeditor.data.")) && language.has(key)) {
+                String translated = language.getOrDefault(key);
+                if (!translated.equals(fallback)) translations.addProperty(key, translated);
+            }
+        });
+        data.add("uiTranslations", translations);
         EditorClipboardHost.declare(data);
         data.addProperty("hostPrefs", true);
         data.addProperty("hostAudio", true);

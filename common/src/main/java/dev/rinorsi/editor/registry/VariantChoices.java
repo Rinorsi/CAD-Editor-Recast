@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.registry;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import net.minecraft.util.StringRepresentable;
 
 /** Non-registry variant components use their real StringRepresentable enums. */
@@ -16,7 +18,7 @@ public final class VariantChoices {
             case "parrot_variant" -> net.minecraft.world.entity.animal.parrot.Parrot.Variant.values();
             case "tropical_fish_pattern" -> net.minecraft.world.entity.animal.fish.TropicalFish.Pattern.values();
             case "salmon_size" -> net.minecraft.world.entity.animal.fish.Salmon.Variant.values();
-            default -> throw new IllegalArgumentException("未知官方枚举: " + name);
+            default -> throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.variantchoices.405e4e80c8", (name)));
         };
     }
 }

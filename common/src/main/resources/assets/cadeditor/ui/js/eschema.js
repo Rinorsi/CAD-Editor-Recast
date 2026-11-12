@@ -25,6 +25,7 @@ function esPreviewAttrs(type, data) {
   if ((typeof data.Age === 'number' && data.Age < 0) || data.IsBaby === 1 || data.IsBaby === true) out.baby = '';
   var eq = isObj(data.equipment) ? data.equipment : {};
   Object.keys(ES_SLOT).forEach(function (k) { if (isObj(eq[k]) && typeof eq[k].id === 'string') out[k] = eq[k].id; });
+  if (typeof data.__cad_stand === 'string') out['cad-stand'] = data.__cad_stand;   /* 盔甲架草稿姿势，由客户端 mixin 套到预览实体上 */
   if (s && s.available) {
     var parts = [];
     (s.variants || []).forEach(function (v) {
@@ -56,16 +57,16 @@ function esOwnedKeys(s) {
 var ES_WAIT = false, ES_TO = null;   /* 当前页面有没有因为「还在读」而画成占位——注册表 / 生物信息到了要重画 */
 function esReady(type, host) {
   var s = type ? Reg.entitySchema(type) : false;
-  if (!type) { host.appendChild(xEmpty('先选择生物')); return null; }
+  if (!type) { host.appendChild(xEmpty(I18n.t("cadeditor.ui.eschema.2266a8f4e6"))); return null; }
   if (s === null) {
     var at = Reg.esAt && Reg.esAt[Reg.full(type)];
-    if (at && Date.now() - at > 6000) { host.appendChild(xEmpty('游戏没有返回这只生物的信息（游戏里的编辑器模组可能还是旧版本，请更新并重启游戏）。可以在「其他数据」里直接添加字段。')); return null; }
+    if (at && Date.now() - at > 6000) { host.appendChild(xEmpty(I18n.t("cadeditor.ui.eschema.97f26ae2f3"))); return null; }
     ES_WAIT = true;
     if (!ES_TO && typeof setTimeout === 'function') ES_TO = setTimeout(function () { ES_TO = null; if (ES_WAIT && typeof weActive === 'function' && weActive() && !$('modal')) { try { weRedrawBody(); } catch (e) {} } }, 6200);
-    host.appendChild(xEmpty('正在向游戏读取这只生物能改什么…')); return null;
+    host.appendChild(xEmpty(I18n.t("cadeditor.ui.eschema.aa9cd4e0c6"))); return null;
   }
-  if (!s) { host.appendChild(xEmpty('没有连接游戏，读不到这只生物的变种和开关。可以在「其他数据」里直接添加字段。')); return null; }
-  if (!s.available) { host.appendChild(xEmpty((s.error || '游戏没能生成这只生物的模板') + '。可以在「其他数据」里直接添加字段。')); return null; }
+  if (!s) { host.appendChild(xEmpty(I18n.t("cadeditor.ui.eschema.94a76e340f"))); return null; }
+  if (!s.available) { host.appendChild(xEmpty(I18n.t("cadeditor.ui.eschema.c67ad3ecb7", (s.error || I18n.t("cadeditor.ui.eschema.ed4cb58ff6"))))); return null; }
   return s;
 }
 /* o = { get()→当前实体复合数据, set(obj), redraw() }：开关 / 选择类改动后调 redraw 重画；输入框、数字框只 set，不打断输入 */
@@ -92,7 +93,7 @@ function esVariantRow(v, o, tpl, edit) {
   function base() { var b = esGet(o.get(), p); if (typeof b !== 'number') b = tpl ? esGet(tpl, p) : undefined; return typeof b === 'number' ? b : 0; }
   function write(val) { edit(function (obj) { esSet(obj, p, mask !== null && typeof val === 'number' ? (base() & ~mask) | (val & mask) : val); }, true); }
   function pick(val) { return mask !== null && typeof val === 'number' ? (val & mask) : val; }
-  var sub = has ? '' : '默认';
+  var sub = has ? '' : I18n.t("cadeditor.ui.common.default");
   /* 范围很大的整数（史莱姆大小）：数字框，显示的是游戏里的尺寸，保存值由 min / semanticMin 换算 */
   if (v.kind === 'int' && typeof v.min === 'number' && typeof v.max === 'number' && (v.options || []).length > 16) {
     var off = typeof v.semanticMin === 'number' ? v.semanticMin - v.min : 0;
@@ -108,11 +109,11 @@ function esVariantRow(v, o, tpl, edit) {
   }
   var entries = (v.options || []).map(function (x) { return { v: x.value, label: esOptLabel(x), sub: String(x.value) }; });
   var numeric = typeof v.default === 'number' || entries.some(function (e) { return typeof e.v === 'number'; });
-  var manual = { label: numeric ? '写入这个整数' : '写入这个 ID（不带命名空间时按 minecraft:）', parse: function (t) {
-    if (numeric) { if (!/^-?\d+$/.test(t)) throw new Error('请输入整数'); return Number(t); }
-    if (!/^([a-z0-9_.-]+:)?[a-z0-9_./-]+$/.test(t)) throw new Error('ID 只能用小写字母、数字和 _ . - /'); return fullId(t);
+  var manual = { label: numeric ? I18n.t("cadeditor.ui.eschema.7764250ade") : I18n.t("cadeditor.ui.eschema.6758599d3b"), parse: function (t) {
+    if (numeric) { if (!/^-?\d+$/.test(t)) throw new Error(I18n.t("cadeditor.ui.eschema.9c75115484")); return Number(t); }
+    if (!/^([a-z0-9_.-]+:)?[a-z0-9_./-]+$/.test(t)) throw new Error(I18n.t("cadeditor.ui.eschema.6bf65a3e14")); return fullId(t);
   } };
-  var btn = h('div', { class: 'k-btn k-sel' }, [h('span', { text: curOpt ? esOptLabel(curOpt) : (cur === undefined ? '（未知）' : String(cur)) }), uiIcon('down', 10)]);
+  var btn = h('div', { class: 'k-btn k-sel' }, [h('span', { text: curOpt ? esOptLabel(curOpt) : (cur === undefined ? I18n.t("cadeditor.ui.eschema.90a49e5099") : String(cur)) }), uiIcon('down', 10)]);
   activate(btn, function () { pickFrom(btn, entries, function (e) { write(e.v); }, { width: 250, manual: manual }); });
   return xRow({ icon: false, title: title, sub: sub, tip: p.join('.') + (cur !== undefined ? ' = ' + cur : ''), right: btn });
 }
@@ -140,7 +141,7 @@ function esFlagRow(f, o, edit, schema) {
   }
   if (f.type === 'float' || f.type === 'int') {
     var def = typeof f.default === 'number' ? f.default : 0, cur = typeof val === 'number' ? val : def;
-    var opts = { title: nm[0], sub: nm[1] || (typeof val === 'number' ? '' : '默认 ' + fmtNum(def)), tip: k, value: cur, min: typeof f.min === 'number' ? f.min : undefined, step: f.type === 'int' ? 1 : 0.5, dec: f.type === 'int' ? 0 : 2,
+    var opts = { title: nm[0], sub: nm[1] || (typeof val === 'number' ? '' : I18n.t("cadeditor.ui.eschema.5564c10bef", (fmtNum(def)))), tip: k, value: cur, min: typeof f.min === 'number' ? f.min : undefined, step: f.type === 'int' ? 1 : 0.5, dec: f.type === 'int' ? 0 : 2,
       onChange: function (x) { edit(function (obj) { nbtSetTyped(obj, k, x, f.type === 'float' ? 'f' : 'i'); }); } };
     var linkId = k === 'Health' ? 'minecraft:max_health' : k === 'AbsorptionAmount' ? 'minecraft:max_absorption' : null;
     var attr = linkId && schema && (schema.attributes || []).filter(function (a) { return a.id === linkId; })[0];
@@ -148,24 +149,24 @@ function esFlagRow(f, o, edit, schema) {
       var linkStart; try { var initial = o.get(), initialRow = (initial.attributes || []).filter(function (a) { return Reg.full(a.id) === linkId; })[0] || {}; linkStart = linkedAttributeValue(attr, initialRow, esAttrBase(initial, attr)); } catch (ignored) {}
       function plan(v) { var data = o.get(), row = (data.attributes || []).filter(function (a) { return a.id === linkId; })[0] || { base: attr.base }; return linkedAttributePlan(attr, Object.assign({}, row, { base: esAttrBase(data, attr) }), v); }
       opts.max = attr.max; opts.preservePrecision = true;
-      opts.subOf = function () { try { var data = o.get(), row = (data.attributes || []).filter(function (a) { return Reg.full(a.id) === linkId; })[0] || {}, cap = linkedAttributeValue(attr, row, esAttrBase(data, attr)); return (linkStart !== undefined && cap !== linkStart ? '上限：' + fmtNum(linkStart) + ' → ' + fmtNum(cap) + '（应用后同步）' : '当前上限：' + fmtNum(cap)) + ' · 游戏上限：' + fmtNum(attr.max); } catch (e) { return '上限暂不可计算：' + e.message; } }; delete opts.sub;
+      opts.subOf = function () { try { var data = o.get(), row = (data.attributes || []).filter(function (a) { return Reg.full(a.id) === linkId; })[0] || {}, cap = linkedAttributeValue(attr, row, esAttrBase(data, attr)); return I18n.t("cadeditor.ui.eschema.17c8a27ae8", (linkStart !== undefined && cap !== linkStart ? I18n.t("cadeditor.ui.eschema.a36a322ae9", (fmtNum(linkStart)), (fmtNum(cap))) : I18n.t("cadeditor.ui.eschema.d6cada7add", (fmtNum(cap)))), (fmtNum(attr.max))); } catch (e) { return I18n.t("cadeditor.ui.eschema.91ed42fa96", (e.message)); } }; delete opts.sub;
       opts.validate = function (v) { try { plan(v); return ''; } catch (e) { return e.message; } };
       opts.onChange = function (v) { var p = plan(v); edit(function (obj) { if (p.changed) esAttrSet(obj, attr, p.base); nbtSetTyped(obj, k, v, f.type === 'float' ? 'f' : 'i'); }); };
-    } else if (k === 'Health' && typeof f.max === 'number') { opts.warnMax = f.max; opts.warnText = '超过默认上限 · 说明'; opts.warnDetail = '该类生物的默认最大生命值为 ' + fmtNum(f.max) + '。体型、变体可能改变实际上限；游戏未提供可联动的最大生命属性，不会伪造上限字段。'; }
+    } else if (k === 'Health' && typeof f.max === 'number') { opts.warnMax = f.max; opts.warnText = I18n.t("cadeditor.ui.eschema.b52150c1a6"); opts.warnDetail = I18n.t("cadeditor.ui.eschema.8513fcdb2f", (fmtNum(f.max))); }
     return xNum(opts);
   }
   if (f.type === 'component' || f.type === 'string') {
     /* 名字：文本组件；已有的颜色、粗体等格式保留，只改 text */
     var text = typeof val === 'string' ? val : isObj(val) && typeof val.text === 'string' ? val.text : '';
     var locked = isObj(val) && typeof val.text !== 'string';
-    if (locked) return xRow({ icon: false, title: nm[0], sub: '使用了翻译键等复杂格式，请在「其他数据」里修改', tip: k });
+    if (locked) return xRow({ icon: false, title: nm[0], sub: I18n.t("cadeditor.ui.eschema.6334fb7c05"), tip: k });
     var inp = kInput(text, function (x) {
       edit(function (obj) {
         if (!x) { delete obj[k]; return; }
         if (f.type === 'string' || !isObj(obj[k]) || Object.keys(obj[k]).every(function (key) { return key === 'text'; })) { obj[k] = x; return; }
         var c = obj[k]; c.text = x; obj[k] = c;
       });
-    }, { placeholder: '不填就没有名字' });
+    }, { placeholder: I18n.t("cadeditor.ui.eschema.90bcaf2d60") });
     inp.classList.add('world-inline-value');
     return xRow({ icon: false, title: nm[0], sub: nm[1], tip: k, right: inp });
   }
@@ -178,7 +179,7 @@ var ES_GEAR_COLS = [['head', 'chest', 'legs', 'feet'], ['mainhand', 'offhand', '
 function esGearGrid(s, o, type) {
   var edit = esEditor(o), bySlot = {};
   (s.equipment || []).forEach(function (q) { if (q.canHold || q.requires) bySlot[q.slot] = q; });
-  if (!Object.keys(bySlot).length) return xEmpty('这只生物没有可以放装备的位置');
+  if (!Object.keys(bySlot).length) return xEmpty(I18n.t("cadeditor.ui.eschema.449b6c5044"));
   function stackOf(q) { var st = esGet(o.get(), q.nbtPath); return isObj(st) && typeof st.id === 'string' ? st : null; }
   function needs(q) { return q.requires && Object.keys(q.requires).some(function (k) { var v = isObj(o.get()) ? o.get()[k] : undefined; return v !== q.requires[k] && !(v === true && q.requires[k] === 1); }); }
   function choose(q, anchor) {
@@ -200,21 +201,21 @@ function esGearGrid(s, o, type) {
   function menu(q, cell, st) {
     var box = h('div', { class: 'k-pickbox es-gearpop' });
     box.appendChild(h('div', { class: 'es-gearhd' }, [stackUiIcon(st, 22), h('div', { class: 'tx' }, [stackUiName(st), h('span', { class: 'k-sub', text: st.id })]),
-      kBtn('编辑物品', function () { kPopClose(); editNestedStack(st, '生物装备 · ' + (ES_SLOT[q.slot] || [q.slot])[0], function (next) { edit(function (obj) { esSet(obj, q.nbtPath, next); }, true); }, o.redraw); }, { icon: 'edit', title: '打开完整物品编辑页，保存后带回此装备槽' })]));
+      kBtn(I18n.t("cadeditor.ui.cards3.7f559289d4"), function () { kPopClose(); editNestedStack(st, I18n.t("cadeditor.ui.eschema.ee43b6f443", ((ES_SLOT[q.slot] || [q.slot])[0])), function (next) { edit(function (obj) { esSet(obj, q.nbtPath, next); }, true); }, o.redraw); }, { icon: 'edit', title: I18n.t("cadeditor.ui.eschema.0575945b77") })]));
     if (q.dropChancePath) {
       var dc = esGet(o.get(), q.dropChancePath), d0 = typeof q.dropChance === 'number' ? q.dropChance : 0;
-      box.appendChild(fieldRow('掉落概率', numField5(typeof dc === 'number' ? dc : d0, d0, { min: 0, max: 1, step: 0.05, dec: 3 }, function (x) { edit(function (obj) { esSet(obj, q.dropChancePath, x); }); })));
+      box.appendChild(fieldRow(I18n.t("cadeditor.ui.eschema.821ceece2c"), numField5(typeof dc === 'number' ? dc : d0, d0, { min: 0, max: 1, step: 0.05, dec: 3 }, function (x) { edit(function (obj) { esSet(obj, q.dropChancePath, x); }); })));
     }
     box.appendChild(h('div', { class: 'es-gearact' }, [
-      kBtn('更换', function () { choose(q, cell); }, { icon: 'refresh' }),
-      kBtn('清空', function () { kPopClose(); edit(function (obj) { esDel(obj, q.nbtPath); if (q.dropChancePath) esDel(obj, q.dropChancePath); }, true); }, { cls: 'dng', icon: 'trash' })
+      kBtn(I18n.t("cadeditor.ui.eschema.916afcd853"), function () { choose(q, cell); }, { icon: 'refresh' }),
+      kBtn(I18n.t("cadeditor.ui.common.clear"), function () { kPopClose(); edit(function (obj) { esDel(obj, q.nbtPath); if (q.dropChancePath) esDel(obj, q.dropChancePath); }, true); }, { cls: 'dng', icon: 'trash' })
     ]));
     kPopover(cell, box, { width: 300, maxHeight: 260 });
   }
   return esGearLayout({
     has: function (slot) { return !!bySlot[slot]; },
     stackOf: function (slot) { return stackOf(bySlot[slot]); },
-    emptyHint: function (slot) { return needs(bySlot[slot]) ? '空（选物品时会一并打开「显示手臂」）' : '空'; },
+    emptyHint: function (slot) { return needs(bySlot[slot]) ? I18n.t("cadeditor.ui.eschema.3bd718508c") : I18n.t("cadeditor.ui.cards4.2f8267a89a"); },
     onEmpty: function (slot, cell) { choose(bySlot[slot], cell); },
     onFilled: function (slot, cell, st) { menu(bySlot[slot], cell, st); }
   });
@@ -230,7 +231,7 @@ function esGearLayout(cfg) {
     var native = st && icon.tagName && icon.tagName.toLowerCase() === 'item';
     if (native) { icon.style.width = '100%'; icon.style.height = '100%'; }
     if (st && !native && (st.count || 1) > 1) cell.appendChild(h('span', { class: 'cnt', text: String(st.count) }));
-    if (!native) setTip(cell, meta[0] + '：' + (st ? nameOfItem(st.id) : (cfg.emptyHint ? cfg.emptyHint(slot) : '空')));
+    if (!native) setTip(cell, meta[0] + '：' + (st ? nameOfItem(st.id) : (cfg.emptyHint ? cfg.emptyHint(slot) : I18n.t("cadeditor.ui.cards4.2f8267a89a"))));
     var open = function () { if (st) cfg.onFilled(slot, cell, st); else cfg.onEmpty(slot, cell); };
     if (cfg.bind) cfg.bind(slot, cell, open); else cell.addEventListener('click', open);
     return h('div', { class: 'es-gear' }, [cell, h('span', { class: 'es-gearl', text: meta[0] })]);
@@ -246,12 +247,12 @@ function esPanel(o) {
     clear(box);
     var s = esReady(o.type, box); if (!s) return;
     var oo = { get: o.get, set: o.set, redraw: draw };
-    if ((s.variants || []).length) { box.appendChild(xSec('paw', '外观')); box.appendChild(esVariantList(s, oo)); }
-    box.appendChild(xSec('sliders', '常用设置')); box.appendChild(esFlagList(s, oo)); var tr = esTagsRow(s, oo); if (tr) box.appendChild(tr);
-    if ((s.attributes || []).some(function (a) { return a.common; })) { box.appendChild(xSec('sword', '属性')); box.appendChild(esAttrList(s, oo)); }
-    if (s.effects && s.effects.common) { box.appendChild(xSec('flask', '状态效果')); box.appendChild(esEffects(s, oo)); }
-    box.appendChild(xSec('helmet', '装备')); box.appendChild(esGearGrid(s, oo, o.type));
-    (s.warnings || []).forEach(function (w) { box.appendChild(kHint('游戏提示：' + w)); });
+    if ((s.variants || []).length) { box.appendChild(xSec('paw', I18n.t("cadeditor.ui.eschema.86a63f23a0"))); box.appendChild(esVariantList(s, oo)); }
+    box.appendChild(xSec('sliders', I18n.t("cadeditor.ui.eschema.66749cca38"))); box.appendChild(esFlagList(s, oo)); var tr = esTagsRow(s, oo); if (tr) box.appendChild(tr);
+    if ((s.attributes || []).some(function (a) { return a.common; })) { box.appendChild(xSec('sword', I18n.t("cadeditor.ui.eschema.86de52d178"))); box.appendChild(esAttrList(s, oo)); }
+    if (s.effects && s.effects.common) { box.appendChild(xSec('flask', I18n.t("cadeditor.ui.eschema.a9e19fd036"))); box.appendChild(esEffects(s, oo)); }
+    box.appendChild(xSec('helmet', I18n.t("cadeditor.ui.eschema.144a327039"))); box.appendChild(esGearGrid(s, oo, o.type));
+    (s.warnings || []).forEach(function (w) { box.appendChild(kHint(I18n.t("cadeditor.ui.eschema.f545b88895", (w)))); });
     foldify(box, 'es');
   }
   draw();
@@ -271,7 +272,7 @@ function heroEntity(type, data, old, src) {
     return h('entity', a);
   })();
   var pa = esPreviewAttrs(full, data);
-  ['baby', 'components'].concat(Object.keys(ES_SLOT)).forEach(function (k) {
+  ['baby', 'components', 'cad-stand'].concat(Object.keys(ES_SLOT)).forEach(function (k) {
     if (pa[k] === undefined) { if (el.getAttribute(k) !== null) el.removeAttribute(k); }
     else if (el.getAttribute(k) !== pa[k]) el.setAttribute(k, pa[k]);
   });
@@ -343,13 +344,13 @@ function esAttrScale(data, s) {
 function esAttrList(s, o) {
   var edit = esEditor(o), list = h('div', { class: 'x-list' });
   var attrs = (s.attributes || []).filter(function (a) { return a.common; });
-  if (!attrs.length) return xEmpty('这只生物没有可以改的属性');
+  if (!attrs.length) return xEmpty(I18n.t("cadeditor.ui.eschema.6ceffb2f6e"));
   attrs.sort(function (a, b) { var i = ES_ATTR_ORDER.indexOf(shortId(a.id)), j = ES_ATTR_ORDER.indexOf(shortId(b.id)); return (i < 0 ? 99 : i) - (j < 0 ? 99 : j) || (a.id < b.id ? -1 : 1); });
   var main = attrs.filter(function (a) { return ES_ATTR_ORDER.indexOf(shortId(a.id)) >= 0 && ES_ATTR_ORDER.indexOf(shortId(a.id)) < 6; }), rest = attrs.filter(function (a) { return main.indexOf(a) < 0; });
   function row(a) {
     var isScale = a.id === 'minecraft:scale', nm = nameOf('attribute', a.id);
     var step = isScale ? 0.25 : (a.max - a.min > 50 ? 1 : 0.1);
-    return xNum({ title: isScale ? '体型' : nm, sub: '默认 ' + fmtNum(a.base) + ' · 范围 ' + fmtNum(a.min) + ' ~ ' + fmtNum(a.max), tip: a.id + (a.id === 'minecraft:max_health' || a.id === 'minecraft:max_absorption' ? '\n降低上限时，超出的当前值会同步降低。' : ''), value: esAttrBase(o.get(), a),
+    return xNum({ title: isScale ? I18n.t("cadeditor.ui.eschema.c8900ba2f5") : nm, sub: I18n.t("cadeditor.ui.eschema.8c5568e59c", (fmtNum(a.base)), (fmtNum(a.min)), (fmtNum(a.max))), tip: a.id + (a.id === 'minecraft:max_health' || a.id === 'minecraft:max_absorption' ? I18n.t("cadeditor.ui.eschema.0f4e066fee") : ''), value: esAttrBase(o.get(), a),
       min: a.min, max: a.max, softMax: isScale ? 4 : undefined, step: step, dec: 3, noSlider: !isScale,
       presets: isScale ? [{ v: 0.5, label: '0.5' }, { v: 1, label: '1' }, { v: 2, label: '2' }, { v: 4, label: '4' }] : undefined,
       validate: function (v) { if (a.id !== 'minecraft:max_health' && a.id !== 'minecraft:max_absorption') return ''; try { var data = o.get(), found = (data.attributes || []).filter(function (r) { return Reg.full(r.id) === a.id; })[0] || {}; linkedAttributeValue(a, found, v); return ''; } catch (e) { return e.message; } },
@@ -359,7 +360,7 @@ function esAttrList(s, o) {
   if (rest.length) {
     var open = !!UIOpen['es:attrs:more'];
     if (open) rest.forEach(function (a) { list.appendChild(row(a)); });
-    var tg = h('div', { class: 'k-add' }, [foldArrow(open, 8), h('span', { text: open ? '收起其他属性' : '其他属性（' + rest.length + '）' })]);
+    var tg = h('div', { class: 'k-add' }, [foldArrow(open, 8), h('span', { text: open ? I18n.t("cadeditor.ui.eschema.26f7ee471c") : I18n.t("cadeditor.ui.eschema.3a24430c4e", (rest.length)) })]);
     activate(tg, function () { UIOpen['es:attrs:more'] = !open; if (o.redraw) o.redraw(); });
     list.appendChild(tg);
   }
@@ -369,14 +370,14 @@ function esAttrList(s, o) {
 function esEffects(s, o) {
   var edit = esEditor(o);
   var fx = kEffectList(function () { var v = esGet(o.get(), ['active_effects']); return Array.isArray(v) ? clone(v) : []; },
-    function (l) { edit(function (obj) { if (l.length) obj.active_effects = l; else delete obj.active_effects; }); }, { empty: '没有效果' });
+    function (l) { edit(function (obj) { if (l.length) obj.active_effects = l; else delete obj.active_effects; }); }, { empty: I18n.t("cadeditor.ui.cards3.aa1f7f93b8") });
   return fx.el;
 }
 /* ---------- 标签（/tag 命令用的）：逗号隔开 ---------- */
 function esTagsRow(s, o) {
   if (!(s.extras || []).some(function (x) { return x.key === 'Tags'; })) return null;
   var edit = esEditor(o), cur = esGet(o.get(), ['Tags']);
-  return xText({ title: '标签', sub: '给 /tag 和选择器用的标签', tip: 'Tags', value: Array.isArray(cur) ? cur.join('，') : '', placeholder: '标签，用逗号隔开', style: 'width:170px', onCommit: function (v) { var t = splitTags(v); edit(function (obj) { if (t.length) obj.Tags = t; else delete obj.Tags; }); } });
+  return xText({ title: I18n.t("cadeditor.ui.eschema.1d0fd5f933"), sub: I18n.t("cadeditor.ui.eschema.ba7f4783d4"), tip: 'Tags', value: Array.isArray(cur) ? cur.join('，') : '', placeholder: I18n.t("cadeditor.ui.eschema.73c968f1e7"), style: 'width:170px', onCommit: function (v) { var t = splitTags(v); edit(function (obj) { if (t.length) obj.Tags = t; else delete obj.Tags; }); } });
 }
 
 /* ====================== 公共：生物头部（图标 + 名字 + ID + 按钮） ======================
@@ -401,10 +402,10 @@ function openEntityDraft(snbt, o) {
   var work, mode = 'form', code = null, panel = null, schemaPending = false, mask, valid = nestedDraftGuard();
   function read(text) {
     var payload = vaultEntityPayload(text);
-    if (!/^(?:[a-z0-9_.-]+:)?[a-z0-9/._-]+$/.test(payload.type)) throw new Error('生物类型 ID 格式无效');
+    if (!/^(?:[a-z0-9_.-]+:)?[a-z0-9/._-]+$/.test(payload.type)) throw new Error(I18n.t("cadeditor.ui.eschema.388a596c77"));
     return vaultEntityObj(text);
   }
-  function failed(e) { if (typeof EditorDiag !== 'undefined') EditorDiag.error('entity.draft', e); toast('生物数据无法保存：' + (e.message || e), 'error'); }
+  function failed(e) { if (typeof EditorDiag !== 'undefined') EditorDiag.error('entity.draft', e); toast(I18n.t("cadeditor.ui.eschema.bf5a7e7049", (e.message || e)), 'error'); }
   try { work = read(snbt); } catch (e) { failed(e); return; }
   var body = h('div', { class: 'k-mb' }), content = h('div', {});
   function show() {
@@ -419,18 +420,18 @@ function openEntityDraft(snbt, o) {
       content.appendChild(panel);
     }
   }
-  var tabs = kSeg([{ v: 'form', label: '属性', icon: 'sliders' }, { v: 'raw', label: 'SNBT', icon: 'code' }], mode, function (next) {
+  var tabs = kSeg([{ v: 'form', label: I18n.t("cadeditor.ui.eschema.86de52d178"), icon: 'sliders' }, { v: 'raw', label: 'SNBT', icon: 'code' }], mode, function (next) {
     if (next === mode) return;
     if (mode === 'raw') { try { work = read(code.get()); } catch (e) { tabs.set(mode); failed(e); return; } }
     mode = next; show();
   });
   body.appendChild(tabs.el); body.appendChild(content); show();
-  var win = modalShell({ icon: 'paw', title: o.title || '编辑生物', sub: entityName(work.id), cls: 'wide', body: body,
-    foot: h('div', { class: 'k-mf' }, [h('div', { class: 'grow' }), kBtn('取消', closeModal), kBtn('保存并返回', function () {
+  var win = modalShell({ icon: 'paw', title: o.title || I18n.t("cadeditor.ui.eschema.7de591c132"), sub: entityName(work.id), cls: 'wide', body: body,
+    foot: h('div', { class: 'k-mf' }, [h('div', { class: 'grow' }), kBtn(I18n.t("cadeditor.ui.common.cancel"), closeModal), kBtn(I18n.t("cadeditor.ui.eschema.778c339528"), function () {
       var text;
       try { text = mode === 'raw' ? code.get() : nbtMerge(work, null); read(text); }
       catch (e) { failed(e); return; }
-      if (!valid() || (o.valid && !o.valid())) { toast('上一级草稿已变化，请重新打开编辑', 'warn'); return; }
+      if (!valid() || (o.valid && !o.valid())) { toast(I18n.t("cadeditor.ui.eschema.1a537ec20a"), 'warn'); return; }
       closeModal(); o.commit(text);
     }, { cls: 'pri', icon: 'check' })]) });
   mask = openModal(win, true); windowify(win, 'entity-draft');
@@ -439,13 +440,13 @@ function openEntityDraft(snbt, o) {
 }
 function esEntityHeader(o) {
   var id = o.id ? Reg.full(o.id) : '';
-  var name = id ? entityName(id) : (o.empty || '（未选择）');
+  var name = id ? entityName(id) : (o.empty || I18n.t("cadeditor.ui.banner.3c5045c728"));
   var kids = [h('div', { class: 'egg-ico' }, [o.iconFn ? o.iconFn(32) : esEntityIcon(id, 32)]), h('div', { class: 'tx' }, [h('b', { text: name }), h('span', { class: 'k-sub', text: o.sub !== undefined ? o.sub : id })])];
   var snd = id && typeof mobSoundRow === 'function' ? mobSoundRow(id) : null;
-  if (o.onPick) kids.push(kBtn('更换生物', function () { openRegPick({ reg: 'entity_type', current: id, title: '选择生物', entityText: o.snbtText, onEntityNbt: o.onEntityNbt, onPick: o.onPick }); }, { icon: 'grid' }));
-  var editButton = id && o.snbtText && o.onEntityNbt ? kBtn('编辑生物', function () { try { openEntityDraft(o.snbtText(), { commit: o.onEntityNbt }); } catch (e) { if (typeof EditorDiag !== 'undefined') EditorDiag.error('entity.header.edit', e); toast('生物数据无法读取：' + (e.message || e), 'error'); } }, { icon: 'edit' }) : null;
-  if (o.onApplyVault) kids.push(kBtn('从保险库套用', function () { openVault({ kind: 'entity', pickEntity: function (snbt) { o.onApplyVault(snbt); } }); }, { icon: 'download', title: '把保险库里同类型生物的外观、属性、装备等套上来' }));
-  if (o.snbtText && id) kids.push(kBtn('存入保险库', function () { openVaultSaveEntity(o.snbtText(), name); }, { icon: 'chest', title: '把调好的整只生物存起来，之后在任何选择生物的地方取出' }));
+  if (o.onPick) kids.push(kBtn(I18n.t("cadeditor.ui.eschema.23ccd9357c"), function () { openRegPick({ reg: 'entity_type', current: id, title: I18n.t("cadeditor.ui.eschema.0c8fb2e36b"), entityText: o.snbtText, onEntityNbt: o.onEntityNbt, onPick: o.onPick }); }, { icon: 'grid' }));
+  var editButton = id && o.snbtText && o.onEntityNbt ? kBtn(I18n.t("cadeditor.ui.eschema.7de591c132"), function () { try { openEntityDraft(o.snbtText(), { commit: o.onEntityNbt }); } catch (e) { if (typeof EditorDiag !== 'undefined') EditorDiag.error('entity.header.edit', e); toast(I18n.t("cadeditor.ui.eschema.3020fa499b", (e.message || e)), 'error'); } }, { icon: 'edit' }) : null;
+  if (o.onApplyVault) kids.push(kBtn(I18n.t("cadeditor.ui.eschema.4abbd64967"), function () { openVault({ kind: 'entity', pickEntity: function (snbt) { o.onApplyVault(snbt); } }); }, { icon: 'download', title: I18n.t("cadeditor.ui.eschema.818f73e936") }));
+  if (o.snbtText && id) kids.push(kBtn(I18n.t("cadeditor.ui.eschema.248306082a"), function () { openVaultSaveEntity(o.snbtText(), name); }, { icon: 'chest', title: I18n.t("cadeditor.ui.eschema.b981ac0d25") }));
   if (snd || editButton || o.originHint) kids.push(h('div', { class: 'egg-actions' }, [snd, o.originHint ? h('span', { class: 'k-sub', text: o.originHint, title: o.originHint }) : null, editButton].filter(function (x) { return x; })));
   return h('div', { class: 'egg-who' }, kids);
 }

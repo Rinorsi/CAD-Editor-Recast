@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.client;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import dev.rinorsi.editor.EditorDiagnostics;
 import java.io.IOException;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -28,23 +30,23 @@ final class EditorSoundDuration {
             try (var input = resource.open()) {
                 byte[] bytes = input.readNBytes(MAX_BYTES + 1);
                 if (!current.getAsBoolean()) return;
-                if (bytes.length > MAX_BYTES) throw new IOException("音频超过32MiB，跳过总时长读取");
+                if (bytes.length > MAX_BYTES) throw new IOException(EditorI18n.tr("cadeditor.message.editorsoundduration.95d89a1d2c"));
                 var encoded = MemoryUtil.memAlloc(bytes.length);
                 try (var stack = MemoryStack.stackPush()) {
                     encoded.put(bytes).flip();
                     var error = stack.mallocInt(1);
                     long decoder = STBVorbis.stb_vorbis_open_memory(encoded, error, null);
-                    if (decoder == 0) throw new IOException("读取Ogg时长失败，代码=" + error.get(0));
+                    if (decoder == 0) throw new IOException(EditorI18n.tr("cadeditor.message.editorsoundduration.eb103f1236", (error.get(0))));
                     try {
                         double seconds = STBVorbis.stb_vorbis_stream_length_in_seconds(decoder);
-                        if (!Double.isFinite(seconds) || seconds <= 0) throw new IOException("音频没有可读取的总时长");
+                        if (!Double.isFinite(seconds) || seconds <= 0) throw new IOException(EditorI18n.tr("cadeditor.message.editorsoundduration.5a7c717988"));
                         if (current.getAsBoolean()) accept.accept(new Clip(bytes, seconds));
                     } finally { STBVorbis.stb_vorbis_close(decoder); }
                 } finally { MemoryUtil.memFree(encoded); }
             } catch (IOException | RuntimeException error) {
                 if (current.getAsBoolean()) {
                     EditorDiagnostics.warning("sound.preview.duration", "resource=" + path + " pack=" + resource.sourcePackId(), error);
-                    failed.accept("无法读取总时长，暂不能跳转；详情见日志");
+                    failed.accept(EditorI18n.tr("cadeditor.message.editorsoundduration.ac154eb788"));
                 }
             }
         });

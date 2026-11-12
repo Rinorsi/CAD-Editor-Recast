@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.client;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.JsonElement;
 import java.util.ArrayDeque;
 import java.util.concurrent.Executors;
@@ -75,7 +77,7 @@ final class EditorUiLog implements AutoCloseable {
         if (emitted.size() >= 20) return null;
         Entry next;
         if (dropped > 0 && now - lastSummary >= 5 * SECOND) {
-            next = new Entry(Level.WARN, "已丢弃 " + dropped + " 条"); dropped = 0; lastSummary = now;
+            next = new Entry(Level.WARN, EditorI18n.tr("cadeditor.message.editoruilog.b424a85f3a", (dropped))); dropped = 0; lastSummary = now;
         } else next = pending.pollFirst();
         if (next != null) emitted.addLast(now);
         return next;

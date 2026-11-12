@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.vault;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.JsonObject;
 import dev.rinorsi.editor.EditorSessions;
 import dev.rinorsi.editor.StackCodec;
@@ -12,10 +14,10 @@ public final class VaultTemplateApply {
     private VaultTemplateApply() {}
     public static JsonObject expand(WorldTarget target, WorldEditSessions.State state, JsonObject request) {
         if (!StackCodec.string(request, "op").equals("apply"))
-            EditorSessions.fail("invalid_request", "预设仅能通过 apply 套用");
+            EditorSessions.fail("invalid_request", EditorI18n.tr("cadeditor.message.vaulttemplateapply.bb7bfbd824"));
         for (String key : request.keySet())
             if (!Set.of("op", "requestId", "slot", "revision", "vault_template", "updateNeighbors").contains(key))
-                EditorSessions.fail("invalid_request", "预设不能与其他编辑字段混合提交");
+                EditorSessions.fail("invalid_request", EditorI18n.tr("cadeditor.message.vaulttemplateapply.f0a27c9549"));
         // Use the opened baseline, not a fresh mutable value, so normal three-way conflicts remain intact.
         var snapshot = target.snapshot(state.slot, false, state.baseline);
         var edit = VaultTemplates.expand(StackCodec.object(request, "vault_template"), snapshot);

@@ -39,7 +39,7 @@ var Drafts = {
       d.draftKeys = d.draftKeys || []; if (d.draftKeys.indexOf(p.key) < 0) d.draftKeys.push(p.key);
       this.keyWritten[p.key] = true; this.write(p.key, p.value, d);
     } }
-    catch (error) { this.failed({ reason: '物品草稿序列化失败：' + String(error.message || error) }); }
+    catch (error) { this.failed({ reason: I18n.t("cadeditor.ui.drafts.d57d334b3b", (String(error.message || error))) }); }
   },
   /* Synchronous pagehide exporter; independent from the ack/chunk queue. Never exports a child as its parent's inventory slot. */
   exportPackets: function () {
@@ -65,7 +65,7 @@ var Drafts = {
     // Other documents/slots/world drafts are never selected from the global prefs map.
     var old = JSON.parse(submitted.snap), key = this.keyOf({src:d.src,id:old.id});
     var currentKey = this.keyOf(d), later;
-    try { later = snapOf(d) !== d.base; } catch (error) { this.failed({reason:'保存已确认，但后续草稿序列化失败；原草稿仍保留：'+String(error.message || error)}); return; }
+    try { later = snapOf(d) !== d.base; } catch (error) { this.failed({reason:I18n.t("cadeditor.ui.drafts.864958ae4e", (String(error.message || error)))}); return; }
     var me = this, keys = (d.draftKeys || []).slice(); if (key && keys.indexOf(key) < 0) keys.push(key);
     keys.forEach(function (written) {
       // A newer dirty value replaces this key with a higher sequence; never delete its last good
@@ -111,12 +111,12 @@ var Drafts = {
     var up = 'u' + (++this.upSeq) + '-' + Date.now(), list = [{ op: 'begin', key: key, upload: up, length: value.length, writer:this.writer,seq:seq }];
     for (var o = 0; o < value.length;) {
       var end = Math.min(value.length, o + 2800), chunk;
-      do { chunk = { op: 'chunk', key:key, upload: up, offset: o, value: value.substring(o, end), done: end === value.length, writer:this.writer, seq:seq }; if (JSON.stringify(chunk).length <= 7000) break; if (end - o === 1) throw new Error('草稿分块信封过大'); end = o + Math.max(1, Math.floor((end - o) / 2)); } while (end > o);
+      do { chunk = { op: 'chunk', key:key, upload: up, offset: o, value: value.substring(o, end), done: end === value.length, writer:this.writer, seq:seq }; if (JSON.stringify(chunk).length <= 7000) break; if (end - o === 1) throw new Error(I18n.t("cadeditor.ui.drafts.6f11207206")); end = o + Math.max(1, Math.floor((end - o) / 2)); } while (end > o);
       list.push(chunk); o = end;
     }
     this.queue = this.queue.concat(list); this.pump();
   },
-  send: function (m) { try { if (oriel.send('drafts', m) === false) throw new Error('宿主未接受草稿消息：' + m.op); this.lastSendError = null; return true; } catch (e) { this.lastSendError = e; return false; } },
+  send: function (m) { try { if (oriel.send('drafts', m) === false) throw new Error(I18n.t("cadeditor.ui.drafts.84ea1fb81f", (m.op))); this.lastSendError = null; return true; } catch (e) { this.lastSendError = e; return false; } },
   pump: function () {
     if (this.busy || !this.queue.length) return;
     var wait = this.nextSendAt - Date.now(), self = this;
@@ -130,13 +130,13 @@ var Drafts = {
       if (active.retry <= 3) { this.queue.unshift(active); this.nextSendAt = Date.now() + active.retry * 500; this.pump(); return; }
       if (active.upload) this.queue = this.queue.filter(function (m) { return m.upload !== active.upload; });
       delete this.acknowledged[active.key];
-      this.failed({ reason: '草稿发送连续失败，原草稿仍保留；请重试', detail: 'op=' + active.op + ' key=' + active.key + ' seq=' + active.seq + ' offset=' + active.offset + ' chars=' + JSON.stringify(active).length + ' error=' + this.lastSendError });
+      this.failed({ reason: I18n.t("cadeditor.ui.drafts.eea4474769"), detail: 'op=' + active.op + ' key=' + active.key + ' seq=' + active.seq + ' offset=' + active.offset + ' chars=' + JSON.stringify(active).length + ' error=' + this.lastSendError });
       this.pump(); return;
     }
     if (active.op === 'world_bind' || active.op === 'get') { if (this.busy === active) this.busy = false; this.pump(); return; }
     if (this.busy !== active) return;
     clearTimeout(this.ackTimer);
-    this.ackTimer = setTimeout(function () { if (me.busy !== active) return; me.busy = false; delete me.acknowledged[active.key]; if (active.upload) me.queue = me.queue.filter(function (m) { return m.upload !== active.upload; }); me.failed({ reason: '草稿上传回执超时，旧草稿仍保留；下次编辑会重新保存', detail: 'op=' + active.op + ' key=' + active.key + ' seq=' + active.seq + ' offset=' + active.offset }); me.pump(); }, 12000);
+    this.ackTimer = setTimeout(function () { if (me.busy !== active) return; me.busy = false; delete me.acknowledged[active.key]; if (active.upload) me.queue = me.queue.filter(function (m) { return m.upload !== active.upload; }); me.failed({ reason: I18n.t("cadeditor.ui.drafts.d02a72ba0c"), detail: 'op=' + active.op + ' key=' + active.key + ' seq=' + active.seq + ' offset=' + active.offset }); me.pump(); }, 12000);
   },
   onResult: function (r) {
     if (!r || typeof r !== 'object') return;
@@ -159,7 +159,7 @@ var Drafts = {
       this.pump();
     } // Old/duplicate receipts must not advance or fail a newer write.
   },
-  failed: function (r) { var reason = r.reason || '宿主拒绝了'; if (typeof EditorDiag !== 'undefined') EditorDiag.error('drafts.persist', new Error(reason + (r.detail ? ' ' + r.detail : '') + (r.op ? ' op=' + r.op + ' key=' + r.key + ' seq=' + r.seq : ''))); toast('草稿没能保存：' + reason, 'warn', 'drafts-error'); },
+  failed: function (r) { var reason = r.reason || I18n.t("cadeditor.ui.drafts.a4243d53b1"); if (typeof EditorDiag !== 'undefined') EditorDiag.error('drafts.persist', new Error(reason + (r.detail ? ' ' + r.detail : '') + (r.op ? ' op=' + r.op + ' key=' + r.key + ' seq=' + r.seq : ''))); toast(I18n.t("cadeditor.ui.drafts.188277a3b0", (reason)), 'warn', 'drafts-error'); },
   attach: function () {
     if (typeof oriel === 'undefined' || !oriel.on) return;
     var me = this;
@@ -171,7 +171,7 @@ var Drafts = {
     var comps = dr.nbt_types ? nbtRestore(dr.comps || {}, dr.nbt_types) : nbtHydrate(dr.comps || {}, dr.v === 2 ? dr.nbt || {} : d.snbt || {});
     if (fullId(dr.id) !== d.id) Store.setItem(fullId(dr.id));
     if (dr.count !== d.count) Store.setCount(dr.count);
-    Store.replace(comps, dr.removed || {}, '恢复草稿');
+    Store.replace(comps, dr.removed || {}, I18n.t("cadeditor.ui.drafts.d20d05c1b0"));
     if (dr.raw && typeof dr.raw.text === 'string') {
       ItemRawBuffers.set(d, {text:dr.raw.text, base:dr.raw.base || snapOf(d), invalid:true});
       UI.cmdFmt = 'snbt'; UI.tab = 'item-stack'; drawTabbar(); drawTabBody();
@@ -205,7 +205,7 @@ var Drafts = {
         var submittedBase = snapOf(nbtReadSnapshot(JSON.stringify(dr)));
         if (diffDoc({ id:d.id, count:d.count, comps:d.comps, removed:d.removed, snbt:d.snbt, base:submittedBase }).length === 0) { this.clear(key); return; }
         }
-      } catch (error) { this.failed({ reason:'已提交草稿核对失败；原草稿仍保留：'+String(error.message || error) }); }
+      } catch (error) { this.failed({ reason:I18n.t("cadeditor.ui.drafts.33a65fa7bd", (String(error.message || error))) }); }
     }
     // A new baseline can be our own successful write with a lost receipt, or an
     // external edit. Neither confirms this local draft: retain it for explicit review.
@@ -218,16 +218,16 @@ var Drafts = {
       if ((Prefs.vals.drafts || {})[key] === value && d.base === base) return true;
       closeModal(); delete me.offered[key]; me.offer(d); return false;
     }
-    var ok = kBtn('恢复', function () {
+    var ok = kBtn(I18n.t("cadeditor.ui.drafts.e0534b8a4e"), function () {
       if (!stillCurrent()) return;
       closeModal();
       me.restore(d, dr);
-      toast('草稿已载入编辑器，尚未写入游戏' + (changed || dr.pending ? '；请先比较游戏数据' : ''), 'info');
+      toast(I18n.t("cadeditor.ui.drafts.f0d698c891", (changed || dr.pending ? I18n.t("cadeditor.ui.drafts.1414eabc7c") : '')), 'info');
     }, { cls: 'pri', icon: 'check' });
-    var no = kBtn('丢弃', function () { if (!stillCurrent()) return; closeModal(); me.clear(key); }, { icon: 'trash' });
-    var reason = changed ? '游戏里的物品已有变化。旧草稿仍保留；恢复后请先比较，再决定是否应用。' : '上次编辑留下了草稿（约 ' + ago + ' 分钟前）。恢复只载入编辑器，不会自动写入游戏。';
-    if (dr.pending) reason += ' 上次提交结果未知，请先核对游戏数据。';
-    var win = modalShell(changed ? '游戏数据已变化，草稿已保留' : '有没应用的修改', '', [kHint(reason)], [h('div', { class: 'grow' }), no, kBtn('稍后', closeModal), ok], 'k-narrow');
+    var no = kBtn(I18n.t("cadeditor.ui.drafts.b16f71b556"), function () { if (!stillCurrent()) return; closeModal(); me.clear(key); }, { icon: 'trash' });
+    var reason = changed ? I18n.t("cadeditor.ui.drafts.05bac2e87c") : I18n.t("cadeditor.ui.drafts.a06b64b4ad", (ago));
+    if (dr.pending) reason += I18n.t("cadeditor.ui.drafts.899457ad6c");
+    var win = modalShell(changed ? I18n.t("cadeditor.ui.drafts.bf44f304e5") : I18n.t("cadeditor.ui.drafts.b84606bd8a"), '', [kHint(reason)], [h('div', { class: 'grow' }), no, kBtn(I18n.t("cadeditor.ui.drafts.9d2ca26128"), closeModal), ok], 'k-narrow');
     openModal(win);
   },
 };
@@ -264,17 +264,17 @@ var WorldDrafts = {
       if (packet.clean) {
         if (packet.clear) { this.clears[packet.key] = true; Drafts.clear(packet.key); delete this.written[packet.key]; }
       } else { delete this.clears[packet.key]; this.written[packet.key] = true; Drafts.write(packet.key, packet.value); }
-    } catch (error) { Drafts.failed({ reason: '世界草稿序列化失败：' + String(error.message || error) }); }
+    } catch (error) { Drafts.failed({ reason: I18n.t("cadeditor.ui.drafts.f6f135dc20", (String(error.message || error))) }); }
   },
   opened: function (saved) { if (!saved) { this.flight = null; delete this.offered[this.key(WE.w)]; this.offer(); } },
   offer: function () {
     var key = this.key(WE.w), value = key && Prefs.vals.drafts && Prefs.vals.drafts[key], me = this;
     if (!value || !Drafts.on()) return;
     if (this.offered[key] === value) return; this.offered[key] = value; delete this.written[key]; delete this.clears[key];
-    var packet; try { packet = JSON.parse(value); if (packet.v !== 3 || packet.kind !== 'world') return; if (!packet.base || typeof packet.base.snbt !== 'string' || !packet.state || typeof packet.state.text !== 'string') throw new Error('草稿缺少基线或编辑文本'); } catch (e) { Drafts.failed({ reason: '已保存的世界草稿无法读取；原草稿仍保留：' + String(e.message || e) }); return; }
+    var packet; try { packet = JSON.parse(value); if (packet.v !== 3 || packet.kind !== 'world') return; if (!packet.base || typeof packet.base.snbt !== 'string' || !packet.state || typeof packet.state.text !== 'string') throw new Error(I18n.t("cadeditor.ui.drafts.b17010b48c")); } catch (e) { Drafts.failed({ reason: I18n.t("cadeditor.ui.drafts.308b496da7", (String(e.message || e))) }); return; }
     var changed = this.textNorm(packet.base.snbt) !== this.textNorm(WE.w.snbt), world = WE.w;
-    var reason = changed ? '游戏数据已有变化。恢复后可继续编辑并应用。' : '这个目标有上次未应用的修改。';
-    if (packet.pending) reason += ' 上次提交结果未知，请先核对游戏数据。';
+    var reason = changed ? I18n.t("cadeditor.ui.drafts.8d76ab9d34") : I18n.t("cadeditor.ui.drafts.3b7eb69f04");
+    if (packet.pending) reason += I18n.t("cadeditor.ui.drafts.899457ad6c");
     function stillCurrent() {
       if (WE.w !== world) return false;
       if ((Prefs.vals.drafts || {})[key] === value) return true;
@@ -282,10 +282,10 @@ var WorldDrafts = {
       // Never restore or discard the older version captured by that prompt's closure.
       closeModal(); delete me.offered[key]; me.offer(); return false;
     }
-    var yes = kBtn('恢复草稿', function () { if (!stillCurrent()) return; closeModal(); me.restore(packet, changed); }, { cls: 'pri', icon: 'check' });
-    var later = kBtn('稍后', closeModal, {});
-    var drop = kBtn('丢弃此草稿', function () { if (!stillCurrent()) return; closeModal(); Drafts.clear(key); }, { icon: 'trash' });
-    openModal(modalShell('有未应用的世界目标草稿', '', [kHint(reason)], [drop, later, yes], 'k-narrow'));
+    var yes = kBtn(I18n.t("cadeditor.ui.drafts.d20d05c1b0"), function () { if (!stillCurrent()) return; closeModal(); me.restore(packet, changed); }, { cls: 'pri', icon: 'check' });
+    var later = kBtn(I18n.t("cadeditor.ui.drafts.9d2ca26128"), closeModal, {});
+    var drop = kBtn(I18n.t("cadeditor.ui.drafts.ab7d38fe7a"), function () { if (!stillCurrent()) return; closeModal(); Drafts.clear(key); }, { icon: 'trash' });
+    openModal(modalShell(I18n.t("cadeditor.ui.drafts.4b7c6db616"), '', [kHint(reason)], [drop, later, yes], 'k-narrow'));
   },
   textNorm: function (text) { try { return nbtPrint(nbtParse(text), false); } catch (e) { return text; } },
   // Apply only changes made after a snapshot, onto freshly-authoritative SNBT.
@@ -303,23 +303,23 @@ var WorldDrafts = {
     return nbtPrint(merge(nbtParse(base), nbtParse(mine), nbtParse(current)), true);
   },
   restore: function (packet, changed) {
-    var state; try { state = nbtRestore(packet.state, packet.types); } catch (error) { Drafts.failed({ reason: '世界草稿类型信息无效：' + String(error.message || error) }); return; } this.restoring = true;
+    var state; try { state = nbtRestore(packet.state, packet.types); } catch (error) { Drafts.failed({ reason: I18n.t("cadeditor.ui.drafts.cf2e8ceb57", (String(error.message || error))) }); return; } this.restoring = true;
     try {
       WE.text = changed ? this.rebaseText(packet.base.snbt, state.text, WE.w.snbt) : state.text;
       ['slots','views','bstate','btype','ent','offers','pslots','upd','face'].forEach(function (k) { if (Object.prototype.hasOwnProperty.call(state, k)) WE[k] = state[k]; });
       WE.obj = null; WE.draftConflict = state.conflict || (changed || packet.pending ? { base: packet.base.snbt, mine: state.text } : null);
       if (weTabs().some(function (t) { return t.id === state.tab; })) WE.tab = state.tab;
-      weRender(); toast('草稿已恢复到编辑器，尚未写入游戏', 'info', 'world-draft');
-    } catch (error) { Drafts.failed({ reason: '世界草稿恢复失败，已保存的草稿仍保留：' + String(error.message || error) }); return; } finally { this.restoring = false; }
+      weRender(); toast(I18n.t("cadeditor.ui.drafts.af63a8e449"), 'info', 'world-draft');
+    } catch (error) { Drafts.failed({ reason: I18n.t("cadeditor.ui.drafts.9ac0a5d8cb", (String(error.message || error))) }); return; } finally { this.restoring = false; }
     this.flush();
   },
   compare: function () {
-    var body = [kHint('查看不修改数据；点击主页面的应用修改可提交草稿。')];
-    body.push(secTitle('游戏当前数据')); body.push(kCode({ value: WE.w.snbt, height: 140 }).el);
-    body.push(secTitle('恢复的草稿')); body.push(kCode({ value: WE.text, height: 140 }).el);
-    body.push(kHint('表单与容器草稿（独立于完整数据文本）'));
+    var body = [kHint(I18n.t("cadeditor.ui.drafts.acffa74970"))];
+    body.push(secTitle(I18n.t("cadeditor.ui.drafts.df6ba1613b"))); body.push(kCode({ value: WE.w.snbt, height: 140 }).el);
+    body.push(secTitle(I18n.t("cadeditor.ui.drafts.62787127bd"))); body.push(kCode({ value: WE.text, height: 140 }).el);
+    body.push(kHint(I18n.t("cadeditor.ui.drafts.ffabf78d99")));
     body.push(kCode({ value: nbtMerge({ views: WE.views, entity: WE.ent, slots: WE.slots, playerSlots: WE.pslots, offers: WE.offers, block_state: WE.bstate, block_type: WE.btype }, null), height: 140 }).el);
-    openModal(modalShell('恢复内容', '', body, [kBtn('返回编辑', closeModal, { cls: 'pri', icon: 'back' })], ''));
+    openModal(modalShell(I18n.t("cadeditor.ui.drafts.bd5caae727"), '', body, [kBtn(I18n.t("cadeditor.ui.drafts.16b38790d5"), closeModal, { cls: 'pri', icon: 'back' })], ''));
   },
   beforeSend: function (id, previous) { WE.draftUnknown = false; this.flight = previous ? clone(previous) : { key: this.key(WE.w), text: WE.text, state: clone(this.state()) }; this.flight.id = id; this.flush(); },
   beforeSaved: function (world) {

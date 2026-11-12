@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.registry;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import net.minecraft.core.BlockPos;
@@ -22,7 +24,7 @@ public final class ItemMetadata {
     private ItemMetadata() {}
     public static JsonArray entries(RegistryAccess access, Identifier only) {
         var registry = access.lookup(Registries.ITEM).orElse(BuiltInRegistries.ITEM);
-        if (only != null && !registry.containsKey(only)) throw new IllegalArgumentException("未知物品：" + only);
+        if (only != null && !registry.containsKey(only)) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.itemmetadata.88b3a85a5a", (only)));
         JsonArray entries = new JsonArray();
         registry.listElements().filter(h -> only == null || h.key().identifier().equals(only))
                 .sorted(java.util.Comparator.comparing(h -> h.key().identifier().toString()))
@@ -61,7 +63,7 @@ public final class ItemMetadata {
                         if (entity instanceof Container container) out.addProperty("container_size", container.getContainerSize());
                         else if (entity instanceof net.minecraft.world.level.block.entity.CampfireBlockEntity campfire) out.addProperty("container_size", campfire.getItems().size());
                     }
-                } catch (RuntimeException e) { out.addProperty("metadata_error", "无法在无世界状态读取方块实体：" + e.getClass().getSimpleName()); }
+                } catch (RuntimeException e) { out.addProperty("metadata_error", EditorI18n.tr("cadeditor.message.itemmetadata.1b3bec4ba3", (e.getClass().getSimpleName()))); }
             }
         }
         boolean bundle = item instanceof BundleItem || comps.has(DataComponents.BUNDLE_CONTENTS);

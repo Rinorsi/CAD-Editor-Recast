@@ -1,5 +1,7 @@
 package dev.rinorsi.editor.registry;
 
+import dev.rinorsi.editor.EditorI18n;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.util.List;
@@ -37,7 +39,7 @@ public final class EntityRegistryChannel {
         if (request.has("requestId")) {
             var token=request.get("requestId");
             if (!token.isJsonPrimitive() || !token.getAsJsonPrimitive().isString() || token.getAsString().isEmpty() || token.getAsString().length()>80)
-                requestError="实体请求 requestId 必须为1至80字符的字符串";
+                requestError=EditorI18n.tr("cadeditor.message.entityregistrychannel.31762599b1");
             else context.add("requestId",token);
         }
         final String invalidRequest=requestError;
@@ -59,21 +61,21 @@ public final class EntityRegistryChannel {
                         row.add("attributes", EntityDefaults.attributes(type)); entries.add(row);
                     }
                 } else {
-                    if (mc.level == null) throw new IllegalStateException("没有客户端世界，无法读取实体/刷怪器模板");
+                    if (mc.level == null) throw new IllegalStateException(EditorI18n.tr("cadeditor.message.entityregistrychannel.9ed1a2c815"));
                     if (name.equals("spawner_info")) entries = SpawnerData.entries(mc.level.registryAccess());
                     else if (name.equals("entity_schema") || name.startsWith("entity_schema:")) {
-                        if (!context.has("id")) throw new IllegalArgumentException("缺少实体 id");
+                        if (!context.has("id")) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.entityregistrychannel.65d007313e"));
                         var type=resolve(context.get("id").getAsString());entries=new JsonArray();
                         entries.add(EntitySchemaValidation.schema(BuiltInRegistries.ENTITY_TYPE.getKey(type).toString(),mc.level));
                     }
                     else {
-                        if (!context.has("id")) throw new IllegalArgumentException("缺少实体 id");
+                        if (!context.has("id")) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.entityregistrychannel.65d007313e"));
                         var type = resolve(context.get("id").getAsString());
                         Entity entity = null; String templateError = null;
                         try {
                             entity = type == net.minecraft.world.entity.EntityTypes.PLAYER && mc.player != null ? new RemotePlayer(mc.level, mc.player.getGameProfile())
                                     : type.create(mc.level, EntitySpawnReason.LOAD);
-                            if (entity == null) templateError = "该实体类型不提供客户端工厂";
+                            if (entity == null) templateError = EditorI18n.tr("cadeditor.message.entityregistrychannel.2c66b166a6");
                         } catch (RuntimeException error) { templateError = message(error); if (current.getAsBoolean()) dev.rinorsi.editor.EditorDiagnostics.warning("registry.entity.factory", context.toString(), error); }
                         JsonObject row = EntityDefaults.describe(type, entity, mc.level.registryAccess());
                         if (entity != null) {
@@ -81,7 +83,7 @@ public final class EntityRegistryChannel {
                                 var problems = new TemplateProblems();
                                 var output = TagValueOutput.createWithContext(problems, mc.level.registryAccess());
                                 entity.saveWithoutId(output);
-                                if (!problems.errors.isEmpty()) throw new IllegalArgumentException("实体模板序列化不完整: " + problems.errors);
+                                if (!problems.errors.isEmpty()) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.entityregistrychannel.012256d62d", (problems.errors)));
                                 var tag = output.buildResult();
                                 // A reusable data template must not carry a freshly generated identity.
                                 tag.remove(Entity.TAG_UUID);
@@ -113,8 +115,8 @@ public final class EntityRegistryChannel {
     }
     private static EntityType<?> resolve(String raw) {
         Identifier id = Identifier.tryParse(raw);
-        if (id == null) throw new IllegalArgumentException("无效实体 id: " + raw);
-        return BuiltInRegistries.ENTITY_TYPE.getOptional(id).orElseThrow(() -> new IllegalArgumentException("未知实体 id: " + raw));
+        if (id == null) throw new IllegalArgumentException(EditorI18n.tr("cadeditor.message.entityregistrychannel.0c4a0738e4", (raw)));
+        return BuiltInRegistries.ENTITY_TYPE.getOptional(id).orElseThrow(() -> new IllegalArgumentException(EditorI18n.tr("cadeditor.message.entityregistrychannel.2651a3c80a", (raw))));
     }
     private static String message(RuntimeException error) {
         String value = error.toString(); return value.substring(0, Math.min(2000, value.length()));
