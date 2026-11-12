@@ -1,29 +1,64 @@
 {
   "project_id": "MJW1h2CF",
   "project_slug": "cad-editor",
-  "replace_previous_gallery": true,
-  "protected_versions": ["Wtcje6WK", "aKnkLbVm", "sXvTDOHL", "EqQI0V34", "bYzq7rfN", "xwN80lRh"],
+  "replace_previous_gallery": false,
+  "protected_versions": [
+    "Wtcje6WK",
+    "aKnkLbVm",
+    "sXvTDOHL",
+    "EqQI0V34",
+    "bYzq7rfN",
+    "xwN80lRh"
+  ],
   "gallery": [
     {
       "file": "docs/screenshots/en_us/item-editor.png",
       "title": "Recast: item appearance and tooltip preview",
-      "description": "English UI. Oriel offline preview of the actual editor with demo data; not an in-game capture.",
+      "description": "Recast: item appearance and tooltip preview",
       "featured": true,
       "ordering": -30
     },
     {
       "file": "docs/screenshots/en_us/potion-effects.png",
       "title": "Recast: potion effect editing",
-      "description": "English UI. Oriel offline preview of the actual editor with demo data; not an in-game capture.",
+      "description": "Recast: potion effect editing",
       "featured": false,
       "ordering": -20
     },
     {
       "file": "docs/screenshots/en_us/snbt-editor.png",
       "title": "Recast: SNBT component editing",
-      "description": "English UI. Oriel offline preview of the actual editor with demo data; not an in-game capture.",
+      "description": "Recast: SNBT component editing",
       "featured": false,
       "ordering": -10
+    },
+    {
+      "file": "docs/screenshots/en_us/book-editor.png",
+      "title": "Recast: book editing",
+      "description": "Recast: book editing",
+      "featured": false,
+      "ordering": 0
+    },
+    {
+      "file": "docs/screenshots/en_us/sign-editor.png",
+      "title": "Recast: sign text editing",
+      "description": "Recast: sign text editing",
+      "featured": false,
+      "ordering": 10
+    },
+    {
+      "file": "docs/screenshots/en_us/mob-editor.png",
+      "title": "Recast: mob settings and inventory",
+      "description": "Recast: mob settings and inventory",
+      "featured": false,
+      "ordering": 20
+    },
+    {
+      "file": "docs/screenshots/en_us/villager-trades.png",
+      "title": "Recast: villager trade editing",
+      "description": "Recast: villager trade editing",
+      "featured": false,
+      "ordering": 30
     }
   ]
 }

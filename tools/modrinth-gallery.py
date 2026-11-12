@@ -1,6 +1,6 @@
 """Upload English screenshots without modifying project text or any version.
 
-No writes by default. --apply verifies three new images before replacing the old gallery.
+No writes by default. --apply uploads images and updates matching image captions.
 Uses the same environment token and redirect protection as the draft uploader.
 """
 import argparse
@@ -25,7 +25,7 @@ PROTECTED_FIELDS = ('id', 'slug', 'title', 'status', 'icon_url', 'description', 
 class PageClient(draft.Client):
     def request(self, method, path, payload=None, content_type='application/json'):
         if method != 'GET':
-            allowed = method in ('POST', 'DELETE') and path.startswith(PROJECT + '/gallery?')
+            allowed = method in ('POST', 'PATCH', 'DELETE') and path.startswith(PROJECT + '/gallery?')
             if not allowed:
                 raise draft.DraftError('此脚本只能替换原项目图库图片，禁止修改介绍、其他设置或版本。')
         return super().request(method, path, payload, content_type)
@@ -48,6 +48,8 @@ def prepare():
             raise draft.DraftError('图库文件必须是 5 MiB 以内的 PNG。')
         if not item['title'].isascii() or not item['description'].isascii():
             raise draft.DraftError('图库标题和说明必须使用英文。')
+        if item['title'] != item['description']:
+            raise draft.DraftError('图库标题和说明必须相同。')
         item['sha256'] = hashlib.sha256(data).hexdigest()
     return config
 
@@ -64,14 +66,14 @@ def image_digest(url):
     return hashlib.sha256(data).hexdigest()
 
 
-def gallery_match(project, item):
+def gallery_match(project, item, strict=True):
     same = [g for g in project.get('gallery', []) if g.get('title') == item['title']]
     if len(same) > 1:
         raise draft.DraftError('图库存在重复标题，请人工核对：' + item['title'])
     if same:
         found = same[0]
         if (image_digest(found.get('raw_url') or found['url']) != item['sha256']
-                or any(found.get(key) != item[key] for key in ('description', 'featured', 'ordering'))):
+                or (strict and any(found.get(key) != item[key] for key in ('description', 'featured', 'ordering')))):
             raise draft.DraftError('图库同名图片或信息不同，停止且不覆盖：' + item['title'])
         return found
     return None
@@ -97,13 +99,19 @@ def apply(client, config, record, save):
     record['before'] = before
     record['version_states_before'] = version_states(client, config['protected_versions'])
     for item in config['gallery']:
-        gallery_match(before, item)
+        gallery_match(before, item, strict=False)
     wanted_titles = {item['title'] for item in config['gallery']}
     previous_gallery = [g for g in before.get('gallery', []) if g.get('title') not in wanted_titles]
     save()
     project = before
     for item in config['gallery']:
-        found = gallery_match(project, item)
+        found = gallery_match(project, item, strict=False)
+        if found and any(found.get(key) != item[key] for key in ('description', 'featured', 'ordering')):
+            query = {key: item[key] for key in ('title', 'description', 'ordering')}
+            query.update(url=found['url'], featured=str(item['featured']).lower())
+            client.request('PATCH', PROJECT + '/gallery?' + urllib.parse.urlencode(query))
+            project = client.request('GET', PROJECT)
+            found = gallery_match(project, item)
         if not found:
             query = {key: item[key] for key in ('title', 'description', 'ordering')}
             query.update(ext='png', featured=str(item['featured']).lower())
@@ -118,7 +126,7 @@ def apply(client, config, record, save):
         save()
         print('已核对英文图片：' + item['title'], flush=True)
     if config.get('replace_previous_gallery'):
-        # Remove only the initial old images, after all three replacements have been verified.
+        # Remove only the initial old images after all replacements have been verified.
         # Original URLs and metadata are retained in the receipt for restoration if needed.
         for old in previous_gallery:
             client.request('DELETE', PROJECT + '/gallery?' + urllib.parse.urlencode({'url': old['url']}))
@@ -149,8 +157,8 @@ def main():
         args.receipt.write_text(json.dumps(record, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     try:
         config = prepare()
-        print('目标：原 CAD Editor / MJW1h2CF；只上传三张英文图库图片。', flush=True)
-        print('介绍和其他设置保留；六个草稿及其他版本均不修改。', flush=True)
+        print('目标：原 CAD Editor / MJW1h2CF；核对 ' + str(len(config['gallery'])) + ' 张英文图库图片。', flush=True)
+        print('介绍和其他设置保留；所有版本均不修改。', flush=True)
         if not args.apply:
             print('本地预检通过，未联网写入。加 --apply 才上传图库图片。')
             return 0
