@@ -1,0 +1,64 @@
+name: Upload Modrinth drafts
+run-name: Modrinth drafts from build ${{ inputs.build_run_id }}
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: Successful main-branch Build and release run containing all six jars
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: modrinth-cad-editor-drafts
+  cancel-in-progress: false
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: Verify trusted successful build and exact source revision
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN_ID: ${{ inputs.build_run_id }}
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess
+          run_id = os.environ['BUILD_RUN_ID']
+          assert run_id.isdecimal(), 'Build run ID must be numeric'
+          repo = os.environ['GITHUB_REPOSITORY']
+          run = json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/actions/runs/{run_id}']))
+          assert run['conclusion'] == 'success' and run['event'] == 'push', 'Build must be successful and triggered by push'
+          assert run['head_branch'] == 'main' and run['head_repository']['full_name'] == repo, 'Build must belong to trusted main'
+          assert run['path'] == '.github/workflows/build.yml', 'Wrong build workflow'
+          assert run['head_sha'] == os.environ['GITHUB_SHA'], 'Build revision must match this upload workflow revision'
+          print('Verified build:', run_id, run['head_sha'])
+          PY
+      - uses: actions/download-artifact@v5
+        with:
+          run-id: ${{ inputs.build_run_id }}
+          github-token: ${{ github.token }}
+          pattern: jar-*
+          merge-multiple: true
+          path: release/modrinth-upload
+      - name: Test draft-only upload behavior
+        run: python3 tools/modrinth-draft-test.py
+      - name: Preflight all six jars
+        run: python3 tools/modrinth-draft.py --artifact-dir release/modrinth-upload
+      - name: Upload and read back draft versions only
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN || secrets.MODRINTH }}
+        run: python3 tools/modrinth-draft.py --artifact-dir release/modrinth-upload --apply
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: modrinth-draft-receipt
+          path: logs/modrinth/draft-upload.json
+          if-no-files-found: ignore
+      - name: Review links
+        run: |
+          echo 'Draft versions: https://modrinth.com/mod/cad-editor/settings/versions' >> "$GITHUB_STEP_SUMMARY"
+          echo "Description preview: https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/docs/modrinth-description.md" >> "$GITHUB_STEP_SUMMARY"
+          echo 'Public project description has not been changed. No versions have been published.' >> "$GITHUB_STEP_SUMMARY"

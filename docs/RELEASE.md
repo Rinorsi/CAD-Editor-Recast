@@ -18,14 +18,25 @@
 
 CI 检出公开的 `Rinorsi/Oriel-UI` 并构建前置。仓库变量 `ORIEL_REPOSITORY`、`ORIEL_REF` 可指定维护者确认的来源；所选提交必须提供当前依赖的 0.15.0 API 和对应六目标瘦包。只有改用私有来源时才需要 `ORIEL_READ_TOKEN`（目标仓库只读权限）；外部 PR 无法读取 secret 时由维护者在可信环境复验。发行 JAR 内嵌 Oriel 解决的是玩家安装依赖，不能替代新 CI 运行器所需的构建输入。
 
-## 可选平台上传
+## Modrinth 草稿上传
 
-gradle.properties 的 `modrinth_id`、`curseforge_id` 指向各自独立项目；未配置的平台保持关闭。只有 `-PorielEmbedded=false` 的外部依赖版需要填写对应 `oriel_modrinth_id`、`oriel_curseforge_id`，声明必需前置；默认内嵌版不要求 Oriel 平台项目 ID。凭据仅放 Actions secrets `MODRINTH_TOKEN`、`CURSEFORGE_TOKEN` 或同名环境变量；Actions 兼容已有的 `MODRINTH` Secret，优先使用 `MODRINTH_TOKEN`。
+目标为原 CAD Editor 项目：`MJW1h2CF`（https://modrinth.com/mod/cad-editor），新建的 Recast 项目 `kR9FVdqy` 暂停使用，不删除。GitHub 继续使用 Rinorsi/CAD-Editor-Recast。
 
-CAD Editor Recast 的 Modrinth 目标为 `kR9FVdqy`（`cad-editor-recast`）。2026-11-12 已建立草稿，图库使用英文界面的真实离线截图；图标采用作者提供的像素图，与 GitHub README 图标一致，尚未提交审核或公开发布。项目介绍的 AI 使用说明不能替代平台 disclosures；上传首个版本后仍需填写平台要求的披露信息。
+- 本地预检：`python tools/modrinth-draft.py --artifact-dir <六包目录>`，不联网写入。
+- 本地直传：`pwsh -File tools/upload-modrinth-draft.ps1 -ArtifactDir <六包目录>`。从环境读取 MODRINTH_TOKEN / MODRINTH；缺少时隐藏输入，不保存令牌。
+- 复用 Actions Secret：`pwsh -File tools/upload-modrinth-draft.ps1 -GitHub`。上传当前提交已成功通过 Build and release 的六目标 CI 产物；它不上传本机目录。支持现有 MODRINTH 和 MODRINTH_TOKEN Secret，无须读取或复制秘密值。
 
-`./gradlew publishMods -PpublishDryRun` 预览；真实上传仅在显式执行 publishMods 或发布 tag 时发生。各平台缺少项目 ID、Oriel 前置 ID 或 token 时独立跳过，不影响 GitHub Release；网络、认证或 API 错误仍报错。CI 在六目标全部通过、GitHub Release 完成之后，使用 -PpublishArtifactDir=release 上传同一批已校验附件，不重新编译。
-发布运行器通过内部 Actions artifact 恢复同一轮构建使用的 Oriel 本地 Maven 输入，供 Gradle 配置阶段解析依赖；它不会成为 GitHub Release 附件。此流程仍需在正式发布时核对云端回执，发布预演不代表真实上传已通过。
+两条上传路径共用同一 Python API 脚本，只创建 status=draft 的版本，逐个读回验证项目、加载器、游戏版本和 SHA512。目标账号必须是 Rinorsi。发现同名公开版本或不同文件时，整批在写入前停止；上传中断后重跑会识别已完成的同文件草稿。脚本不修改旧版、不改项目状态、不公开版本、不提交审核、不创建 tag。查看：https://modrinth.com/mod/cad-editor/settings/versions 。
+
+介绍预览为 [modrinth-description.md](modrinth-description.md)，采用作者定稿的英文版。已公开项目的介绍没有独立草稿；上传脚本不会修改公开介绍，须在作者检查预览后另行替换。源码与问题链接迁移同样应作为明确的页面更新操作。
+
+本地回执在 logs/modrinth/draft-upload.json；Actions 上传同名回执 artifact，记录每个草稿的链接与文件哈希。首次使用至少需要 USER_READ、PROJECT_READ、VERSION_READ、VERSION_CREATE 等相应权限；真实权限仍以平台返回为准。
+
+## 其他发行入口
+
+原有 tag 工作流仍创建 GitHub Release；其 Modrinth 公开上传已关闭，避免草稿检查流程被绕过。Gradle publishMods 对 Modrinth 仅保留 publishDryRun 预览，真实上传使用上面的草稿脚本。CurseForge 未配置项目 ID 时仍跳过；其旧有可选上传不变。
+
+Oriel 默认已内嵌，不要求玩家另装或配置 Oriel 平台项目 ID。只有外部依赖发行模式需要相应的 Oriel 项目 ID。
 
 ## 内存报告
 

@@ -131,9 +131,8 @@ jobs:
         with:
           name: oriel-maven
           path: ~/.m2/repository/dev/oriel/
-      - name: Optional platform uploads of the verified Release attachments
+      - name: Optional CurseForge upload of the verified Release attachments
         env:
-          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN || secrets.MODRINTH }}
           CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
         run: |
           chmod +x gradlew

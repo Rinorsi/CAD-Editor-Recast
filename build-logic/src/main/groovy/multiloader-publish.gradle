@@ -6,6 +6,10 @@ def loader = project.parent.name
 def modVersion = project.version.toString()
 def dry = providers.gradleProperty('publishDryRun').isPresent() || providers.environmentVariable('PUBLISH_DRY_RUN').getOrElse('false') == 'true'
 def ready = { String site, String token ->
+    if (site == 'modrinth' && !dry) {
+        logger.lifecycle('Modrinth uploads use tools/modrinth-draft.py; review and publish drafts on Modrinth.')
+        return false
+    }
     def configured = findProperty(site + '_id')?.toString()?.trim() && (orielEmbedded || findProperty('oriel_' + site + '_id')?.toString()?.trim())
     def enabled = configured && (dry || providers.environmentVariable(token).getOrNull())
     if (!enabled) logger.lifecycle("Skipping ${site} upload for ${project.path}: configure project / Oriel ids and ${token}.")
