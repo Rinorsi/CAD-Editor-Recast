@@ -22,7 +22,7 @@ CI 检出公开的 `Rinorsi/Oriel-UI` 并构建前置。仓库变量 `ORIEL_REPO
 
 gradle.properties 的 `modrinth_id`、`curseforge_id` 指向各自独立项目；未配置的平台保持关闭。只有 `-PorielEmbedded=false` 的外部依赖版需要填写对应 `oriel_modrinth_id`、`oriel_curseforge_id`，声明必需前置；默认内嵌版不要求 Oriel 平台项目 ID。凭据仅放 Actions secrets `MODRINTH_TOKEN`、`CURSEFORGE_TOKEN` 或同名环境变量；Actions 兼容已有的 `MODRINTH` Secret，优先使用 `MODRINTH_TOKEN`。
 
-CAD Editor Recast 的 Modrinth 目标为 `kR9FVdqy`（`cad-editor-recast`）。2026-11-12 已建立草稿，图库使用英文界面的真实离线截图；图标暂留空，尚未提交审核或公开发布。项目介绍的 AI 使用说明不能替代平台 disclosures；上传首个版本后仍需填写平台要求的披露信息。
+CAD Editor Recast 的 Modrinth 目标为 `kR9FVdqy`（`cad-editor-recast`）。2026-11-12 已建立草稿，图库使用英文界面的真实离线截图；图标采用作者提供的像素图，与 GitHub README 图标一致，尚未提交审核或公开发布。项目介绍的 AI 使用说明不能替代平台 disclosures；上传首个版本后仍需填写平台要求的披露信息。
 
 `./gradlew publishMods -PpublishDryRun` 预览；真实上传仅在显式执行 publishMods 或发布 tag 时发生。各平台缺少项目 ID、Oriel 前置 ID 或 token 时独立跳过，不影响 GitHub Release；网络、认证或 API 错误仍报错。CI 在六目标全部通过、GitHub Release 完成之后，使用 -PpublishArtifactDir=release 上传同一批已校验附件，不重新编译。
 发布运行器通过内部 Actions artifact 恢复同一轮构建使用的 Oriel 本地 Maven 输入，供 Gradle 配置阶段解析依赖；它不会成为 GitHub Release 附件。此流程仍需在正式发布时核对云端回执，发布预演不代表真实上传已通过。

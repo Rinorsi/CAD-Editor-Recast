@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/branding/logo-transparent-256.png" width="128" alt="CAD Editor">
+  <img src="docs/branding/icon-plate-256.png" width="128" alt="CAD Editor Recast">
 </p>
 
 # CAD Editor · Recast

@@ -85,7 +85,7 @@ class BrandingTest(unittest.TestCase):
         self.assertTrue((ROOT / "docs/branding/README.md").is_file())
         self.assertFalse((ROOT / "docs/branding/sheet.png").exists())
         readme = text("README.md")
-        self.assertIn('src="docs/branding/logo-transparent-256.png" width="128"', readme)
+        self.assertIn('src="docs/branding/icon-plate-256.png" width="128"', readme)
         self.assertIn("<!-- editor-version -->", readme)
 
     def test_jars(self):

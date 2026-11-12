@@ -1,15 +1,15 @@
 # CAD Editor 品牌资源
 
-以下 PNG 直接复制自已确认的成品，不重新缩放或生成；对比图 `sheet.png` 不入库。
+2026-11-12，当前带底板图标采用作者在本次对话中提供的 512×512 PNG。平台 512 版保留原文件；256 版与运行包 128 版由该图最近邻缩小，不增加抗锯齿或重新生成图案。
 
 | 文件 | 尺寸 | 用途 |
 |---|---|---|
-| `icon-plate-512.png` | 512×512 | 带底板，平台项目图标 |
-| `icon-plate-256.png` | 256×256 | 带底板，平台较小图标 |
-| `logo-transparent-512.png` | 512×512 | 透明，README／横幅的大尺寸素材 |
-| `logo-transparent-256.png` | 256×256 | 透明，README 顶部（显示宽度 128）／横幅 |
+| `icon-plate-512.png` | 512×512 | 当前平台项目图标，保留上传原图 |
+| `icon-plate-256.png` | 256×256 | 当前 GitHub README 顶部（显示宽度 128）与 UI 图标 |
+| `logo-transparent-512.png` | 512×512 | 历史透明素材，保留供旧引用使用 |
+| `logo-transparent-256.png` | 256×256 | 历史透明素材，保留供旧引用使用 |
 
-Fabric、NeoForge 模组列表与 Modrinth、CurseForge 项目图标使用 **plate**；README、横幅使用 **transparent**。32px 以下不要使用这一版，需要另做简化版。
+Fabric、NeoForge 模组列表、Modrinth 项目与 GitHub README 使用当前 **plate** 图标；`ui/logo.png` 与 `icon-plate-256.png` 相同。历史透明素材不表示本次新图标的透明版本。
 
 ## 模组元数据
 
@@ -20,7 +20,7 @@ Fabric、NeoForge 模组列表与 Modrinth、CurseForge 项目图标使用 **pla
 - B站：https://b23.tv/hjUvs0c
 - 爱发电：https://afdian.com/a/Rinorsi
 
-运行包图标为已确认的 `icon-plate-128.png`（128×128），原样复制到 `common/src/main/resources/assets/cadeditor/icon.png`。两个加载器均打包为 `assets/cadeditor/icon.png`，不是 UI 目录下的 `logo.png`。Fabric 的 `contact.bilibili`／`contact.afdian` 是附加键，启动器是否展示未验证；NeoForge credits 中的链接是否可点击未验证。
+运行包图标为 `icon-plate-256.png` 缩小 2 倍的 128×128，写入 `common/src/main/resources/assets/cadeditor/icon.png`。两个加载器均打包为 `assets/cadeditor/icon.png`，不是 UI 目录下的 `logo.png`。Fabric 的 `contact.bilibili`／`contact.afdian` 是附加键，启动器是否展示未验证；NeoForge credits 中的链接是否可点击未验证。
 
 ## NeoForge 图标键与路径依据
 
