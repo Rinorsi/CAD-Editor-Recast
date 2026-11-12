@@ -55,6 +55,14 @@ jobs:
           chmod +x gradlew
           # Gradle 配置阶段会解析三个 Minecraft 版本的 Oriel 依赖，所以每个任务都要把六个目标发布到本地 Maven，只发布当前矩阵的版本会在配置 fabric:26.1 时找不到 oriel-fabric-26.1.2
           ./gradlew :fabric:26.1:publishToMavenLocal :fabric:26.2:publishToMavenLocal :fabric:26.3:publishToMavenLocal :neoforge:26.1:publishToMavenLocal :neoforge:26.2:publishToMavenLocal :neoforge:26.3:publishToMavenLocal -Poriel_slim --console=plain --stacktrace
+      - name: Preserve Oriel Maven inputs for the release runner
+        if: startsWith(github.ref, 'refs/tags/') && matrix.loader == 'fabric' && matrix.mc == '26.1'
+        uses: actions/upload-artifact@v5
+        with:
+          name: oriel-maven
+          path: ~/.m2/repository/dev/oriel/
+          include-hidden-files: true
+          if-no-files-found: error
       - name: Matrix build and check including codecVerification
         working-directory: Editor
         shell: bash
@@ -112,15 +120,20 @@ jobs:
       - name: Publish GitHub release attachments
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" release/*.jar release/SHA256SUMS.txt --title "CAD Editor $GITHUB_REF_NAME" --notes-file release-notes.md --verify-tag --prerelease
+        run: gh release create "$GITHUB_REF_NAME" release/*.jar release/SHA256SUMS.txt --title "CAD Editor Recast $GITHUB_REF_NAME" --notes-file release-notes.md --verify-tag --prerelease
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v5
+      - name: Restore pinned Oriel inputs for Gradle publishing configuration
+        uses: actions/download-artifact@v5
+        with:
+          name: oriel-maven
+          path: ~/.m2/repository/dev/oriel/
       - name: Optional platform uploads of the verified Release attachments
         env:
-          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN || secrets.MODRINTH }}
           CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
         run: |
           chmod +x gradlew

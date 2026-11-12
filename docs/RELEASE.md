@@ -13,16 +13,19 @@
 
 当前源码依赖 Oriel 0.15.0。本地构建使用正式 Maven 瘦包；云端默认固定至
 `49d0410a7a5dae7003b9972e24d7c3349e35fe5b`，已核对该远端提交的核心版本为0.15.0。
-2026-11-11 已确认当前 Editor 仓库尚未配置 `ORIEL_READ_TOKEN`；同步源码不代表云端六目标CI已通过，须配置私有依赖的读取权限后运行。
+2026-11-12 已核对 `Rinorsi/Oriel-UI` 为公开仓库，默认来源无需额外配置 `ORIEL_READ_TOKEN`。同步源码不代表云端六目标 CI 已通过，仍须查看对应提交的构建与检查结果。
 文末已有验收记录属于历史包，不代表新的提交已通过云端构建或已发布。
 
-Oriel 源码目前私有。配置 Actions secret `ORIEL_READ_TOKEN`（Oriel 仓库只读权限），CI 检出 `Rinorsi/Oriel-UI` 并构建前置。仓库变量 `ORIEL_REPOSITORY`、`ORIEL_REF` 可指定维护者确认的来源；所选提交必须提供当前依赖的 0.15.0 API 和对应六目标瘦包。未开放且 secret 未配置时 CI 明确失败；外部 PR 无法读取 secret 时由维护者在可信环境复验。
+CI 检出公开的 `Rinorsi/Oriel-UI` 并构建前置。仓库变量 `ORIEL_REPOSITORY`、`ORIEL_REF` 可指定维护者确认的来源；所选提交必须提供当前依赖的 0.15.0 API 和对应六目标瘦包。只有改用私有来源时才需要 `ORIEL_READ_TOKEN`（目标仓库只读权限）；外部 PR 无法读取 secret 时由维护者在可信环境复验。发行 JAR 内嵌 Oriel 解决的是玩家安装依赖，不能替代新 CI 运行器所需的构建输入。
 
 ## 可选平台上传
 
-gradle.properties 的 `modrinth_id`、`curseforge_id` 留空；`oriel_modrinth_id`、`oriel_curseforge_id` 也需填写，以声明必需前置。凭据仅放 Actions secrets `MODRINTH_TOKEN`、`CURSEFORGE_TOKEN` 或同名环境变量。
+gradle.properties 的 `modrinth_id`、`curseforge_id` 指向各自独立项目；未配置的平台保持关闭。只有 `-PorielEmbedded=false` 的外部依赖版需要填写对应 `oriel_modrinth_id`、`oriel_curseforge_id`，声明必需前置；默认内嵌版不要求 Oriel 平台项目 ID。凭据仅放 Actions secrets `MODRINTH_TOKEN`、`CURSEFORGE_TOKEN` 或同名环境变量；Actions 兼容已有的 `MODRINTH` Secret，优先使用 `MODRINTH_TOKEN`。
+
+CAD Editor Recast 的 Modrinth 目标为 `kR9FVdqy`（`cad-editor-recast`）。2026-11-12 已建立草稿，图库使用英文界面的真实离线截图；图标暂留空，尚未提交审核或公开发布。项目介绍的 AI 使用说明不能替代平台 disclosures；上传首个版本后仍需填写平台要求的披露信息。
 
 `./gradlew publishMods -PpublishDryRun` 预览；真实上传仅在显式执行 publishMods 或发布 tag 时发生。各平台缺少项目 ID、Oriel 前置 ID 或 token 时独立跳过，不影响 GitHub Release；网络、认证或 API 错误仍报错。CI 在六目标全部通过、GitHub Release 完成之后，使用 -PpublishArtifactDir=release 上传同一批已校验附件，不重新编译。
+发布运行器通过内部 Actions artifact 恢复同一轮构建使用的 Oriel 本地 Maven 输入，供 Gradle 配置阶段解析依赖；它不会成为 GitHub Release 附件。此流程仍需在正式发布时核对云端回执，发布预演不代表真实上传已通过。
 
 ## 内存报告
 

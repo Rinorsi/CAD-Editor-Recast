@@ -29,7 +29,7 @@ publishMods {
         : tasks.named('jar', Jar).flatMap { it.archiveFile })
     modLoaders.add(loader)
     version = "${modVersion}+${loader}-${minecraft_version}"
-    displayName = "CAD Editor ${modVersion} (${loader} ${minecraft_version})"
+    displayName = "CAD Editor Recast ${modVersion} (${loader} ${minecraft_version})"
     type = ReleaseType.of(release == 'release' ? 'stable' : release)
     changelog = notes
     dryRun = dry

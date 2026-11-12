@@ -134,28 +134,11 @@ public final class VaultTest {
         new Pinyin(
             Files.newInputStream(
                 Path.of("common/src/main/resources/assets/cadeditor/ui/js/pinyin-data.js")));
-    // Load the actual shipped Chinese language so translated-name and pinyin search are real.
-    net.minecraft.locale.Language.inject(
-        new net.minecraft.locale.Language() {
-          final Map<String, String> names = loadChinese();
-
-          public String getOrDefault(String key, String fallback) {
-            return names.getOrDefault(key, fallback);
-          }
-
-          public boolean has(String key) {
-            return names.containsKey(key);
-          }
-
-          public boolean isDefaultRightToLeft() {
-            return false;
-          }
-
-          public net.minecraft.util.FormattedCharSequence getVisualOrder(
-              net.minecraft.network.chat.FormattedText text) {
-            return net.minecraft.util.FormattedCharSequence.EMPTY;
-          }
-        });
+    // The vanilla JAR carries its actual English language; no client asset download is needed.
+    // Chinese text and pinyin are exercised by the explicit custom item/entry names below.
+    String translatedSword = Component.translatable(Items.DIAMOND_SWORD.getDescriptionId()).getString();
+    check(!translatedSword.equals(Items.DIAMOND_SWORD.getDescriptionId()),
+        "vanilla language resolves a translated registry name");
     Path dir = Files.createTempDirectory("cadeditor-vault-test-");
     Path file = dir.resolve("vault.json");
     Map<String, ItemStack> fixtures = new LinkedHashMap<>(TooltipFixtures.create(lookup));
@@ -260,7 +243,7 @@ public final class VaultTest {
       tags.add("武器");
       update.add("tags", tags);
       run(store, update);
-      for (String query : List.of("钻石", "zuanshi", "zsj", "diamond_sword", "测试武器")) {
+      for (String query : List.of("钻石", "zuanshi", "zsj", "diamond_sword", "测试武器", translatedSword)) {
         JsonObject r = req("list");
         r.addProperty("query", query);
         check(
@@ -524,38 +507,4 @@ public final class VaultTest {
         () -> VaultStore.parse("{\"x\":" + "[".repeat(100) + "0" + "]".repeat(100) + "}"));
   }
 
-  private static Map<String, String> loadChinese() {
-    try {
-      Path assets = Path.of(System.getProperty("user.home"), ".gradle/caches/fabric-loom/assets");
-      Path index;
-      try (var files = Files.list(assets.resolve("indexes"))) {
-        index =
-            files
-                .filter(
-                    p ->
-                        p.getFileName()
-                            .toString()
-                            .startsWith(SharedConstants.getCurrentVersion().name() + "-"))
-                .findFirst()
-                .orElseThrow();
-      }
-      String hash =
-          JsonParser.parseString(Files.readString(index))
-              .getAsJsonObject()
-              .getAsJsonObject("objects")
-              .getAsJsonObject("minecraft/lang/zh_cn.json")
-              .get("hash")
-              .getAsString();
-      JsonObject data =
-          JsonParser.parseString(
-                  Files.readString(
-                      assets.resolve("objects").resolve(hash.substring(0, 2)).resolve(hash)))
-              .getAsJsonObject();
-      Map<String, String> out = new HashMap<>();
-      data.entrySet().forEach(e -> out.put(e.getKey(), e.getValue().getAsString()));
-      return out;
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
 }

@@ -87,7 +87,7 @@ public final class EditorClipboardHostTest {
         check(page.contains("notice.addProperty(\"sequence\", ++noticeSequence)"),
                 "each host notice includes a fresh sequence even for repeated text");
         String navigation = sources.get("WorldEditorClient.java");
-        check(navigation.contains("EditorPageHost.notice(owner,\"无法打开玩家数据：\"")
+        check(navigation.contains("EditorPageHost.notice(owner,EditorI18n.tr(\"cadeditor.message.worldeditorclient.4b0fba67d8\", (e.getMessage())));")
                 && navigation.contains("if(owner!=null)EditorPageHost.notice(owner,result.get(\"reason\")"),
                 "local and asynchronous navigation rejection use page notice instead of hidden HUD");
         String host = sources.get("EditorClipboardHost.java");
