@@ -1,0 +1,28 @@
+name: Upload Modrinth English screenshots
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: modrinth-cad-editor-gallery
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check gallery-only writes and repeat uploads
+        run: python3 tools/modrinth-gallery-test.py
+      - name: Preflight English gallery only
+        run: python3 tools/modrinth-gallery.py
+      - name: Upload screenshots without changing text or versions
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN || secrets.MODRINTH }}
+        run: python3 tools/modrinth-gallery.py --apply
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: modrinth-gallery-receipt
+          path: logs/modrinth/gallery-upload.json
+          if-no-files-found: ignore
