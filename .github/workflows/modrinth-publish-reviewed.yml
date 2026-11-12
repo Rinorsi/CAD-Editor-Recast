@@ -1,0 +1,35 @@
+name: Publish reviewed Modrinth 0.99.8 versions
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: modrinth-cad-editor-reviewed-publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v5
+        with:
+          run-id: 43226800259
+          github-token: ${{ github.token }}
+          name: modrinth-draft-receipt
+          path: release/reviewed-modrinth
+      - name: Check reviewed publication and interrupted-run recovery
+        run: python3 tools/modrinth-publish-reviewed-test.py
+      - name: Check six exact reviewed targets and bilingual release note
+        run: python3 tools/modrinth-publish-reviewed.py --manifest release/reviewed-modrinth/draft-upload.json
+      - name: Publish reviewed versions with the approved short changelog
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN || secrets.MODRINTH }}
+        run: python3 tools/modrinth-publish-reviewed.py --manifest release/reviewed-modrinth/draft-upload.json --apply
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: modrinth-published-0.99.8-receipt
+          path: logs/modrinth/published-0.99.8.json
+          if-no-files-found: ignore
